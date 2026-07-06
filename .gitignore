@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lockfile omitted while GitHub sync goes through the API instead of git push
+package-lock.json
