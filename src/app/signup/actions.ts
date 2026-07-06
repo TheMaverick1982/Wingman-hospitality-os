@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export type SignupState = { error: string | null; checkEmail: boolean };
@@ -20,11 +21,14 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   const supabase = await createClient();
+  const headersList = await headers();
+  const origin = headersList.get("origin") ?? `https://${headersList.get("host")}`;
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${origin}/auth/callback`,
       data: {
         pending_org_name: orgName,
         pending_location_name: locationName,
