@@ -101,15 +101,15 @@ export default async function AccountabilityPage({
           <div className="flex flex-col gap-2">
             {flags.map((f, i) => (
               <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "brick" ? "bg-brick-tint" : "bg-gold-tint"}`}>
-                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#8A5D18]"}`}>{f.text}</span>
+                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#92400e]"}`}>{f.text}</span>
               </div>
             ))}
           </div>
         </Card>
       ) : (
-        <div className="bg-olive-tint rounded-[10px] p-5 mb-6 flex items-center gap-3">
-          <CheckCircle2 size={18} className="text-[#354328]" />
-          <span className="text-sm font-medium text-[#354328]">Nothing flagged right now — standards are holding.</span>
+        <div className="bg-olive-tint rounded-2xl p-5 mb-6 flex items-center gap-3">
+          <CheckCircle2 size={18} className="text-[#166534]" />
+          <span className="text-sm font-medium text-[#166534]">Nothing flagged right now — standards are holding.</span>
         </div>
       )}
 

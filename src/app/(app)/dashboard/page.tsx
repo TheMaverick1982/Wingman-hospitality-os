@@ -119,7 +119,7 @@ export default async function DashboardPage({
           <div className="flex flex-col gap-2">
             {flags.map((f, i) => (
               <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "brick" ? "bg-brick-tint" : "bg-gold-tint"}`}>
-                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#8A5D18]"}`}>{f.text}</span>
+                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#92400e]"}`}>{f.text}</span>
               </div>
             ))}
           </div>
@@ -161,10 +161,10 @@ export default async function DashboardPage({
         </Card>
       </div>
 
-      <div className="bg-charcoal rounded-[10px] p-6 mt-5">
+      <div className="bg-charcoal rounded-2xl p-6 mt-5">
         <div className="flex items-start gap-3">
           <Quote size={22} className="text-gold" />
-          <p className="text-[#EDE6D8] font-display text-lg leading-snug">
+          <p className="text-[#f5f5f7] font-display text-lg leading-snug">
             We can send all the customers we want to a restaurant — if they don&apos;t come back, that&apos;s not good.
             Everything here exists to move guests from Visit 1 to Visit 4.
           </p>

@@ -42,13 +42,13 @@ export function HiringClient({
         {coreValues.map((v) => {
           const g = hiringGuidanceFor(v);
           return (
-            <div key={v.title} className="bg-panel border border-line rounded-[10px] p-5">
+            <div key={v.title} className="bg-panel border border-line rounded-2xl p-5">
               <p className="text-sm font-semibold mb-2 text-ink">{v.title}</p>
               <p className="text-sm mb-3 text-charcoal-2">&quot;{g.question}&quot;</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-olive-tint rounded-lg p-3">
-                  <span className="text-xs font-semibold block mb-1 text-[#354328]">Green flag</span>
-                  <span className="text-xs text-[#354328]">{g.green}</span>
+                  <span className="text-xs font-semibold block mb-1 text-[#166534]">Green flag</span>
+                  <span className="text-xs text-[#166534]">{g.green}</span>
                 </div>
                 <div className="bg-brick-tint rounded-lg p-3">
                   <span className="text-xs font-semibold block mb-1 text-brick-dark">Red flag</span>
@@ -62,19 +62,19 @@ export function HiringClient({
 
       <div className="flex items-center gap-2 mb-3">
         <GraduationCap size={14} className="text-gold" />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8A5D18]">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#92400e]">
           {activeRole}-specific — what this department needs beyond hospitality
         </h3>
       </div>
       <div className="grid grid-cols-1 gap-3 mb-8">
         {traitsByDept[activeRole].map((t) => (
-          <div key={t.title} className="bg-panel border border-line rounded-[10px] p-5">
+          <div key={t.title} className="bg-panel border border-line rounded-2xl p-5">
             <p className="text-sm font-semibold mb-2 text-ink">{t.title}</p>
             <p className="text-sm mb-3 text-charcoal-2">&quot;{t.question}&quot;</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-olive-tint rounded-lg p-3">
-                <span className="text-xs font-semibold block mb-1 text-[#354328]">Green flag</span>
-                <span className="text-xs text-[#354328]">{t.green_flag}</span>
+                <span className="text-xs font-semibold block mb-1 text-[#166534]">Green flag</span>
+                <span className="text-xs text-[#166534]">{t.green_flag}</span>
               </div>
               <div className="bg-brick-tint rounded-lg p-3">
                 <span className="text-xs font-semibold block mb-1 text-brick-dark">Red flag</span>

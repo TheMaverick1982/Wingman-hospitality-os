@@ -40,7 +40,7 @@ export function RoleChecklist({
   }
 
   return (
-    <div className="bg-panel border border-line rounded-[10px] p-6">
+    <div className="bg-panel border border-line rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg font-semibold text-ink">{department} training program</h3>
         <span className={`font-mono text-sm font-semibold ${pct === 100 ? "text-olive" : "text-muted"}`}>
@@ -77,7 +77,7 @@ export function RoleChecklist({
         <>
           <div className="pt-5 mb-3 flex items-center gap-2 border-t border-line">
             <GraduationCap size={14} className="text-gold" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#8A5D18]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#92400e]">
               {trackLabel} — role-specific
             </span>
           </div>

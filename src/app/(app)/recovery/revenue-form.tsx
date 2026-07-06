@@ -9,7 +9,7 @@ export function RevenueForm({ initialValue }: { initialValue: number }) {
   const [state, formAction, pending] = useActionState(updateTotalRevenue, initialState);
 
   return (
-    <div className="bg-panel border border-line rounded-[10px] p-5 flex-1 min-w-[200px]">
+    <div className="bg-panel border border-line rounded-2xl p-5 flex-1 min-w-[200px]">
       <label className="text-xs uppercase tracking-wide font-semibold block mb-2 text-muted">
         Total revenue this period
       </label>

@@ -72,7 +72,7 @@ export default async function HiringPage({
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} />
 
       <h3 className="font-display text-lg font-semibold mb-3 text-ink">Candidate scorecards</h3>
-      <div className="bg-panel border border-line rounded-[10px] overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line">

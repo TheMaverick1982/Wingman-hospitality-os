@@ -17,10 +17,10 @@ export function WeeklyFocusForm({ initialValue }: { initialValue: string }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         rows={2}
-        className="w-full rounded-lg p-3 text-sm bg-white border border-[#E3C687] text-ink"
+        className="w-full rounded-lg p-3 text-sm bg-white border border-[#ffcc80] text-ink"
       />
       <div className="flex items-center justify-between mt-2">
-        <p className="text-xs text-[#8A5D18]">Read this at the start of every shift, every location, this week.</p>
+        <p className="text-xs text-[#92400e]">Read this at the start of every shift, every location, this week.</p>
         <Btn small type="submit" disabled={pending}>
           {pending ? "Saving..." : "Save"}
         </Btn>

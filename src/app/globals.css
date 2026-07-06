@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
+/*
+ * Apple.com-inspired palette. Token *names* stay the same as the original
+ * design pass so components don't need per-file rewrites — only the hex
+ * values changed. "brick" is now the primary accent blue, "gold" the
+ * warning amber, "olive" the success green; charcoal/ink/muted/line are
+ * Apple's near-black, secondary gray, and hairline-border grays.
+ */
 @theme inline {
-  --color-ink: #241f1b;
-  --color-paper: #fbf7f1;
+  --color-ink: #1d1d1f;
+  --color-paper: #f5f5f7;
   --color-panel: #ffffff;
-  --color-charcoal: #221e1b;
-  --color-charcoal-2: #332c26;
-  --color-brick: #a8402b;
-  --color-brick-dark: #7e2e1f;
-  --color-brick-tint: #f3e1db;
-  --color-gold: #c98a2c;
-  --color-gold-tint: #f5e6c8;
-  --color-olive: #4b5d3a;
-  --color-olive-tint: #e1e8d8;
-  --color-line: #e7e0d3;
-  --color-muted: #8a8072;
+  --color-charcoal: #1d1d1f;
+  --color-charcoal-2: #424245;
+  --color-brick: #0071e3;
+  --color-brick-dark: #0058b0;
+  --color-brick-tint: #e8f2fd;
+  --color-gold: #ff9500;
+  --color-gold-tint: #fff4e5;
+  --color-olive: #1d8a3e;
+  --color-olive-tint: #e6f6ea;
+  --color-line: #d2d2d7;
+  --color-muted: #86868b;
 
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-zilla-slab);
-  --font-mono: var(--font-ibm-plex-mono);
+  --font-sans: var(--font-geist);
+  --font-display: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
 }
 
 ::selection {
-  background: var(--color-gold-tint);
+  background: var(--color-brick-tint);
 }

@@ -6,6 +6,6 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`bg-panel border border-line rounded-[10px] ${className}`}>{children}</div>
+    <div className={`bg-panel border border-line rounded-2xl ${className}`}>{children}</div>
   );
 }

@@ -11,11 +11,11 @@ export function StageCard({
 }) {
   return (
     <div
-      className={`p-5 flex-1 min-w-[150px] rounded-[10px] border border-b-[3px] border-dashed ${
+      className={`p-5 flex-1 min-w-[150px] rounded-2xl border border-b-[3px] border-dashed ${
         active ? "bg-charcoal border-charcoal" : "bg-panel border-line"
       }`}
     >
-      <div className={`text-sm font-medium mb-2 ${active ? "text-[#EDE6D8]" : "text-ink"}`}>{label}</div>
+      <div className={`text-sm font-medium mb-2 ${active ? "text-[#f5f5f7]" : "text-ink"}`}>{label}</div>
       <div className={`font-mono text-3xl font-semibold mb-2 ${active ? "text-white" : "text-brick"}`}>
         {pct}%
       </div>
@@ -25,7 +25,7 @@ export function StageCard({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className={`text-xs ${active ? "text-[#C7BDAB]" : "text-muted"}`}>{sub}</div>
+      <div className={`text-xs ${active ? "text-[#a1a1a6]" : "text-muted"}`}>{sub}</div>
     </div>
   );
 }

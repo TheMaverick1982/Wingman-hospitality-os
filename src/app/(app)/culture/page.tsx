@@ -33,29 +33,29 @@ export default async function CulturePage() {
       </div>
 
       <div className="bg-charcoal rounded-xl p-8 mb-6">
-        <p className="text-[#8A8072] text-xs uppercase tracking-wide font-semibold mb-3">Our philosophy</p>
+        <p className="text-[#98989d] text-xs uppercase tracking-wide font-semibold mb-3">Our philosophy</p>
         <p className="text-white font-display text-2xl leading-snug max-w-2xl">{org?.philosophy}</p>
       </div>
 
       <h3 className="font-display text-lg font-semibold mb-3 text-ink">What we believe</h3>
       <div className="grid grid-cols-3 gap-4 mb-8">
         {(coreValues ?? []).map((v) => (
-          <div key={v.title} className="bg-panel border border-line border-b-[3px] rounded-[10px] p-5">
+          <div key={v.title} className="bg-panel border border-line border-b-[3px] rounded-2xl p-5">
             <p className="text-sm font-semibold mb-1.5 text-ink">{v.title}</p>
             <p className="text-xs leading-relaxed text-muted">{v.description}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-gold-tint rounded-[10px] p-6 mb-8">
+      <div className="bg-gold-tint rounded-2xl p-6 mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={16} className="text-[#8A5D18]" />
-          <h3 className="font-display text-lg font-semibold text-[#5C3E10]">This week&apos;s pre-shift focus</h3>
+          <Sparkles size={16} className="text-[#92400e]" />
+          <h3 className="font-display text-lg font-semibold text-[#92400e]">This week&apos;s pre-shift focus</h3>
         </div>
         {isGm ? (
           <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
         ) : (
-          <p className="text-sm text-[#5C3E10]">{org?.weekly_focus || "Nothing set yet."}</p>
+          <p className="text-sm text-[#92400e]">{org?.weekly_focus || "Nothing set yet."}</p>
         )}
       </div>
 
@@ -65,7 +65,7 @@ export default async function CulturePage() {
       </div>
       <div className="flex flex-col gap-3">
         {(moments ?? []).map((m) => (
-          <div key={m.id} className="bg-panel border border-line rounded-[10px] p-5">
+          <div key={m.id} className="bg-panel border border-line rounded-2xl p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-ink">{m.about}</span>

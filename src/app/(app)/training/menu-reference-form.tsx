@@ -20,12 +20,12 @@ export function MenuReferenceForm({
   const [value, setValue] = useState(initialContent);
 
   return (
-    <div className="bg-gold-tint rounded-[10px] p-6 mb-5">
+    <div className="bg-gold-tint rounded-2xl p-6 mb-5">
       <div className="flex items-center gap-2 mb-2">
-        <ClipboardList size={16} className="text-[#8A5D18]" />
-        <h3 className="font-display text-lg font-semibold text-[#5C3E10]">Menu reference</h3>
+        <ClipboardList size={16} className="text-[#92400e]" />
+        <h3 className="font-display text-lg font-semibold text-[#92400e]">Menu reference</h3>
       </div>
-      <p className="text-xs mb-3 text-[#8A5D18]">
+      <p className="text-xs mb-3 text-[#92400e]">
         Staff study this alongside the checklist below.
       </p>
       {isGm ? (
@@ -37,7 +37,7 @@ export function MenuReferenceForm({
             onChange={(e) => setValue(e.target.value)}
             rows={4}
             placeholder="e.g. Detroit Bianco — mozzarella, ricotta, garlic oil, basil. Contains dairy, gluten..."
-            className="w-full rounded-lg p-3 text-sm bg-white border border-[#E3C687] text-ink mb-2"
+            className="w-full rounded-lg p-3 text-sm bg-white border border-[#ffcc80] text-ink mb-2"
           />
           <div className="flex justify-end">
             <Btn small type="submit" disabled={pending}>
@@ -47,7 +47,7 @@ export function MenuReferenceForm({
           {state.error && <p className="text-sm text-brick mt-1">{state.error}</p>}
         </form>
       ) : (
-        <p className="text-sm whitespace-pre-wrap text-[#5C3E10]">{initialContent || "Nothing added yet."}</p>
+        <p className="text-sm whitespace-pre-wrap text-[#92400e]">{initialContent || "Nothing added yet."}</p>
       )}
     </div>
   );

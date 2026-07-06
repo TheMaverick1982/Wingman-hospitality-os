@@ -110,7 +110,7 @@ export default async function RecoveryPage({
         </Card>
       </div>
 
-      <div className="bg-panel border border-line rounded-[10px] overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line">

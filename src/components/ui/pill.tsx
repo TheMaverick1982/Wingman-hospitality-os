@@ -1,8 +1,8 @@
 const TONE_CLASSES = {
-  muted: "bg-[#EFEAE0] text-charcoal-2",
+  muted: "bg-[#f2f2f7] text-charcoal-2",
   brick: "bg-brick-tint text-brick-dark",
-  gold: "bg-gold-tint text-[#8A5D18]",
-  olive: "bg-olive-tint text-[#354328]",
+  gold: "bg-gold-tint text-[#92400e]",
+  olive: "bg-olive-tint text-[#166534]",
 } as const;
 
 export function Pill({

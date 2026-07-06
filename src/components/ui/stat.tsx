@@ -21,7 +21,7 @@ export function Stat({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="bg-panel border border-line rounded-[10px] p-5 flex-1 min-w-[180px]">
+    <div className="bg-panel border border-line rounded-2xl p-5 flex-1 min-w-[180px]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-muted text-xs uppercase tracking-wide font-semibold">{label}</span>
         {Icon && <Icon size={16} className={TONE_CLASSES[tone]} strokeWidth={2} />}

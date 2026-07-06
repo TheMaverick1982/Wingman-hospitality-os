@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 const KIND_CLASSES = {
-  primary: "bg-charcoal text-white border border-charcoal disabled:bg-[#B8AF9F] disabled:border-[#B8AF9F]",
+  primary: "bg-charcoal text-white border border-charcoal disabled:bg-[#aeaeb2] disabled:border-[#aeaeb2]",
   ghost: "bg-white text-ink border border-line",
   danger: "bg-white text-brick border border-brick-tint",
 } as const;
@@ -16,7 +16,7 @@ export function Btn({ children, kind = "primary", icon: Icon, small, className, 
   return (
     <button
       {...rest}
-      className={`flex items-center gap-1.5 rounded-lg font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed ${
+      className={`flex items-center gap-1.5 rounded-full font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed ${
         small ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm"
       } ${KIND_CLASSES[kind]} ${className ?? ""}`}
     >

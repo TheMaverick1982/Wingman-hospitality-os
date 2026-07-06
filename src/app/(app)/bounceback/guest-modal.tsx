@@ -66,7 +66,7 @@ export function GuestModal({
         {[1, 2, 3, 4].map((n) => {
           const v = guest?.visits?.[n];
           return (
-            <div key={n} className="bg-white border border-line rounded-[10px] p-4 mb-3">
+            <div key={n} className="bg-white border border-line rounded-2xl p-4 mb-3">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold bg-brick text-white font-mono">
                   {n}

@@ -96,7 +96,7 @@ export function CandidateModalButton({
               {combinedTraits.map((t, i) => (
                 <div
                   key={i}
-                  className={`p-3.5 rounded-[10px] border ${t.universal ? "border-line" : "border-[#E3C687]"} bg-white`}
+                  className={`p-3.5 rounded-2xl border ${t.universal ? "border-line" : "border-[#ffcc80]"} bg-white`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
