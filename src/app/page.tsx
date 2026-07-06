@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
 import { ValueProps } from "@/components/marketing/value-props";
+import { CustomSystem } from "@/components/marketing/custom-system";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -24,6 +25,7 @@ export default async function Home() {
       <MarketingNav />
       <Hero />
       <ValueProps />
+      <CustomSystem />
       <HowItWorks />
       <CtaSection />
       <MarketingFooter />
