@@ -10,6 +10,7 @@ import {
   GraduationCap,
   AlertTriangle,
   Briefcase,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,7 +51,15 @@ export function Sidebar({ orgName, isGm }: { orgName: string; isGm: boolean }) {
         })}
       </nav>
       <div className="mt-auto pt-4 border-t border-white/10">
-        {!isGm && (
+        {isGm ? (
+          <Link
+            href="/wizard"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+          >
+            <Wand2 size={14} />
+            Setup wizard
+          </Link>
+        ) : (
           <p className="text-[#8e8e93] text-xs leading-relaxed">
             Only a General Manager can edit the training system.
           </p>
