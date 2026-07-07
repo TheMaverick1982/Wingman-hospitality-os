@@ -14,7 +14,9 @@ export default async function BounceBackPage() {
   const [{ data: guests }, locations] = await Promise.all([
     supabase
       .from("guests")
-      .select("id, name, phone, email, guest_visits(visit_number, visit_date, location_id, incentive, notes)")
+      .select(
+        "id, name, phone, email, referred_a_friend, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction)"
+      )
       .order("created_at", { ascending: false }),
     getOrgLocations(),
   ]);

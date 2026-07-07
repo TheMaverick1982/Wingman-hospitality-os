@@ -1,9 +1,12 @@
+export type VisitReaction = "wowed" | "delighted" | "neutral" | "let_down";
+
 export type GuestVisit = {
   visit_number: number;
   visit_date: string | null;
   location_id: string | null;
   incentive: string | null;
   notes: string | null;
+  reaction?: VisitReaction | null;
 };
 
 export type GuestWithVisits = {
@@ -12,6 +15,7 @@ export type GuestWithVisits = {
   phone: string;
   email: string;
   guest_visits: GuestVisit[];
+  referred_a_friend?: boolean;
 };
 
 export function stageOf(visits: GuestVisit[]): number {

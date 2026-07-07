@@ -13,6 +13,7 @@ export type GuestVisitFormValue = {
   location_id: string | null;
   incentive: string;
   notes: string;
+  reaction?: string | null;
 };
 
 export type GuestFormValue = {
@@ -21,7 +22,15 @@ export type GuestFormValue = {
   phone: string;
   email: string;
   visits: Record<number, GuestVisitFormValue | undefined>;
+  referred_a_friend?: boolean;
 };
+
+const REACTIONS: { value: string; label: string }[] = [
+  { value: "wowed", label: "Wowed" },
+  { value: "delighted", label: "Delighted" },
+  { value: "neutral", label: "Neutral" },
+  { value: "let_down", label: "Let down" },
+];
 
 const initialState: ActionState = { error: null };
 
@@ -63,6 +72,16 @@ export function GuestModal({
           <input name="email" defaultValue={guest?.email} className={inputClass} />
         </label>
 
+        <label className="flex items-center gap-2 text-sm mb-4">
+          <input
+            type="checkbox"
+            name="referred_a_friend"
+            defaultChecked={guest?.referred_a_friend}
+            className="accent-brick"
+          />
+          <span className="font-medium text-ink">This guest referred a friend</span>
+        </label>
+
         {[1, 2, 3, 4].map((n) => {
           const v = guest?.visits?.[n];
           return (
@@ -76,7 +95,7 @@ export function GuestModal({
                   {n === 1 ? " (Initial)" : n === 4 ? " (Loyal)" : ""}
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="text-xs font-medium block mb-1 text-muted">Date visited</label>
                   <input
@@ -111,6 +130,19 @@ export function GuestModal({
                     placeholder="e.g. Free Detroit Bianco"
                     className={inputClass}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1 text-muted">
+                    Reaction — how did they feel, not what they bought
+                  </label>
+                  <select name={`visit_${n}_reaction`} defaultValue={v?.reaction ?? ""} className={inputClass}>
+                    <option value="">—</option>
+                    {REACTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <label className="text-xs font-medium block mb-1 text-muted">Notes</label>
