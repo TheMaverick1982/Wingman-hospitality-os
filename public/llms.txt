@@ -1,0 +1,18 @@
+# Wingman
+
+> Wingman is the retention layer for hospitality: a culture, training, and accountability system that turns first-time restaurant guests into repeat regulars, run shift after shift by the team on the floor.
+
+Wingman gives restaurants and multi-location hospitality groups one system to define a culture statement and core values, run role-based training with a real sign-off log (Host, Server, Bartender, Chef, Manager), run daily checklists and pre-shift rituals, track every guest's visit history to spot who came back and who didn't, log service recovery and discounts with reasons attached, and coach staff before small problems become patterns. Super Admins see every location side by side; Managers see their own floor.
+
+## Pricing
+- Single location: $199/month, everything included.
+- Each additional location: +$100/month.
+- Example: 3 locations = $399/month ($199 + 2 × $100). 5 locations = $599/month ($199 + 4 × $100).
+- Billed monthly, no long-term commitment required.
+
+## Pages
+- [Homepage](https://joinwingman.app/): product overview, guest retention thesis.
+- [How It Works](https://joinwingman.app/how-it-works): the culture → training → accountability → retention loop, step by step.
+- [Pricing](https://joinwingman.app/pricing): plans, worked pricing examples, and FAQ.
+- [Book a Demo](https://joinwingman.app/book-a-demo): schedule a walkthrough.
+- [Sign up](https://joinwingman.app/signup): start a free account.
