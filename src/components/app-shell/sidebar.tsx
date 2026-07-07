@@ -55,7 +55,7 @@ export function Sidebar({
 
   return (
     <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
-      <Link href="/dashboard" className="flex items-center px-2.5 pb-6">
+      <Link href="/dashboard" aria-label="Wingman home" className="flex items-center px-2.5 pb-6">
         <WingmanLogo className="h-6 w-auto" />
       </Link>
 
