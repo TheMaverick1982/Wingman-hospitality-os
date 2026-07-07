@@ -4,14 +4,6 @@ import { RotateCcw, TrendingUp, Heart } from "lucide-react";
 export function Hero() {
   return (
     <section className="relative overflow-hidden pt-20 pb-16 px-6">
-      <div
-        aria-hidden
-        className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full opacity-30 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(circle, var(--color-brick) 0%, var(--color-olive) 45%, transparent 70%)",
-        }}
-      />
       <div className="relative max-w-4xl mx-auto text-center">
         <h1 className="font-display text-5xl sm:text-6xl font-semibold tracking-tight text-ink leading-[1.05]">
           The guest you already won
