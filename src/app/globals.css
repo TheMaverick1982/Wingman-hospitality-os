@@ -62,6 +62,31 @@
   }
 }
 
+/*
+ * The public marketing site and auth pages are built from a fixed, light-only
+ * Claude Design spec with no dark variant. Scope them back to light values so
+ * the app's dark-mode media query (meant for the authenticated product) can't
+ * collapse their light-gray/white/black section rhythm into all-black.
+ */
+.force-light {
+  --color-ink: #1a1a1a;
+  --color-paper: #f5f5f7;
+  --color-panel: #ffffff;
+  --color-charcoal: #1a1a1a;
+  --color-charcoal-2: #525252;
+  --color-brick: #0a6cff;
+  --color-brick-dark: #0757d6;
+  --color-brick-tint: #eaf1ff;
+  --color-line: #e5e5e5;
+  --color-line-strong: #d4d4d4;
+  --color-muted: #737373;
+  --color-muted-2: #a3a3a3;
+  --color-gold-tint: #fdf3e1;
+  --color-olive-tint: #e7f6ec;
+  --color-danger-tint: #fcebeb;
+  color-scheme: light;
+}
+
 ::selection {
   background: var(--color-brick-tint);
 }

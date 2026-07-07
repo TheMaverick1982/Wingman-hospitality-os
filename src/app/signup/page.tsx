@@ -19,7 +19,7 @@ export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signup, initialState);
 
   return (
-    <div className="min-h-full flex flex-col bg-white">
+    <div className="min-h-full flex flex-col force-light bg-panel">
       <div className="max-w-[1180px] w-full mx-auto px-6 sm:px-10 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="w-[26px] h-[26px] rounded-lg bg-ink flex items-center justify-center shrink-0">

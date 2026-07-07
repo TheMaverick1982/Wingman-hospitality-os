@@ -46,7 +46,7 @@ const FAQS = [
 
 export default function PricingPage() {
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
 
       <div style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F7 100%)" }}>

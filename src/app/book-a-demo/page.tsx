@@ -44,7 +44,7 @@ const TIMES = [
 
 export default function BookADemoPage() {
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 pt-10 sm:pt-12 pb-20 sm:pb-24 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-[72px] items-start">

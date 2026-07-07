@@ -56,7 +56,7 @@ const SECTIONS = [
 
 export default function PrivacyPage() {
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-16 sm:pt-[88px] pb-10">

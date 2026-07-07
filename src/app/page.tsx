@@ -24,7 +24,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
       <Hero />
       <StatsBand />
