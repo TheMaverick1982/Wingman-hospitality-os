@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
@@ -11,6 +12,10 @@ import { HowItWorks } from "@/components/marketing/how-it-works";
 import { QuoteSection } from "@/components/marketing/quote-section";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default async function Home() {
   const supabase = await createClient();

@@ -1,6 +1,27 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  title: "How It Works",
+  description:
+    "See how Wingman turns a first-time guest into a loyal regular: define your culture, train every role, run daily accountability habits, and track the guest journey visit by visit.",
+  keywords: [
+    "how restaurant retention software works",
+    "guest journey tracking",
+    "restaurant training system",
+    "hospitality accountability process",
+    "restaurant culture and values",
+  ],
+  alternates: { canonical: "/how-it-works" },
+  openGraph: {
+    title: "How Wingman Works | Wingman",
+    description:
+      "Set your standard, train your team, and keep your guests — the whole loop, from first visit to loyal regular.",
+    url: "/how-it-works",
+  },
+};
 
 const PILLARS = [
   { glyph: "◆", title: "Culture", body: "A statement and five values in your voice — the standard the whole team shares." },

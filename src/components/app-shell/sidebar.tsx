@@ -13,6 +13,7 @@ import {
   Wand2,
   BarChart3,
   Settings,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section } from "@/lib/auth/permissions";
@@ -41,11 +42,13 @@ export function Sidebar({
   fullName,
   locationName,
   repeatRate,
+  isPlatformAdmin,
 }: {
   accessRole: AccessRole;
   fullName: string;
   locationName: string;
   repeatRate: number;
+  isPlatformAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
@@ -106,6 +109,15 @@ export function Sidebar({
       </nav>
 
       <div className="mt-auto">
+        {isPlatformAdmin && (
+          <Link
+            href="/admin/organizations"
+            className="flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm font-medium text-charcoal-2 hover:bg-paper transition-colors mb-3"
+          >
+            <ShieldCheck size={19} strokeWidth={2} className="text-muted-2" />
+            Platform admin
+          </Link>
+        )}
         <div className="bg-paper rounded-[14px] p-4 mb-3">
           <div className="text-[13px] font-semibold text-ink mb-1 truncate">{locationName}</div>
           <div className="text-xs text-muted mb-3">{repeatRate}% repeat rate this month</div>

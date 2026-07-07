@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  title: "Book a Demo",
+  description:
+    "See Wingman on your own floor. Book a 30-minute walkthrough tailored to your restaurant's concept, staffing, and guest experience gaps.",
+  keywords: ["restaurant software demo", "book a demo hospitality software", "wingman demo"],
+  alternates: { canonical: "/book-a-demo" },
+  openGraph: {
+    title: "Book a Demo | Wingman",
+    description: "A 30-minute walkthrough of the real product, tailored to your concept.",
+    url: "/book-a-demo",
+  },
+};
 
 const POINTS = [
   "A tour of the real product, tailored to your concept",

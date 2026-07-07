@@ -1,5 +1,17 @@
+import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "How Wingman collects, uses, and protects your restaurant's data and your guests' data.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "Privacy Policy | Wingman",
+    description: "How Wingman collects, uses, and protects your restaurant's data and your guests' data.",
+    url: "/privacy",
+  },
+};
 
 const SECTIONS = [
   {

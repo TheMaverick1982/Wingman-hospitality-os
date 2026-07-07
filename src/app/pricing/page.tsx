@@ -1,6 +1,25 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple, per-location pricing for Wingman: $199/mo for your first location, $100/mo for each additional one. Culture, training, accountability, and retention tracking included on every plan.",
+  keywords: [
+    "restaurant software pricing",
+    "hospitality management software cost",
+    "multi-location restaurant pricing",
+    "guest retention software pricing",
+  ],
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "Pricing | Wingman",
+    description: "One standard, every location. Simple per-location pricing with everything included.",
+    url: "/pricing",
+  },
+};
 
 const SINGLE = [
   "Custom culture statement and five core values",

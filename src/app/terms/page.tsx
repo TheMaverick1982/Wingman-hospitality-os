@@ -1,5 +1,17 @@
+import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "The terms that govern your use of Wingman.",
+  alternates: { canonical: "/terms" },
+  openGraph: {
+    title: "Terms of Service | Wingman",
+    description: "The terms that govern your use of Wingman.",
+    url: "/terms",
+  },
+};
 
 const SECTIONS = [
   {

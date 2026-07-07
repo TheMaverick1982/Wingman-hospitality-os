@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getOrgLocations } from "@/lib/data/locations";
@@ -5,6 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { Topbar } from "@/components/app-shell/topbar";
+import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
@@ -26,6 +33,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)");
   const repeatRate = computeRepeatRate((guests ?? []) as GuestWithVisits[], sidebarLocation?.id ?? null);
 
+  const cookieStore = await cookies();
+  const isImpersonating = Boolean(cookieStore.get("wingman_impersonator_refresh")?.value);
+
   return (
     <div className="w-full flex min-h-full flex-1">
       <Sidebar
@@ -33,8 +43,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         fullName={profile.fullName}
         locationName={sidebarLocation?.name || profile.orgName}
         repeatRate={repeatRate}
+        isPlatformAdmin={profile.isPlatformAdmin}
       />
       <div className="flex-1 flex flex-col min-w-0">
+        {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         <Topbar
           accessRole={profile.accessRole}
           locations={locations}

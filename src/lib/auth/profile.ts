@@ -10,6 +10,7 @@ export type CurrentProfile = {
   locationName: string | null;
   orgId: string;
   orgName: string;
+  isPlatformAdmin: boolean;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -22,7 +23,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, access_role, location_id, org_id, locations(name), organizations(name)")
+    .select("full_name, access_role, location_id, org_id, is_platform_admin, locations(name), organizations(name)")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -34,6 +35,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     access_role: AccessRole;
     location_id: string | null;
     org_id: string;
+    is_platform_admin: boolean;
     locations: { name: string } | null;
     organizations: { name: string } | null;
   };
@@ -47,5 +49,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     locationName: profile.locations?.name ?? null,
     orgId: profile.org_id,
     orgName: profile.organizations?.name ?? "",
+    isPlatformAdmin: profile.is_platform_admin,
   };
 }
