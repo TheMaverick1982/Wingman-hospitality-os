@@ -55,8 +55,8 @@ export function TwoOutcomesChart() {
       </div>
 
       <div
-        className="absolute bg-white border border-[#ededed] rounded-[18px] py-5 px-[22px] w-[210px]"
-        style={{ bottom: "330px", left: "-14px", boxShadow: "0 16px 40px rgba(0,0,0,0.12)" }}
+        className="hidden sm:block absolute bg-white border border-[#ededed] rounded-[18px] py-5 px-[22px] w-[210px]"
+        style={{ bottom: "47%", left: "-14px", boxShadow: "0 16px 40px rgba(0,0,0,0.12)" }}
       >
         <div className="flex items-center justify-between mb-3">
           <span className="text-[13px] text-muted font-medium">Repeat rate</span>
