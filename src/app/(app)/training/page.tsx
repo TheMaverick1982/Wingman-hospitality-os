@@ -15,13 +15,16 @@ export default async function TrainingPage() {
     { data: standards },
     { data: trainingItems },
     { data: meta },
-    { data: menus },
+    { data: menuItems },
     { data: signoffs },
   ] = await Promise.all([
     supabase.from("department_standards").select("department, item, sort_order").order("sort_order"),
     supabase.from("department_training_items").select("department, item, sort_order").order("sort_order"),
     supabase.from("department_meta").select("department, track_label, has_menu"),
-    supabase.from("menu_references").select("department, content"),
+    supabase
+      .from("menu_items")
+      .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
+      .order("sort_order"),
     supabase
       .from("training_signoffs")
       .select("id, staff_name, department, completion_pct, occurred_on")
@@ -36,7 +39,7 @@ export default async function TrainingPage() {
       trainingItems: (trainingItems ?? []).filter((t) => t.department === d).map((t) => t.item),
       trackLabel: metaRow?.track_label ?? null,
       hasMenu: metaRow?.has_menu ?? false,
-      menuContent: menus?.find((m) => m.department === d)?.content ?? "",
+      menuItems: (menuItems ?? []).filter((m) => m.department === d),
     };
   }
 

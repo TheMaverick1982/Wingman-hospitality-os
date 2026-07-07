@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { RoleChecklist } from "./role-checklist";
-import { MenuReferenceForm } from "./menu-reference-form";
+import { MenuTrainingSection, type MenuItem } from "./menu-training-section";
 
 export type DeptData = {
   standards: string[];
   trainingItems: string[];
   trackLabel: string | null;
   hasMenu: boolean;
-  menuContent: string;
+  menuItems: MenuItem[];
 };
 
 export function TrainingClient({
@@ -40,7 +40,7 @@ export function TrainingClient({
       </div>
 
       {dept.hasMenu && (
-        <MenuReferenceForm department={activeRole} initialContent={dept.menuContent} isGm={isGm} />
+        <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} />
       )}
 
       <RoleChecklist
