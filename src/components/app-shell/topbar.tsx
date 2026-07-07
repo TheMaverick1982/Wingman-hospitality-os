@@ -3,14 +3,15 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Briefcase, MapPin } from "lucide-react";
 import type { Location } from "@/lib/data/locations";
+import { ROLE_LABELS, type AccessRole } from "@/lib/auth/permissions";
 import { logout } from "@/app/login/actions";
 
 export function Topbar({
-  isGm,
+  accessRole,
   locations,
   userLocationName,
 }: {
-  isGm: boolean;
+  accessRole: AccessRole;
   locations: Location[];
   userLocationName: string | null;
 }) {
@@ -18,6 +19,7 @@ export function Topbar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLocation = searchParams.get("location") ?? "all";
+  const isSuperAdmin = accessRole === "super_admin";
 
   function onLocationChange(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -33,12 +35,12 @@ export function Topbar({
         <div className="flex items-center gap-2 px-3 py-[7px] rounded-full border border-line hover:bg-paper transition-colors">
           <Briefcase size={13} className="text-muted-2" />
           <span className="text-[13px] font-medium text-ink">
-            {isGm ? "General Manager (all locations)" : "Store Manager"}
+            {isSuperAdmin ? `${ROLE_LABELS[accessRole]} (all locations)` : ROLE_LABELS[accessRole]}
           </span>
         </div>
         <div className="flex items-center gap-2 px-3 py-[7px] rounded-full border border-line hover:bg-paper transition-colors">
           <MapPin size={13} className="text-muted-2" />
-          {isGm ? (
+          {isSuperAdmin ? (
             <select
               value={currentLocation}
               onChange={(e) => onLocationChange(e.target.value)}

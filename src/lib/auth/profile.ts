@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import type { AccessRole } from "./permissions";
 
 export type CurrentProfile = {
   userId: string;
   email: string | undefined;
   fullName: string;
-  accessRole: "gm" | "manager";
+  accessRole: AccessRole;
   locationId: string | null;
   locationName: string | null;
   orgId: string;
@@ -30,7 +31,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   // that these embeds are single rows (many-to-one FKs) rather than arrays.
   const profile = data as unknown as {
     full_name: string;
-    access_role: "gm" | "manager";
+    access_role: AccessRole;
     location_id: string | null;
     org_id: string;
     locations: { name: string } | null;

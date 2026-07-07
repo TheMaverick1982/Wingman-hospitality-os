@@ -1,5 +1,6 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { canEditSection } from "@/lib/auth/permissions";
 import { Pill } from "@/components/ui/pill";
 import { Sparkles } from "lucide-react";
 import { MomentModalButton } from "./moment-form";
@@ -8,7 +9,7 @@ import { WeeklyFocusForm } from "./weekly-focus-form";
 export default async function CulturePage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const isGm = profile.accessRole === "gm";
+  const canEdit = canEditSection(profile.accessRole, "culture");
 
   const supabase = await createClient();
   const [{ data: org }, { data: coreValues }, { data: moments }] = await Promise.all([
@@ -29,7 +30,7 @@ export default async function CulturePage() {
             Not a poster on the wall. The beliefs that decide how every shift actually runs.
           </p>
         </div>
-        {!isGm && <Pill>View only — GM edits this</Pill>}
+        {!canEdit && <Pill>View only</Pill>}
       </div>
 
       <div className="bg-charcoal rounded-xl p-8 mb-6">
@@ -52,7 +53,7 @@ export default async function CulturePage() {
           <Sparkles size={16} className="text-[#b45309]" />
           <h3 className="font-display text-lg font-semibold text-[#b45309]">This week&apos;s pre-shift focus</h3>
         </div>
-        {isGm ? (
+        {canEdit ? (
           <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
         ) : (
           <p className="text-sm text-[#b45309]">{org?.weekly_focus || "Nothing set yet."}</p>
@@ -61,7 +62,7 @@ export default async function CulturePage() {
 
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-display text-lg font-semibold text-ink">Culture wall</h3>
-        <MomentModalButton />
+        {canEdit && <MomentModalButton />}
       </div>
       <div className="flex flex-col gap-3">
         {(moments ?? []).map((m) => (

@@ -1,5 +1,6 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData } from "./training-client";
@@ -7,7 +8,7 @@ import { TrainingClient, type DeptData } from "./training-client";
 export default async function TrainingPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const isGm = profile.accessRole === "gm";
+  const canEdit = canEditSection(profile.accessRole, "training");
 
   const supabase = await createClient();
   const [
@@ -49,10 +50,10 @@ export default async function TrainingPage() {
             each department has its own technical ground to cover too.
           </p>
         </div>
-        {!isGm && <Pill>View only — GM edits the standard</Pill>}
+        {!canEdit && <Pill>View only</Pill>}
       </div>
 
-      <TrainingClient data={data} isGm={isGm} />
+      <TrainingClient data={data} isGm={canEdit} />
 
       <h3 className="font-display text-lg font-semibold mt-8 mb-3 text-ink">Sign-off log</h3>
       <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (profile.accessRole !== "gm") redirect("/dashboard");
+  if (profile.accessRole !== "super_admin") redirect("/dashboard");
 
   return (
     <div>

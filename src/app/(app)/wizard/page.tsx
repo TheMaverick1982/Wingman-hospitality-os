@@ -5,7 +5,7 @@ import { WizardForm } from "./wizard-form";
 export default async function WizardPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (profile.accessRole !== "gm") redirect("/dashboard");
+  if (profile.accessRole !== "super_admin") redirect("/dashboard");
 
   return (
     <div className="max-w-2xl mx-auto">

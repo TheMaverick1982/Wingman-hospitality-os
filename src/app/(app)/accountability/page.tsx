@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { aggregateBy, computeSpotCheckAverages, stageOf, type Discount, type SpotCheck } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
+import { canEditSection } from "@/lib/auth/permissions";
 import { Card } from "@/components/ui/card";
 import { Pill } from "@/components/ui/pill";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -17,7 +18,8 @@ export default async function AccountabilityPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const isGm = profile.accessRole === "gm";
+  const isSuperAdmin = profile.accessRole === "super_admin";
+  const canEdit = canEditSection(profile.accessRole, "accountability");
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -76,19 +78,24 @@ export default async function AccountabilityPage({
             Standards only matter if someone checks. This is where intention becomes follow-through.
           </p>
         </div>
-        <div className="flex gap-2">
-          <DailyCheckModalButton
-            locations={locations}
-            isGm={isGm}
-            lockedLocationName={profile.locationName}
-            defaultLocationId={effectiveLocation ?? profile.locationId}
-          />
-          <SpotCheckModalButton
-            locations={locations}
-            isGm={isGm}
-            lockedLocationName={profile.locationName}
-            defaultLocationId={effectiveLocation ?? profile.locationId}
-          />
+        <div className="flex items-center gap-2">
+          {!canEdit && <Pill>View only</Pill>}
+          {canEdit && (
+            <>
+              <DailyCheckModalButton
+                locations={locations}
+                isGm={isSuperAdmin}
+                lockedLocationName={profile.locationName}
+                defaultLocationId={effectiveLocation ?? profile.locationId}
+              />
+              <SpotCheckModalButton
+                locations={locations}
+                isGm={isSuperAdmin}
+                lockedLocationName={profile.locationName}
+                defaultLocationId={effectiveLocation ?? profile.locationId}
+              />
+            </>
+          )}
         </div>
       </div>
 

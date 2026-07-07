@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getSectionAccess } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
@@ -13,7 +15,8 @@ export default async function HiringPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const isGm = profile.accessRole === "gm";
+  if (getSectionAccess(profile.accessRole, "hiring") === "none") redirect("/dashboard");
+  const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -62,7 +65,7 @@ export default async function HiringPage({
             Object.entries(traitsByDept).map(([d, traits]) => [d, traits.map((t) => t.title)])
           ) as Record<Department, string[]>}
           locations={locations}
-          isGm={isGm}
+          isGm={isSuperAdmin}
           lockedLocationName={profile.locationName}
           defaultLocationId={effectiveLocation ?? profile.locationId}
           defaultDepartment={ALL_DEPARTMENTS[1]}

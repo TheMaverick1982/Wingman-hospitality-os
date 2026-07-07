@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { getSectionAccess } from "@/lib/auth/permissions";
 import { Card } from "@/components/ui/card";
 
 export default async function ReportingPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  if (getSectionAccess(profile.accessRole, "reporting") === "none") redirect("/dashboard");
 
   return (
     <div>

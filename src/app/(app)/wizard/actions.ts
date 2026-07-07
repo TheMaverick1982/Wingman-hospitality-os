@@ -17,8 +17,8 @@ type GeneratedSystem = {
 
 export async function generateAndApplySystem(_prev: WizardState, formData: FormData): Promise<WizardState> {
   const profile = await getCurrentProfile();
-  if (!profile || profile.accessRole !== "gm") {
-    return { error: "Only a General Manager can run the setup wizard." };
+  if (!profile || profile.accessRole !== "super_admin") {
+    return { error: "Only a Super Admin can run the setup wizard." };
   }
 
   const name = String(formData.get("name") || profile.orgName).trim();

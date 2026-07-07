@@ -15,28 +15,30 @@ import {
   Settings,
   type LucideIcon,
 } from "lucide-react";
+import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section } from "@/lib/auth/permissions";
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/culture", label: "Culture", icon: Heart },
-  { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw },
-  { href: "/recovery", label: "Service Recovery", icon: Receipt },
-  { href: "/training", label: "Training & Standards", icon: GraduationCap },
-  { href: "/accountability", label: "Accountability", icon: AlertTriangle },
-  { href: "/hiring", label: "Hiring", icon: Briefcase },
-  { href: "/reporting", label: "Reporting", icon: BarChart3 },
+const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" },
+  { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
+  { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" },
+  { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
+  { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
+  { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
+  { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
+  { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
 ];
 
 export function Sidebar({
   orgName,
-  isGm,
+  accessRole,
   fullName,
 }: {
   orgName: string;
-  isGm: boolean;
+  accessRole: AccessRole;
   fullName: string;
 }) {
   const pathname = usePathname();
+  const isSuperAdmin = accessRole === "super_admin";
 
   return (
     <div className="bg-[#fafafa] w-[240px] shrink-0 border-r border-line p-[14px] pt-5 flex flex-col">
@@ -50,7 +52,7 @@ export function Sidebar({
         </div>
       </div>
       <nav className="flex flex-col gap-1">
-        {NAV.map((item) => {
+        {NAV.filter((item) => getSectionAccess(accessRole, item.section) !== "none").map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
@@ -69,7 +71,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {isGm && (
+      {isSuperAdmin && (
         <div className="flex flex-col gap-1 mt-2">
           <Link
             href="/wizard"
@@ -98,7 +100,7 @@ export function Sidebar({
         </div>
         <div className="min-w-0">
           <div className="text-ink text-[13px] font-semibold truncate">{fullName || "You"}</div>
-          <div className="text-muted-2 text-xs truncate">{isGm ? "General Manager" : "Store Manager"}</div>
+          <div className="text-muted-2 text-xs truncate">{ROLE_LABELS[accessRole]}</div>
         </div>
       </div>
     </div>

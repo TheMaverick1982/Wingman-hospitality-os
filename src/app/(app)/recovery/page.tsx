@@ -1,6 +1,7 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { canEditSection } from "@/lib/auth/permissions";
 import { aggregateBy, type Discount } from "@/lib/hospitality";
 import { Stat } from "@/components/ui/stat";
 import { Card } from "@/components/ui/card";
@@ -18,7 +19,8 @@ export default async function RecoveryPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const isGm = profile.accessRole === "gm";
+  const isSuperAdmin = profile.accessRole === "super_admin";
+  const canEdit = canEditSection(profile.accessRole, "recovery");
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -55,12 +57,17 @@ export default async function RecoveryPage({
             discounts happened.
           </p>
         </div>
-        <DiscountModalButton
-          locations={locations}
-          isGm={isGm}
-          lockedLocationName={profile.locationName}
-          defaultLocationId={effectiveLocation ?? profile.locationId}
-        />
+        <div className="flex items-center gap-2">
+          {!canEdit && <Pill>View only</Pill>}
+          {canEdit && (
+            <DiscountModalButton
+              locations={locations}
+              isGm={isSuperAdmin}
+              lockedLocationName={profile.locationName}
+              defaultLocationId={effectiveLocation ?? profile.locationId}
+            />
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 mb-6">
@@ -72,7 +79,7 @@ export default async function RecoveryPage({
           icon={Number(discountPct) > 4 ? TrendingUp : TrendingDown}
         />
         <Stat label="Total discounted" value={`$${discountTotal}`} sub={`${discounts.length} logged incidents`} tone="brick" icon={Receipt} />
-        {isGm ? (
+        {isSuperAdmin ? (
           <RevenueForm initialValue={totalRevenue} />
         ) : (
           <Stat label="Total revenue this period" value={`$${totalRevenue}`} />
@@ -133,7 +140,7 @@ export default async function RecoveryPage({
                 <td className="px-5 py-3.5 text-charcoal-2">{d.reason}</td>
                 <td className="px-5 py-3.5 text-ink font-mono">${d.amount}</td>
                 <td className="px-5 py-3.5">
-                  <DeleteIconButton id={d.id} action={deleteDiscount} />
+                  {canEdit && <DeleteIconButton id={d.id} action={deleteDiscount} />}
                 </td>
               </tr>
             ))}

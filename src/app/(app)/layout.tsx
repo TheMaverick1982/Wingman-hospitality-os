@@ -8,14 +8,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
 
-  const isGm = profile.accessRole === "gm";
-  const locations = isGm ? await getOrgLocations() : [];
+  const isSuperAdmin = profile.accessRole === "super_admin";
+  const locations = isSuperAdmin ? await getOrgLocations() : [];
 
   return (
     <div className="w-full flex min-h-full flex-1">
-      <Sidebar orgName={profile.orgName} isGm={isGm} fullName={profile.fullName} />
+      <Sidebar orgName={profile.orgName} accessRole={profile.accessRole} fullName={profile.fullName} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar isGm={isGm} locations={locations} userLocationName={profile.locationName} />
+        <Topbar
+          accessRole={profile.accessRole}
+          locations={locations}
+          userLocationName={profile.locationName}
+        />
         <div className="p-8 overflow-y-auto flex-1">
           <div className="max-w-[1400px] mx-auto">{children}</div>
         </div>
