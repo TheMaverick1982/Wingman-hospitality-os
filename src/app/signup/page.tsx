@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
+import { WingmanMark } from "@/components/ui/wingman-mark";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = { error: null, checkEmail: false };
@@ -21,10 +22,8 @@ export default function SignupPage() {
   return (
     <div className="min-h-full flex flex-col force-light bg-panel">
       <div className="max-w-[1180px] w-full mx-auto px-6 sm:px-10 py-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="w-[26px] h-[26px] rounded-lg bg-ink flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">W</span>
-          </span>
+        <Link href="/" className="flex items-center gap-2">
+          <WingmanMark className="w-[22px] h-[22px] text-brick shrink-0" />
           <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Wingman</span>
         </Link>
         <p className="text-sm text-muted">

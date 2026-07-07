@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { WingmanMark } from "@/components/ui/wingman-mark";
 
 export function MarketingNav() {
   return (
     <header className="sticky top-0 z-50 bg-white/72 backdrop-blur-2xl backdrop-saturate-[1.8] border-b border-[#ededed]">
       <div className="max-w-[1180px] mx-auto flex items-center justify-between px-10 h-[60px]">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="w-[26px] h-[26px] rounded-lg bg-ink flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">W</span>
-          </span>
+        <Link href="/" className="flex items-center gap-2">
+          <WingmanMark className="w-[22px] h-[22px] text-brick shrink-0" />
           <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Wingman</span>
         </Link>
         <nav className="flex items-center gap-6">
