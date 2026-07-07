@@ -1,53 +1,38 @@
 import Link from "next/link";
-import { RotateCcw, TrendingUp, Heart } from "lucide-react";
+import { TwoOutcomesChart } from "./two-outcomes-chart";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden pt-20 pb-16 px-6">
-      <div className="relative max-w-6xl mx-auto text-center">
-        <h1 className="font-display text-[44px] sm:text-[64px] lg:text-[76px] font-bold tracking-[-0.035em] text-ink leading-[0.98] text-balance">
-          The guest you already won
-          <br />
-          is your best marketing channel.
-        </h1>
-        <p className="mt-6 text-lg sm:text-xl text-muted max-w-2xl mx-auto leading-relaxed">
-          Wingman turns every first visit into a second, third, and tenth — with the culture,
-          training, and accountability system that makes hospitality teams actually deliver on it,
-          every single shift.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="text-base font-semibold text-white bg-charcoal rounded-full px-7 py-3.5 hover:opacity-80 transition-opacity"
-          >
-            Get started free
-          </Link>
-          <Link
-            href="/login"
-            className="text-base font-semibold text-brick rounded-full px-7 py-3.5 hover:opacity-70 transition-opacity"
-          >
-            Log in →
-          </Link>
+    <div style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F7 100%)" }}>
+      <div className="max-w-[1180px] mx-auto px-6 sm:px-10 pt-16 sm:pt-28">
+        <div className="max-w-[860px]">
+          <span className="inline-flex items-center gap-2 bg-brick-tint text-brick-dark text-[13px] font-semibold tracking-[0.01em] px-[14px] py-[6px] rounded-full mb-7">
+            <span className="w-[7px] h-[7px] rounded-full bg-brick" />
+            The retention layer for hospitality
+          </span>
+          <h1 className="font-display text-[40px] sm:text-[64px] lg:text-[88px] font-bold tracking-[-0.035em] text-ink leading-[0.98] mb-7">
+            The guest you already won is your best marketing channel.
+          </h1>
+          <p className="text-lg sm:text-[22px] leading-[1.5] text-muted max-w-[620px] mb-10">
+            Wingman turns every first visit into a second, third, and tenth — with the culture,
+            training, and accountability system that makes teams deliver on it, every single
+            shift.
+          </p>
+          <div className="flex items-center gap-4 mb-14 sm:mb-[72px]">
+            <Link
+              href="/signup"
+              className="text-[17px] font-semibold text-white bg-brick rounded-full px-[30px] py-[15px] hover:bg-brick-dark transition-colors"
+            >
+              Get Started
+            </Link>
+            <Link href="/book-a-demo" className="text-[17px] font-semibold text-brick hover:text-brick-dark transition-colors px-3 py-[15px]">
+              Book a Demo →
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <div className="relative max-w-4xl mx-auto mt-16 grid grid-cols-3 gap-4">
-        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
-          <RotateCcw size={18} className="text-brick mb-3" />
-          <div className="font-mono text-2xl font-semibold text-ink">62%</div>
-          <div className="text-xs text-muted mt-1">of first-time guests brought back for visit 2</div>
-        </div>
-        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
-          <TrendingUp size={18} className="text-olive mb-3" />
-          <div className="font-mono text-2xl font-semibold text-ink">2.1%</div>
-          <div className="text-xs text-muted mt-1">discount rate, down from a 7% baseline</div>
-        </div>
-        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
-          <Heart size={18} className="text-gold mb-3" />
-          <div className="font-mono text-2xl font-semibold text-ink">128</div>
-          <div className="text-xs text-muted mt-1">culture moments recognized this quarter</div>
-        </div>
+        <TwoOutcomesChart />
       </div>
-    </section>
+    </div>
   );
 }

@@ -2,27 +2,32 @@ import Link from "next/link";
 
 export function MarketingFooter() {
   return (
-    <footer className="bg-paper py-10 px-6 border-t border-line">
-      <div className="max-w-[1180px] mx-auto flex items-center justify-between text-sm text-muted">
-        <span>© {new Date().getFullYear()} Wingman</span>
-        <div className="flex items-center gap-6">
-          <Link href="/how-it-works" className="hover:text-ink transition-colors">
+    <footer className="border-t border-line bg-white">
+      <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-14 flex items-center justify-between flex-wrap gap-6">
+        <div className="flex items-center gap-2.5">
+          <span className="w-6 h-6 rounded-[7px] bg-ink flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-[13px]">W</span>
+          </span>
+          <span className="text-sm text-muted-2">© {new Date().getFullYear()} Wingman</span>
+        </div>
+        <div className="flex items-center gap-7 text-sm font-medium text-[#525252] flex-wrap">
+          <Link href="/how-it-works" className="text-[#525252]">
             How it works
           </Link>
-          <Link href="/pricing" className="hover:text-ink transition-colors">
+          <Link href="/pricing" className="text-[#525252]">
             Pricing
           </Link>
-          <Link href="/book-a-demo" className="hover:text-ink transition-colors">
-            Book a demo
+          <Link href="/login" className="text-[#525252]">
+            Log in
           </Link>
-          <Link href="/privacy" className="hover:text-ink transition-colors">
+          <Link href="/signup" className="text-[#525252]">
+            Get Started
+          </Link>
+          <Link href="/privacy" className="text-[#525252]">
             Privacy
           </Link>
-          <Link href="/terms" className="hover:text-ink transition-colors">
+          <Link href="/terms" className="text-[#525252]">
             Terms
-          </Link>
-          <Link href="/login" className="hover:text-ink transition-colors">
-            Log in
           </Link>
         </div>
       </div>
