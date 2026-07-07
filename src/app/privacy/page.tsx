@@ -1,80 +1,97 @@
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 
+const SECTIONS = [
+  {
+    h: "Information we collect",
+    body: [
+      "Account information you provide — your name, email, restaurant details, locations, and team members you invite.",
+      "Operational data you create in Wingman — culture statements, training standards, sign-offs, spot-checks, checklists, and guest visit records.",
+    ],
+  },
+  {
+    h: "How we use it",
+    body: [
+      "To provide and improve the service: building your training system, tracking retention, and surfacing accountability insights for your team.",
+      "To communicate with you about your account, security, and product updates. We do not sell your data.",
+    ],
+  },
+  {
+    h: "Guest data",
+    body: [
+      "Restaurants may log guest visit information to power bounce-back and retention features. That data belongs to the restaurant; Wingman processes it on their behalf and never uses it to advertise to guests.",
+    ],
+  },
+  {
+    h: "Sharing and processors",
+    body: [
+      "We share data only with trusted processors that help us run the service (hosting, payments, email), each bound by contract to protect it. We may disclose data if required by law.",
+    ],
+  },
+  {
+    h: "Data retention",
+    body: [
+      "We keep your data while your account is active. After cancellation, your data remains available to export for 30 days, then is deleted from active systems.",
+    ],
+  },
+  {
+    h: "Security",
+    body: [
+      "We use encryption in transit and at rest, role-based access controls, and least-privilege permissions. No system is perfectly secure, but protecting your data is a core priority.",
+    ],
+  },
+  {
+    h: "Your choices",
+    body: [
+      "You can access, correct, export, or delete your data from Settings, or by contacting us. Account owners control team access levels and what each role can view.",
+    ],
+  },
+  {
+    h: "Changes to this policy",
+    body: [
+      "We may update this policy as the product evolves. We will note the date of the latest change at the top and notify account owners of material updates.",
+    ],
+  },
+];
+
 export default function PrivacyPage() {
   return (
     <div className="flex-1 flex flex-col">
       <MarketingNav />
-      <section className="py-20 px-6">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="font-display text-[40px] font-bold tracking-[-0.03em] text-ink mb-2">
-            Privacy Policy
-          </h1>
-          <p className="text-sm text-muted mb-2">Last updated: July 2026</p>
-          <div className="bg-gold-tint border border-gold/30 rounded-xl p-4 mb-10 text-sm text-[#92400e]">
-            Placeholder legal copy — have an attorney review and finalize this before publishing it
-            live.
-          </div>
 
-          <div className="flex flex-col gap-10 text-[15px] text-charcoal-2 leading-relaxed">
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">1. Information we collect</h2>
-              <p>
-                We collect account information (name, email, organization and location details),
-                operational data you enter into Wingman (guest records, training sign-offs,
-                accountability logs, hiring notes), and standard usage/log data. If you use Google
-                sign-in, we receive your name, email, and profile photo from Google.
+      <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-16 sm:pt-[88px] pb-10">
+        <div className="text-[13px] font-semibold tracking-[0.08em] uppercase text-brick mb-4">Legal</div>
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
+          Privacy Policy
+        </h1>
+        <p className="text-base text-muted-2">Last updated July 7, 2026</p>
+      </div>
+
+      <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
+        <p className="text-lg leading-[1.6] text-charcoal-2 mb-10">
+          This policy explains what Wingman collects, how we use it, and the choices you have. We
+          built Wingman for hospitality teams, and we treat your restaurant&apos;s data — and your
+          guests&apos; data — as something we&apos;re trusted to protect.
+        </p>
+        {SECTIONS.map((s) => (
+          <div key={s.h} className="border-t border-line py-8">
+            <h2 className="text-2xl font-semibold tracking-[-0.015em] text-ink mb-3.5">{s.h}</h2>
+            {s.body.map((p) => (
+              <p key={p} className="text-base leading-[1.6] text-charcoal-2 mb-3.5 last:mb-0">
+                {p}
               </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">2. How we use it</h2>
-              <p>
-                We use this information to provide and improve Wingman, to send you service and
-                billing communications, and to generate the reports and analytics your account
-                requests. We do not sell your data.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">3. Data sharing</h2>
-              <p>
-                We share data with service providers who help us run Wingman — hosting (Vercel),
-                database and auth (Supabase), payment processing, and email delivery — solely to
-                provide the service. Data within your organization is only visible to members of
-                that organization, scoped by their access level.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">4. Data security</h2>
-              <p>
-                Your organization&apos;s data is isolated at the database level using row-level
-                security, so no other organization can read or write it. Data is encrypted in
-                transit.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">5. Your rights</h2>
-              <p>
-                You can request an export or deletion of your organization&apos;s data at any time
-                by contacting us. Account owners can export data for 30 days after canceling a
-                subscription.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">6. Changes to this policy</h2>
-              <p>
-                We&apos;ll post any changes to this page and update the date above. Material
-                changes will be communicated to account owners by email.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">7. Contact</h2>
-              <p>
-                Questions about this policy: <span className="text-ink font-medium">privacy@joinwingman.app</span>
-              </p>
-            </div>
+            ))}
           </div>
+        ))}
+        <div className="border-t border-line pt-8 text-base text-charcoal-2 leading-[1.6]">
+          Questions about your data? Email{" "}
+          <a href="mailto:privacy@joinwingman.app" className="text-brick font-medium">
+            privacy@joinwingman.app
+          </a>
+          .
         </div>
-      </section>
+      </div>
+
       <MarketingFooter />
     </div>
   );

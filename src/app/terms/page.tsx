@@ -1,92 +1,96 @@
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 
+const SECTIONS = [
+  {
+    h: "Using Wingman",
+    body: [
+      "You may use Wingman to run your restaurant's culture, training, accountability, and retention operations. You're responsible for your account, your team's activity, and the accuracy of the data you enter.",
+      "You agree not to misuse the service, attempt to breach its security, or use it to violate any law or the rights of others.",
+    ],
+  },
+  {
+    h: "Accounts and access levels",
+    body: [
+      "The account owner (Super Admin) controls locations, billing, and what Managers and Staff can view. You're responsible for keeping login credentials secure and for the actions taken under your account.",
+    ],
+  },
+  {
+    h: "Subscription and billing",
+    body: [
+      "Wingman is billed monthly: $199 for your first location and $100 per additional location. Adding a location increases your subscription immediately, prorated to the current period.",
+      "Fees are charged to your payment method on file at the start of each billing period and are non-refundable except where required by law.",
+    ],
+  },
+  {
+    h: "Cancellation",
+    body: [
+      "You can cancel any time from Settings → Billing. Your plan stays active through the end of the current billing period, after which access ends. Your data is available to export for 30 days following cancellation.",
+    ],
+  },
+  {
+    h: "Your content",
+    body: [
+      "You own the content and data you put into Wingman. You grant us the limited right to host and process it solely to provide the service to you.",
+    ],
+  },
+  {
+    h: "Availability",
+    body: [
+      "We work to keep Wingman available and reliable, but the service is provided \"as is\" without warranties. We aren't liable for indirect or consequential damages to the extent permitted by law.",
+    ],
+  },
+  {
+    h: "Acceptable use",
+    body: [
+      "Don't upload unlawful content, infringe others' rights, or attempt to disrupt or reverse-engineer the service. We may suspend accounts that violate these terms.",
+    ],
+  },
+  {
+    h: "Changes to these terms",
+    body: [
+      "We may update these terms as the product changes. We'll post the latest date at the top and notify account owners of material changes. Continued use means you accept the updated terms.",
+    ],
+  },
+];
+
 export default function TermsPage() {
   return (
     <div className="flex-1 flex flex-col">
       <MarketingNav />
-      <section className="py-20 px-6">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="font-display text-[40px] font-bold tracking-[-0.03em] text-ink mb-2">
-            Terms of Service
-          </h1>
-          <p className="text-sm text-muted mb-2">Last updated: July 2026</p>
-          <div className="bg-gold-tint border border-gold/30 rounded-xl p-4 mb-10 text-sm text-[#92400e]">
-            Placeholder legal copy — have an attorney review and finalize this before publishing it
-            live.
-          </div>
 
-          <div className="flex flex-col gap-10 text-[15px] text-charcoal-2 leading-relaxed">
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">1. Acceptance of terms</h2>
-              <p>
-                By creating a Wingman account, you agree to these terms on behalf of yourself and
-                the organization you represent.
+      <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-16 sm:pt-[88px] pb-10">
+        <div className="text-[13px] font-semibold tracking-[0.08em] uppercase text-brick mb-4">Legal</div>
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
+          Terms of Service
+        </h1>
+        <p className="text-base text-muted-2">Last updated July 7, 2026</p>
+      </div>
+
+      <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
+        <p className="text-lg leading-[1.6] text-charcoal-2 mb-10">
+          These terms govern your use of Wingman. By creating an account or using the service, you
+          agree to them. We&apos;ve kept them as plain as we can.
+        </p>
+        {SECTIONS.map((s) => (
+          <div key={s.h} className="border-t border-line py-8">
+            <h2 className="text-2xl font-semibold tracking-[-0.015em] text-ink mb-3.5">{s.h}</h2>
+            {s.body.map((p) => (
+              <p key={p} className="text-base leading-[1.6] text-charcoal-2 mb-3.5 last:mb-0">
+                {p}
               </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">2. Accounts & access levels</h2>
-              <p>
-                The person who creates an organization is its Super Admin. Super Admins can invite
-                Managers and Staff and assign their access level and location. Each person is
-                responsible for activity under their own login.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">3. Subscription & billing</h2>
-              <p>
-                Wingman is billed monthly per location: $199/mo for a single location, or $199/mo
-                for your first location plus $100/mo for each additional location on the
-                multi-location plan. Adding a location updates your subscription immediately,
-                prorated for the remainder of the billing cycle.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">4. Cancellation</h2>
-              <p>
-                You can cancel at any time from Settings → Billing. Your organization keeps access
-                through the end of the current billing period, and you can export your data for 30
-                days after that.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">5. Acceptable use</h2>
-              <p>
-                Don&apos;t use Wingman to store data you don&apos;t have the right to store, attempt
-                to access another organization&apos;s data, or use the service in a way that
-                disrupts it for other customers.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">6. Data ownership</h2>
-              <p>
-                You own the data you put into Wingman. We&apos;re a processor of that data on your
-                behalf, per our Privacy Policy.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">7. Limitation of liability</h2>
-              <p>
-                Wingman is provided &quot;as is.&quot; To the extent permitted by law, we are not
-                liable for indirect or consequential damages arising from use of the service.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">8. Changes</h2>
-              <p>
-                We may update these terms from time to time. Material changes will be communicated
-                to account owners by email.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-[17px] font-semibold text-ink mb-2">9. Contact</h2>
-              <p>
-                Questions about these terms: <span className="text-ink font-medium">legal@joinwingman.app</span>
-              </p>
-            </div>
+            ))}
           </div>
+        ))}
+        <div className="border-t border-line pt-8 text-base text-charcoal-2 leading-[1.6]">
+          Questions about these terms? Email{" "}
+          <a href="mailto:legal@joinwingman.app" className="text-brick font-medium">
+            legal@joinwingman.app
+          </a>
+          .
         </div>
-      </section>
+      </div>
+
       <MarketingFooter />
     </div>
   );
