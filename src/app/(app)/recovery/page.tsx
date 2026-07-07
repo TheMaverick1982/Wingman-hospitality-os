@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Pill } from "@/components/ui/pill";
 import { DeleteIconButton } from "@/components/ui/delete-icon-button";
 import { Receipt, TrendingDown, TrendingUp } from "lucide-react";
+import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { DiscountModalButton } from "./discount-modal";
 import { RevenueForm } from "./revenue-form";
 import { deleteDiscount } from "./actions";
@@ -115,6 +116,15 @@ export default async function RecoveryPage({
             ))}
           </div>
         </Card>
+      </div>
+
+      <div className="flex items-center justify-end mb-3">
+        <ExportCsvButton
+          filename="service-recovery.csv"
+          headers={["Date", "Location", "Server", "Category", "Reason", "Amount"]}
+          rows={discounts.map((d) => [d.occurred_on, locationName(d.location_id), d.server_name, d.category, d.reason, d.amount])}
+          label="Export log"
+        />
       </div>
 
       <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
