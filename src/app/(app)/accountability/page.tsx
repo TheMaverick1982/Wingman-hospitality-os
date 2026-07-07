@@ -6,9 +6,12 @@ import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { canEditSection } from "@/lib/auth/permissions";
 import { Card } from "@/components/ui/card";
 import { Pill } from "@/components/ui/pill";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Sunrise, Sparkle } from "lucide-react";
 import { DailyCheckModalButton } from "./daily-check-modal";
 import { SpotCheckModalButton } from "./spot-check-modal";
+import { PreShiftCheckModalButton } from "./pre-shift-check-modal";
+import { AmbianceCheckModalButton } from "./ambiance-check-modal";
+import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS } from "@/lib/constants";
 
 export default async function AccountabilityPage({
@@ -33,24 +36,44 @@ export default async function AccountabilityPage({
   let discountsQ = supabase.from("discounts").select("*");
   let spotChecksQ = supabase.from("spot_checks").select("*").order("occurred_on", { ascending: false });
   let dailyChecksQ = supabase.from("daily_checklists").select("*").order("occurred_on", { ascending: false });
+  let preShiftChecksQ = supabase.from("pre_shift_checks").select("*").order("occurred_on", { ascending: false }).limit(8);
+  let ambianceChecksQ = supabase.from("ambiance_checks").select("*").order("occurred_on", { ascending: false }).limit(5);
+  let coachingLogsQ = supabase.from("coaching_logs").select("*").order("created_at", { ascending: false }).limit(8);
   if (effectiveLocation) {
     discountsQ = discountsQ.eq("location_id", effectiveLocation);
     spotChecksQ = spotChecksQ.eq("location_id", effectiveLocation);
     dailyChecksQ = dailyChecksQ.eq("location_id", effectiveLocation);
+    preShiftChecksQ = preShiftChecksQ.eq("location_id", effectiveLocation);
+    ambianceChecksQ = ambianceChecksQ.eq("location_id", effectiveLocation);
+    coachingLogsQ = coachingLogsQ.eq("location_id", effectiveLocation);
   }
 
-  const [{ data: discountsData }, { data: spotChecksData }, { data: dailyChecksData }, { data: guests }, locations] =
-    await Promise.all([
-      discountsQ,
-      spotChecksQ,
-      dailyChecksQ,
-      supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
-      getOrgLocations(),
-    ]);
+  const [
+    { data: discountsData },
+    { data: spotChecksData },
+    { data: dailyChecksData },
+    { data: preShiftChecksData },
+    { data: ambianceChecksData },
+    { data: coachingLogsData },
+    { data: guests },
+    locations,
+  ] = await Promise.all([
+    discountsQ,
+    spotChecksQ,
+    dailyChecksQ,
+    preShiftChecksQ,
+    ambianceChecksQ,
+    coachingLogsQ,
+    supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
+    getOrgLocations(),
+  ]);
 
   const discounts = (discountsData ?? []) as Discount[];
   const spotChecks = (spotChecksData ?? []) as (SpotCheck & { id: string; department: string; occurred_on: string; felt_like_transaction: boolean; notes: string })[];
   const dailyChecks = dailyChecksData ?? [];
+  const preShiftChecks = preShiftChecksData ?? [];
+  const ambianceChecks = ambianceChecksData ?? [];
+  const coachingLogs = coachingLogsData ?? [];
 
   const { data: org } = await supabase.from("organizations").select("total_revenue").single();
   const discountTotal = discounts.reduce((s, d) => s + Number(d.amount), 0);
@@ -94,6 +117,18 @@ export default async function AccountabilityPage({
                 lockedLocationName={profile.locationName}
                 defaultLocationId={effectiveLocation ?? profile.locationId}
               />
+              <PreShiftCheckModalButton
+                locations={locations}
+                isGm={isSuperAdmin}
+                lockedLocationName={profile.locationName}
+                defaultLocationId={effectiveLocation ?? profile.locationId}
+              />
+              <AmbianceCheckModalButton
+                locations={locations}
+                isGm={isSuperAdmin}
+                lockedLocationName={profile.locationName}
+                defaultLocationId={effectiveLocation ?? profile.locationId}
+              />
             </>
           )}
         </div>
@@ -107,8 +142,20 @@ export default async function AccountabilityPage({
           </div>
           <div className="flex flex-col gap-2">
             {flags.map((f, i) => (
-              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "danger" ? "bg-danger-tint" : "bg-gold-tint"}`}>
+              <div
+                key={i}
+                className={`flex items-center justify-between gap-2 p-3 rounded-lg ${f.tone === "danger" ? "bg-danger-tint" : "bg-gold-tint"}`}
+              >
                 <span className={`text-sm ${f.tone === "danger" ? "text-danger" : "text-[#b45309]"}`}>{f.text}</span>
+                {canEdit && (
+                  <CoachingModalButton
+                    flagText={f.text}
+                    locations={locations}
+                    isGm={isSuperAdmin}
+                    lockedLocationName={profile.locationName}
+                    defaultLocationId={effectiveLocation ?? profile.locationId}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -153,6 +200,62 @@ export default async function AccountabilityPage({
               </div>
             ))}
             {staffAverages.length === 0 && <p className="text-sm text-muted">No spot-checks logged yet.</p>}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-3 gap-5 mb-6">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Sunrise size={16} className="text-brick" />
+            <h3 className="font-display text-lg font-semibold text-ink">Pre-shift checks</h3>
+          </div>
+          <p className="text-xs mb-4 text-muted">Readiness, logged per person before the shift.</p>
+          <div className="flex flex-col gap-2">
+            {preShiftChecks.slice(0, 5).map((pc) => {
+              const doneCount = pc.checked.filter(Boolean).length;
+              return (
+                <div key={pc.id} className="flex items-center justify-between text-sm">
+                  <span className="text-charcoal-2">{pc.staff_name}</span>
+                  <Pill dot tone={doneCount === pc.checked.length ? "olive" : "gold"}>
+                    {doneCount}/{pc.checked.length}
+                  </Pill>
+                </div>
+              );
+            })}
+            {preShiftChecks.length === 0 && <p className="text-sm text-muted">None logged yet.</p>}
+          </div>
+        </Card>
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkle size={16} className="text-brick" />
+            <h3 className="font-display text-lg font-semibold text-ink">Ambiance checks</h3>
+          </div>
+          <p className="text-xs mb-4 text-muted">First-impression score of the physical space.</p>
+          <div className="flex flex-col gap-2">
+            {ambianceChecks.slice(0, 5).map((ac) => {
+              const avg = ac.scores.reduce((a: number, b: number) => a + b, 0) / ac.scores.length;
+              return (
+                <div key={ac.id} className="flex items-center justify-between text-sm">
+                  <span className="text-charcoal-2">{locationName(ac.location_id)} · {ac.occurred_on}</span>
+                  <Pill dot tone={avg >= 4 ? "olive" : avg >= 3 ? "gold" : "danger"}>{avg.toFixed(1)}/5</Pill>
+                </div>
+              );
+            })}
+            {ambianceChecks.length === 0 && <p className="text-sm text-muted">None logged yet.</p>}
+          </div>
+        </Card>
+        <Card className="p-6">
+          <h3 className="font-display text-lg font-semibold mb-1 text-ink">Coaching log</h3>
+          <p className="text-xs mb-4 text-muted">State → Story → Strategy conversations, on record.</p>
+          <div className="flex flex-col gap-2.5">
+            {coachingLogs.slice(0, 4).map((cl) => (
+              <div key={cl.id} className="text-sm">
+                <p className="text-charcoal-2 leading-snug">{cl.flag_text}</p>
+                {cl.strategy_note && <p className="text-xs text-muted mt-0.5">→ {cl.strategy_note}</p>}
+              </div>
+            ))}
+            {coachingLogs.length === 0 && <p className="text-sm text-muted">None logged yet.</p>}
           </div>
         </Card>
       </div>

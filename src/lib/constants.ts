@@ -36,3 +36,19 @@ export const DAILY_CHECKLIST_ITEMS = [
 ] as const;
 
 export const RECOMMENDATION_OPTIONS = ["Strong fit", "Fit", "Unsure", "Not a fit"] as const;
+
+export const PRE_SHIFT_ITEMS = [
+  "Uniform and appearance are shift-ready",
+  "Know tonight's specials and any 86'd items",
+  "Know today's reservations and any large parties",
+  "Reviewed yesterday's guest feedback or flags",
+  "Ready to set the tone — positive energy at the door",
+] as const;
+
+export const AMBIANCE_DIMENSIONS = [
+  "Cleanliness (floors, tables, restrooms)",
+  "Music volume & selection",
+  "Lighting",
+  "Host stand / entrance first impression",
+  "Temperature comfort",
+] as const;
