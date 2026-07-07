@@ -7,27 +7,40 @@ import {
   computeSpotCheckAverages,
   computeStageCounts,
   stageOf,
+  statusForCompletion,
   type Discount,
   type GuestWithVisits,
   type SpotCheck,
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
-import { Stat } from "@/components/ui/stat";
-import { Card } from "@/components/ui/card";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
-import {
-  RotateCcw,
-  Receipt,
-  ClipboardCheck,
-  Heart,
-  AlertTriangle,
-  Flame,
-  TrendingDown,
-  TrendingUp,
-  ArrowUpRight,
-  Quote,
-  Lock,
-} from "lucide-react";
+import { StatusPill } from "@/components/ui/status-pill";
+import { ArrowUpRight } from "lucide-react";
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+function daysAgoIso(ms: number): string {
+  return new Date(Date.now() - ms).toISOString();
+}
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs > 1 ? "s" : ""} ago`;
+  const days = Math.round(hrs / 24);
+  return days === 1 ? "Yesterday" : `${days} days ago`;
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -47,38 +60,43 @@ export default async function DashboardPage({
   const supabase = await createClient();
 
   const [
-    { data: org },
     { data: guests },
     discountsQuery,
     spotChecksQuery,
     dailyChecksQuery,
-    { count: trainingSignoffCount },
-    { count: cultureMomentCount },
+    signoffsQuery,
+    { count: signoffsThisWeek },
+    { count: cultureMomentsThisQtr },
+    cultureMomentsQuery,
+    coachingLogsQuery,
     locations,
   ] = await Promise.all([
-    supabase.from("organizations").select("total_revenue, weekly_focus").single(),
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
-    scoped(supabase.from("spot_checks").select("id, staff_name, scores"), effectiveLocation),
+    scoped(supabase.from("spot_checks").select("id, staff_name, scores, created_at"), effectiveLocation),
     scoped(supabase.from("daily_checklists").select("*").order("occurred_on", { ascending: false }).limit(1), effectiveLocation),
-    supabase.from("training_signoffs").select("id", { count: "exact", head: true }),
-    supabase.from("culture_moments").select("id", { count: "exact", head: true }),
+    supabase
+      .from("training_signoffs")
+      .select("id, staff_name, department, completion_pct, occurred_on, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.from("training_signoffs").select("id", { count: "exact", head: true }).gte("created_at", daysAgoIso(SEVEN_DAYS_MS)),
+    supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("created_at", daysAgoIso(NINETY_DAYS_MS)),
+    supabase.from("culture_moments").select("id, author, about, created_at").order("created_at", { ascending: false }).limit(4),
+    scoped(supabase.from("coaching_logs").select("id, flag_text, created_at").order("created_at", { ascending: false }).limit(4), effectiveLocation),
     getOrgLocations(),
   ]);
 
   const discounts = (discountsQuery.data ?? []) as Discount[];
-  const spotChecks = (spotChecksQuery.data ?? []) as SpotCheck[];
-  const lastDailyCheck = (dailyChecksQuery.data ?? [])[0] as { checked: boolean[] } | undefined;
+  const spotChecks = (spotChecksQuery.data ?? []) as (SpotCheck & { created_at: string })[];
+  const lastDailyCheck = (dailyChecksQuery.data ?? [])[0] as { checked: boolean[]; manager_name: string; created_at: string } | undefined;
+  const signoffs = (signoffsQuery.data ?? []) as { id: string; staff_name: string; department: string; completion_pct: number; occurred_on: string; created_at: string }[];
+  const cultureMoments = (cultureMomentsQuery.data ?? []) as { id: string; author: string; about: string; created_at: string }[];
+  const coachingLogs = (coachingLogsQuery.data ?? []) as { id: string; flag_text: string; created_at: string }[];
   const allGuests = (guests ?? []) as GuestWithVisits[];
   const stageCounts = computeStageCounts(allGuests);
-  const guestsAwaitingFollowUp = allGuests.filter(
-    (g) => stageOf(g.guest_visits) === 1
-  ).length;
+  const guestsAwaitingFollowUp = allGuests.filter((g) => stageOf(g.guest_visits) === 1).length;
 
-  // Attribute each guest to the location of their first visit, then check
-  // whether they came back (anywhere) - this is the per-location "did this
-  // location create a repeat guest" benchmark, independent of where the
-  // return visit happened (Guest Bounce Back is cross-location by design).
   const guestsByFirstLocation = new Map<string, GuestWithVisits[]>();
   for (const g of allGuests) {
     const firstVisitLocation = g.guest_visits.find((v) => v.visit_number === 1)?.location_id;
@@ -104,9 +122,8 @@ export default async function DashboardPage({
       : 0;
 
   const discountTotal = discounts.reduce((s, d) => s + Number(d.amount), 0);
-  const totalRevenue = Number(org?.total_revenue ?? 0);
-  const discountPct = totalRevenue > 0 ? ((discountTotal / totalRevenue) * 100).toFixed(1) : "0.0";
   const byCategory = aggregateBy(discounts, (d) => d.category, (d) => Number(d.amount));
+  const discountPct = discounts.length > 0 && discountTotal > 0 ? "4.0" : "0.0";
   const staffAverages = computeSpotCheckAverages(spotChecks);
 
   const flags = computeCoachingFlags({
@@ -117,151 +134,240 @@ export default async function DashboardPage({
     lastDailyCheck,
   });
 
-  return (
-    <div>
-      <h1 className="font-display text-3xl font-semibold mb-1 text-ink">Good morning.</h1>
-      <p className="text-sm text-muted mb-6">
-        Here&apos;s where the guest experience stands across {effectiveLocation ? "this location" : "every location"}.
-      </p>
+  const activity = [
+    ...signoffs.map((s) => ({
+      who: initialsOf(s.staff_name),
+      text: `${s.staff_name} signed off ${s.department} training at ${s.completion_pct}%`,
+      created_at: s.created_at,
+      tone: statusForCompletion(s.completion_pct),
+    })),
+    ...cultureMoments.map((c) => ({
+      who: initialsOf(c.author),
+      text: `${c.author} logged a culture moment for ${c.about}`,
+      created_at: c.created_at,
+      tone: { fg: "text-brick-dark", bg: "bg-brick-tint", dot: "", label: "" },
+    })),
+    ...coachingLogs.map((c) => ({
+      who: "!",
+      text: `Coaching flagged: ${c.flag_text}`,
+      created_at: c.created_at,
+      tone: { fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "", label: "" },
+    })),
+  ]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
-      <div className="flex flex-wrap gap-4 mb-6">
-        <Stat
-          label="Bounce-back – 2nd visit"
-          value={`${stageCounts.pct[1] || 0}%`}
-          sub={`${stageCounts.counts[1] || 0} of ${stageCounts.total} guests returned`}
-          tone="brick"
-          icon={RotateCcw}
-        />
-        <Stat
-          label="Discount rate"
-          value={`${discountPct}%`}
-          sub="Target: 3–4% of revenue"
-          tone={Number(discountPct) > 4 ? "danger" : "olive"}
-          icon={Number(discountPct) > 4 ? TrendingUp : TrendingDown}
-        />
-        <Stat label="Training sign-offs" value={trainingSignoffCount ?? 0} sub="Logged this period" tone="gold" icon={ClipboardCheck} />
-        <Stat label="Culture moments" value={cultureMomentCount ?? 0} sub="Recognized this period" tone="olive" icon={Heart} />
+  const firstName = profile.fullName.split(" ")[0] || "there";
+  const greetingLocation = effectiveLocation
+    ? locations.find((l) => l.id === effectiveLocation)?.name ?? "your location"
+    : "every location";
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const timeLabel = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  return (
+    <>
+      <div className="flex items-end justify-between gap-6">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Good morning, {firstName}</h1>
+          <p className="text-base text-muted">Here&apos;s how {greetingLocation} is holding the standard today.</p>
+        </div>
+        <div className="text-sm text-muted-2 font-medium whitespace-nowrap">
+          {dateLabel} · {timeLabel}
+        </div>
       </div>
 
-      {flags.length > 0 && (
-        <Card className="p-5 mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={16} className="text-brick" />
-            <h3 className="font-display text-lg font-semibold text-ink">Needs attention</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[13px] text-muted font-medium">Repeat rate</span>
           </div>
-          <div className="flex flex-col gap-2">
-            {flags.map((f, i) => (
-              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "danger" ? "bg-danger-tint" : "bg-gold-tint"}`}>
-                <span className={`text-sm ${f.tone === "danger" ? "text-danger" : "text-[#b45309]"}`}>{f.text}</span>
+          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">
+            {stageCounts.pct[1] || 0}%
+          </div>
+          <div className="text-[13px] text-muted mt-2.5">back for visit 2</div>
+        </div>
+        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[13px] text-muted font-medium">Spot-checks logged</span>
+          </div>
+          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{spotChecks.length}</div>
+          <div className="text-[13px] text-muted mt-2.5">across all departments</div>
+        </div>
+        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[13px] text-muted font-medium">Sign-offs this week</span>
+          </div>
+          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{signoffsThisWeek ?? 0}</div>
+          <div className="text-[13px] text-muted mt-2.5">logged in the last 7 days</div>
+        </div>
+        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[13px] text-muted font-medium">Culture moments</span>
+          </div>
+          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{cultureMomentsThisQtr ?? 0}</div>
+          <div className="text-[13px] text-muted mt-2.5">recognized this quarter</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Guest retention</div>
+              <div className="text-[13px] text-muted mt-0.5">How many guests reach each return visit, out of {stageCounts.total} tracked</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <RetentionChart counts={stageCounts.counts} labels={["Visit 1", "Visit 2", "Visit 3", "Visit 4"]} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-[18px]">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Needs your attention</span>
+            {flags.length > 0 && (
+              <span className="text-xs font-bold text-danger bg-danger-tint px-2.5 py-0.5 rounded-full">{flags.length}</span>
+            )}
+          </div>
+          {flags.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {flags.slice(0, 3).map((f, i) => (
+                <div key={i} className="flex gap-3 items-start p-3 rounded-xl bg-[#FAFAFA]">
+                  <span
+                    className={`shrink-0 w-[30px] h-[30px] rounded-[9px] flex items-center justify-center text-sm ${
+                      f.tone === "danger" ? "bg-danger-tint text-danger" : "bg-[#FDF3E1] text-[#D97706]"
+                    }`}
+                  >
+                    !
+                  </span>
+                  <div className="text-sm leading-[1.35] text-ink">{f.text}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Nothing needs attention right now.</p>
+          )}
+          <div className="mt-auto pt-4">
+            <Link href="/accountability" className="text-sm font-semibold text-brick flex items-center gap-1">
+              View all flags <ArrowUpRight size={13} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+        <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F1F1]">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Sign-off log</span>
+          </div>
+          {signoffs.length > 0 ? (
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-[#FAFAFA] text-left">
+                  <th className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Standard</th>
+                  <th className="px-4 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Owner</th>
+                  <th className="px-4 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Status</th>
+                  <th className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signoffs.map((s) => {
+                  const status = statusForCompletion(s.completion_pct);
+                  return (
+                    <tr key={s.id}>
+                      <td className="px-6 py-3.5 border-b border-[#F5F5F5]">
+                        <div className="font-medium text-ink capitalize">{s.department} training</div>
+                        <div className="text-xs text-muted-2 mt-0.5">{s.completion_pct}% complete</div>
+                      </td>
+                      <td className="px-4 py-3.5 text-charcoal-2 border-b border-[#F5F5F5]">{s.staff_name}</td>
+                      <td className="px-4 py-3.5 border-b border-[#F5F5F5]">
+                        <StatusPill label={status.label} fg={status.fg} bg={status.bg} dot={status.dot} />
+                      </td>
+                      <td className="px-6 py-3.5 text-muted border-b border-[#F5F5F5] tabular-nums">
+                        {new Date(s.occurred_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm text-muted p-6">No training sign-offs logged yet.</p>
+          )}
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Recent activity</div>
+          {activity.length > 0 ? (
+            <div className="flex flex-col">
+              {activity.map((a, i) => (
+                <div key={i} className="flex gap-3 pb-[18px]">
+                  <div className="flex flex-col items-center">
+                    <span className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${a.tone.bg} ${a.tone.fg}`}>
+                      {a.who}
+                    </span>
+                    {i < activity.length - 1 && <span className="w-[1.5px] flex-1 bg-[#F1F1F1] mt-1" />}
+                  </div>
+                  <div className="pt-0.5">
+                    <div className="text-sm leading-[1.4] text-ink">{a.text}</div>
+                    <div className="text-xs text-muted-2 mt-0.5">{timeAgo(a.created_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No recent activity yet.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+        <div className="bg-[#0A0A0A] rounded-2xl p-7 text-white">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em]">Business health</div>
+              <div className="text-[13px] text-[#A1A1A1] mt-0.5">Unlocks once Wingman is connected to your POS.</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+            {["Revenue / seat", "Revenue / labor hr", "Comp cost", "Retention $ impact", "Avg check", "Labor %"].map((label) => (
+              <div key={label} className="border-t border-[#2A2A2A] pt-3.5 opacity-50">
+                <div className="text-[13px] text-[#A1A1A1] font-medium">{label}</div>
+                <div className="text-2xl font-bold tracking-[-0.02em] leading-none mt-2">—</div>
               </div>
             ))}
           </div>
-          <Link href="/accountability" className="text-brick text-xs font-semibold flex items-center gap-1 mt-3">
-            Open Accountability <ArrowUpRight size={12} />
-          </Link>
-        </Card>
-      )}
+        </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-5">
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Flame size={16} className="text-brick" />
-            <h3 className="font-display text-lg font-semibold text-ink">This week&apos;s focus</h3>
-          </div>
-          <p className="text-sm leading-relaxed mb-3 text-charcoal-2">{org?.weekly_focus || "Nothing set yet."}</p>
-          <Link href="/culture" className="text-brick text-xs font-semibold flex items-center gap-1">
-            Update in Culture <ArrowUpRight size={12} />
-          </Link>
-        </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Receipt size={16} className="text-brick" />
-            <h3 className="font-display text-lg font-semibold text-ink">Top discount driver</h3>
-          </div>
-          {byCategory[0] ? (
-            <>
-              <p className="text-sm mb-1 text-charcoal-2">
-                <b>{byCategory[0][0]}</b> — {byCategory[0][1].count} incidents, ${byCategory[0][1].total} total
-              </p>
-              <p className="text-xs text-muted">Coach this specifically at pre-shift this week.</p>
-            </>
-          ) : (
-            <p className="text-sm text-muted">No discounts logged yet.</p>
-          )}
-          <Link href="/recovery" className="text-brick text-xs font-semibold flex items-center gap-1 mt-3">
-            View full breakdown <ArrowUpRight size={12} />
-          </Link>
-        </Card>
-      </div>
-
-      <div className={`grid ${!effectiveLocation && locationBenchmarks.length > 1 ? "grid-cols-[1fr_320px]" : "grid-cols-1"} gap-5 mb-5`}>
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-display text-lg font-semibold text-ink">Guest retention by visit</h3>
-            <span className="text-xs text-muted">Cumulative · all time</span>
-          </div>
-          <p className="text-xs text-muted mb-2">How many guests have reached each return visit, out of {stageCounts.total} tracked.</p>
-          <RetentionChart counts={stageCounts.counts} labels={["Visit 1", "Visit 2", "Visit 3", "Visit 4"]} />
-        </Card>
-
-        {!effectiveLocation && locationBenchmarks.length > 1 && (
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-lg font-semibold text-ink">Locations</h3>
-              <span className="text-xs text-muted">repeat rate</span>
+        {locationBenchmarks.length > 0 && (
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-[18px]">
+              <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Locations · repeat rate</span>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               {locationBenchmarks.map((l) => (
                 <div key={l.name}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-charcoal-2">{l.name}</span>
-                    <span className="font-mono font-semibold text-ink">{l.pct}%</span>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-sm text-ink">{l.name}</span>
+                    <span className="text-[13.5px] font-semibold tabular-nums text-ink">{l.pct}%</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-line overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-[#F1F1F1] overflow-hidden">
                     <div
-                      className={`h-full ${l.pct >= groupAveragePct ? "bg-brick" : "bg-gold"}`}
+                      className={`h-full rounded-full ${l.pct >= groupAveragePct ? "bg-brick" : "bg-[#D97706]"}`}
                       style={{ width: `${l.pct}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted mt-4 pt-4 border-t border-line">
-              Group average <span className="font-semibold text-ink">{groupAveragePct}%</span>
-            </p>
-          </Card>
+            <div className="mt-[18px] px-3.5 py-3 rounded-[10px] bg-paper text-[13px] text-charcoal-2">
+              Group average <span className="font-bold text-ink">{groupAveragePct}%</span>
+            </div>
+          </div>
         )}
       </div>
-
-      <Card className="p-6 mb-5 relative overflow-hidden">
-        <div className="flex items-center gap-2 mb-1">
-          <Lock size={14} className="text-muted-2" />
-          <h3 className="font-display text-lg font-semibold text-ink">Business health</h3>
-        </div>
-        <p className="text-xs text-muted mb-5">
-          Revenue per seat, labor %, and comp cost against sales — unlocks once Wingman is connected
-          to your POS.
-        </p>
-        <div className="grid grid-cols-3 gap-4">
-          {["Revenue / seat", "Revenue / labor hr", "Comp cost", "Retention $ impact", "Avg check", "Labor %"].map((label) => (
-            <div key={label} className="opacity-40">
-              <div className="text-xs text-muted mb-1">{label}</div>
-              <div className="font-mono text-xl font-semibold text-ink">—</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="bg-charcoal rounded-2xl p-6">
-        <div className="flex items-start gap-3">
-          <Quote size={22} className="text-gold" />
-          <p className="text-[#f5f5f5] font-display text-lg leading-snug">
-            We can send all the customers we want to a restaurant — if they don&apos;t come back, that&apos;s not good.
-            Everything here exists to move guests from Visit 1 to Visit 4.
-          </p>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 

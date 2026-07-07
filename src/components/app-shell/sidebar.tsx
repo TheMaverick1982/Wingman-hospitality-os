@@ -28,79 +28,102 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[]
   { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
 ];
 
+function initialsOf(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 export function Sidebar({
-  orgName,
   accessRole,
   fullName,
+  locationName,
+  repeatRate,
 }: {
-  orgName: string;
   accessRole: AccessRole;
   fullName: string;
+  locationName: string;
+  repeatRate: number;
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
 
   return (
-    <div className="bg-[#fafafa] w-[240px] shrink-0 border-r border-line p-[14px] pt-5 flex flex-col">
-      <div className="flex items-center gap-2.5 px-2 mb-8">
-        <div className="w-[26px] h-[26px] rounded-lg bg-ink flex items-center justify-center shrink-0">
-          <span className="text-white font-semibold text-xs">W</span>
+    <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
+      <Link href="/dashboard" className="flex items-center gap-2.5 px-2.5 pb-6">
+        <div className="w-7 h-7 rounded-lg bg-ink flex items-center justify-center shrink-0">
+          <span className="text-white font-bold text-[15px]">W</span>
         </div>
-        <div className="min-w-0">
-          <div className="text-ink font-semibold text-sm leading-tight truncate">Wingman</div>
-          <div className="text-muted text-[11px] tracking-wide uppercase truncate">{orgName}</div>
-        </div>
-      </div>
-      <nav className="flex flex-col gap-1">
+        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Wingman</span>
+      </Link>
+
+      <nav className="flex flex-col gap-0.5">
         {NAV.filter((item) => getSectionAccess(accessRole, item.section) !== "none").map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-[11px] px-3 py-[9px] rounded-[9px] text-sm transition-colors ${
-                active
-                  ? "bg-brick text-white font-semibold"
-                  : "text-charcoal-2 font-medium hover:bg-[#efefef]"
+              className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+                active ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
               }`}
             >
-              <item.icon size={16} strokeWidth={2} className={active ? "text-white" : "text-muted-2"} />
+              <item.icon size={19} strokeWidth={2} className={active ? "text-white/90" : "text-muted-2"} />
               {item.label}
             </Link>
           );
         })}
-      </nav>
 
-      {isSuperAdmin && (
-        <div className="flex flex-col gap-1 mt-2">
+        {isSuperAdmin && (
           <Link
             href="/wizard"
-            className="flex items-center gap-[11px] px-3 py-[9px] rounded-[9px] text-sm font-medium text-charcoal-2 hover:bg-[#efefef] transition-colors"
-          >
-            <Wand2 size={16} className="text-muted-2" />
-            Setup wizard
-          </Link>
-          <Link
-            href="/settings"
-            className={`flex items-center gap-[11px] px-3 py-[9px] rounded-[9px] text-sm transition-colors ${
-              pathname.startsWith("/settings")
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+              pathname.startsWith("/wizard")
                 ? "bg-brick text-white font-semibold"
-                : "text-charcoal-2 font-medium hover:bg-[#efefef]"
+                : "text-charcoal-2 font-medium hover:bg-paper"
             }`}
           >
-            <Settings size={16} className={pathname.startsWith("/settings") ? "text-white" : "text-muted-2"} />
-            Settings
+            <Wand2 size={19} strokeWidth={2} className={pathname.startsWith("/wizard") ? "text-white/90" : "text-muted-2"} />
+            Setup wizard
           </Link>
-        </div>
-      )}
+        )}
 
-      <div className="mt-auto pt-4 border-t border-line flex items-center gap-2.5 px-2">
-        <div className="w-[30px] h-[30px] rounded-full bg-ink flex items-center justify-center shrink-0">
-          <span className="text-white text-xs font-semibold">{fullName.charAt(0).toUpperCase() || "?"}</span>
+        {isSuperAdmin && (
+          <>
+            <div className="h-px bg-line my-2 mx-2" />
+            <Link
+              href="/settings"
+              className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+                pathname.startsWith("/settings")
+                  ? "bg-brick text-white font-semibold"
+                  : "text-charcoal-2 font-medium hover:bg-paper"
+              }`}
+            >
+              <Settings size={19} strokeWidth={2} className={pathname.startsWith("/settings") ? "text-white/90" : "text-muted-2"} />
+              Settings
+            </Link>
+          </>
+        )}
+      </nav>
+
+      <div className="mt-auto">
+        <div className="bg-paper rounded-[14px] p-4 mb-3">
+          <div className="text-[13px] font-semibold text-ink mb-1 truncate">{locationName}</div>
+          <div className="text-xs text-muted mb-3">{repeatRate}% repeat rate this month</div>
+          <div className="h-1.5 rounded-full bg-line overflow-hidden">
+            <div className="h-full rounded-full bg-brick" style={{ width: `${Math.min(repeatRate, 100)}%` }} />
+          </div>
         </div>
-        <div className="min-w-0">
-          <div className="text-ink text-[13px] font-semibold truncate">{fullName || "You"}</div>
-          <div className="text-muted-2 text-xs truncate">{ROLE_LABELS[accessRole]}</div>
+        <div className="flex items-center gap-2.5 px-2.5 py-2 border-t border-line">
+          <div className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center shrink-0 text-[13px] font-semibold">
+            {initialsOf(fullName)}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-[13px] font-semibold text-ink truncate">{fullName || "You"}</div>
+            <div className="text-xs text-muted-2 truncate">{ROLE_LABELS[accessRole]}</div>
+          </div>
+          <span className="text-muted-2 text-sm">⌄</span>
         </div>
       </div>
     </div>

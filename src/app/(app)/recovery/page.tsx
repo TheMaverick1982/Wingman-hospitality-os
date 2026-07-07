@@ -3,15 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection } from "@/lib/auth/permissions";
 import { aggregateBy, type Discount } from "@/lib/hospitality";
-import { Stat } from "@/components/ui/stat";
-import { Card } from "@/components/ui/card";
+import { StatTile } from "@/components/ui/stat-tile";
 import { Pill } from "@/components/ui/pill";
 import { DeleteIconButton } from "@/components/ui/delete-icon-button";
-import { Receipt, TrendingDown, TrendingUp } from "lucide-react";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { DiscountModalButton } from "./discount-modal";
 import { RevenueForm } from "./revenue-form";
 import { deleteDiscount } from "./actions";
+
+const CATEGORY_COLORS = ["bg-[#DC2626]", "bg-[#D97706]", "bg-[#D97706]", "bg-brick", "bg-muted-2"];
 
 export default async function RecoveryPage({
   searchParams,
@@ -46,19 +46,19 @@ export default async function RecoveryPage({
   const discountPct = totalRevenue > 0 ? ((discountTotal / totalRevenue) * 100).toFixed(1) : "0.0";
   const byCategory = aggregateBy(discounts, (d) => d.category, (d) => Number(d.amount));
   const byServer = aggregateBy(discounts, (d) => d.server_name, (d) => Number(d.amount));
+  const maxCategoryTotal = byCategory.length > 0 ? byCategory[0][1].total : 1;
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-6">
+    <>
+      <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold mb-1 text-ink">Service Recovery</h1>
-          <p className="text-sm text-muted">
-            We don&apos;t rely on discounts to fix experiences. We fix the experience — and track why
-            discounts happened.
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Every comp has a reason</h1>
+          <p className="text-base text-muted">
+            Tag every discount and recovery so patterns surface instead of hiding in the POS.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && (
             <DiscountModalButton
@@ -71,54 +71,66 @@ export default async function RecoveryPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-6">
-        <Stat
-          label="Discount rate this period"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile label="Recovery spend" value={`$${discountTotal}`} sub="this period" />
+        <StatTile label="Comps logged" value={discounts.length} sub="all with a reason" />
+        <StatTile
+          label="Discount rate"
           value={`${discountPct}%`}
-          sub="Target 3–4%"
-          tone={Number(discountPct) > 4 ? "danger" : "olive"}
-          icon={Number(discountPct) > 4 ? TrendingUp : TrendingDown}
+          sub="target 3–4% of revenue"
+          trend={Number(discountPct) > 4 ? "Above target" : "On target"}
+          trendTone={Number(discountPct) > 4 ? "down" : "up"}
         />
-        <Stat label="Total discounted" value={`$${discountTotal}`} sub={`${discounts.length} logged incidents`} tone="brick" icon={Receipt} />
         {isSuperAdmin ? (
           <RevenueForm initialValue={totalRevenue} />
         ) : (
-          <Stat label="Total revenue this period" value={`$${totalRevenue}`} />
+          <StatTile label="Total revenue" value={`$${totalRevenue}`} sub="this period" />
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-6">
-        <Card className="p-6">
-          <h3 className="font-display text-lg font-semibold mb-3 text-ink">Top issues</h3>
-          <div className="flex flex-col gap-2.5">
-            {byCategory.length === 0 && <p className="text-sm text-muted">Nothing logged yet.</p>}
-            {byCategory.map(([cat, v]) => (
-              <div key={cat} className="flex items-center justify-between text-sm">
-                <span className="text-charcoal-2">{cat}</span>
-                <span className="font-mono text-muted">
-                  {v.count} · ${v.total}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-        <Card className="p-6">
-          <h3 className="font-display text-lg font-semibold mb-3 text-ink">By staff member</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-5">
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Top reasons</div>
+          <div className="text-[13px] text-muted mb-6">This period, by comp value.</div>
+          {byCategory.length === 0 ? (
+            <p className="text-sm text-muted">Nothing logged yet.</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {byCategory.map(([cat, v], i) => (
+                <div key={cat}>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-sm font-medium text-ink">{cat}</span>
+                    <span className="text-[13px] font-semibold text-muted tabular-nums">${v.total}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-[#F1F1F1] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
+                      style={{ width: `${Math.round((v.total / maxCategoryTotal) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">By staff member</div>
           <div className="flex flex-col gap-2.5">
             {byServer.length === 0 && <p className="text-sm text-muted">Nothing logged yet.</p>}
             {byServer.map(([name, v]) => (
               <div key={name} className="flex items-center justify-between text-sm">
                 <span className="text-charcoal-2">{name}</span>
-                <span className="font-mono text-muted">
+                <span className="tabular-nums text-muted">
                   {v.count} · ${v.total}
                 </span>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
 
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center justify-end">
         <ExportCsvButton
           filename="service-recovery.csv"
           headers={["Date", "Location", "Server", "Category", "Reason", "Amount"]}
@@ -127,10 +139,10 @@ export default async function RecoveryPage({
         />
       </div>
 
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#fafafa] border-b border-line">
+            <tr className="bg-[#FAFAFA] border-b border-line">
               {["Date", "Location", "Server", "Category", "Reason", "Amount", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -140,7 +152,7 @@ export default async function RecoveryPage({
           </thead>
           <tbody>
             {discounts.map((d) => (
-              <tr key={d.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
+              <tr key={d.id} className="border-b border-line hover:bg-[#FAFAFA] transition-colors">
                 <td className="px-5 py-3.5 text-muted">{d.occurred_on}</td>
                 <td className="px-5 py-3.5 text-muted">{locationName(d.location_id)}</td>
                 <td className="px-5 py-3.5 text-ink">{d.server_name}</td>
@@ -148,10 +160,8 @@ export default async function RecoveryPage({
                   <Pill tone="brick">{d.category}</Pill>
                 </td>
                 <td className="px-5 py-3.5 text-charcoal-2">{d.reason}</td>
-                <td className="px-5 py-3.5 text-ink font-mono">${d.amount}</td>
-                <td className="px-5 py-3.5">
-                  {canEdit && <DeleteIconButton id={d.id} action={deleteDiscount} />}
-                </td>
+                <td className="px-5 py-3.5 text-ink font-semibold tabular-nums">${d.amount}</td>
+                <td className="px-5 py-3.5">{canEdit && <DeleteIconButton id={d.id} action={deleteDiscount} />}</td>
               </tr>
             ))}
             {discounts.length === 0 && (
@@ -164,6 +174,6 @@ export default async function RecoveryPage({
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }

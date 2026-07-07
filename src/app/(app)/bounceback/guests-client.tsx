@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search, Download, Heart, Megaphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, Megaphone } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
-import { Pill } from "@/components/ui/pill";
-import { StageCard } from "@/components/ui/stage-card";
+import { StatTile } from "@/components/ui/stat-tile";
+import { StatusPill } from "@/components/ui/status-pill";
+import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { computeStageCounts, stageOf, visitAt, type GuestWithVisits } from "@/lib/hospitality";
 import type { Location } from "@/lib/data/locations";
 import { GuestModal, type GuestFormValue } from "./guest-modal";
@@ -12,6 +13,17 @@ import { deleteGuest } from "./actions";
 import { downloadCsv } from "@/lib/csv";
 
 type Guest = GuestWithVisits & { phone: string; email: string; name: string };
+
+const REACTION_META = [
+  { key: "wowed" as const, label: "Wowed", desc: "a story worth telling", color: "#16A34A" },
+  { key: "delighted" as const, label: "Delighted", desc: "noticeably cared for", color: "#0A6CFF" },
+  { key: "neutral" as const, label: "Neutral", desc: "served, not moved", color: "#D4D4D4" },
+  { key: "let_down" as const, label: "Let down", desc: "recovery needed", color: "#DC2626" },
+];
+
+function daysSince(dateStr: string, now: number): number {
+  return Math.floor((now - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
 
 export function GuestsClient({
   guests,
@@ -24,16 +36,14 @@ export function GuestsClient({
 }) {
   const [search, setSearch] = useState("");
   const [modalGuest, setModalGuest] = useState<GuestFormValue | null | undefined>(undefined);
+  const [now] = useState(() => Date.now());
 
   const stageCounts = useMemo(() => computeStageCounts(guests), [guests]);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return guests;
     return guests.filter(
-      (g) =>
-        g.name.toLowerCase().includes(q) ||
-        g.phone.includes(q) ||
-        g.email.toLowerCase().includes(q)
+      (g) => g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.email.toLowerCase().includes(q)
     );
   }, [guests, search]);
 
@@ -47,11 +57,43 @@ export function GuestsClient({
   }, [allVisits]);
   const positiveReactions = reactionCounts.wowed + reactionCounts.delighted;
   const flatReactions = reactionCounts.neutral + reactionCounts.let_down;
-  const reactionRatio = flatReactions > 0 ? (positiveReactions / flatReactions).toFixed(1) : positiveReactions > 0 ? "∞" : "—";
   const totalReactions = positiveReactions + flatReactions;
+  const reactionRatio = flatReactions > 0 ? (positiveReactions / flatReactions).toFixed(1) : positiveReactions > 0 ? "∞" : "—";
 
   const referralCount = useMemo(() => guests.filter((g) => g.referred_a_friend).length, [guests]);
   const referralRate = guests.length > 0 ? Math.round((referralCount / guests.length) * 100) : 0;
+
+  const avgVisits = useMemo(() => {
+    if (guests.length === 0) return "0.0";
+    const total = guests.reduce((s, g) => s + g.guest_visits.filter((v) => v.visit_date).length, 0);
+    return (total / guests.length).toFixed(1);
+  }, [guests]);
+
+  const atRisk = useMemo(
+    () =>
+      guests.filter((g) => {
+        const stage = stageOf(g.guest_visits);
+        if (stage === 0 || stage >= 4) return false;
+        const last = visitAt(g.guest_visits, stage)?.visit_date;
+        return last ? daysSince(last, now) >= 30 : false;
+      }),
+    [guests, now]
+  );
+
+  const wonBack = useMemo(
+    () =>
+      guests.filter((g) => stageOf(g.guest_visits) >= 2 && g.guest_visits.some((v) => v.visit_number > 1 && v.incentive)).length,
+    [guests]
+  );
+
+  const funnel = useMemo(() => {
+    const [c1, c2, c3, c4] = stageCounts.counts;
+    return [
+      { stage: "Visit 1 → 2", pct: c1 > 0 ? Math.round((c2 / c1) * 100) : 0 },
+      { stage: "Visit 2 → 3", pct: c2 > 0 ? Math.round((c3 / c2) * 100) : 0 },
+      { stage: "Visit 3 → 4", pct: c3 > 0 ? Math.round((c4 / c3) * 100) : 0 },
+    ];
+  }, [stageCounts]);
 
   function exportContacts() {
     downloadCsv(
@@ -95,72 +137,111 @@ export function GuestsClient({
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-6">
+    <>
+      <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold mb-1 text-ink">Guest Bounce Back</h1>
-          <p className="text-sm text-muted">
-            Track return visits and measure the success of comeback incentives. Shared across every
-            location — a guest can return anywhere.
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Turn first visits into regulars</h1>
+          <p className="text-base text-muted">
+            Every guest, tracked across <span className="font-semibold text-ink">all locations</span> — because a
+            regular at one is a first-timer at another.
           </p>
         </div>
-        <Btn icon={Plus} onClick={() => setModalGuest(null)}>
+        <Btn icon={Plus} onClick={() => setModalGuest(null)} className="shrink-0">
           Log New Guest
         </Btn>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <StageCard label="Visit 1 (Initial)" pct={stageCounts.pct[0] || 0} sub={`${stageCounts.counts[0] || 0} / ${stageCounts.total} guests tracked`} />
-        <StageCard label="Visit 2" pct={stageCounts.pct[1] || 0} sub={`${stageCounts.counts[1] || 0} reached stage 2`} />
-        <StageCard label="Visit 3" pct={stageCounts.pct[2] || 0} sub={`${stageCounts.counts[2] || 0} reached stage 3`} />
-        <StageCard label="Visit 4 (Loyal)" pct={stageCounts.pct[3] || 0} sub={`${stageCounts.counts[3] || 0} reached stage 4`} active />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile label="Repeat rate" value={`${stageCounts.pct[1] || 0}%`} sub="back for visit 2" />
+        <StatTile label="Avg. visits / guest" value={avgVisits} sub="across tracked guests" />
+        <StatTile label="At risk of churn" value={atRisk.length} sub="no visit in 30+ days" trend={atRisk.length > 0 ? "Needs action" : undefined} trendTone="down" />
+        <StatTile label="Won back" value={wonBack} sub="via bounce-back offers" />
       </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-6">
-        <div className="bg-panel border border-line rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Heart size={16} className="text-brick" />
-              <h3 className="font-display text-lg font-semibold text-ink">Reactions created</h3>
-            </div>
-            <span className="font-mono text-xl font-bold text-olive">{reactionRatio}:1</span>
-          </div>
-          <p className="text-xs text-muted mb-4">Guests remember how you made them feel — not the transaction.</p>
-          {totalReactions === 0 ? (
-            <p className="text-sm text-muted">No reactions logged yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {[
-                { key: "wowed" as const, label: "Wowed", tone: "olive" as const },
-                { key: "delighted" as const, label: "Delighted", tone: "brick" as const },
-                { key: "neutral" as const, label: "Neutral", tone: "muted" as const },
-                { key: "let_down" as const, label: "Let down", tone: "danger" as const },
-              ].map((r) => (
-                <div key={r.key} className="flex items-center justify-between text-sm">
-                  <Pill dot tone={r.tone}>{r.label}</Pill>
-                  <span className="font-mono text-ink">{reactionCounts[r.key]}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Visit funnel</div>
+          <div className="text-[13px] text-muted mb-6">Where guests drop off — and where they stick.</div>
+          <div className="flex flex-col gap-3.5">
+            {funnel.map((f) => (
+              <div key={f.stage}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <span className="text-sm font-medium text-ink">{f.stage}</span>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{f.pct}%</span>
                 </div>
-              ))}
+                <div className="h-3 rounded-full bg-[#F1F1F1] overflow-hidden">
+                  <div className="h-full rounded-full bg-brick" style={{ width: `${f.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Guest retention</div>
+          <div className="text-[13px] text-muted mt-0.5 mb-2">Cumulative visits, out of {stageCounts.total} tracked</div>
+          <RetentionChart counts={stageCounts.counts} labels={["Visit 1", "Visit 2", "Visit 3", "Visit 4"]} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Reactions created</div>
+              <div className="text-[13px] text-muted mt-0.5 max-w-[320px]">
+                Guests remember how you made them feel — not the transaction.
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[32px] font-bold tracking-[-0.02em] leading-none text-[#16A34A]">{reactionRatio}:1</div>
+              <div className="text-xs text-muted-2 mt-1">positive to flat</div>
+            </div>
+          </div>
+          {totalReactions > 0 && (
+            <div className="flex h-3 rounded-full overflow-hidden my-5 gap-0.5">
+              {REACTION_META.map((r) => {
+                const pct = (reactionCounts[r.key] / totalReactions) * 100;
+                return pct > 0 ? <div key={r.key} style={{ width: `${pct}%`, background: r.color }} /> : null;
+              })}
             </div>
           )}
-        </div>
-        <div className="bg-panel border border-line rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Megaphone size={16} className="text-gold" />
-              <h3 className="font-display text-lg font-semibold text-ink">Raving fans</h3>
-            </div>
-            <span className="font-mono text-xl font-bold text-ink">{referralRate}%</span>
+          <div className="flex flex-col gap-3">
+            {REACTION_META.map((r) => (
+              <div key={r.key} className="flex items-center gap-2.5">
+                <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: r.color }} />
+                <span className="text-sm font-medium flex-1">{r.label}</span>
+                <span className="text-[13px] text-muted">{r.desc}</span>
+                <span className="text-sm font-semibold tabular-nums w-[42px] text-right">{reactionCounts[r.key]}</span>
+              </div>
+            ))}
           </div>
-          <p className="text-xs text-muted mb-4">Satisfied guests don&apos;t refer. Raving fans do.</p>
-          <p className="text-sm text-charcoal-2">
-            <b className="text-ink">{referralCount}</b> of {guests.length} tracked guests referred a friend.
-          </p>
+          {totalReactions === 0 && <p className="text-sm text-muted mt-3">No reactions logged yet.</p>}
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Raving fans</div>
+              <div className="text-[13px] text-muted mt-0.5 max-w-[320px]">
+                Satisfied guests don&apos;t refer. Raving fans do.
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[32px] font-bold tracking-[-0.02em] leading-none text-ink">{referralRate}%</div>
+              <div className="text-xs text-muted-2 mt-1">referral rate</div>
+            </div>
+          </div>
+          <div className="mt-5 px-4 py-3.5 rounded-[10px] bg-brick-tint flex items-center justify-between">
+            <span className="text-[13px] text-brick-dark font-semibold">
+              {referralCount} of {guests.length} tracked guests referred a friend
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-panel border border-line">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-white border border-line">
           <Search size={15} className="text-muted" />
           <input
             value={search}
@@ -174,10 +255,10 @@ export function GuestsClient({
         </Btn>
       </div>
 
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#fafafa] border-b border-line">
+            <tr className="bg-[#FAFAFA] border-b border-line">
               {["Guest", "Contact", "Current Stage", "Latest Incentive", "Location", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -193,8 +274,14 @@ export function GuestsClient({
               const firstLocationId = visitAt(g.guest_visits, 1)?.location_id ?? visitLocationIds[0];
               const firstLocationName = locations.find((l) => l.id === firstLocationId)?.name ?? "—";
               const extraLocationCount = visitLocationIds.filter((id) => id !== firstLocationId).length;
+              const status =
+                stage >= 4
+                  ? { label: "Regular", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" }
+                  : stage >= 2
+                    ? { label: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" }
+                    : { label: "First visit", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
               return (
-                <tr key={g.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
+                <tr key={g.id} className="border-b border-line hover:bg-[#FAFAFA] transition-colors">
                   <td className="px-5 py-3.5 text-ink">
                     <div className="flex items-center gap-1.5">
                       {g.name}
@@ -203,7 +290,7 @@ export function GuestsClient({
                   </td>
                   <td className="px-5 py-3.5 text-muted">{g.phone || g.email || "—"}</td>
                   <td className="px-5 py-3.5">
-                    <Pill dot tone={stage >= 4 ? "olive" : stage >= 2 ? "gold" : "muted"}>Visit {stage} of 4</Pill>
+                    <StatusPill label={`${status.label} · Visit ${stage} of 4`} fg={status.fg} bg={status.bg} dot={status.dot} />
                   </td>
                   <td className={`px-5 py-3.5 ${latest ? "text-ink" : "text-muted"}`}>{latest || "None recorded"}</td>
                   <td className="px-5 py-3.5 text-muted">
@@ -241,6 +328,6 @@ export function GuestsClient({
           onClose={() => setModalGuest(undefined)}
         />
       )}
-    </div>
+    </>
   );
 }

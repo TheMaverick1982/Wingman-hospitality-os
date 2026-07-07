@@ -2,9 +2,39 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { Pill } from "@/components/ui/pill";
-import { Sparkles } from "lucide-react";
 import { MomentModalButton } from "./moment-form";
 import { WeeklyFocusForm } from "./weekly-focus-form";
+
+const AVATAR_TONES = [
+  { bg: "bg-brick-tint", fg: "text-brick-dark" },
+  { bg: "bg-[#E7F6EC]", fg: "text-[#15803D]" },
+  { bg: "bg-[#FDF3E1]", fg: "text-[#B45309]" },
+  { bg: "bg-[#F1F1F1]", fg: "text-charcoal-2" },
+];
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function toneFor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[hash % AVATAR_TONES.length];
+}
+
+function daysAgoIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function daysAgoLabel(dateStr: string): string {
+  const diffDays = Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
+}
 
 export default async function CulturePage() {
   const profile = await getCurrentProfile();
@@ -12,47 +42,64 @@ export default async function CulturePage() {
   const canEdit = canEditSection(profile.accessRole, "culture");
 
   const supabase = await createClient();
-  const [{ data: org }, { data: coreValues }, { data: moments }] = await Promise.all([
+  const ninetyDaysAgo = daysAgoIso(90);
+  const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }] = await Promise.all([
     supabase.from("organizations").select("philosophy, weekly_focus").single(),
     supabase.from("core_values").select("title, description").order("sort_order"),
     supabase
       .from("culture_moments")
       .select("id, author, about, tag, message, occurred_on")
       .order("occurred_on", { ascending: false }),
+    supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("occurred_on", ninetyDaysAgo),
   ]);
 
+  const allMoments = moments ?? [];
+  const leaderboard = Object.entries(
+    allMoments.reduce<Record<string, number>>((acc, m) => {
+      acc[m.author] = (acc[m.author] ?? 0) + 1;
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
   return (
-    <div>
-      <div className="flex items-start justify-between mb-6">
+    <>
+      <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold mb-1 text-ink">Culture</h1>
-          <p className="text-sm text-muted max-w-xl">
-            Not a poster on the wall. The beliefs that decide how every shift actually runs.
-          </p>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your culture, in your words</h1>
+          <p className="text-base text-muted">The standard every hire is trained to and every shift is measured against.</p>
         </div>
-        {!canEdit && <Pill>View only</Pill>}
-      </div>
-
-      <div className="bg-charcoal rounded-xl p-8 mb-6">
-        <p className="text-[#a1a1a1] text-xs uppercase tracking-wide font-semibold mb-3">Our philosophy</p>
-        <p className="text-white font-display text-2xl leading-snug max-w-2xl">{org?.philosophy}</p>
-      </div>
-
-      <h3 className="font-display text-lg font-semibold mb-3 text-ink">What we believe</h3>
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {(coreValues ?? []).map((v) => (
-          <div key={v.title} className="bg-panel border border-line border-b-[3px] rounded-2xl p-5">
-            <p className="text-sm font-semibold mb-1.5 text-ink">{v.title}</p>
-            <p className="text-xs leading-relaxed text-muted">{v.description}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-gold-tint rounded-2xl p-6 mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={16} className="text-[#b45309]" />
-          <h3 className="font-display text-lg font-semibold text-[#b45309]">This week&apos;s pre-shift focus</h3>
+        <div className="flex items-center gap-3 shrink-0">
+          {!canEdit && <Pill>View only</Pill>}
+          {canEdit && <MomentModalButton />}
         </div>
+      </div>
+
+      <div className="bg-[#0A0A0A] rounded-[20px] p-8 sm:p-12 text-white">
+        <div className="text-xs font-semibold tracking-[0.08em] uppercase text-[#4D97FF] mb-5">Culture statement</div>
+        <div className="text-2xl sm:text-[34px] font-semibold tracking-[-0.02em] leading-[1.3] max-w-[820px]">
+          &quot;{org?.philosophy}&quot;
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Core values</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {(coreValues ?? []).map((v, i) => (
+            <div key={v.title} className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <div className="w-9 h-9 rounded-[10px] bg-brick-tint text-brick flex items-center justify-center text-[15px] font-bold mb-4">
+                {String(i + 1).padStart(2, "0")}
+              </div>
+              <div className="text-base font-semibold tracking-[-0.01em] text-ink mb-1.5">{v.title}</div>
+              <div className="text-[13px] text-muted leading-[1.45]">{v.description}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-gold-tint rounded-2xl p-6">
+        <h3 className="font-display text-base font-semibold text-[#b45309] mb-2">This week&apos;s pre-shift focus</h3>
         {canEdit ? (
           <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
         ) : (
@@ -60,28 +107,61 @@ export default async function CulturePage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display text-lg font-semibold text-ink">Culture wall</h3>
-        {canEdit && <MomentModalButton />}
-      </div>
-      <div className="flex flex-col gap-3">
-        {(moments ?? []).map((m) => (
-          <div key={m.id} className="bg-panel border border-line rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-ink">{m.about}</span>
-                <Pill tone="olive">{m.tag}</Pill>
-              </div>
-              <span className="text-xs text-muted">{m.occurred_on}</span>
-            </div>
-            <p className="text-sm leading-relaxed mb-2 text-charcoal-2">{m.message}</p>
-            <p className="text-xs text-muted">— {m.author}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Culture moments</span>
+            <span className="text-[13px] font-semibold text-muted">{momentsThisQtr ?? 0} this quarter</span>
           </div>
-        ))}
-        {(moments ?? []).length === 0 && (
-          <p className="text-sm text-muted">No culture moments yet. Recognize someone to start the wall.</p>
-        )}
+          <div className="flex flex-col gap-4">
+            {allMoments.slice(0, 6).map((m) => {
+              const tone = toneFor(m.author);
+              return (
+                <div key={m.id} className="flex gap-3.5 items-start">
+                  <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold ${tone.bg} ${tone.fg}`}>
+                    {initialsOf(m.author)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm leading-[1.45]">
+                      <span className="font-semibold text-ink">{m.author}</span>{" "}
+                      <span className="text-charcoal-2">recognized {m.about}: {m.message}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-xs font-semibold text-brick-dark bg-brick-tint px-2.5 py-0.5 rounded-full">{m.tag}</span>
+                      <span className="text-[12.5px] text-muted-2">{daysAgoLabel(m.occurred_on)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {allMoments.length === 0 && (
+              <p className="text-sm text-muted">No culture moments yet. Recognize someone to start the wall.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Most recognized</div>
+          <div className="flex flex-col gap-3.5">
+            {leaderboard.map(([name, count], i) => {
+              const tone = toneFor(name);
+              return (
+                <div key={name} className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-muted-2 w-4 tabular-nums">{i + 1}</span>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${tone.bg} ${tone.fg}`}>
+                    {initialsOf(name)}
+                  </span>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-ink">{name}</div>
+                  </div>
+                  <span className="text-sm font-bold tabular-nums text-ink">{count}</span>
+                </div>
+              );
+            })}
+            {leaderboard.length === 0 && <p className="text-sm text-muted">No recognitions yet.</p>}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

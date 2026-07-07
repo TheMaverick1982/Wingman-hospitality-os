@@ -40,6 +40,23 @@ export function computeStageCounts(guests: GuestWithVisits[]) {
   };
 }
 
+export type StatusTone = { label: string; fg: string; bg: string; dot: string };
+
+export function statusForCompletion(pct: number): StatusTone {
+  if (pct >= 90) return { label: "Signed off", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" };
+  if (pct >= 60) return { label: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" };
+  return { label: "Needs coaching", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
+}
+
+export function computeRepeatRate(guests: GuestWithVisits[], locationId: string | null): number {
+  const relevant = locationId
+    ? guests.filter((g) => g.guest_visits.find((v) => v.visit_number === 1)?.location_id === locationId)
+    : guests;
+  if (relevant.length === 0) return 0;
+  const returned = relevant.filter((g) => stageOf(g.guest_visits) >= 2).length;
+  return Math.round((returned / relevant.length) * 100);
+}
+
 export type Discount = {
   id: string;
   occurred_on: string;

@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
-import { TrainingClient, type DeptData } from "./training-client";
+import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
+import { SignoffLog } from "./signoff-log";
 
 export default async function TrainingPage() {
   const profile = await getCurrentProfile();
@@ -31,7 +32,9 @@ export default async function TrainingPage() {
       .order("occurred_on", { ascending: false }),
   ]);
 
+  const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
+  const summaries = {} as Record<Department, RoleSummary>;
   for (const d of ALL_DEPARTMENTS) {
     const metaRow = meta?.find((m) => m.department === d);
     data[d] = {
@@ -41,58 +44,36 @@ export default async function TrainingPage() {
       hasMenu: metaRow?.has_menu ?? false,
       menuItems: (menuItems ?? []).filter((m) => m.department === d),
     };
+
+    const deptSignoffs = allSignoffs.filter((s) => s.department === d);
+    const people = new Set(deptSignoffs.map((s) => s.staff_name)).size;
+    const pct =
+      deptSignoffs.length > 0
+        ? Math.round(deptSignoffs.reduce((sum, s) => sum + s.completion_pct, 0) / deptSignoffs.length)
+        : 0;
+    summaries[d] = {
+      people,
+      pct,
+      signoffCount: deptSignoffs.length,
+      standardsCount: data[d].standards.length + data[d].trainingItems.length,
+    };
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-6">
+    <>
+      <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold mb-1 text-ink">Training & Standards</h1>
-          <p className="text-sm text-muted max-w-xl">
-            A full program per department. Hospitality is the dominant thread through everything — but
-            each department has its own technical ground to cover too.
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Training & standards</h1>
+          <p className="text-base text-muted max-w-xl">
+            Department-by-department progress toward your standard, with a real sign-off log.
           </p>
         </div>
         {!canEdit && <Pill>View only</Pill>}
       </div>
 
-      <TrainingClient data={data} isGm={canEdit} />
+      <TrainingClient data={data} summaries={summaries} isGm={canEdit} />
 
-      <h3 className="font-display text-lg font-semibold mt-8 mb-3 text-ink">Sign-off log</h3>
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[#fafafa] border-b border-line">
-              {["Name", "Department", "Date", "Completion"].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(signoffs ?? []).map((t) => (
-              <tr key={t.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
-                <td className="px-5 py-3.5 text-ink">{t.staff_name}</td>
-                <td className="px-5 py-3.5">
-                  <Pill>{t.department}</Pill>
-                </td>
-                <td className="px-5 py-3.5 text-muted">{t.occurred_on}</td>
-                <td className={`px-5 py-3.5 font-mono ${t.completion_pct === 100 ? "text-olive" : "text-gold"}`}>
-                  {t.completion_pct}%
-                </td>
-              </tr>
-            ))}
-            {(signoffs ?? []).length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-muted">
-                  No sign-offs logged yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <SignoffLog signoffs={allSignoffs} />
+    </>
   );
 }
