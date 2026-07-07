@@ -14,6 +14,7 @@ import {
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
+import { GreetingHeader } from "@/components/dashboard/greeting-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ArrowUpRight } from "lucide-react";
 
@@ -161,21 +162,9 @@ export default async function DashboardPage({
   const greetingLocation = effectiveLocation
     ? locations.find((l) => l.id === effectiveLocation)?.name ?? "your location"
     : "every location";
-  const now = new Date();
-  const dateLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  const timeLabel = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-
   return (
     <>
-      <div className="flex items-end justify-between gap-6">
-        <div>
-          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Good morning, {firstName}</h1>
-          <p className="text-base text-muted">Here&apos;s how {greetingLocation} is holding the standard today.</p>
-        </div>
-        <div className="text-sm text-muted-2 font-medium whitespace-nowrap">
-          {dateLabel} · {timeLabel}
-        </div>
-      </div>
+      <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">

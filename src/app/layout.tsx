@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { GoogleTagManager } from "@next/third-parties/google";
+import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
+import { getGaMeasurementId } from "@/lib/data/platform-settings";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app";
@@ -41,15 +42,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaMeasurementId = await getGaMeasurementId();
+
   return (
     <html lang="en" className="h-full antialiased">
       <GoogleTagManager gtmId="GTM-P7CJ3J7G" />
       <body className="min-h-full flex flex-col bg-paper text-ink font-sans">{children}</body>
+      {gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
     </html>
   );
 }
