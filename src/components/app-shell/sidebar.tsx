@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section } from "@/lib/auth/permissions";
-import { WingmanMark } from "@/components/ui/wingman-mark";
+import { WingmanLogo } from "@/components/ui/wingman-logo";
 
 const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" },
@@ -52,9 +52,8 @@ export function Sidebar({
 
   return (
     <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
-      <Link href="/dashboard" className="flex items-center gap-2 px-2.5 pb-6">
-        <WingmanMark className="w-6 h-6 text-brick shrink-0" />
-        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Wingman</span>
+      <Link href="/dashboard" className="flex items-center px-2.5 pb-6">
+        <WingmanLogo className="h-6 w-auto" />
       </Link>
 
       <nav className="flex flex-col gap-0.5">
