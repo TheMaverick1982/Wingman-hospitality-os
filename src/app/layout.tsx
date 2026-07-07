@@ -82,7 +82,7 @@ export default async function RootLayout({
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        {children}
+        <main className="flex-1 flex flex-col min-h-0">{children}</main>
       </body>
       {gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
     </html>

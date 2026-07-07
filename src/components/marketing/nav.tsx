@@ -5,7 +5,7 @@ export function MarketingNav() {
   return (
     <header className="sticky top-0 z-50 bg-white/72 backdrop-blur-2xl backdrop-saturate-[1.8] border-b border-[#ededed]">
       <div className="max-w-[1180px] mx-auto flex items-center justify-between px-10 h-[60px]">
-        <Link href="/" className="flex items-center">
+        <Link href="/" aria-label="Wingman home" className="flex items-center">
           <WingmanLogo className="h-6 w-auto" />
         </Link>
         <nav className="flex items-center gap-6">
