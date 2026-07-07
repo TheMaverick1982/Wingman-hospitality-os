@@ -44,6 +44,28 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Wingman",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: siteUrl,
+  description:
+    "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",
+  offers: {
+    "@type": "Offer",
+    price: "199",
+    priceCurrency: "USD",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: "199",
+      priceCurrency: "USD",
+      unitText: "per location, per month",
+    },
+  },
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -54,7 +76,14 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <GoogleTagManager gtmId="GTM-P7CJ3J7G" />
-      <body className="min-h-full flex flex-col bg-paper text-ink font-sans">{children}</body>
+      <body className="min-h-full flex flex-col bg-paper text-ink font-sans">
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        {children}
+      </body>
       {gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
     </html>
   );
