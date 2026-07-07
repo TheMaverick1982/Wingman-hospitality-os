@@ -24,7 +24,7 @@ export function HiringClient({
             key={d}
             onClick={() => setActiveRole(d)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
-              activeRole === d ? "bg-charcoal text-white border-charcoal" : "bg-white text-ink border-line"
+              activeRole === d ? "bg-charcoal text-white border-charcoal" : "bg-panel text-ink border-line"
             }`}
           >
             {d}
@@ -47,8 +47,8 @@ export function HiringClient({
               <p className="text-sm mb-3 text-charcoal-2">&quot;{g.question}&quot;</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-olive-tint rounded-lg p-3">
-                  <span className="text-xs font-semibold block mb-1 text-[#166534]">Green flag</span>
-                  <span className="text-xs text-[#166534]">{g.green}</span>
+                  <span className="text-xs font-semibold block mb-1 text-[#15803d]">Green flag</span>
+                  <span className="text-xs text-[#15803d]">{g.green}</span>
                 </div>
                 <div className="bg-brick-tint rounded-lg p-3">
                   <span className="text-xs font-semibold block mb-1 text-brick-dark">Red flag</span>
@@ -62,7 +62,7 @@ export function HiringClient({
 
       <div className="flex items-center gap-2 mb-3">
         <GraduationCap size={14} className="text-gold" />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#92400e]">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#b45309]">
           {activeRole}-specific — what this department needs beyond hospitality
         </h3>
       </div>
@@ -73,8 +73,8 @@ export function HiringClient({
             <p className="text-sm mb-3 text-charcoal-2">&quot;{t.question}&quot;</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-olive-tint rounded-lg p-3">
-                <span className="text-xs font-semibold block mb-1 text-[#166534]">Green flag</span>
-                <span className="text-xs text-[#166534]">{t.green_flag}</span>
+                <span className="text-xs font-semibold block mb-1 text-[#15803d]">Green flag</span>
+                <span className="text-xs text-[#15803d]">{t.green_flag}</span>
               </div>
               <div className="bg-brick-tint rounded-lg p-3">
                 <span className="text-xs font-semibold block mb-1 text-brick-dark">Red flag</span>

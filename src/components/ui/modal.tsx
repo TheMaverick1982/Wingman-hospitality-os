@@ -15,7 +15,7 @@ export function Modal({
 }) {
   return (
     <div className="fixed inset-0 flex items-start justify-center p-6 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
-      <div className={`w-full mt-8 mb-8 bg-white rounded-2xl shadow-2xl ${wide ? "max-w-[720px]" : "max-w-[560px]"}`}>
+      <div className={`w-full mt-8 mb-8 bg-panel rounded-[18px] shadow-lg overflow-hidden ${wide ? "max-w-[720px]" : "max-w-[560px]"}`}>
         <div className="flex items-start justify-between p-6 border-b border-line">
           <div>
             <h2 className="font-display text-2xl font-semibold text-ink">{title}</h2>

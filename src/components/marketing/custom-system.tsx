@@ -18,7 +18,7 @@ const WE_BUILD = [
 
 export function CustomSystem() {
   return (
-    <section className="bg-white py-24 px-6 border-t border-line">
+    <section className="bg-panel py-24 px-6 border-t border-line">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="font-display text-3xl sm:text-4xl font-semibold text-ink tracking-tight mb-4">
@@ -46,10 +46,10 @@ export function CustomSystem() {
             </ul>
           </div>
           <div className="bg-charcoal rounded-2xl p-8">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#98989d] mb-5">We build</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#a1a1a1] mb-5">We build</p>
             <ul className="flex flex-col gap-4">
               {WE_BUILD.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-[#f5f5f7]">
+                <li key={item} className="flex items-start gap-3 text-sm text-[#f5f5f5]">
                   <CheckCircle2 size={16} className="text-olive shrink-0 mt-0.5" />
                   {item}
                 </li>

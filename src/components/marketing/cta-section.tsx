@@ -8,7 +8,7 @@ export function CtaSection() {
           &quot;We can send all the customers we want to a restaurant — if they don&apos;t come back,
           that&apos;s not good.&quot;
         </p>
-        <p className="text-[#98989d] text-sm mb-10">
+        <p className="text-[#a1a1a1] text-sm mb-10">
           Everything in Wingman exists to move guests from Visit 1 to Visit 4 — and keep them there.
         </p>
         <Link

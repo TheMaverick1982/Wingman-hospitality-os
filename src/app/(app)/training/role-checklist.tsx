@@ -77,7 +77,7 @@ export function RoleChecklist({
         <>
           <div className="pt-5 mb-3 flex items-center gap-2 border-t border-line">
             <GraduationCap size={14} className="text-gold" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#92400e]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#b45309]">
               {trackLabel} — role-specific
             </span>
           </div>

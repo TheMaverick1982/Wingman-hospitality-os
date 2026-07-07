@@ -74,7 +74,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
                   type="button"
                   onClick={() => setPrice(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold font-mono border ${
-                    price === p ? "bg-charcoal text-white border-charcoal" : "bg-white text-ink border-line"
+                    price === p ? "bg-charcoal text-white border-charcoal" : "bg-panel text-ink border-line"
                   }`}
                 >
                   {p}
@@ -95,7 +95,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
               <label
                 key={d}
                 className={`flex items-center gap-3 p-3.5 rounded-lg cursor-pointer border ${
-                  depts.includes(d) ? "bg-olive-tint border-olive/30" : "bg-white border-line"
+                  depts.includes(d) ? "bg-olive-tint border-olive/30" : "bg-panel border-line"
                 }`}
               >
                 <input type="checkbox" checked={depts.includes(d)} onChange={() => toggleDept(d)} className="accent-olive" />
@@ -139,7 +139,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
               <label
                 key={p}
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border ${
-                  priorities.includes(p) ? "bg-gold-tint border-gold/30" : "bg-white border-line"
+                  priorities.includes(p) ? "bg-gold-tint border-gold/30" : "bg-panel border-line"
                 }`}
               >
                 <input type="checkbox" checked={priorities.includes(p)} onChange={() => togglePriority(p)} className="accent-gold" />
@@ -180,7 +180,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
           ))}
 
           <p className="text-sm text-charcoal-2 mb-4">Ready to generate. Here&apos;s what we&apos;ll build:</p>
-          <div className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-2 mb-2">
+          <div className="bg-panel border border-line rounded-2xl p-5 flex flex-col gap-2 mb-2">
             <Row label="Restaurant" value={`${name} — ${concept} (${price})`} />
             <Row label="Departments" value={depts.join(", ") || "None selected"} />
             <Row label="Priorities" value={priorities.length ? priorities.join(", ") : "General excellence"} />

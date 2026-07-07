@@ -68,7 +68,7 @@ export default async function RecoveryPage({
           label="Discount rate this period"
           value={`${discountPct}%`}
           sub="Target 3–4%"
-          tone={Number(discountPct) > 4 ? "brick" : "olive"}
+          tone={Number(discountPct) > 4 ? "danger" : "olive"}
           icon={Number(discountPct) > 4 ? TrendingUp : TrendingDown}
         />
         <Stat label="Total discounted" value={`$${discountTotal}`} sub={`${discounts.length} logged incidents`} tone="brick" icon={Receipt} />
@@ -110,10 +110,10 @@ export default async function RecoveryPage({
         </Card>
       </div>
 
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line">
+            <tr className="bg-[#fafafa] border-b border-line">
               {["Date", "Location", "Server", "Category", "Reason", "Amount", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -123,7 +123,7 @@ export default async function RecoveryPage({
           </thead>
           <tbody>
             {discounts.map((d) => (
-              <tr key={d.id} className="border-b border-line">
+              <tr key={d.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
                 <td className="px-5 py-3.5 text-muted">{d.occurred_on}</td>
                 <td className="px-5 py-3.5 text-muted">{locationName(d.location_id)}</td>
                 <td className="px-5 py-3.5 text-ink">{d.server_name}</td>

@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="w-full flex min-h-full flex-1">
-      <Sidebar orgName={profile.orgName} isGm={isGm} />
+      <Sidebar orgName={profile.orgName} isGm={isGm} fullName={profile.fullName} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar isGm={isGm} locations={locations} userLocationName={profile.locationName} />
         <div className="p-8 overflow-y-auto flex-1">{children}</div>

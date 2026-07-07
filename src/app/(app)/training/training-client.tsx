@@ -31,7 +31,7 @@ export function TrainingClient({
             key={d}
             onClick={() => setActiveRole(d)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
-              activeRole === d ? "bg-charcoal text-white border-charcoal" : "bg-white text-ink border-line"
+              activeRole === d ? "bg-charcoal text-white border-charcoal" : "bg-panel text-ink border-line"
             }`}
           >
             {d}

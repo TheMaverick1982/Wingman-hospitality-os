@@ -15,7 +15,7 @@ export function StageCard({
         active ? "bg-charcoal border-charcoal" : "bg-panel border-line"
       }`}
     >
-      <div className={`text-sm font-medium mb-2 ${active ? "text-[#f5f5f7]" : "text-ink"}`}>{label}</div>
+      <div className={`text-sm font-medium mb-2 ${active ? "text-[#f5f5f5]" : "text-ink"}`}>{label}</div>
       <div className={`font-mono text-3xl font-semibold mb-2 ${active ? "text-white" : "text-brick"}`}>
         {pct}%
       </div>
@@ -25,7 +25,7 @@ export function StageCard({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className={`text-xs ${active ? "text-[#a1a1a6]" : "text-muted"}`}>{sub}</div>
+      <div className={`text-xs ${active ? "text-[#a1a1a1]" : "text-muted"}`}>{sub}</div>
     </div>
   );
 }

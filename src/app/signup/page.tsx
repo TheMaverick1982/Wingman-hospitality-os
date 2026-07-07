@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { Field, inputClass } from "@/components/ui/field";
+import { Btn } from "@/components/ui/btn";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = { error: null, checkEmail: false };
@@ -12,8 +14,8 @@ export default function SignupPage() {
   if (state.checkEmail) {
     return (
       <div className="mx-auto max-w-sm py-24 text-center">
-        <h1 className="text-2xl font-semibold mb-2">Check your email</h1>
-        <p className="text-sm text-zinc-600">
+        <h1 className="font-display text-2xl font-semibold mb-2 text-ink">Check your email</h1>
+        <p className="text-sm text-muted">
           We sent you a confirmation link. Click it to activate your account and set up your
           organization.
         </p>
@@ -23,57 +25,44 @@ export default function SignupPage() {
 
   return (
     <div className="mx-auto max-w-sm py-16">
-      <h1 className="text-2xl font-semibold mb-1">Set up Wingman</h1>
-      <p className="text-sm text-zinc-600 mb-6">
+      <h1 className="font-display text-2xl font-semibold mb-1 text-ink">Set up Wingman</h1>
+      <p className="text-sm text-muted mb-6">
         You&apos;ll be the General Manager for your organization — you can invite Store Managers
         afterward.
       </p>
-      <form action={formAction} className="flex flex-col gap-4">
-        <Field label="Restaurant / organization name" name="orgName" placeholder="Square Peg" />
-        <Field label="Your first location" name="locationName" placeholder="Delray Beach" />
-        <Field label="Your name" name="fullName" placeholder="Jane Doe" />
-        <Field label="Email" name="email" type="email" placeholder="you@example.com" />
-        <Field label="Password" name="password" type="password" placeholder="At least 8 characters" />
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-zinc-900 text-white text-sm font-semibold py-2.5 disabled:opacity-50"
-        >
+      <form action={formAction} className="flex flex-col gap-1">
+        <Field label="Restaurant / organization name">
+          <input name="orgName" placeholder="Square Peg" required className={inputClass} />
+        </Field>
+        <Field label="Your first location">
+          <input name="locationName" placeholder="Delray Beach" required className={inputClass} />
+        </Field>
+        <Field label="Your name">
+          <input name="fullName" placeholder="Jane Doe" required className={inputClass} />
+        </Field>
+        <Field label="Email">
+          <input name="email" type="email" placeholder="you@example.com" required className={inputClass} />
+        </Field>
+        <Field label="Password">
+          <input
+            name="password"
+            type="password"
+            placeholder="At least 8 characters"
+            required
+            className={inputClass}
+          />
+        </Field>
+        {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
+        <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
           {pending ? "Creating..." : "Create organization"}
-        </button>
+        </Btn>
       </form>
-      <p className="text-sm text-zinc-600 mt-4">
+      <p className="text-sm text-muted mt-4">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-zinc-900">
+        <Link href="/login" className="font-semibold text-brick">
           Log in
         </Link>
       </p>
     </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type = "text",
-  placeholder,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  placeholder?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="font-semibold">{label}</span>
-      <input
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        required
-        className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-      />
-    </label>
   );
 }

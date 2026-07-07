@@ -40,17 +40,17 @@ export function Hero() {
       </div>
 
       <div className="relative max-w-4xl mx-auto mt-16 grid grid-cols-3 gap-4">
-        <div className="bg-white border border-line rounded-2xl p-5 shadow-sm">
+        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
           <RotateCcw size={18} className="text-brick mb-3" />
           <div className="font-mono text-2xl font-semibold text-ink">62%</div>
           <div className="text-xs text-muted mt-1">of first-time guests brought back for visit 2</div>
         </div>
-        <div className="bg-white border border-line rounded-2xl p-5 shadow-sm">
+        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
           <TrendingUp size={18} className="text-olive mb-3" />
           <div className="font-mono text-2xl font-semibold text-ink">2.1%</div>
           <div className="text-xs text-muted mt-1">discount rate, down from a 7% baseline</div>
         </div>
-        <div className="bg-white border border-line rounded-2xl p-5 shadow-sm">
+        <div className="bg-panel border border-line rounded-2xl p-5 shadow-sm">
           <Heart size={18} className="text-gold mb-3" />
           <div className="font-mono text-2xl font-semibold text-ink">128</div>
           <div className="text-xs text-muted mt-1">culture moments recognized this quarter</div>

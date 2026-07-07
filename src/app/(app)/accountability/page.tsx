@@ -100,16 +100,16 @@ export default async function AccountabilityPage({
           </div>
           <div className="flex flex-col gap-2">
             {flags.map((f, i) => (
-              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "brick" ? "bg-brick-tint" : "bg-gold-tint"}`}>
-                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#92400e]"}`}>{f.text}</span>
+              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "danger" ? "bg-danger-tint" : "bg-gold-tint"}`}>
+                <span className={`text-sm ${f.tone === "danger" ? "text-danger" : "text-[#b45309]"}`}>{f.text}</span>
               </div>
             ))}
           </div>
         </Card>
       ) : (
         <div className="bg-olive-tint rounded-2xl p-5 mb-6 flex items-center gap-3">
-          <CheckCircle2 size={18} className="text-[#166534]" />
-          <span className="text-sm font-medium text-[#166534]">Nothing flagged right now — standards are holding.</span>
+          <CheckCircle2 size={18} className="text-[#15803d]" />
+          <span className="text-sm font-medium text-[#15803d]">Nothing flagged right now — standards are holding.</span>
         </div>
       )}
 
@@ -126,7 +126,7 @@ export default async function AccountabilityPage({
                     <span className="font-semibold text-ink">{dc.manager_name}</span>
                     <span className="text-muted"> — {locationName(dc.location_id)} · {dc.occurred_on}</span>
                   </div>
-                  <Pill tone={doneCount === dc.checked.length ? "olive" : "gold"}>
+                  <Pill dot tone={doneCount === dc.checked.length ? "olive" : "gold"}>
                     {doneCount}/{dc.checked.length}
                   </Pill>
                 </div>
@@ -160,7 +160,7 @@ export default async function AccountabilityPage({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-ink">{sc.staff_name}</span>
                   <Pill>{sc.department}</Pill>
-                  <Pill tone={avg >= 4 ? "olive" : avg >= 3 ? "gold" : "brick"}>{avg.toFixed(1)}/5</Pill>
+                  <Pill dot tone={avg >= 4 ? "olive" : avg >= 3 ? "gold" : "danger"}>{avg.toFixed(1)}/5</Pill>
                 </div>
                 <span className="text-xs text-muted">{sc.occurred_on}</span>
               </div>

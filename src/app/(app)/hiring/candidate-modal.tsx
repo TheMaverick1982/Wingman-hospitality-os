@@ -96,7 +96,7 @@ export function CandidateModalButton({
               {combinedTraits.map((t, i) => (
                 <div
                   key={i}
-                  className={`p-3.5 rounded-2xl border ${t.universal ? "border-line" : "border-[#ffcc80]"} bg-white`}
+                  className={`p-3.5 rounded-2xl border ${t.universal ? "border-line" : "border-[#ffcc80]"} bg-panel`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export function CandidateModalButton({
                     type="button"
                     onClick={() => setRecommendation(r)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                      recommendation === r ? "bg-charcoal text-white border-charcoal" : "bg-white text-ink border-line"
+                      recommendation === r ? "bg-charcoal text-white border-charcoal" : "bg-panel text-ink border-line"
                     }`}
                   >
                     {r}

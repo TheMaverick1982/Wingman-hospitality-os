@@ -72,10 +72,10 @@ export default async function HiringPage({
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} />
 
       <h3 className="font-display text-lg font-semibold mb-3 text-ink">Candidate scorecards</h3>
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line">
+            <tr className="bg-[#fafafa] border-b border-line">
               {["Candidate", "Department", "Location", "Date", "Avg score", "Recommendation"].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -87,14 +87,14 @@ export default async function HiringPage({
             {(candidates ?? []).map((c) => {
               const avg = c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length;
               return (
-                <tr key={c.id} className="border-b border-line">
+                <tr key={c.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
                   <td className="px-5 py-3.5 text-ink">{c.name}</td>
                   <td className="px-5 py-3.5 text-muted">{c.department}</td>
                   <td className="px-5 py-3.5 text-muted">{locationName(c.location_id)}</td>
                   <td className="px-5 py-3.5 text-muted">{c.occurred_on}</td>
                   <td className="px-5 py-3.5 text-ink font-mono">{avg.toFixed(1)} / 5</td>
                   <td className="px-5 py-3.5">
-                    <Pill tone={c.recommendation === "Strong fit" ? "olive" : c.recommendation === "Not a fit" ? "brick" : "gold"}>
+                    <Pill dot tone={c.recommendation === "Strong fit" ? "olive" : c.recommendation === "Not a fit" ? "danger" : "gold"}>
                       {c.recommendation}
                     </Pill>
                   </td>

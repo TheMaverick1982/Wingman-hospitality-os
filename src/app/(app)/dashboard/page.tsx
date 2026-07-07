@@ -103,7 +103,7 @@ export default async function DashboardPage({
           label="Discount rate"
           value={`${discountPct}%`}
           sub="Target: 3–4% of revenue"
-          tone={Number(discountPct) > 4 ? "brick" : "olive"}
+          tone={Number(discountPct) > 4 ? "danger" : "olive"}
           icon={Number(discountPct) > 4 ? TrendingUp : TrendingDown}
         />
         <Stat label="Training sign-offs" value={trainingSignoffCount ?? 0} sub="Logged this period" tone="gold" icon={ClipboardCheck} />
@@ -118,8 +118,8 @@ export default async function DashboardPage({
           </div>
           <div className="flex flex-col gap-2">
             {flags.map((f, i) => (
-              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "brick" ? "bg-brick-tint" : "bg-gold-tint"}`}>
-                <span className={`text-sm ${f.tone === "brick" ? "text-brick-dark" : "text-[#92400e]"}`}>{f.text}</span>
+              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.tone === "danger" ? "bg-danger-tint" : "bg-gold-tint"}`}>
+                <span className={`text-sm ${f.tone === "danger" ? "text-danger" : "text-[#b45309]"}`}>{f.text}</span>
               </div>
             ))}
           </div>
@@ -164,7 +164,7 @@ export default async function DashboardPage({
       <div className="bg-charcoal rounded-2xl p-6 mt-5">
         <div className="flex items-start gap-3">
           <Quote size={22} className="text-gold" />
-          <p className="text-[#f5f5f7] font-display text-lg leading-snug">
+          <p className="text-[#f5f5f5] font-display text-lg leading-snug">
             We can send all the customers we want to a restaurant — if they don&apos;t come back, that&apos;s not good.
             Everything here exists to move guests from Visit 1 to Visit 4.
           </p>

@@ -34,7 +34,7 @@ export function ValueProps() {
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
           {PROPS.map((p) => (
-            <div key={p.title} className="bg-white border border-line rounded-2xl p-8">
+            <div key={p.title} className="bg-panel border border-line rounded-2xl p-8">
               <div className="w-10 h-10 rounded-full bg-brick-tint flex items-center justify-center mb-5">
                 <p.icon size={18} className="text-brick" />
               </div>

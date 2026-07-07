@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 
 const KIND_CLASSES = {
-  primary: "bg-charcoal text-white border border-charcoal disabled:bg-[#aeaeb2] disabled:border-[#aeaeb2]",
-  ghost: "bg-white text-ink border border-line",
-  danger: "bg-white text-brick border border-brick-tint",
+  primary: "bg-brick text-white border border-brick hover:bg-brick-dark hover:border-brick-dark disabled:bg-muted-2 disabled:border-muted-2",
+  ghost: "bg-panel text-ink border border-line-strong hover:bg-paper hover:border-muted-2",
+  danger: "bg-panel text-danger border border-danger-tint hover:bg-danger-tint",
 } as const;
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -16,8 +16,8 @@ export function Btn({ children, kind = "primary", icon: Icon, small, className, 
   return (
     <button
       {...rest}
-      className={`flex items-center gap-1.5 rounded-full font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed ${
-        small ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm"
+      className={`flex items-center gap-1.5 rounded-[10px] font-semibold transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
+        small ? "px-3 py-1.5 text-xs" : "px-[22px] py-[11px] text-[15px]"
       } ${KIND_CLASSES[kind]} ${className ?? ""}`}
     >
       {Icon && <Icon size={small ? 13 : 15} />}

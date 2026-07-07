@@ -28,8 +28,8 @@ export default async function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-sm py-16">
-      <h1 className="text-2xl font-semibold mb-1">Finish setting up</h1>
-      <p className="text-sm text-zinc-600 mb-6">
+      <h1 className="font-display text-2xl font-semibold mb-1 text-ink">Finish setting up</h1>
+      <p className="text-sm text-muted mb-6">
         Your account is confirmed — just need a few details to create your organization.
       </p>
       <OnboardingForm />

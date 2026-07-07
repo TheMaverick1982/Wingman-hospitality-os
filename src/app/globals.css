@@ -1,33 +1,71 @@
 @import "tailwindcss";
 
 /*
- * Apple.com-inspired palette. Token *names* stay the same as the original
- * design pass so components don't need per-file rewrites — only the hex
- * values changed. "brick" is now the primary accent blue, "gold" the
- * warning amber, "olive" the success green; charcoal/ink/muted/line are
- * Apple's near-black, secondary gray, and hairline-border grays.
+ * Wingman Design System (Claude Design handoff, "Apple.com-style refresh").
+ * Token *names* stay the same as prior passes so components don't need
+ * per-file rewrites - only values changed, plus two new tokens
+ * (--color-line-strong, --color-muted-2, --color-danger*) the new spec
+ * calls for that didn't exist before.
+ *
+ * Plain @theme (not @theme inline): utilities must compile to var(--color-x)
+ * references so the dark-mode override block below can actually take effect
+ * at runtime. @theme inline bakes literal values into utilities instead.
  */
-@theme inline {
-  --color-ink: #1d1d1f;
+@theme {
+  --color-ink: #1a1a1a;
   --color-paper: #f5f5f7;
   --color-panel: #ffffff;
-  --color-charcoal: #1d1d1f;
-  --color-charcoal-2: #424245;
-  --color-brick: #0071e3;
-  --color-brick-dark: #0058b0;
-  --color-brick-tint: #e8f2fd;
-  --color-gold: #ff9500;
-  --color-gold-tint: #fff4e5;
-  --color-olive: #1d8a3e;
-  --color-olive-tint: #e6f6ea;
-  --color-line: #d2d2d7;
-  --color-muted: #86868b;
+  --color-charcoal: #1a1a1a;
+  --color-charcoal-2: #525252;
+  --color-brick: #0a6cff;
+  --color-brick-dark: #0757d6;
+  --color-brick-tint: #eaf1ff;
+  --color-gold: #d97706;
+  --color-gold-tint: #fdf3e1;
+  --color-olive: #15803d;
+  --color-olive-tint: #e7f6ec;
+  --color-line: #e5e5e5;
+  --color-line-strong: #d4d4d4;
+  --color-muted: #737373;
+  --color-muted-2: #a3a3a3;
+  --color-danger: #b91c1c;
+  --color-danger-tint: #fcebeb;
 
-  --font-sans: var(--font-geist);
-  --font-display: var(--font-geist);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue",
+    "Segoe UI", Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue",
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #f5f5f5;
+    --color-paper: #0a0a0a;
+    --color-panel: #171717;
+    --color-charcoal: #232323;
+    --color-charcoal-2: #a1a1a1;
+    --color-brick: #3b82f6;
+    --color-brick-dark: #60a5fa;
+    --color-brick-tint: #0f2647;
+    --color-line: #2a2a2a;
+    --color-line-strong: #3a3a3a;
+    --color-muted: #a1a1a1;
+    --color-muted-2: #737373;
+    --color-gold-tint: #3a2a0f;
+    --color-olive-tint: #0f2b1a;
+    --color-danger-tint: #3a1414;
+  }
 }
 
 ::selection {
   background: var(--color-brick-tint);
+}
+
+body {
+  font-feature-settings: "tnum" 0;
 }

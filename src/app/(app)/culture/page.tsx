@@ -33,7 +33,7 @@ export default async function CulturePage() {
       </div>
 
       <div className="bg-charcoal rounded-xl p-8 mb-6">
-        <p className="text-[#98989d] text-xs uppercase tracking-wide font-semibold mb-3">Our philosophy</p>
+        <p className="text-[#a1a1a1] text-xs uppercase tracking-wide font-semibold mb-3">Our philosophy</p>
         <p className="text-white font-display text-2xl leading-snug max-w-2xl">{org?.philosophy}</p>
       </div>
 
@@ -49,13 +49,13 @@ export default async function CulturePage() {
 
       <div className="bg-gold-tint rounded-2xl p-6 mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={16} className="text-[#92400e]" />
-          <h3 className="font-display text-lg font-semibold text-[#92400e]">This week&apos;s pre-shift focus</h3>
+          <Sparkles size={16} className="text-[#b45309]" />
+          <h3 className="font-display text-lg font-semibold text-[#b45309]">This week&apos;s pre-shift focus</h3>
         </div>
         {isGm ? (
           <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
         ) : (
-          <p className="text-sm text-[#92400e]">{org?.weekly_focus || "Nothing set yet."}</p>
+          <p className="text-sm text-[#b45309]">{org?.weekly_focus || "Nothing set yet."}</p>
         )}
       </div>
 

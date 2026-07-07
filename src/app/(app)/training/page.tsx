@@ -55,10 +55,10 @@ export default async function TrainingPage() {
       <TrainingClient data={data} isGm={isGm} />
 
       <h3 className="font-display text-lg font-semibold mt-8 mb-3 text-ink">Sign-off log</h3>
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line">
+            <tr className="bg-[#fafafa] border-b border-line">
               {["Name", "Department", "Date", "Completion"].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -68,7 +68,7 @@ export default async function TrainingPage() {
           </thead>
           <tbody>
             {(signoffs ?? []).map((t) => (
-              <tr key={t.id} className="border-b border-line">
+              <tr key={t.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
                 <td className="px-5 py-3.5 text-ink">{t.staff_name}</td>
                 <td className="px-5 py-3.5">
                   <Pill>{t.department}</Pill>

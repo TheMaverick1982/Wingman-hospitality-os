@@ -71,7 +71,7 @@ export function GuestsClient({
         <StageCard label="Visit 4 (Loyal)" pct={stageCounts.pct[3] || 0} sub={`${stageCounts.counts[3] || 0} reached stage 4`} active />
       </div>
 
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg mb-4 max-w-md bg-white border border-line">
+      <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg mb-4 max-w-md bg-panel border border-line">
         <Search size={15} className="text-muted" />
         <input
           value={search}
@@ -81,10 +81,10 @@ export function GuestsClient({
         />
       </div>
 
-      <div className="bg-panel border border-line rounded-2xl overflow-hidden">
+      <div className="bg-panel border border-line rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line">
+            <tr className="bg-[#fafafa] border-b border-line">
               {["Guest", "Contact", "Current Stage", "Latest Incentive", "Last Location", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
@@ -102,11 +102,11 @@ export function GuestsClient({
               const lastLocationId = visitAt(g.guest_visits, stage)?.location_id;
               const lastLocationName = locations.find((l) => l.id === lastLocationId)?.name;
               return (
-                <tr key={g.id} className="border-b border-line">
+                <tr key={g.id} className="border-b border-line hover:bg-[#fafafa] transition-colors">
                   <td className="px-5 py-3.5 text-ink">{g.name}</td>
                   <td className="px-5 py-3.5 text-muted">{g.phone || g.email || "—"}</td>
                   <td className="px-5 py-3.5">
-                    <Pill tone={stage >= 4 ? "olive" : stage >= 2 ? "gold" : "muted"}>Visit {stage} of 4</Pill>
+                    <Pill dot tone={stage >= 4 ? "olive" : stage >= 2 ? "gold" : "muted"}>Visit {stage} of 4</Pill>
                   </td>
                   <td className={`px-5 py-3.5 ${latest ? "text-ink" : "text-muted"}`}>{latest || "None recorded"}</td>
                   <td className="px-5 py-3.5 text-muted">

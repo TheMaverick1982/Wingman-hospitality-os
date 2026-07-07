@@ -1,4 +1,4 @@
-export type CoachingFlag = { tone: "brick" | "gold"; text: string };
+export type CoachingFlag = { tone: "danger" | "gold"; text: string };
 
 export function computeCoachingFlags({
   discountPct,
@@ -16,10 +16,10 @@ export function computeCoachingFlags({
   const flags: CoachingFlag[] = [];
 
   if (Number(discountPct) > 4) {
-    flags.push({ tone: "brick", text: `Discount rate is ${discountPct}% — above the 3–4% target. Review Service Recovery.` });
+    flags.push({ tone: "danger", text: `Discount rate is ${discountPct}% — above the 3–4% target. Review Service Recovery.` });
   }
   if (byCategory[0] && byCategory[0][1].count >= 2) {
-    flags.push({ tone: "brick", text: `Recurring issue: "${byCategory[0][0]}" has come up ${byCategory[0][1].count} times. Coach this at pre-shift.` });
+    flags.push({ tone: "danger", text: `Recurring issue: "${byCategory[0][0]}" has come up ${byCategory[0][1].count} times. Coach this at pre-shift.` });
   }
   if (guestsAwaitingFollowUp > 0) {
     flags.push({
@@ -29,7 +29,7 @@ export function computeCoachingFlags({
   }
   for (const s of staffAverages) {
     if (s.avg < 3.5) {
-      flags.push({ tone: "brick", text: `${s.name} is averaging ${s.avg.toFixed(1)}/5 on spot-checks — schedule a coaching session.` });
+      flags.push({ tone: "danger", text: `${s.name} is averaging ${s.avg.toFixed(1)}/5 on spot-checks — schedule a coaching session.` });
     }
   }
   if (lastDailyCheck && lastDailyCheck.checked.filter(Boolean).length < lastDailyCheck.checked.length) {
