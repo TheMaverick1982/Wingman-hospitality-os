@@ -26,8 +26,8 @@ const PROPS: { icon: LucideIcon; title: string; body: string }[] = [
 export function ValueProps() {
   return (
     <section className="bg-paper py-24 px-6">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="font-display text-3xl sm:text-4xl font-semibold text-center text-ink mb-16 tracking-tight">
+      <div className="max-w-[1180px] mx-auto">
+        <h2 className="font-display text-[30px] font-bold text-center text-ink mb-16 tracking-tight">
           Guest experience isn&apos;t a poster on the wall.
           <br />
           It&apos;s a system.
@@ -38,7 +38,7 @@ export function ValueProps() {
               <div className="w-10 h-10 rounded-full bg-brick-tint flex items-center justify-center mb-5">
                 <p.icon size={18} className="text-brick" />
               </div>
-              <h3 className="text-lg font-semibold text-ink mb-2">{p.title}</h3>
+              <h3 className="text-[17px] font-semibold text-ink mb-2">{p.title}</h3>
               <p className="text-sm text-muted leading-relaxed">{p.body}</p>
             </div>
           ))}

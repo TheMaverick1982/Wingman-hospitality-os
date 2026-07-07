@@ -4,8 +4,8 @@ import { RotateCcw, TrendingUp, Heart } from "lucide-react";
 export function Hero() {
   return (
     <section className="relative overflow-hidden pt-20 pb-16 px-6">
-      <div className="relative max-w-4xl mx-auto text-center">
-        <h1 className="font-display text-5xl sm:text-6xl font-semibold tracking-tight text-ink leading-[1.05]">
+      <div className="relative max-w-6xl mx-auto text-center">
+        <h1 className="font-display text-[44px] sm:text-[64px] lg:text-[76px] font-bold tracking-[-0.035em] text-ink leading-[0.98] text-balance">
           The guest you already won
           <br />
           is your best marketing channel.

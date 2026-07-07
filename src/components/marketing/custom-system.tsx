@@ -19,9 +19,9 @@ const WE_BUILD = [
 export function CustomSystem() {
   return (
     <section className="bg-panel py-24 px-6 border-t border-line">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-[1180px] mx-auto">
         <div className="text-center mb-16">
-          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-ink tracking-tight mb-4">
+          <h2 className="font-display text-[30px] font-bold text-ink tracking-tight mb-4">
             Not a generic training binder.
             <br />
             Your standard.

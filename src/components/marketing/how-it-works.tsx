@@ -24,15 +24,15 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section className="bg-panel py-24 px-6 border-t border-line">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="font-display text-3xl sm:text-4xl font-semibold text-center text-ink mb-16 tracking-tight">
+      <div className="max-w-[1180px] mx-auto">
+        <h2 className="font-display text-[30px] font-bold text-center text-ink mb-16 tracking-tight">
           How it works
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {STEPS.map((s) => (
             <div key={s.n}>
               <div className="font-mono text-sm text-muted mb-3">{s.n}</div>
-              <h3 className="text-base font-semibold text-ink mb-2">{s.title}</h3>
+              <h3 className="text-[17px] font-semibold text-ink mb-2">{s.title}</h3>
               <p className="text-sm text-muted leading-relaxed">{s.body}</p>
             </div>
           ))}

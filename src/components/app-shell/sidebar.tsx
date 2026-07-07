@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Briefcase,
   Wand2,
+  BarChart3,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +24,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/training", label: "Training & Standards", icon: GraduationCap },
   { href: "/accountability", label: "Accountability", icon: AlertTriangle },
   { href: "/hiring", label: "Hiring", icon: Briefcase },
+  { href: "/reporting", label: "Reporting", icon: BarChart3 },
 ];
 
 export function Sidebar({
@@ -67,13 +70,26 @@ export function Sidebar({
       </nav>
 
       {isGm && (
-        <Link
-          href="/wizard"
-          className="flex items-center gap-[11px] px-3 py-[9px] mt-2 rounded-[9px] text-sm font-medium text-charcoal-2 hover:bg-[#efefef] transition-colors"
-        >
-          <Wand2 size={16} className="text-muted-2" />
-          Setup wizard
-        </Link>
+        <div className="flex flex-col gap-1 mt-2">
+          <Link
+            href="/wizard"
+            className="flex items-center gap-[11px] px-3 py-[9px] rounded-[9px] text-sm font-medium text-charcoal-2 hover:bg-[#efefef] transition-colors"
+          >
+            <Wand2 size={16} className="text-muted-2" />
+            Setup wizard
+          </Link>
+          <Link
+            href="/settings"
+            className={`flex items-center gap-[11px] px-3 py-[9px] rounded-[9px] text-sm transition-colors ${
+              pathname.startsWith("/settings")
+                ? "bg-brick text-white font-semibold"
+                : "text-charcoal-2 font-medium hover:bg-[#efefef]"
+            }`}
+          >
+            <Settings size={16} className={pathname.startsWith("/settings") ? "text-white" : "text-muted-2"} />
+            Settings
+          </Link>
+        </div>
       )}
 
       <div className="mt-auto pt-4 border-t border-line flex items-center gap-2.5 px-2">
