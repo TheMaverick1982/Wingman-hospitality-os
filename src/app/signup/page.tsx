@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
+import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = { error: null, checkEmail: false };
@@ -27,9 +28,14 @@ export default function SignupPage() {
     <div className="mx-auto max-w-sm py-16">
       <h1 className="font-display text-2xl font-semibold mb-1 text-ink">Set up Wingman</h1>
       <p className="text-sm text-muted mb-6">
-        You&apos;ll be the General Manager for your organization — you can invite Store Managers
-        afterward.
+        You&apos;ll be the Super Admin for your organization — you can invite your team afterward.
       </p>
+      <GoogleSignInButton />
+      <div className="flex items-center gap-3 my-5">
+        <div className="h-px bg-line flex-1" />
+        <span className="text-xs text-muted">or</span>
+        <div className="h-px bg-line flex-1" />
+      </div>
       <form action={formAction} className="flex flex-col gap-1">
         <Field label="Restaurant / organization name">
           <input name="orgName" placeholder="Square Peg" required className={inputClass} />
