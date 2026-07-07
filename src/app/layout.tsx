@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
+import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app";
@@ -75,7 +75,6 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="h-full antialiased">
-      <GoogleTagManager gtmId="GTM-P7CJ3J7G" />
       <body className="min-h-full flex flex-col bg-paper text-ink font-sans">
         <script
           type="application/ld+json"
@@ -84,7 +83,7 @@ export default async function RootLayout({
         />
         <main className="flex-1 flex flex-col min-h-0">{children}</main>
       </body>
-      {gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
+      <DelayedThirdParties gtmId="GTM-P7CJ3J7G" gaId={gaMeasurementId} />
     </html>
   );
 }
