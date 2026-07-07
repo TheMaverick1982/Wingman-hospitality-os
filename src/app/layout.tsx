@@ -29,12 +29,14 @@ export const metadata: Metadata = {
     description:
       "Turn every first-time guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use.",
     url: siteUrl,
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Wingman — The Retention Layer for Hospitality" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Wingman — The Retention Layer for Hospitality",
     description:
       "Turn every first-time guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
