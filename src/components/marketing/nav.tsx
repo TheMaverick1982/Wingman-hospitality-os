@@ -8,6 +8,12 @@ export function MarketingNav() {
           Wingman
         </Link>
         <nav className="flex items-center gap-6">
+          <Link href="/how-it-works" className="text-sm font-medium text-ink hover:text-brick transition-colors hidden sm:inline">
+            How it works
+          </Link>
+          <Link href="/pricing" className="text-sm font-medium text-ink hover:text-brick transition-colors hidden sm:inline">
+            Pricing
+          </Link>
           <Link href="/login" className="text-sm font-medium text-ink hover:text-brick transition-colors">
             Log in
           </Link>
