@@ -32,7 +32,7 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
     if (!allLocations && locationIds.length === 0) return { error: "Select at least one location." };
   }
 
-  const origin = (await headers()).get("origin");
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
   const admin = createAdminClient();
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${origin}/auth/callback?type=invite`,
@@ -61,7 +61,7 @@ export async function resendInvite(_prev: ActionState, formData: FormData): Prom
   const email = String(formData.get("email") || "").trim();
   if (!email) return { error: "Missing email." };
 
-  const origin = (await headers()).get("origin");
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
   const admin = createAdminClient();
   // Routed through Supabase so it uses the project's configured sender + the
   // branded "Invite user" template. Works for members who haven't accepted yet.
@@ -89,7 +89,7 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
   if (!Array.isArray(rows) || rows.length === 0) return { error: "Add at least one team member.", successCount: 0, failures: [] };
   if (rows.length > MAX_BATCH_SIZE) return { error: `Invite up to ${MAX_BATCH_SIZE} team members at a time.`, successCount: 0, failures: [] };
 
-  const origin = (await headers()).get("origin");
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
   const admin = createAdminClient();
   const supabase = await createClient();
   const failures: { index: number; message: string }[] = [];
@@ -173,6 +173,21 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
   if (role !== "super_admin" && !locationId) return { error: "A location is required for this role." };
 
   const supabase = await createClient();
+
+  // Confirm the target belongs to the caller's org, and (for scoped roles) that
+  // the chosen location does too, before any write. RLS is the backstop, but
+  // this makes the boundary explicit and keeps parity with deleteTeamMember.
+  const { data: target } = await supabase.from("profiles").select("org_id").eq("id", userId).single();
+  if (!target || target.org_id !== profile.orgId) return { error: "Member not found in your organization." };
+  if (role !== "super_admin") {
+    const { data: loc } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("id", locationId)
+      .eq("org_id", profile.orgId)
+      .maybeSingle();
+    if (!loc) return { error: "That location isn't in your organization." };
+  }
 
   if (role === "super_admin") {
     // Promote to co-owner: full access, no location scope.

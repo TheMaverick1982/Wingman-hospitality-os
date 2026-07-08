@@ -98,8 +98,14 @@ export async function updateStaffContact(
   id: string,
   patch: { fullName?: string; email?: string; phone?: string; status?: "active" | "inactive" }
 ) {
+  // Allowlist the columns a caller may set -- server-action args are fully
+  // client-controlled, so never spread the raw object into .update().
+  const allowed = new Set(["full_name", "fullName", "email", "phone", "status"]);
+  const safe = Object.fromEntries(
+    Object.entries(patch as Record<string, unknown>).filter(([k]) => allowed.has(k))
+  );
   const supabase = await createClient();
-  await supabase.from("staff_members").update(patch).eq("id", id);
+  await supabase.from("staff_members").update(safe).eq("id", id);
   revalidatePath("/staff");
   revalidatePath(`/staff/${id}`);
 }
@@ -116,6 +122,12 @@ export async function updateTrainingProgress(
   itemId: string,
   patch: { checked?: boolean; rating?: "" | "strong" | "coaching"; note?: string }
 ) {
+  // Allowlist the mutable columns; don't spread the raw client-supplied patch.
+  const allowed = new Set(["checked", "rating", "note"]);
+  const safe = Object.fromEntries(
+    Object.entries(patch as Record<string, unknown>).filter(([k]) => allowed.has(k))
+  );
+
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return;
@@ -123,7 +135,7 @@ export async function updateTrainingProgress(
   await supabase
     .from("staff_training_progress")
     .upsert(
-      { org_id: org.id, staff_id: staffId, item_type: itemType, item_id: itemId, ...patch, updated_at: new Date().toISOString() },
+      { org_id: org.id, staff_id: staffId, item_type: itemType, item_id: itemId, ...safe, updated_at: new Date().toISOString() },
       { onConflict: "staff_id,item_type,item_id" }
     );
   revalidatePath(`/staff/${staffId}`);

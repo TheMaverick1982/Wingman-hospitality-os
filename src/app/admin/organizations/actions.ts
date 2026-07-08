@@ -31,7 +31,7 @@ export async function createFreeOrganization(_prev: CreateOrgState, formData: Fo
   }
   if (cleanLocations.length === 0) return { error: "At least one location is required." };
 
-  const origin = (await headers()).get("origin");
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
   const admin = createAdminClient();
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
     redirectTo: `${origin}/auth/callback?type=invite`,

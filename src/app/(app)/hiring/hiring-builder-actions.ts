@@ -205,8 +205,12 @@ export async function updateHiringTrait(
   id: string,
   patch: { title?: string; question?: string; green_flag?: string; red_flag?: string }
 ) {
+  const allowed = new Set(["title", "question", "green_flag", "red_flag"]);
+  const safe = Object.fromEntries(
+    Object.entries(patch as Record<string, unknown>).filter(([k]) => allowed.has(k))
+  );
   const supabase = await createClient();
-  await supabase.from("hiring_traits").update(patch).eq("id", id);
+  await supabase.from("hiring_traits").update(safe).eq("id", id);
   revalidatePath("/hiring");
 }
 
