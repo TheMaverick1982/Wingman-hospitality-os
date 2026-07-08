@@ -20,7 +20,7 @@ export default async function AdminOrganizationDetailPage({
     admin.from("locations").select("id, name, created_at").eq("org_id", orgId).order("created_at"),
     admin
       .from("profiles")
-      .select("id, full_name, access_role, location_id, locations(name)")
+      .select("id, full_name, access_role, location_id, locations!location_id(name)")
       .eq("org_id", orgId)
       .order("full_name"),
   ]);
