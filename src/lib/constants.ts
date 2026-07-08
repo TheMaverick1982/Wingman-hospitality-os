@@ -51,4 +51,6 @@ export const AMBIANCE_DIMENSIONS = [
   "Lighting",
   "Host stand / entrance first impression",
   "Temperature comfort",
+  "Sight lines & flow (open path, no dead-end corners)",
+  "Seating comfort & spacing",
 ] as const;

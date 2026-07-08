@@ -61,10 +61,10 @@ export function AmbianceCheckModalButton({
                 <input type="date" name="occurredOn" defaultValue={today()} required className={inputClass} />
               </Field>
             </div>
-            <div className="grid grid-cols-5 gap-3 mb-4">
+            <div className="flex flex-col gap-2 mb-4">
               {AMBIANCE_DIMENSIONS.map((d, i) => (
-                <div key={d}>
-                  <label className="text-xs font-medium block mb-1 leading-tight text-muted">{d}</label>
+                <div key={d} className="flex items-center justify-between gap-4 bg-panel border border-line rounded-xl px-4 py-2.5">
+                  <label className="text-sm font-medium text-ink leading-tight">{d}</label>
                   <StarRating name={`score_${i}`} />
                 </div>
               ))}
