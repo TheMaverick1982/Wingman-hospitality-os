@@ -39,7 +39,7 @@ function daysAgoLabel(dateStr: string): string {
 export default async function CulturePage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const canEdit = canEditSection(profile.accessRole, "culture");
+  const canEdit = canEditSection(profile.accessRole, "culture", profile.permissionOverrides);
 
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);

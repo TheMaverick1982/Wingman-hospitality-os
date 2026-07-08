@@ -4,27 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations } from "@/lib/data/locations";
 import { CreditCard, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
+import { BulkInviteButton } from "./bulk-invite-form";
 import { TeamMemberRow, type TeamMember } from "./team-member-row";
 import { AddLocationForm } from "./add-location-form";
+import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
-
-const PERMISSIONS_MATRIX: { section: string; superAdmin: string; manager: string; staff: string }[] = [
-  { section: "Dashboard", superAdmin: "Full", manager: "Full", staff: "View" },
-  { section: "Culture", superAdmin: "Full", manager: "Full", staff: "View" },
-  { section: "Guest Bounce Back", superAdmin: "Full", manager: "Full", staff: "—" },
-  { section: "Service Recovery", superAdmin: "Full", manager: "Full", staff: "View" },
-  { section: "Training & Standards", superAdmin: "Full", manager: "Full", staff: "View" },
-  { section: "Accountability", superAdmin: "Full", manager: "Full", staff: "View" },
-  { section: "Hiring", superAdmin: "Full", manager: "Full", staff: "—" },
-  { section: "Reporting", superAdmin: "Full", manager: "View", staff: "—" },
-  { section: "Settings", superAdmin: "Full", manager: "—", staff: "—" },
-];
-
-const LEVEL_PILL: Record<string, string> = {
-  Full: "bg-[#E7F6EC] text-[#15803D]",
-  View: "bg-brick-tint text-brick-dark",
-  "—": "bg-paper text-muted-2",
-};
 
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
@@ -53,7 +37,10 @@ export default async function SettingsPage() {
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Team members</span>
             <span className="text-[13px] text-muted-2 ml-1.5">{allMembers.length} users</span>
           </div>
-          <InviteTeamMemberButton locations={locations} />
+          <div className="flex items-center gap-2">
+            <BulkInviteButton locations={locations} />
+            <InviteTeamMemberButton locations={locations} />
+          </div>
         </div>
         <table className="w-full text-sm">
           <thead>
@@ -75,25 +62,11 @@ export default async function SettingsPage() {
 
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
         <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Permissions by level</div>
-        <p className="text-sm text-muted mb-5">What each access level can see and do. Super Admin is the account owner.</p>
-        <div className="border border-[#EDEDED] rounded-xl overflow-hidden">
-          <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] bg-[#FAFAFA] border-b border-line">
-            <div className="px-[18px] py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em]">Section</div>
-            <div className="px-3 py-3 text-[11.5px] font-bold text-ink text-center">Super Admin</div>
-            <div className="px-3 py-3 text-[11.5px] font-bold text-brick-dark text-center">Manager</div>
-            <div className="px-3 py-3 text-[11.5px] font-bold text-charcoal-2 text-center">Staff</div>
-          </div>
-          {PERMISSIONS_MATRIX.map((row) => (
-            <div key={row.section} className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center border-b border-[#F5F5F5] last:border-0">
-              <div className="px-[18px] py-3 text-sm font-medium text-ink">{row.section}</div>
-              {[row.superAdmin, row.manager, row.staff].map((level, i) => (
-                <div key={i} className="px-3 py-2.5 text-center">
-                  <span className={`inline-block min-w-[58px] py-1 rounded-full text-xs font-semibold ${LEVEL_PILL[level]}`}>{level}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        <p className="text-sm text-muted mb-5">
+          What each access level can see and do. Super Admin is the account owner and always has full access — only
+          Manager and Staff levels are editable here.
+        </p>
+        <PermissionsMatrixForm initialOverrides={profile.permissionOverrides} />
       </div>
     </div>
   );
@@ -106,15 +79,22 @@ export default async function SettingsPage() {
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Locations</span>
             <span className="text-[13px] text-muted-2 ml-1.5">{locations.length} active</span>
           </div>
-          <AddLocationForm />
+          <AddLocationForm currentLocationCount={locations.length} />
         </div>
         {locations.map((l, i) => (
           <div key={l.id} className="flex items-center justify-between px-6 py-4 border-b border-[#F5F5F5] last:border-0">
-            <div className="flex items-center gap-3.5">
-              <span className="w-10 h-10 rounded-[11px] bg-brick-tint text-brick flex items-center justify-center text-base">◈</span>
-              <div className="text-[15px] font-semibold text-ink">{l.name}</div>
+            <div className="flex items-center gap-3.5 min-w-0">
+              <span className="w-10 h-10 rounded-[11px] bg-brick-tint text-brick flex items-center justify-center text-base shrink-0">◈</span>
+              <div className="min-w-0">
+                <div className="text-[15px] font-semibold text-ink">{l.name}</div>
+                {(l.address || l.phone || l.email) && (
+                  <div className="text-xs text-muted-2 truncate">
+                    {[l.address, l.phone, l.email].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-5 shrink-0">
               <span className="text-[13px] text-muted">{staffCountByLocation.get(l.id) ?? 0} staff</span>
               <span className="text-[13px] font-semibold text-[#15803D] bg-[#E7F6EC] px-2.5 py-1 rounded-full">
                 {i === 0 ? "$199 base" : "+$100/mo"}
@@ -156,7 +136,7 @@ export default async function SettingsPage() {
       </div>
       <p className="text-sm text-muted mb-4">
         Payment processing isn&apos;t connected yet. Once it is, you&apos;ll manage your plan, add or
-        remove locations, and cancel from here.
+        remove locations, and cancel from here. This tab is only ever visible to the account owner.
       </p>
       <div className="flex items-center gap-2 opacity-50">
         <CreditCard size={16} className="text-muted" />

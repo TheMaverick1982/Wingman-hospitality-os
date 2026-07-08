@@ -9,7 +9,7 @@ import { SignoffLog } from "./signoff-log";
 export default async function TrainingPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  const canEdit = canEditSection(profile.accessRole, "training");
+  const canEdit = canEditSection(profile.accessRole, "training", profile.permissionOverrides);
 
   const supabase = await createClient();
   const [

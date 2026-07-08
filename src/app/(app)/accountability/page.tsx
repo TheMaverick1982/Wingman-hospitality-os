@@ -27,7 +27,7 @@ export default async function AccountabilityPage({
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const isSuperAdmin = profile.accessRole === "super_admin";
-  const canEdit = canEditSection(profile.accessRole, "accountability");
+  const canEdit = canEditSection(profile.accessRole, "accountability", profile.permissionOverrides);
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
