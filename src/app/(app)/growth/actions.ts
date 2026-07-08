@@ -60,3 +60,51 @@ export async function saveGrowthPlan(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/reporting");
   return { error: null };
 }
+
+export async function addGrowthEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const locationId = String(formData.get("locationId") || "") || null;
+  const periodDate = String(formData.get("periodDate") || "");
+  const customers = Number(formData.get("customers") || 0);
+  const avgSale = Number(formData.get("avgSale") || 0);
+  const repurchaseFrequency = Number(formData.get("repurchaseFrequency") || 0);
+
+  if (!periodDate) return { error: "Pick a date for this period." };
+  if ([customers, avgSale, repurchaseFrequency].some(Number.isNaN)) return { error: "Enter valid numbers." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const payload = {
+    org_id: org.id,
+    location_id: locationId,
+    period_date: periodDate,
+    customers,
+    avg_sale: avgSale,
+    repurchase_frequency: repurchaseFrequency,
+    created_by: user?.id,
+  };
+
+  let existingQuery = supabase.from("growth_plan_entries").select("id").eq("org_id", org.id).eq("period_date", periodDate);
+  existingQuery = locationId ? existingQuery.eq("location_id", locationId) : existingQuery.is("location_id", null);
+  const { data: existing } = await existingQuery.maybeSingle();
+
+  const { error } = existing
+    ? await supabase.from("growth_plan_entries").update(payload).eq("id", existing.id)
+    : await supabase.from("growth_plan_entries").insert(payload);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/growth");
+  revalidatePath("/reporting");
+  return { error: null };
+}
+
+export async function deleteGrowthEntry(id: string) {
+  const supabase = await createClient();
+  await supabase.from("growth_plan_entries").delete().eq("id", id);
+  revalidatePath("/growth");
+}

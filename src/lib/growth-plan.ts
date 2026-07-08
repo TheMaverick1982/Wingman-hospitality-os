@@ -8,6 +8,7 @@ export type GrowthBaseline = {
 
 export type GrowthPhase = {
   label: string;
+  sublabel?: string;
   customers: number;
   avgSale: number;
   repurchaseFrequency: number;
@@ -19,14 +20,14 @@ function computeTotal(b: GrowthBaseline): number {
   return b.customers * b.avgSale * b.repurchaseFrequency;
 }
 
-function applyGrowth(base: GrowthBaseline, pctCustomers: number, pctAvgSale: number, pctFrequency: number, label: string): GrowthPhase {
+function applyGrowth(base: GrowthBaseline, pctCustomers: number, pctAvgSale: number, pctFrequency: number, label: string, sublabel?: string): GrowthPhase {
   const customers = base.customers * (1 + pctCustomers / 100);
   const avgSale = base.avgSale * (1 + pctAvgSale / 100);
   const repurchaseFrequency = base.repurchaseFrequency * (1 + pctFrequency / 100);
   const total = customers * avgSale * repurchaseFrequency;
   const baseTotal = computeTotal(base);
   const pctIncreaseVsBase = baseTotal > 0 ? ((total - baseTotal) / baseTotal) * 100 : 0;
-  return { label, customers, avgSale, repurchaseFrequency, total, pctIncreaseVsBase };
+  return { label, sublabel, customers, avgSale, repurchaseFrequency, total, pctIncreaseVsBase };
 }
 
 export function buildPhases(
@@ -39,7 +40,7 @@ export function buildPhases(
   const roundedUniform = Math.round(uniformPct);
   return {
     current: applyGrowth(base, 0, 0, 0, "Current"),
-    uniform: applyGrowth(base, uniformPct, uniformPct, uniformPct, `${roundedUniform}/${roundedUniform}/${roundedUniform} Plan`),
+    uniform: applyGrowth(base, uniformPct, uniformPct, uniformPct, "Compounded Growth", `${roundedUniform}/${roundedUniform}/${roundedUniform}`),
     target: applyGrowth(base, targetPctCustomers, targetPctAvgSale, targetPctFrequency, "Your Target"),
   };
 }
