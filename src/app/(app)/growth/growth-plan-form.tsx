@@ -24,17 +24,20 @@ export function GrowthPlanForm({
     currentCustomers: number;
     currentAvgSale: number;
     currentRepurchaseFrequency: number;
+    uniformPct: number;
     targetCustomersPct: number;
     targetAvgSalePct: number;
     targetFrequencyPct: number;
   };
 }) {
   const [state, formAction, pending] = useActionState(saveGrowthPlan, initialState);
+  const [uniformPct, setUniformPct] = useState(initial.uniformPct);
   const [target, setTarget] = useState({
     customers: initial.targetCustomersPct,
     avgSale: initial.targetAvgSalePct,
     frequency: initial.targetFrequencyPct,
   });
+  const roundedUniform = Math.round(uniformPct) || 0;
 
   return (
     <form action={formAction} className="bg-white border border-line rounded-2xl p-7 shadow-sm">
@@ -63,8 +66,31 @@ export function GrowthPlanForm({
         </Field>
       </div>
 
+      <div className="mt-2 mb-6 pt-5 border-t border-line">
+        <div className="text-[13px] font-semibold text-ink mb-1">Uniform growth plan</div>
+        <div className="text-[13px] text-muted mb-3">
+          Apply the same % increase to all three levers — 10 is the classic &quot;10/10/10&quot; plan, but bump it up to
+          model a bigger uniform push.
+        </div>
+        <div className="flex items-center gap-4 max-w-sm">
+          <input
+            type="range"
+            name="uniformPct"
+            min="0"
+            max="100"
+            step="1"
+            value={uniformPct}
+            onChange={(e) => setUniformPct(Number(e.target.value))}
+            className="flex-1 accent-brick"
+          />
+          <div className="shrink-0 text-sm font-semibold text-ink tabular-nums w-32 text-right">
+            {roundedUniform}/{roundedUniform}/{roundedUniform}
+          </div>
+        </div>
+      </div>
+
       <div className="mt-2 mb-4">
-        <div className="text-[13px] font-semibold text-ink mb-2">Target plan</div>
+        <div className="text-[13px] font-semibold text-ink mb-2">Custom target plan</div>
         <div className="flex flex-wrap gap-2 mb-4">
           {PRESETS.map((p) => (
             <button

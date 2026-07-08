@@ -13,11 +13,16 @@ export async function saveGrowthPlan(_prev: ActionState, formData: FormData): Pr
   const currentCustomers = Number(formData.get("currentCustomers") || 0);
   const currentAvgSale = Number(formData.get("currentAvgSale") || 0);
   const currentRepurchaseFrequency = Number(formData.get("currentRepurchaseFrequency") || 0);
+  const uniformPct = Number(formData.get("uniformPct") || 10);
   const targetCustomersPct = Number(formData.get("targetCustomersPct") || 0);
   const targetAvgSalePct = Number(formData.get("targetAvgSalePct") || 0);
   const targetFrequencyPct = Number(formData.get("targetFrequencyPct") || 0);
 
-  if ([currentCustomers, currentAvgSale, currentRepurchaseFrequency, targetCustomersPct, targetAvgSalePct, targetFrequencyPct].some(Number.isNaN)) {
+  if (
+    [currentCustomers, currentAvgSale, currentRepurchaseFrequency, uniformPct, targetCustomersPct, targetAvgSalePct, targetFrequencyPct].some(
+      Number.isNaN
+    )
+  ) {
     return { error: "Enter valid numbers." };
   }
 
@@ -33,6 +38,7 @@ export async function saveGrowthPlan(_prev: ActionState, formData: FormData): Pr
     current_customers: currentCustomers,
     current_avg_sale: currentAvgSale,
     current_repurchase_frequency: currentRepurchaseFrequency,
+    uniform_pct: uniformPct,
     target_customers_pct: targetCustomersPct,
     target_avg_sale_pct: targetAvgSalePct,
     target_frequency_pct: targetFrequencyPct,

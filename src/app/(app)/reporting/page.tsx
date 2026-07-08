@@ -91,6 +91,7 @@ export default async function ReportingPage({
           avgSale: Number(growthPlan.current_avg_sale),
           repurchaseFrequency: Number(growthPlan.current_repurchase_frequency),
         },
+        10,
         Number(growthPlan.target_customers_pct),
         Number(growthPlan.target_avg_sale_pct),
         Number(growthPlan.target_frequency_pct)

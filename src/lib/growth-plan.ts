@@ -31,13 +31,15 @@ function applyGrowth(base: GrowthBaseline, pctCustomers: number, pctAvgSale: num
 
 export function buildPhases(
   base: GrowthBaseline,
+  uniformPct: number,
   targetPctCustomers: number,
   targetPctAvgSale: number,
   targetPctFrequency: number
-): { current: GrowthPhase; tenTenTen: GrowthPhase; target: GrowthPhase } {
+): { current: GrowthPhase; uniform: GrowthPhase; target: GrowthPhase } {
+  const roundedUniform = Math.round(uniformPct);
   return {
     current: applyGrowth(base, 0, 0, 0, "Current"),
-    tenTenTen: applyGrowth(base, 10, 10, 10, "10/10/10 Plan"),
+    uniform: applyGrowth(base, uniformPct, uniformPct, uniformPct, `${roundedUniform}/${roundedUniform}/${roundedUniform} Plan`),
     target: applyGrowth(base, targetPctCustomers, targetPctAvgSale, targetPctFrequency, "Your Target"),
   };
 }

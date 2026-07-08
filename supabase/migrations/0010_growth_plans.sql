@@ -12,6 +12,7 @@ create table growth_plans (
   current_customers numeric not null default 0,
   current_avg_sale numeric not null default 0,
   current_repurchase_frequency numeric not null default 0,
+  uniform_pct numeric not null default 10,
   target_customers_pct numeric not null default 20,
   target_avg_sale_pct numeric not null default 20,
   target_frequency_pct numeric not null default 20,

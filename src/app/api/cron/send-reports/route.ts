@@ -134,6 +134,7 @@ async function buildReportHtml(
           avgSale: Number(plan.current_avg_sale),
           repurchaseFrequency: Number(plan.current_repurchase_frequency),
         },
+        Number(plan.uniform_pct),
         Number(plan.target_customers_pct),
         Number(plan.target_avg_sale_pct),
         Number(plan.target_frequency_pct)

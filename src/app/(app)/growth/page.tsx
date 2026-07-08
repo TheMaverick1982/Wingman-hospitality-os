@@ -13,6 +13,7 @@ type GrowthPlanRow = {
   current_customers: number;
   current_avg_sale: number;
   current_repurchase_frequency: number;
+  uniform_pct: number;
   target_customers_pct: number;
   target_avg_sale_pct: number;
   target_frequency_pct: number;
@@ -23,6 +24,7 @@ const EMPTY_PLAN: GrowthPlanRow = {
   current_customers: 0,
   current_avg_sale: 0,
   current_repurchase_frequency: 0,
+  uniform_pct: 10,
   target_customers_pct: 20,
   target_avg_sale_pct: 20,
   target_frequency_pct: 20,
@@ -60,7 +62,13 @@ export default async function GrowthPlanPage({
     avgSale: Number(plan.current_avg_sale),
     repurchaseFrequency: Number(plan.current_repurchase_frequency),
   };
-  const phases = buildPhases(baseline, Number(plan.target_customers_pct), Number(plan.target_avg_sale_pct), Number(plan.target_frequency_pct));
+  const phases = buildPhases(
+    baseline,
+    Number(plan.uniform_pct),
+    Number(plan.target_customers_pct),
+    Number(plan.target_avg_sale_pct),
+    Number(plan.target_frequency_pct)
+  );
   const trajectory = buildTrajectory(
     baseline,
     Number(plan.target_customers_pct),
@@ -84,6 +92,16 @@ export default async function GrowthPlanPage({
         {!canEdit && <Pill>View only</Pill>}
       </div>
 
+      <div className="bg-brick-tint border border-[#CFE0FF] rounded-2xl p-6">
+        <p className="text-sm text-brick-dark leading-relaxed">
+          Most operators try to grow revenue by chasing one big number — more covers, a bigger check, a busier
+          Saturday. This tool shows why that&apos;s the hard way: revenue is really three numbers multiplied
+          together, so a <strong>10% lift in each</strong> compounds into a <strong>33% total gain</strong>, not
+          30%. Enter your real numbers below, see exactly what a modest, sustainable push in each lever is worth,
+          and set a target you can actually hold your team to — by location or across the whole group.
+        </p>
+      </div>
+
       {canEdit ? (
         <GrowthPlanForm
           locationId={effectiveLocation}
@@ -93,6 +111,7 @@ export default async function GrowthPlanPage({
             currentCustomers: Number(plan.current_customers),
             currentAvgSale: Number(plan.current_avg_sale),
             currentRepurchaseFrequency: Number(plan.current_repurchase_frequency),
+            uniformPct: Number(plan.uniform_pct),
             targetCustomersPct: Number(plan.target_customers_pct),
             targetAvgSalePct: Number(plan.target_avg_sale_pct),
             targetFrequencyPct: Number(plan.target_frequency_pct),
@@ -136,7 +155,7 @@ export default async function GrowthPlanPage({
                 </tr>
               </thead>
               <tbody>
-                {[phases.current, phases.tenTenTen, phases.target].map((p, i) => (
+                {[phases.current, phases.uniform, phases.target].map((p, i) => (
                   <tr key={p.label} className="border-b border-line last:border-b-0">
                     <td className="px-5 py-3.5 font-semibold text-ink">{p.label}</td>
                     <td className="px-5 py-3.5 text-muted tabular-nums">{p.customers.toFixed(1)}</td>
@@ -155,7 +174,7 @@ export default async function GrowthPlanPage({
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <PhaseComparisonChart phases={[phases.current, phases.tenTenTen, phases.target]} />
+            <PhaseComparisonChart phases={[phases.current, phases.uniform, phases.target]} />
             <TrajectoryChart points={trajectory} frequency={plan.frequency} />
           </div>
         </>
