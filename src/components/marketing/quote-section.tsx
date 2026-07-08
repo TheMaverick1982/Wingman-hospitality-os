@@ -9,7 +9,7 @@ export function QuoteSection() {
         </blockquote>
         <p className="text-lg sm:text-[19px] text-[#a1a1a1]">
           Everything in Wingman exists to move guests from Visit 1 to Visit 4 — and keep them
-          there.
+          returning for life.
         </p>
       </div>
     </div>
