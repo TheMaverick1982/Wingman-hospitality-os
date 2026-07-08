@@ -28,5 +28,5 @@ export async function completeOnboarding(
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  redirect("/start-here");
 }

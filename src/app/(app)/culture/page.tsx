@@ -1,6 +1,7 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
+import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { MomentModalButton } from "./moment-form";
 import { WeeklyFocusForm } from "./weekly-focus-form";
@@ -43,7 +44,7 @@ export default async function CulturePage() {
 
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
-  const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }] = await Promise.all([
+  const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
     supabase.from("organizations").select("philosophy, weekly_focus").single(),
     supabase.from("core_values").select("title, description").order("sort_order"),
     supabase
@@ -51,6 +52,7 @@ export default async function CulturePage() {
       .select("id, author, about, tag, message, occurred_on")
       .order("occurred_on", { ascending: false }),
     supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("occurred_on", ninetyDaysAgo),
+    getStaffMembers(null),
   ]);
 
   const allMoments = moments ?? [];
@@ -72,7 +74,7 @@ export default async function CulturePage() {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {!canEdit && <Pill>View only</Pill>}
-          {canEdit && <MomentModalButton />}
+          {canEdit && <MomentModalButton staff={staff} />}
         </div>
       </div>
 

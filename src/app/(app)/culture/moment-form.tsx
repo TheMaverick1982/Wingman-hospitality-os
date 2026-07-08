@@ -7,11 +7,12 @@ import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { CULTURE_TAGS } from "@/lib/constants";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { StaffPicker, type StaffOption } from "@/components/staff-picker";
 import { addCultureMoment, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
-export function MomentModalButton() {
+export function MomentModalButton({ staff }: { staff: StaffOption[] }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addCultureMoment, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
@@ -30,10 +31,10 @@ export function MomentModalButton() {
           <form action={formAction}>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Your name">
-                <input name="author" required className={inputClass} />
+                <StaffPicker name="author" staff={staff} required placeholder="Your name" />
               </Field>
               <Field label="Who's this about?">
-                <input name="about" required className={inputClass} />
+                <StaffPicker name="about" staff={staff} required placeholder="Who's this about?" />
               </Field>
             </div>
             <Field label="Tag">

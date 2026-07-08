@@ -13,10 +13,11 @@ import {
   type SpotCheck,
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
+import { getOnboardingStatus } from "@/lib/onboarding";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Rocket, Sparkle } from "lucide-react";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -50,6 +51,7 @@ export default async function DashboardPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -58,6 +60,7 @@ export default async function DashboardPage({
     requestedLocationId: location,
   });
 
+  const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
   const supabase = await createClient();
 
   const [
@@ -71,6 +74,7 @@ export default async function DashboardPage({
     cultureMomentsQuery,
     coachingLogsQuery,
     locations,
+    { data: org },
   ] = await Promise.all([
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
@@ -86,6 +90,7 @@ export default async function DashboardPage({
     supabase.from("culture_moments").select("id, author, about, created_at").order("created_at", { ascending: false }).limit(4),
     scoped(supabase.from("coaching_logs").select("id, flag_text, created_at").order("created_at", { ascending: false }).limit(4), effectiveLocation),
     getOrgLocations(),
+    supabase.from("organizations").select("weekly_focus").single(),
   ]);
 
   const discounts = (discountsQuery.data ?? []) as Discount[];
@@ -165,6 +170,31 @@ export default async function DashboardPage({
   return (
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
+
+      {onboarding && !onboarding.allDone && (
+        <Link
+          href="/start-here"
+          className="flex items-center gap-3 bg-brick-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
+        >
+          <Rocket size={16} className="text-brick shrink-0" />
+          <span className="text-sm text-brick-dark flex-1">
+            <span className="font-semibold">Finish setting up your account</span> — {onboarding.doneCount} of {onboarding.steps.length} steps done.
+          </span>
+          <span className="text-sm font-semibold text-brick-dark whitespace-nowrap">Start here →</span>
+        </Link>
+      )}
+
+      {org?.weekly_focus && (
+        <Link
+          href="/culture"
+          className="flex items-center gap-3 bg-gold-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
+        >
+          <Sparkle size={16} className="text-[#b45309] shrink-0" />
+          <span className="text-sm text-[#b45309]">
+            <span className="font-semibold">This week&apos;s pre-shift focus:</span> {org.weekly_focus}
+          </span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">

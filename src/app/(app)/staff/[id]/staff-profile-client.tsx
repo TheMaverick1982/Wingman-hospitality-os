@@ -50,6 +50,7 @@ export function StaffProfileClient({
   signoffs,
   candidate,
   coreValueTitles,
+  initialTab,
 }: {
   staff: Staff;
   locationName: string;
@@ -61,8 +62,9 @@ export function StaffProfileClient({
   signoffs: { id: string; completion_pct: number; occurred_on: string }[];
   candidate: Candidate;
   coreValueTitles: string[];
+  initialTab?: "contact" | "training" | "hiring";
 }) {
-  const [tab, setTab] = useState<"contact" | "training" | "hiring">("contact");
+  const [tab, setTab] = useState<"contact" | "training" | "hiring">(initialTab ?? "contact");
 
   const progressMap = new Map(progress.map((p) => [`${p.item_type}:${p.item_id}`, p]));
   const allItems: (ChecklistItem & { type: "standard" | "training" })[] = [

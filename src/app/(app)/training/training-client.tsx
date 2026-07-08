@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import type { Location } from "@/lib/data/locations";
+import type { StaffMember } from "@/lib/data/staff";
 import { RoleChecklist } from "./role-checklist";
 import { MenuTrainingSection, type MenuItem } from "./menu-training-section";
 
@@ -26,10 +28,14 @@ export function TrainingClient({
   data,
   summaries,
   isGm,
+  staff,
+  locations,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
   isGm: boolean;
+  staff: StaffMember[];
+  locations: Location[];
 }) {
   const [activeRole, setActiveRole] = useState<Department>(ALL_DEPARTMENTS[0]);
   const dept = data[activeRole];
@@ -79,6 +85,8 @@ export function TrainingClient({
         roleItems={dept.trainingItems}
         trackLabel={dept.trackLabel}
         canEdit={isGm}
+        staff={staff}
+        locations={locations}
       />
     </div>
   );

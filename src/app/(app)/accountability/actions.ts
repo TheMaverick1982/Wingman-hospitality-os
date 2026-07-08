@@ -2,16 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ALL_DEPARTMENTS, DAILY_CHECKLIST_ITEMS, PRE_SHIFT_ITEMS, AMBIANCE_DIMENSIONS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, AMBIANCE_DIMENSIONS, type Department } from "@/lib/constants";
 
 export type ActionState = { error: string | null };
+
+// Checkbox inputs are only present in FormData when checked, so the count
+// of items rendered has to travel alongside the form as its own field.
+function readChecked(formData: FormData): boolean[] {
+  const itemCount = Number(formData.get("itemCount") || 0);
+  return Array.from({ length: itemCount }, (_, i) => formData.get(`item_${i}`) === "on");
+}
 
 export async function addDailyChecklist(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const managerName = String(formData.get("managerName") || "").trim();
   const locationId = String(formData.get("locationId") || "");
   const occurredOn = String(formData.get("occurredOn") || "");
   const notes = String(formData.get("notes") || "").trim();
-  const checked = DAILY_CHECKLIST_ITEMS.map((_, i) => formData.get(`item_${i}`) === "on");
+  const checked = readChecked(formData);
 
   if (!managerName || !locationId || !occurredOn) {
     return { error: "Manager, location, and date are required." };
@@ -86,7 +93,7 @@ export async function addPreShiftCheck(_prev: ActionState, formData: FormData): 
   const department = String(formData.get("department") || "");
   const locationId = String(formData.get("locationId") || "");
   const occurredOn = String(formData.get("occurredOn") || "");
-  const checked = PRE_SHIFT_ITEMS.map((_, i) => formData.get(`item_${i}`) === "on");
+  const checked = readChecked(formData);
 
   if (!staffName || !locationId || !occurredOn) {
     return { error: "Staff member, location, and date are required." };

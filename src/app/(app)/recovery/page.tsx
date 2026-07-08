@@ -1,6 +1,7 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getStaffMembers } from "@/lib/data/staff";
 import { canEditSection } from "@/lib/auth/permissions";
 import { aggregateBy, type Discount } from "@/lib/hospitality";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -34,10 +35,11 @@ export default async function RecoveryPage({
   let query = supabase.from("discounts").select("*").order("occurred_on", { ascending: false });
   if (effectiveLocation) query = query.eq("location_id", effectiveLocation);
 
-  const [{ data: org }, { data: discountsData }, locations] = await Promise.all([
+  const [{ data: org }, { data: discountsData }, locations, staff] = await Promise.all([
     supabase.from("organizations").select("total_revenue").single(),
     query,
     getOrgLocations(),
+    getStaffMembers(effectiveLocation),
   ]);
 
   const discounts = (discountsData ?? []) as Discount[];
@@ -63,6 +65,7 @@ export default async function RecoveryPage({
           {canEdit && (
             <DiscountModalButton
               locations={locations}
+              staff={staff}
               isGm={isSuperAdmin}
               lockedLocationName={profile.locationName}
               defaultLocationId={effectiveLocation ?? profile.locationId}

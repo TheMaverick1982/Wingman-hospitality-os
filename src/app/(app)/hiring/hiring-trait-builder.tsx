@@ -16,7 +16,7 @@ export function HiringTraitBuilder({ department }: { department: string }) {
 
   return (
     <>
-      <Btn small kind="ghost" icon={Wand2} onClick={() => setOpen(true)}>
+      <Btn small kind="info" icon={Wand2} onClick={() => setOpen(true)}>
         Build hiring criteria
       </Btn>
       {open && (

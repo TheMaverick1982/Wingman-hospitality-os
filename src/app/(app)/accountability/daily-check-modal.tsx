@@ -6,7 +6,6 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { DAILY_CHECKLIST_ITEMS } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { addDailyChecklist, type ActionState } from "./actions";
 
@@ -18,11 +17,13 @@ export function DailyCheckModalButton({
   isGm,
   lockedLocationName,
   defaultLocationId,
+  items,
 }: {
   locations: Location[];
   isGm: boolean;
   lockedLocationName: string | null;
   defaultLocationId: string | null;
+  items: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addDailyChecklist, initialState);
@@ -63,8 +64,9 @@ export function DailyCheckModalButton({
             <Field label="Date">
               <input type="date" name="occurredOn" defaultValue={today()} required className={inputClass} />
             </Field>
+            <input type="hidden" name="itemCount" value={items.length} />
             <div className="flex flex-col gap-2.5 mb-4">
-              {DAILY_CHECKLIST_ITEMS.map((item, i) => (
+              {items.map((item, i) => (
                 <label key={i} className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" name={`item_${i}`} className="mt-1 accent-brick" />
                   <span className="text-sm leading-relaxed text-charcoal-2">{item}</span>

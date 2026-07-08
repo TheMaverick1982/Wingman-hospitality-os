@@ -8,6 +8,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { DISCOUNT_CATEGORIES } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
+import { StaffPicker, type StaffOption } from "@/components/staff-picker";
 import { addDiscount, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -15,11 +16,13 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export function DiscountModalButton({
   locations,
+  staff,
   isGm,
   lockedLocationName,
   defaultLocationId,
 }: {
   locations: Location[];
+  staff: StaffOption[];
   isGm: boolean;
   lockedLocationName: string | null;
   defaultLocationId: string | null;
@@ -65,7 +68,7 @@ export function DiscountModalButton({
               </Field>
             </div>
             <Field label="Server">
-              <input name="serverName" required className={inputClass} />
+              <StaffPicker name="serverName" staff={staff} department="Server" required placeholder="Server name" />
             </Field>
             <Field label="Category">
               <select name="category" defaultValue={DISCOUNT_CATEGORIES[0]} className={inputClass}>

@@ -1,0 +1,218 @@
+"use client";
+
+import { useActionState, useState, useTransition } from "react";
+import { Pencil, Trash2, Plus, Check, X, Wand2, Sparkles, Upload } from "lucide-react";
+import { Btn } from "@/components/ui/btn";
+import { Modal } from "@/components/ui/modal";
+import { Pill } from "@/components/ui/pill";
+import { inputClass } from "@/components/ui/field";
+import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import {
+  addAccountabilityItem,
+  updateAccountabilityItemText,
+  deleteAccountabilityItem,
+  generateAccountabilityChecklist,
+  type ChecklistType,
+  type TemplateItem,
+  type ItemState,
+  type BuildState,
+} from "./template-actions";
+
+const addInitial: ItemState = { error: null };
+const buildInitial: BuildState = { error: null };
+
+export function ChecklistTemplateEditor({
+  checklistType,
+  title,
+  items,
+}: {
+  checklistType: ChecklistType;
+  title: string;
+  items: TemplateItem[];
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [addState, addAction, addPending] = useActionState(addAccountabilityItem, addInitial);
+  useCloseOnSuccess(addPending, addState.error, () => setShowAdd(false));
+  const [, startTransition] = useTransition();
+
+  function remove(id: string) {
+    startTransition(() => deleteAccountabilityItem(checklistType, id));
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    const text = draft.trim();
+    if (text) startTransition(() => updateAccountabilityItemText(checklistType, editingId, text));
+    setEditingId(null);
+  }
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display text-lg font-semibold text-ink">{title}</h3>
+        <ChecklistBuilder checklistType={checklistType} label={title} />
+      </div>
+
+      <div className="flex flex-col gap-2.5 mb-2">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-start gap-3 group">
+            <span className="mt-1 w-3.5 h-3.5 rounded-[4px] border-2 border-brick shrink-0" />
+            {editingId === item.id ? (
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  autoFocus
+                  className={`${inputClass} flex-1 py-1.5 text-sm`}
+                />
+                <button onClick={saveEdit} className="text-olive shrink-0">
+                  <Check size={15} />
+                </button>
+                <button onClick={() => setEditingId(null)} className="text-muted-2 shrink-0">
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm leading-relaxed text-charcoal-2 flex-1">{item.item}</span>
+                {item.source === "custom" && <Pill tone="muted">Custom</Pill>}
+                <div className="hidden group-hover:flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingId(item.id);
+                      setDraft(item.item);
+                    }}
+                    className="text-muted-2 hover:text-ink"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={() => remove(item.id)} className="text-muted-2 hover:text-danger">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {showAdd ? (
+        <form action={addAction} className="flex items-center gap-2 mt-1">
+          <input type="hidden" name="checklistType" value={checklistType} />
+          <input name="text" placeholder="Add an item..." autoFocus className={`${inputClass} flex-1 py-1.5 text-sm`} />
+          <button type="submit" className="text-olive shrink-0" disabled={addPending}>
+            <Check size={15} />
+          </button>
+          <button type="button" onClick={() => setShowAdd(false)} className="text-muted-2 shrink-0">
+            <X size={15} />
+          </button>
+          {addState.error && <p className="text-xs text-danger">{addState.error}</p>}
+        </form>
+      ) : (
+        <button type="button" onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 text-xs font-semibold text-brick mt-1">
+          <Plus size={13} /> Add item
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType; label: string }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"upload" | "wizard">("upload");
+  const [state, formAction, pending] = useActionState(generateAccountabilityChecklist, buildInitial);
+
+  return (
+    <>
+      <Btn small kind="info" icon={Wand2} onClick={() => setOpen(true)}>
+        Build with AI
+      </Btn>
+      {open && (
+        <Modal
+          title={`Build ${label}`}
+          sub="Upload what you already use, or let Wingman build it from scratch -- guest experience woven in alongside operational discipline."
+          onClose={() => setOpen(false)}
+          wide
+        >
+          <div className="flex gap-2 mb-5">
+            <button
+              type="button"
+              onClick={() => setMode("upload")}
+              className={`flex-1 rounded-xl border px-4 py-3 text-left transition-colors ${
+                mode === "upload" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                <Upload size={15} /> I have an existing checklist
+              </div>
+              <p className="text-xs text-muted">Upload a PDF or photo of what you already use.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("wizard")}
+              className={`flex-1 rounded-xl border px-4 py-3 text-left transition-colors ${
+                mode === "wizard" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                <Sparkles size={15} /> Build from scratch
+              </div>
+              <p className="text-xs text-muted">Answer a couple questions and Wingman writes it.</p>
+            </button>
+          </div>
+
+          <form action={formAction}>
+            <input type="hidden" name="checklistType" value={checklistType} />
+            <input type="hidden" name="mode" value={mode} />
+
+            {mode === "upload" ? (
+              <div className="mb-2">
+                <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Existing checklist document</label>
+                <input
+                  type="file"
+                  name="file"
+                  accept="image/*,application/pdf"
+                  required
+                  className="text-sm text-charcoal-2 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-paper file:text-ink file:text-sm file:font-semibold w-full"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 mb-2">
+                <div>
+                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
+                    What&apos;s the #1 recurring issue this checklist should catch?
+                  </label>
+                  <textarea name="painPoint" rows={2} className={`${inputClass} resize-none`} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
+                    What does &quot;guest experience done right&quot; look like on your floor, that this should reinforce?
+                  </label>
+                  <textarea name="mustHave" rows={2} className={`${inputClass} resize-none`} />
+                </div>
+              </div>
+            )}
+
+            {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}
+            {state.built != null && !state.error && <p className="text-sm text-[#15803d] mt-2">Built {state.built} items.</p>}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
+                Close
+              </Btn>
+              <Btn type="submit" disabled={pending} icon={Sparkles}>
+                {pending ? "Building..." : "Build checklist"}
+              </Btn>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}

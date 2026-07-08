@@ -4,6 +4,7 @@ const KIND_CLASSES = {
   primary: "bg-brick text-white border border-brick hover:bg-brick-dark hover:border-brick-dark disabled:bg-muted-2 disabled:border-muted-2",
   ghost: "bg-panel text-ink border border-line-strong hover:bg-paper hover:border-muted-2",
   danger: "bg-panel text-danger border border-danger-tint hover:bg-danger-tint",
+  info: "bg-[#2563EB] text-white border border-[#2563EB] hover:bg-[#1D4ED8] hover:border-[#1D4ED8] disabled:bg-muted-2 disabled:border-muted-2",
 } as const;
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
