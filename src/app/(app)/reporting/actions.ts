@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { error: string | null };
 
-const VALID_SECTIONS = ["culture", "bounceback", "recovery", "training", "accountability", "hiring"];
+const VALID_SECTIONS = ["culture", "bounceback", "recovery", "training", "accountability", "hiring", "growth"];
 
 export async function scheduleReport(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const frequency = String(formData.get("frequency") || "");

@@ -17,6 +17,7 @@ const SECTIONS = [
   { key: "training", label: "Training" },
   { key: "accountability", label: "Accountability" },
   { key: "hiring", label: "Hiring" },
+  { key: "growth", label: "Revenue Growth Planner" },
 ];
 
 export function ScheduleReportModalButton() {

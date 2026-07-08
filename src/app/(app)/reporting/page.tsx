@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
+import { buildPhases } from "@/lib/growth-plan";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
-import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase } from "lucide-react";
+import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
 import { ScheduleReportModalButton } from "./schedule-report-modal";
 import { deleteReportSchedule } from "./actions";
 
@@ -44,6 +45,7 @@ export default async function ReportingPage({
     { data: candidates },
     { data: guests },
     { data: schedules },
+    { data: growthPlan },
     locations,
   ] = await Promise.all([
     supabase.from("discounts").select("amount, location_id").gte("occurred_on", cutoff),
@@ -53,6 +55,11 @@ export default async function ReportingPage({
     supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff),
     supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction)"),
     supabase.from("report_schedules").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("growth_plans")
+      .select("current_customers, current_avg_sale, current_repurchase_frequency, target_customers_pct, target_avg_sale_pct, target_frequency_pct")
+      .is("location_id", null)
+      .maybeSingle(),
     getOrgLocations(),
   ]);
 
@@ -76,6 +83,20 @@ export default async function ReportingPage({
 
   const referredCount = allGuests.filter((g) => g.referred_a_friend).length;
   const referralRate = allGuests.length > 0 ? Math.round((referredCount / allGuests.length) * 100) : 0;
+
+  const growthTarget = growthPlan
+    ? buildPhases(
+        {
+          customers: Number(growthPlan.current_customers),
+          avgSale: Number(growthPlan.current_avg_sale),
+          repurchaseFrequency: Number(growthPlan.current_repurchase_frequency),
+        },
+        10,
+        Number(growthPlan.target_customers_pct),
+        Number(growthPlan.target_avg_sale_pct),
+        Number(growthPlan.target_frequency_pct)
+      ).target
+    : null;
 
   const byLocation = locations.map((loc) => {
     const locDiscounts = (discounts ?? []).filter((d) => d.location_id === loc.id);
@@ -155,6 +176,19 @@ export default async function ReportingPage({
         { label: "Candidates scored", value: (candidates ?? []).length },
         { label: "Strong fits", value: strongFitCount },
       ],
+    },
+    {
+      icon: TrendingUp,
+      label: "Revenue Growth Planner",
+      href: "/growth",
+      iconBg: "bg-brick-tint",
+      iconFg: "text-brick",
+      rows: growthTarget
+        ? [
+            { label: "Target growth", value: `+${growthTarget.pctIncreaseVsBase.toFixed(1)}%` },
+            { label: "Target revenue", value: `$${growthTarget.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
+          ]
+        : [{ label: "Status", value: "Not set up yet" }],
     },
   ];
 
