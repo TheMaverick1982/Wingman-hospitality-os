@@ -54,3 +54,34 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
   revalidatePath("/hiring");
   return { error: null };
 }
+
+export async function hireCandidate(candidateId: string): Promise<{ error: string | null; staffId?: string }> {
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const { data: candidate } = await supabase
+    .from("candidates")
+    .select("name, department, location_id")
+    .eq("id", candidateId)
+    .maybeSingle();
+  if (!candidate) return { error: "Candidate not found." };
+
+  const { data: staffRow, error } = await supabase
+    .from("staff_members")
+    .insert({
+      org_id: org.id,
+      location_id: candidate.location_id,
+      candidate_id: candidateId,
+      full_name: candidate.name,
+      department: candidate.department,
+      hired_on: new Date().toISOString().slice(0, 10),
+    })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  revalidatePath("/hiring");
+  revalidatePath("/staff");
+  return { error: null, staffId: staffRow.id };
+}

@@ -2,12 +2,13 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
-import { getSectionAccess } from "@/lib/auth/permissions";
+import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
 import { StatusPill } from "@/components/ui/status-pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton } from "./candidate-modal";
+import { HireCandidateButton } from "./hire-candidate-button";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
   "Strong fit": { fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
@@ -45,6 +46,7 @@ export default async function HiringPage({
   if (!profile) return null;
   if (getSectionAccess(profile.accessRole, "hiring", profile.permissionOverrides) === "none") redirect("/dashboard");
   const isSuperAdmin = profile.accessRole === "super_admin";
+  const canEdit = canEditSection(profile.accessRole, "hiring", profile.permissionOverrides);
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -63,7 +65,7 @@ export default async function HiringPage({
       .from("core_values")
       .select("title, description, hiring_question, hiring_green_flag, hiring_red_flag")
       .order("sort_order"),
-    supabase.from("hiring_traits").select("department, title, question, green_flag, red_flag").order("sort_order"),
+    supabase.from("hiring_traits").select("id, department, title, question, green_flag, red_flag, source").order("sort_order"),
     candidatesQ,
     getOrgLocations(),
   ]);
@@ -72,11 +74,14 @@ export default async function HiringPage({
   for (const d of ALL_DEPARTMENTS) {
     traitsByDept[d] = (hiringTraits ?? [])
       .filter((t) => t.department === d)
-      .map((t) => ({ title: t.title, question: t.question, green_flag: t.green_flag, red_flag: t.red_flag }));
+      .map((t) => ({ id: t.id, title: t.title, question: t.question, green_flag: t.green_flag, red_flag: t.red_flag, source: t.source }));
   }
 
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
   const allCandidates = candidates ?? [];
+
+  const { data: hiredStaff } = await supabase.from("staff_members").select("candidate_id").not("candidate_id", "is", null);
+  const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
 
   const byDepartment = ALL_DEPARTMENTS.map((d) => {
     const cands = allCandidates.filter((c) => c.department === d);
@@ -226,7 +231,7 @@ export default async function HiringPage({
         </div>
       </div>
 
-      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} />
+      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} canEdit={canEdit} />
 
       <div>
         <h3 className="font-display text-lg font-semibold mb-3 text-ink">Candidate scorecards</h3>
@@ -234,7 +239,7 @@ export default async function HiringPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#FAFAFA] border-b border-line">
-                {["Candidate", "Department", "Location", "Date", "Avg score", "Recommendation"].map((h) => (
+                {["Candidate", "Department", "Location", "Date", "Avg score", "Recommendation", "Staff"].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                     {h}
                   </th>
@@ -256,12 +261,15 @@ export default async function HiringPage({
                         {c.recommendation}
                       </Pill>
                     </td>
+                    <td className="px-5 py-3.5">
+                      {canEdit && <HireCandidateButton candidateId={c.id} alreadyHired={hiredCandidateIds.has(c.id)} />}
+                    </td>
                   </tr>
                 );
               })}
               {allCandidates.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-muted">
+                  <td colSpan={7} className="px-5 py-8 text-center text-muted">
                     No candidates scored yet.
                   </td>
                 </tr>

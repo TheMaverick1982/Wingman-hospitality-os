@@ -19,8 +19,8 @@ export default async function TrainingPage() {
     { data: menuItems },
     { data: signoffs },
   ] = await Promise.all([
-    supabase.from("department_standards").select("department, item, sort_order").order("sort_order"),
-    supabase.from("department_training_items").select("department, item, sort_order").order("sort_order"),
+    supabase.from("department_standards").select("id, department, item, sort_order, source").order("sort_order"),
+    supabase.from("department_training_items").select("id, department, item, sort_order, source").order("sort_order"),
     supabase.from("department_meta").select("department, track_label, has_menu"),
     supabase
       .from("menu_items")
@@ -38,8 +38,8 @@ export default async function TrainingPage() {
   for (const d of ALL_DEPARTMENTS) {
     const metaRow = meta?.find((m) => m.department === d);
     data[d] = {
-      standards: (standards ?? []).filter((s) => s.department === d).map((s) => s.item),
-      trainingItems: (trainingItems ?? []).filter((t) => t.department === d).map((t) => t.item),
+      standards: (standards ?? []).filter((s) => s.department === d).map((s) => ({ id: s.id, item: s.item, source: s.source })),
+      trainingItems: (trainingItems ?? []).filter((t) => t.department === d).map((t) => ({ id: t.id, item: t.item, source: t.source })),
       trackLabel: metaRow?.track_label ?? null,
       hasMenu: metaRow?.has_menu ?? false,
       menuItems: (menuItems ?? []).filter((m) => m.department === d),

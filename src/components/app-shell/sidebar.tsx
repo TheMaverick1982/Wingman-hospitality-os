@@ -10,6 +10,7 @@ import {
   GraduationCap,
   AlertTriangle,
   Briefcase,
+  Users,
   TrendingUp,
   Wand2,
   BarChart3,
@@ -30,6 +31,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[]
   { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
   { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
   { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
+  { href: "/staff", label: "Staff", icon: Users, section: "staff" },
 ];
 
 function initialsOf(fullName: string): string {

@@ -1,117 +1,202 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, GraduationCap } from "lucide-react";
-import { Btn } from "@/components/ui/btn";
+import { useActionState, useState, useTransition } from "react";
+import Link from "next/link";
+import { Heart, GraduationCap, Pencil, Trash2, Plus, Check, X, Users } from "lucide-react";
+import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
-import { signOffTraining } from "./actions";
+import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { RoleTrainingBuilder } from "./role-training-builder";
+import { addChecklistItem, updateChecklistItemText, deleteChecklistItem, type ItemState } from "./role-training-actions";
+import type { ChecklistItem } from "./training-client";
 
-// Rendered with `key={department}` by the caller so switching departments
-// remounts this component and resets all local state naturally.
+const addInitial: ItemState = { error: null };
+
 export function RoleChecklist({
   department,
   hospitalityItems,
   roleItems,
   trackLabel,
+  canEdit,
 }: {
   department: string;
-  hospitalityItems: string[];
-  roleItems: string[];
+  hospitalityItems: ChecklistItem[];
+  roleItems: ChecklistItem[];
   trackLabel: string | null;
+  canEdit: boolean;
 }) {
-  const [checkedH, setCheckedH] = useState<Record<number, boolean>>({});
-  const [checkedR, setCheckedR] = useState<Record<number, boolean>>({});
-  const [name, setName] = useState("");
-  const [signingOff, setSigningOff] = useState(false);
-
-  const totalItems = hospitalityItems.length + roleItems.length;
-  const checkedCount =
-    Object.values(checkedH).filter(Boolean).length + Object.values(checkedR).filter(Boolean).length;
-  const pct = totalItems ? Math.round((checkedCount / totalItems) * 100) : 0;
-
-  async function handleSignOff() {
-    if (!name || pct !== 100) return;
-    setSigningOff(true);
-    await signOffTraining(name, department, pct);
-    setSigningOff(false);
-    setName("");
-    setCheckedH({});
-    setCheckedR({});
-  }
-
   return (
     <div className="bg-panel border border-line rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg font-semibold text-ink">{department} training program</h3>
-        <span className={`font-mono text-sm font-semibold ${pct === 100 ? "text-olive" : "text-muted"}`}>
-          {pct}% reviewed
-        </span>
+        {canEdit && <RoleTrainingBuilder department={department} />}
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <Heart size={14} className="text-brick" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-brick">
-          Hospitality & guest experience — the standard
+      <ItemGroup
+        icon={<Heart size={14} className="text-brick" />}
+        label="Hospitality & guest experience — the standard"
+        labelClass="text-brick"
+        accent="accent-brick"
+        items={hospitalityItems}
+        list="hospitality"
+        department={department}
+        canEdit={canEdit}
+        empty="No standard defined yet for this department."
+      />
+
+      {(trackLabel || roleItems.length > 0 || canEdit) && (
+        <div className="pt-5 border-t border-line">
+          <ItemGroup
+            icon={<GraduationCap size={14} className="text-gold" />}
+            label={`${trackLabel || "Role-specific"} — role-specific`}
+            labelClass="text-[#b45309]"
+            accent="accent-gold"
+            items={roleItems}
+            list="role"
+            department={department}
+            canEdit={canEdit}
+            empty="No role-specific track defined yet."
+          />
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 pt-4 mt-4 border-t border-line text-sm text-muted">
+        <Users size={14} />
+        <span>
+          Ready to train someone on this?{" "}
+          <Link href="/staff" className="font-semibold text-brick hover:underline">
+            Run a staff member through it in Staff →
+          </Link>
         </span>
       </div>
-      <div className="flex flex-col gap-2.5 mb-5">
-        {hospitalityItems.length === 0 && (
-          <p className="text-sm text-muted">No standard defined yet for this department.</p>
-        )}
-        {hospitalityItems.map((item, i) => (
-          <label key={i} className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={!!checkedH[i]}
-              onChange={(e) => setCheckedH({ ...checkedH, [i]: e.target.checked })}
-              className="mt-1 accent-brick"
-            />
-            <span className={`text-sm leading-relaxed ${checkedH[i] ? "text-muted line-through" : "text-charcoal-2"}`}>
-              {item}
-            </span>
-          </label>
+    </div>
+  );
+}
+
+function ItemGroup({
+  icon,
+  label,
+  labelClass,
+  accent,
+  items,
+  list,
+  department,
+  canEdit,
+  empty,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  labelClass: string;
+  accent: string;
+  items: ChecklistItem[];
+  list: "hospitality" | "role";
+  department: string;
+  canEdit: boolean;
+  empty: string;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [addState, addAction, addPending] = useActionState(addChecklistItem, addInitial);
+  useCloseOnSuccess(addPending, addState.error, () => setShowAdd(false));
+  const [, startTransition] = useTransition();
+
+  function beginEdit(item: ChecklistItem) {
+    setEditingId(item.id);
+    setDraft(item.item);
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    const text = draft.trim();
+    if (text) startTransition(() => updateChecklistItemText(list, editingId, text));
+    setEditingId(null);
+  }
+
+  function remove(id: string) {
+    startTransition(() => deleteChecklistItem(list, id));
+  }
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <span className={`text-xs font-semibold uppercase tracking-wide ${labelClass}`}>{label}</span>
+      </div>
+      <div className="flex flex-col gap-2.5 mb-2">
+        {items.length === 0 && <p className="text-sm text-muted">{empty}</p>}
+        {items.map((item) => (
+          <div key={item.id} className="flex items-start gap-3 group">
+            <span className={`mt-1 w-3.5 h-3.5 rounded-[4px] border-2 shrink-0 ${accent === "accent-brick" ? "border-brick" : "border-gold"}`} />
+            {editingId === item.id ? (
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  autoFocus
+                  className={`${inputClass} flex-1 py-1.5 text-sm`}
+                />
+                <button onClick={saveEdit} className="text-olive shrink-0">
+                  <Check size={15} />
+                </button>
+                <button onClick={() => setEditingId(null)} className="text-muted-2 shrink-0">
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm leading-relaxed text-charcoal-2 flex-1">{item.item}</span>
+                {item.source === "custom" && <Pill tone="muted">Custom</Pill>}
+                {canEdit && (
+                  <div className="hidden group-hover:flex items-center gap-2 shrink-0">
+                    <button onClick={() => beginEdit(item)} className="text-muted-2 hover:text-ink">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => remove(item.id)} className="text-muted-2 hover:text-danger">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         ))}
       </div>
 
-      {trackLabel && (
+      {canEdit && (
         <>
-          <div className="pt-5 mb-3 flex items-center gap-2 border-t border-line">
-            <GraduationCap size={14} className="text-gold" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#b45309]">
-              {trackLabel} — role-specific
-            </span>
-          </div>
-          <div className="flex flex-col gap-2.5 mb-5">
-            {roleItems.map((item, i) => (
-              <label key={i} className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!checkedR[i]}
-                  onChange={(e) => setCheckedR({ ...checkedR, [i]: e.target.checked })}
-                  className="mt-1 accent-gold"
-                />
-                <span className={`text-sm leading-relaxed ${checkedR[i] ? "text-muted line-through" : "text-charcoal-2"}`}>
-                  {item}
-                </span>
-              </label>
-            ))}
-          </div>
+          {showAdd ? (
+            <form action={addAction} className="flex items-center gap-2 mt-1">
+              <input type="hidden" name="department" value={department} />
+              <input type="hidden" name="list" value={list} />
+              <input
+                name="text"
+                placeholder="Add an item..."
+                autoFocus
+                className={`${inputClass} flex-1 py-1.5 text-sm`}
+              />
+              <button type="submit" className="text-olive shrink-0" disabled={addPending}>
+                <Check size={15} />
+              </button>
+              <button type="button" onClick={() => setShowAdd(false)} className="text-muted-2 shrink-0">
+                <X size={15} />
+              </button>
+              {addState.error && <p className="text-xs text-danger">{addState.error}</p>}
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-brick mt-1"
+            >
+              <Plus size={13} /> Add item
+            </button>
+          )}
         </>
-      )}
-
-      <div className="flex items-center gap-3 pt-4 border-t border-line">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Staff member name"
-          className={`${inputClass} flex-1`}
-        />
-        <Btn onClick={handleSignOff} disabled={pct !== 100 || !name || signingOff}>
-          Sign off {pct < 100 ? `(${pct}%)` : ""}
-        </Btn>
-      </div>
-      {pct < 100 && totalItems > 0 && (
-        <p className="text-xs text-muted mt-2">Check every item — hospitality and role-specific — before signing off.</p>
       )}
     </div>
   );
