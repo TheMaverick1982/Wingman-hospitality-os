@@ -134,6 +134,34 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
   return { error: failures.length > 0 && successCount === 0 ? "Couldn't send any invites." : null, successCount, failures };
 }
 
+export async function deleteTeamMember(userId: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only a Super Admin can remove team members." };
+  if (!userId) return { error: "Missing member." };
+  if (userId === profile.userId) return { error: "You can't remove yourself." };
+
+  const supabase = await createClient();
+  const { data: target } = await supabase.from("profiles").select("access_role, org_id").eq("id", userId).single();
+  if (!target || target.org_id !== profile.orgId) return { error: "Member not found in your organization." };
+
+  // Never remove the last Super Admin.
+  if (target.access_role === "super_admin") {
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("access_role", "super_admin");
+    if ((count ?? 0) <= 1) return { error: "You can't remove the last Super Admin." };
+  }
+
+  // Deleting the auth user cascades to their profile and location grants.
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  return { error: null };
+}
+
 export async function updateTeamMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.accessRole !== "super_admin") return { error: "Only a Super Admin can edit team members." };
