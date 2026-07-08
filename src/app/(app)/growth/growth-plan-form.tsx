@@ -80,7 +80,11 @@ export function GrowthPlanForm({
             max="100"
             step="1"
             value={uniformPct}
-            onChange={(e) => setUniformPct(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              setUniformPct(val);
+              setTarget({ customers: val, avgSale: val, frequency: val });
+            }}
             className="flex-1 accent-brick"
           />
           <div className="shrink-0 text-sm font-semibold text-ink tabular-nums w-32 text-right">

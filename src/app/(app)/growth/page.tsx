@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -5,8 +6,11 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import { buildPhases, buildTrajectory, type GrowthFrequency } from "@/lib/growth-plan";
 import { Pill } from "@/components/ui/pill";
+import { DeleteIconButton } from "@/components/ui/delete-icon-button";
 import { GrowthPlanForm } from "./growth-plan-form";
-import { PhaseComparisonChart, TrajectoryChart } from "./growth-plan-charts";
+import { ActualsForm } from "./actuals-form";
+import { PhaseBreakdown, PhaseComparisonChart, TrajectoryChart, ActualsChart } from "./growth-plan-charts";
+import { deleteGrowthEntry } from "./actions";
 
 type GrowthPlanRow = {
   frequency: GrowthFrequency;
@@ -19,21 +23,34 @@ type GrowthPlanRow = {
   target_frequency_pct: number;
 };
 
+type GrowthPlanEntry = {
+  id: string;
+  period_date: string;
+  customers: number;
+  avg_sale: number;
+  repurchase_frequency: number;
+};
+
 const EMPTY_PLAN: GrowthPlanRow = {
   frequency: "monthly",
   current_customers: 0,
   current_avg_sale: 0,
   current_repurchase_frequency: 0,
   uniform_pct: 10,
-  target_customers_pct: 20,
-  target_avg_sale_pct: 20,
-  target_frequency_pct: 20,
+  target_customers_pct: 10,
+  target_avg_sale_pct: 10,
+  target_frequency_pct: 10,
 };
+
+const TABS = [
+  { key: "plan", label: "Plan" },
+  { key: "track", label: "Track Actuals" },
+] as const;
 
 export default async function GrowthPlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; tab?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -41,7 +58,8 @@ export default async function GrowthPlanPage({
   const canEdit = canEditSection(profile.accessRole, "growth");
   const isSuperAdmin = profile.accessRole === "super_admin";
 
-  const { location } = await searchParams;
+  const { location, tab } = await searchParams;
+  const activeTab = tab === "track" ? "track" : "plan";
   const effectiveLocation = resolveEffectiveLocation({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
@@ -51,11 +69,19 @@ export default async function GrowthPlanPage({
   const supabase = await createClient();
   let planQuery = supabase.from("growth_plans").select("*");
   planQuery = effectiveLocation ? planQuery.eq("location_id", effectiveLocation) : planQuery.is("location_id", null);
+  let entriesQuery = supabase.from("growth_plan_entries").select("id, period_date, customers, avg_sale, repurchase_frequency").order("period_date");
+  entriesQuery = effectiveLocation ? entriesQuery.eq("location_id", effectiveLocation) : entriesQuery.is("location_id", null);
 
-  const [{ data: planRow }, locations] = await Promise.all([planQuery.maybeSingle(), getOrgLocations()]);
+  const [{ data: planRow }, { data: entriesData }, locations] = await Promise.all([planQuery.maybeSingle(), entriesQuery, getOrgLocations()]);
 
   const plan = (planRow as GrowthPlanRow | null) ?? EMPTY_PLAN;
-  const locationLabel = effectiveLocation ? (locations.find((l) => l.id === effectiveLocation)?.name ?? "Location") : "All locations";
+  const entries = (entriesData ?? []) as GrowthPlanEntry[];
+  const locationLabel =
+    locations.length <= 1
+      ? (locations[0]?.name ?? "Your location")
+      : effectiveLocation
+        ? (locations.find((l) => l.id === effectiveLocation)?.name ?? "Location")
+        : "All locations";
 
   const baseline = {
     customers: Number(plan.current_customers),
@@ -78,6 +104,7 @@ export default async function GrowthPlanPage({
   );
 
   const hasNumbers = baseline.customers > 0 && baseline.avgSale > 0 && baseline.repurchaseFrequency > 0;
+  const locationQs = effectiveLocation ? `&location=${effectiveLocation}` : "";
 
   return (
     <>
@@ -102,52 +129,96 @@ export default async function GrowthPlanPage({
         </p>
       </div>
 
-      {canEdit ? (
-        <GrowthPlanForm
-          locationId={effectiveLocation}
-          locationLabel={locationLabel}
-          initial={{
-            frequency: plan.frequency,
-            currentCustomers: Number(plan.current_customers),
-            currentAvgSale: Number(plan.current_avg_sale),
-            currentRepurchaseFrequency: Number(plan.current_repurchase_frequency),
-            uniformPct: Number(plan.uniform_pct),
-            targetCustomersPct: Number(plan.target_customers_pct),
-            targetAvgSalePct: Number(plan.target_avg_sale_pct),
-            targetFrequencyPct: Number(plan.target_frequency_pct),
-          }}
-        />
-      ) : (
-        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
-          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Your numbers — {locationLabel}</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-            <div>
-              <div className="text-[13px] text-muted mb-1">Current # of customers</div>
-              <div className="text-lg font-semibold text-ink tabular-nums">{baseline.customers}</div>
-            </div>
-            <div>
-              <div className="text-[13px] text-muted mb-1">Current average $ per sale</div>
-              <div className="text-lg font-semibold text-ink tabular-nums">${baseline.avgSale}</div>
-            </div>
-            <div>
-              <div className="text-[13px] text-muted mb-1">Current repurchase frequency</div>
-              <div className="text-lg font-semibold text-ink tabular-nums">{baseline.repurchaseFrequency}</div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex gap-1 bg-white border border-line rounded-xl p-1 w-fit">
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={`/growth?tab=${t.key}${locationQs}`}
+            className={`text-[13px] font-semibold px-3.5 py-2 rounded-[9px] transition-colors ${
+              activeTab === t.key ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
 
-      {!hasNumbers ? (
-        <div className="bg-paper border border-line rounded-2xl p-10 text-center">
-          <p className="text-sm text-muted">Enter your current numbers above to see your growth plan and projections.</p>
-        </div>
+      {activeTab === "plan" ? (
+        <>
+          {canEdit ? (
+            <GrowthPlanForm
+              locationId={effectiveLocation}
+              locationLabel={locationLabel}
+              initial={{
+                frequency: plan.frequency,
+                currentCustomers: Number(plan.current_customers),
+                currentAvgSale: Number(plan.current_avg_sale),
+                currentRepurchaseFrequency: Number(plan.current_repurchase_frequency),
+                uniformPct: Number(plan.uniform_pct),
+                targetCustomersPct: Number(plan.target_customers_pct),
+                targetAvgSalePct: Number(plan.target_avg_sale_pct),
+                targetFrequencyPct: Number(plan.target_frequency_pct),
+              }}
+            />
+          ) : (
+            <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Your numbers — {locationLabel}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                <div>
+                  <div className="text-[13px] text-muted mb-1">Current # of customers</div>
+                  <div className="text-lg font-semibold text-ink tabular-nums">{baseline.customers}</div>
+                </div>
+                <div>
+                  <div className="text-[13px] text-muted mb-1">Current average $ per sale</div>
+                  <div className="text-lg font-semibold text-ink tabular-nums">${baseline.avgSale}</div>
+                </div>
+                <div>
+                  <div className="text-[13px] text-muted mb-1">Current repurchase frequency</div>
+                  <div className="text-lg font-semibold text-ink tabular-nums">{baseline.repurchaseFrequency}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!hasNumbers ? (
+            <div className="bg-paper border border-line rounded-2xl p-10 text-center">
+              <p className="text-sm text-muted">Enter your current numbers above to see your growth plan and projections.</p>
+            </div>
+          ) : (
+            <>
+              <PhaseBreakdown phases={[phases.current, phases.uniform, phases.target]} />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <PhaseComparisonChart phases={[phases.current, phases.uniform, phases.target]} />
+                <TrajectoryChart points={trajectory} frequency={plan.frequency} />
+              </div>
+            </>
+          )}
+
+          {isSuperAdmin && locations.length > 1 && (
+            <p className="text-[13px] text-muted">
+              Switch locations with the selector in the top bar — pick a location for its own plan, or &quot;All locations&quot; for an org-wide plan.
+            </p>
+          )}
+        </>
       ) : (
         <>
+          {canEdit && <ActualsForm locationId={effectiveLocation} frequency={plan.frequency} />}
+
+          {entries.length > 0 && (
+            <ActualsChart
+              entries={entries.map((e) => ({
+                periodDate: e.period_date,
+                total: Number(e.customers) * Number(e.avg_sale) * Number(e.repurchase_frequency),
+              }))}
+            />
+          )}
+
           <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#FAFAFA] border-b border-line">
-                  {["Plan", "Customers", "Avg $ per sale", "Repurchase freq.", "Total", "vs. current"].map((h) => (
+                  {["Period", "Customers", "Avg $ per sale", "Repurchase freq.", "Total", ""].map((h) => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                       {h}
                     </th>
@@ -155,35 +226,32 @@ export default async function GrowthPlanPage({
                 </tr>
               </thead>
               <tbody>
-                {[phases.current, phases.uniform, phases.target].map((p, i) => (
-                  <tr key={p.label} className="border-b border-line last:border-b-0">
-                    <td className="px-5 py-3.5 font-semibold text-ink">{p.label}</td>
-                    <td className="px-5 py-3.5 text-muted tabular-nums">{p.customers.toFixed(1)}</td>
-                    <td className="px-5 py-3.5 text-muted tabular-nums">${p.avgSale.toFixed(2)}</td>
-                    <td className="px-5 py-3.5 text-muted tabular-nums">{p.repurchaseFrequency.toFixed(2)}</td>
-                    <td className="px-5 py-3.5 text-ink font-semibold tabular-nums">
-                      ${p.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="px-5 py-3.5 tabular-nums">
-                      {i === 0 ? <span className="text-muted-2">—</span> : <span className="text-[#15803D] font-semibold">+{p.pctIncreaseVsBase.toFixed(1)}%</span>}
+                {[...entries].reverse().map((e) => {
+                  const total = Number(e.customers) * Number(e.avg_sale) * Number(e.repurchase_frequency);
+                  return (
+                    <tr key={e.id} className="border-b border-line last:border-b-0">
+                      <td className="px-5 py-3.5 text-ink font-medium">{e.period_date}</td>
+                      <td className="px-5 py-3.5 text-muted tabular-nums">{Number(e.customers)}</td>
+                      <td className="px-5 py-3.5 text-muted tabular-nums">${Number(e.avg_sale).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-muted tabular-nums">{Number(e.repurchase_frequency).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-ink font-semibold tabular-nums">
+                        ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="px-5 py-3.5">{canEdit && <DeleteIconButton id={e.id} action={deleteGrowthEntry} />}</td>
+                    </tr>
+                  );
+                })}
+                {entries.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-8 text-center text-muted">
+                      No {plan.frequency === "weekly" ? "weekly" : "monthly"} numbers logged yet.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <PhaseComparisonChart phases={[phases.current, phases.uniform, phases.target]} />
-            <TrajectoryChart points={trajectory} frequency={plan.frequency} />
-          </div>
         </>
-      )}
-
-      {isSuperAdmin && locations.length > 1 && (
-        <p className="text-[13px] text-muted">
-          Switch locations with the selector in the top bar — pick a location for its own plan, or &quot;All locations&quot; for an org-wide plan.
-        </p>
       )}
     </>
   );
