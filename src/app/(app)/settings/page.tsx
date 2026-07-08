@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations } from "@/lib/data/locations";
-import { CreditCard, Lock } from "lucide-react";
+import { CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
 import { BulkInviteButton } from "./bulk-invite-form";
 import { TeamMemberRow, type TeamMember } from "./team-member-row";
@@ -16,10 +16,12 @@ export default async function SettingsPage() {
   if (profile.accessRole !== "super_admin") redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: members }, locations] = await Promise.all([
+  const [{ data: members }, locations, { data: org }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id").order("full_name"),
     getOrgLocations(),
+    supabase.from("organizations").select("is_free_account").single(),
   ]);
+  const isFreeAccount = org?.is_free_account ?? false;
 
   const allMembers = members ?? [];
   const staffCountByLocation = new Map<string, number>();
@@ -79,7 +81,7 @@ export default async function SettingsPage() {
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Locations</span>
             <span className="text-[13px] text-muted-2 ml-1.5">{locations.length} active</span>
           </div>
-          <AddLocationForm currentLocationCount={locations.length} />
+          <AddLocationForm currentLocationCount={locations.length} isFreeAccount={isFreeAccount} />
         </div>
         {locations.map((l, i) => (
           <div key={l.id} className="flex items-center justify-between px-6 py-4 border-b border-[#F5F5F5] last:border-0">
@@ -96,35 +98,49 @@ export default async function SettingsPage() {
             </div>
             <div className="flex items-center gap-5 shrink-0">
               <span className="text-[13px] text-muted">{staffCountByLocation.get(l.id) ?? 0} staff</span>
-              <span className="text-[13px] font-semibold text-[#15803D] bg-[#E7F6EC] px-2.5 py-1 rounded-full">
-                {i === 0 ? "$199 base" : "+$100/mo"}
-              </span>
+              {!isFreeAccount && (
+                <span className="text-[13px] font-semibold text-[#15803D] bg-[#E7F6EC] px-2.5 py-1 rounded-full">
+                  {i === 0 ? "$199 base" : "+$100/mo"}
+                </span>
+              )}
             </div>
           </div>
         ))}
       </div>
-      {locations.length > 1 && (
-        <div className="bg-[#0A0A0A] rounded-2xl px-7 py-6 text-white flex items-center justify-between gap-6 flex-wrap">
+      {isFreeAccount ? (
+        <div className="bg-olive-tint rounded-2xl px-7 py-6 flex items-center gap-3">
+          <Gift size={20} className="text-[#15803d] shrink-0" />
           <div>
-            <div className="text-[15px] font-semibold">Multi-location plan</div>
-            <div className="text-[13px] text-[#A1A1A1] mt-0.5">
-              $199 first location + $100 per additional · billed monthly
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[28px] font-bold tracking-[-0.02em]">
-              ${monthlyTotal}
-              <span className="text-[15px] text-[#A1A1A1] font-medium">/mo</span>
-            </div>
-            <div className="text-xs text-[#A1A1A1] mt-0.5">
-              $199 + {locations.length - 1} × $100
-            </div>
+            <div className="text-[15px] font-semibold text-[#15803d]">Free account — no billing</div>
+            <div className="text-[13px] text-[#15803d] mt-0.5">Add as many locations as you need at no cost.</div>
           </div>
         </div>
+      ) : (
+        <>
+          {locations.length > 1 && (
+            <div className="bg-[#0A0A0A] rounded-2xl px-7 py-6 text-white flex items-center justify-between gap-6 flex-wrap">
+              <div>
+                <div className="text-[15px] font-semibold">Multi-location plan</div>
+                <div className="text-[13px] text-[#A1A1A1] mt-0.5">
+                  $199 first location + $100 per additional · billed monthly
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[28px] font-bold tracking-[-0.02em]">
+                  ${monthlyTotal}
+                  <span className="text-[15px] text-[#A1A1A1] font-medium">/mo</span>
+                </div>
+                <div className="text-xs text-[#A1A1A1] mt-0.5">
+                  $199 + {locations.length - 1} × $100
+                </div>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-muted">
+            Adding a location updates your subscription automatically once billing is connected — see the Billing tab.
+          </p>
+        </>
       )}
-      <p className="text-xs text-muted">
-        Adding a location updates your subscription automatically once billing is connected — see the Billing tab.
-      </p>
     </div>
   );
 
@@ -134,14 +150,29 @@ export default async function SettingsPage() {
         <Lock size={14} className="text-muted-2" />
         <h3 className="font-display text-lg font-semibold text-ink">Billing</h3>
       </div>
-      <p className="text-sm text-muted mb-4">
-        Payment processing isn&apos;t connected yet. Once it is, you&apos;ll manage your plan, add or
-        remove locations, and cancel from here. This tab is only ever visible to the account owner.
-      </p>
-      <div className="flex items-center gap-2 opacity-50">
-        <CreditCard size={16} className="text-muted" />
-        <span className="text-sm text-muted">No payment method on file</span>
-      </div>
+      {isFreeAccount ? (
+        <>
+          <p className="text-sm text-muted mb-4">
+            This is a free account — nothing is billed, ever, regardless of how many locations you add. This tab is
+            only ever visible to the account owner.
+          </p>
+          <div className="flex items-center gap-2">
+            <Gift size={16} className="text-[#15803d]" />
+            <span className="text-sm font-semibold text-[#15803d]">Free account — no billing</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted mb-4">
+            Payment processing isn&apos;t connected yet. Once it is, you&apos;ll manage your plan, add or
+            remove locations, and cancel from here. This tab is only ever visible to the account owner.
+          </p>
+          <div className="flex items-center gap-2 opacity-50">
+            <CreditCard size={16} className="text-muted" />
+            <span className="text-sm text-muted">No payment method on file</span>
+          </div>
+        </>
+      )}
     </div>
   );
 

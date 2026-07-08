@@ -1,12 +1,55 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
+
+export type CreateOrgState = { error: string | null };
+
+export async function createFreeOrganization(_prev: CreateOrgState, formData: FormData): Promise<CreateOrgState> {
+  const profile = await getCurrentProfile();
+  if (!profile?.isPlatformAdmin) return { error: "Only a platform admin can do this." };
+
+  const orgName = String(formData.get("orgName") || "").trim();
+  const ownerName = String(formData.get("ownerName") || "").trim();
+  const ownerEmail = String(formData.get("ownerEmail") || "").trim();
+  let locationNames: string[];
+  try {
+    locationNames = JSON.parse(String(formData.get("locationNamesJson") || "[]"));
+  } catch {
+    return { error: "Couldn't read the submitted locations." };
+  }
+  const cleanLocations = locationNames.map((l) => l.trim()).filter(Boolean);
+
+  if (!orgName || !ownerName || !ownerEmail) {
+    return { error: "Organization name, owner name, and owner email are required." };
+  }
+  if (cleanLocations.length === 0) return { error: "At least one location is required." };
+
+  const origin = (await headers()).get("origin");
+  const admin = createAdminClient();
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
+    redirectTo: `${origin}/auth/callback?type=invite`,
+  });
+  if (inviteError) return { error: inviteError.message };
+
+  const supabase = await createClient();
+  const { error: rpcError } = await supabase.rpc("create_organization_for_user", {
+    org_name: orgName,
+    owner_user_id: invited.user.id,
+    gm_full_name: ownerName,
+    location_names: cleanLocations,
+  });
+  if (rpcError) return { error: rpcError.message };
+
+  revalidatePath("/admin/organizations");
+  return { error: null };
+}
 
 export async function impersonateUser(targetProfileId: string) {
   const profile = await getCurrentProfile();
