@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
+import { buildPhases } from "@/lib/growth-plan";
 
 const FREQUENCY_DAYS: Record<string, number> = { weekly: 7, biweekly: 14, monthly: 30 };
 
@@ -12,6 +13,7 @@ const SECTION_LABELS: Record<string, string> = {
   training: "Training & Standards",
   accountability: "Accountability",
   hiring: "Hiring",
+  growth: "Revenue Growth Planner",
 };
 
 export async function GET(request: NextRequest) {
@@ -121,6 +123,31 @@ async function buildReportHtml(
     const { data: candidates } = await supabase.from("candidates").select("recommendation").eq("org_id", orgId).gte("occurred_on", cutoff);
     const strongFits = (candidates ?? []).filter((c: { recommendation: string }) => c.recommendation === "Strong fit").length;
     rows.push(row(SECTION_LABELS.hiring, String((candidates ?? []).length), `${strongFits} strong fits`));
+  }
+
+  if (sections.includes("growth")) {
+    const { data: plan } = await supabase.from("growth_plans").select("*").eq("org_id", orgId).is("location_id", null).maybeSingle();
+    if (plan) {
+      const target = buildPhases(
+        {
+          customers: Number(plan.current_customers),
+          avgSale: Number(plan.current_avg_sale),
+          repurchaseFrequency: Number(plan.current_repurchase_frequency),
+        },
+        Number(plan.target_customers_pct),
+        Number(plan.target_avg_sale_pct),
+        Number(plan.target_frequency_pct)
+      ).target;
+      rows.push(
+        row(
+          SECTION_LABELS.growth,
+          `+${target.pctIncreaseVsBase.toFixed(1)}%`,
+          `target $${target.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}/${plan.frequency === "weekly" ? "wk" : "mo"}`
+        )
+      );
+    } else {
+      rows.push(row(SECTION_LABELS.growth, "—", "No plan set up yet"));
+    }
   }
 
   return `
