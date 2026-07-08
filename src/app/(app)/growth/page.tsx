@@ -4,7 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
-import { buildPhases, buildTrajectory, type GrowthFrequency } from "@/lib/growth-plan";
+import { buildPhases, buildTrajectory, guestLifetimeValue, ltvToCac, type GrowthFrequency } from "@/lib/growth-plan";
 import { Pill } from "@/components/ui/pill";
 import { DeleteIconButton } from "@/components/ui/delete-icon-button";
 import { GrowthPlanForm } from "./growth-plan-form";
@@ -21,6 +21,8 @@ type GrowthPlanRow = {
   target_customers_pct: number;
   target_avg_sale_pct: number;
   target_frequency_pct: number;
+  retained_years: number;
+  avg_acquisition_cost: number;
 };
 
 type GrowthPlanEntry = {
@@ -40,6 +42,8 @@ const EMPTY_PLAN: GrowthPlanRow = {
   target_customers_pct: 10,
   target_avg_sale_pct: 10,
   target_frequency_pct: 10,
+  retained_years: 2,
+  avg_acquisition_cost: 0,
 };
 
 const TABS = [
@@ -104,6 +108,11 @@ export default async function GrowthPlanPage({
   );
 
   const hasNumbers = baseline.customers > 0 && baseline.avgSale > 0 && baseline.repurchaseFrequency > 0;
+  const retainedYears = Number(plan.retained_years) || 0;
+  const cac = Number(plan.avg_acquisition_cost) || 0;
+  const ltv = guestLifetimeValue(baseline, plan.frequency, retainedYears);
+  const ltvCac = ltvToCac(ltv.ltv, cac);
+  const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const locationQs = effectiveLocation ? `&location=${effectiveLocation}` : "";
 
   return (
@@ -158,6 +167,8 @@ export default async function GrowthPlanPage({
                 targetCustomersPct: Number(plan.target_customers_pct),
                 targetAvgSalePct: Number(plan.target_avg_sale_pct),
                 targetFrequencyPct: Number(plan.target_frequency_pct),
+                retainedYears: Number(plan.retained_years),
+                avgAcquisitionCost: Number(plan.avg_acquisition_cost),
               }}
             />
           ) : (
@@ -187,6 +198,43 @@ export default async function GrowthPlanPage({
           ) : (
             <>
               <PhaseBreakdown phases={[phases.current, phases.uniform, phases.target]} />
+
+              {retainedYears > 0 && (
+                <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+                  <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">What a guest is really worth</div>
+                  <div className="text-[13px] text-muted mt-0.5 mb-5">
+                    A guest isn&apos;t one check — they&apos;re their spend, repeated, over the years they stay. That&apos;s the number
+                    that makes retention and win-back worth paying for.
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+                    <div>
+                      <div className="text-[13px] text-muted mb-1">Annual value / guest</div>
+                      <div className="text-lg font-semibold text-ink tabular-nums">{money(ltv.annualPerGuest)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-muted mb-1">Lifetime value (LTV)</div>
+                      <div className="text-lg font-semibold text-ink tabular-nums">{money(ltv.ltv)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-muted mb-1">Cost to acquire (CAC)</div>
+                      <div className="text-lg font-semibold text-ink tabular-nums">{cac > 0 ? money(cac) : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-muted mb-1">LTV : CAC ratio</div>
+                      <div className={`text-lg font-semibold tabular-nums ${ltvCac === null ? "text-muted" : ltvCac >= 3 ? "text-[#15803D]" : "text-[#B45309]"}`}>
+                        {ltvCac === null ? "—" : `${ltvCac.toFixed(1)}:1`}
+                      </div>
+                    </div>
+                  </div>
+                  {ltvCac !== null && (
+                    <p className="text-[13px] text-muted mt-4">
+                      {ltvCac >= 3
+                        ? "Healthy — every dollar spent winning a guest returns it many times over. Spend confidently on retention."
+                        : "Below the ~3:1 mark — win-back and repeat visits will move this faster than chasing new guests."}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <PhaseComparisonChart phases={[phases.current, phases.uniform, phases.target]} />

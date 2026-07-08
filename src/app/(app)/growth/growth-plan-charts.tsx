@@ -99,7 +99,7 @@ export function TrajectoryChart({
     <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
       <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Projected trajectory</div>
       <div className="text-[13px] text-muted mb-6">
-        If your target's growth rate is sustained every {frequency === "weekly" ? "week" : "month"} for {periodCount} {frequency === "weekly" ? "weeks" : "months"}.
+        If your target&apos;s growth rate is sustained every {frequency === "weekly" ? "week" : "month"} for {periodCount} {frequency === "weekly" ? "weeks" : "months"}.
       </div>
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" className="w-full h-auto overflow-visible">
         <defs>

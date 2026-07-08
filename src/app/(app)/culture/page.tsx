@@ -5,6 +5,7 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { MomentModalButton } from "./moment-form";
 import { WeeklyFocusForm } from "./weekly-focus-form";
+import { CultureTextForm } from "./culture-text-form";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -45,7 +46,7 @@ export default async function CulturePage() {
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
   const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
-    supabase.from("organizations").select("philosophy, weekly_focus").single(),
+    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment").single(),
     supabase.from("core_values").select("title, description").order("sort_order"),
     supabase
       .from("culture_moments")
@@ -85,6 +86,24 @@ export default async function CulturePage() {
         </div>
       </div>
 
+      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Your X-Factor</div>
+        <div className="text-[13px] text-muted mt-0.5 mb-3">
+          The one thing you do better than anyone — the reason a guest picks you over the place next door. Name it, and
+          every role reinforces it.
+        </div>
+        {canEdit ? (
+          <CultureTextForm
+            field="x_factor"
+            initialValue={org?.x_factor ?? ""}
+            placeholder="e.g. We remember every regular's name and drink — no one in town comes close."
+            accent="ink"
+          />
+        ) : (
+          <p className="text-sm text-ink">{org?.x_factor || "Not defined yet."}</p>
+        )}
+      </div>
+
       <div>
         <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Core values</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -100,14 +119,69 @@ export default async function CulturePage() {
         </div>
       </div>
 
-      <div className="bg-gold-tint rounded-2xl p-6">
-        <h3 className="font-display text-base font-semibold text-[#b45309] mb-2">This week&apos;s pre-shift focus</h3>
-        {canEdit ? (
-          <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
-        ) : (
-          <p className="text-sm text-[#b45309]">{org?.weekly_focus || "Nothing set yet."}</p>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-gold-tint rounded-2xl p-6">
+          <h3 className="font-display text-base font-semibold text-[#b45309] mb-2">This week&apos;s pre-shift focus</h3>
+          {canEdit ? (
+            <WeeklyFocusForm initialValue={org?.weekly_focus ?? ""} />
+          ) : (
+            <p className="text-sm text-[#b45309]">{org?.weekly_focus || "Nothing set yet."}</p>
+          )}
+        </div>
+        <div className="bg-gold-tint rounded-2xl p-6">
+          <h3 className="font-display text-base font-semibold text-[#b45309] mb-1">This week&apos;s experiment</h3>
+          <p className="text-xs text-[#b45309] mb-2">One small test to run this week — a new upsell, a new touch, a new table-side line.</p>
+          {canEdit ? (
+            <CultureTextForm
+              field="weekly_experiment"
+              initialValue={org?.weekly_experiment ?? ""}
+              placeholder="e.g. Every server offers a dessert by name this week — see if attach rate moves."
+            />
+          ) : (
+            <p className="text-sm text-[#b45309]">{org?.weekly_experiment || "Nothing set yet."}</p>
+          )}
+        </div>
       </div>
+
+      <details className="bg-white border border-line rounded-2xl shadow-sm group">
+        <summary className="flex items-center justify-between gap-3 p-6 cursor-pointer list-none">
+          <div>
+            <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Weekly manager huddle</div>
+            <div className="text-[13px] text-muted mt-0.5">A 45-minute agenda that ends in action, not venting. Tap to open.</div>
+          </div>
+          <span className="text-muted-2 text-sm group-open:rotate-180 transition-transform">⌄</span>
+        </summary>
+        <div className="px-6 pb-6 -mt-1">
+          <ol className="flex flex-col gap-3">
+            {[
+              { t: "Scoreboard — 10 min", d: "Last week vs. target: one win, one miss." },
+              { t: "Constraint — 10 min", d: "Which gap is most open right now, and the one move to close it this week (check your Health Score)." },
+              { t: "Recurring problem — 10 min", d: "Is this a one-off or a pattern? Anything recurring gets an owner and a system fix, not another reminder." },
+              {
+                t: "This week's focus & experiment — 5 min",
+                d: org?.weekly_focus || org?.weekly_experiment
+                  ? `Focus: ${org?.weekly_focus || "—"}${org?.weekly_experiment ? ` · Experiment: ${org.weekly_experiment}` : ""}`
+                  : "Set the one behavior to drill and one test to run.",
+              },
+              { t: "Recognition — 5 min", d: "Name specific staff wins out loud." },
+              {
+                t: "Anticipation — once a quarter only",
+                d: "Quick scan: any new competitor, wage/cost change, key-staff life event, or shift in guest demand to plan around? Skip most weeks.",
+              },
+            ].map((step, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="shrink-0 w-6 h-6 rounded-full border border-line bg-panel text-brick font-mono text-xs font-semibold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-ink">{step.t}</div>
+                  <div className="text-[13px] text-muted leading-relaxed">{step.d}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">

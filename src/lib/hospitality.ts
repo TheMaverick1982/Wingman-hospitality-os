@@ -95,5 +95,5 @@ export function computeSpotCheckAverages(spotChecks: SpotCheck[]) {
     entry.count += 1;
     map.set(sc.staff_name, entry);
   }
-  return [...map.entries()].map(([name, v]) => ({ name, avg: v.total / v.count }));
+  return [...map.entries()].map(([name, v]) => ({ name, avg: v.total / v.count, count: v.count }));
 }

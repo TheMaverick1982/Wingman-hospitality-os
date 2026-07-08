@@ -14,10 +14,11 @@ import {
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { getOnboardingStatus } from "@/lib/onboarding";
+import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { ArrowUpRight, Rocket, Sparkle } from "lucide-react";
+import { ArrowUpRight, ClipboardCheck, Rocket, Sparkle } from "lucide-react";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -75,6 +76,7 @@ export default async function DashboardPage({
     coachingLogsQuery,
     locations,
     { data: org },
+    auditQuery,
   ] = await Promise.all([
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
@@ -91,7 +93,21 @@ export default async function DashboardPage({
     scoped(supabase.from("coaching_logs").select("id, flag_text, created_at").order("created_at", { ascending: false }).limit(4), effectiveLocation),
     getOrgLocations(),
     supabase.from("organizations").select("weekly_focus").single(),
+    scoped(
+      supabase
+        .from("audits")
+        .select("health_score, gap_scores, occurred_on")
+        .order("occurred_on", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1),
+      effectiveLocation
+    ),
   ]);
+
+  const latestAudit = (auditQuery.data ?? [])[0] as
+    | { health_score: number; gap_scores: number[]; occurred_on: string }
+    | undefined;
+  const auditConstraint = latestAudit ? FIVE_GAPS[constraintGapIndex(latestAudit.gap_scores)] : null;
 
   const discounts = (discountsQuery.data ?? []) as Discount[];
   const spotChecks = (spotChecksQuery.data ?? []) as (SpotCheck & { created_at: string })[];
@@ -192,6 +208,28 @@ export default async function DashboardPage({
           <Sparkle size={16} className="text-[#b45309] shrink-0" />
           <span className="text-sm text-[#b45309]">
             <span className="font-semibold">This week&apos;s pre-shift focus:</span> {org.weekly_focus}
+          </span>
+        </Link>
+      )}
+
+      {latestAudit && auditConstraint && (
+        <Link
+          href="/audit"
+          className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
+        >
+          <ClipboardCheck size={16} className="text-brick shrink-0" />
+          <span className="flex items-center gap-2 text-sm text-ink flex-1 min-w-0">
+            <span className={`inline-flex items-center gap-1.5 font-semibold ${scoreTone(latestAudit.health_score).fg}`}>
+              <span className={`w-2 h-2 rounded-full ${scoreTone(latestAudit.health_score).dot}`} />
+              Health Score {latestAudit.health_score}
+            </span>
+            <span className="text-muted-2">·</span>
+            <span className="text-muted truncate">
+              Fix first: <span className="font-semibold text-ink">{auditConstraint.label}</span>
+            </span>
+          </span>
+          <span className="text-sm font-semibold text-brick whitespace-nowrap flex items-center gap-1">
+            Open audit <ArrowUpRight size={13} />
           </span>
         </Link>
       )}

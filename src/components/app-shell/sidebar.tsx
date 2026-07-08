@@ -12,6 +12,8 @@ import {
   Briefcase,
   Users,
   TrendingUp,
+  ClipboardCheck,
+  UtensilsCrossed,
   Wand2,
   BarChart3,
   Settings,
@@ -31,6 +33,8 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[]
   { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
   { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
   { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
+  { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
+  { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
   { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
   { href: "/staff", label: "Staff", icon: Users, section: "staff" },
 ];

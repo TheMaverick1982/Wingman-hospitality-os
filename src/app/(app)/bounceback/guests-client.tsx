@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search, Download, Megaphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, Megaphone, Clock, Heart } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -86,6 +86,29 @@ export function GuestsClient({
     [guests]
   );
 
+  // Win-back list: at-risk guests, most-stale first, so a manager can act.
+  const winBackList = useMemo(() => {
+    return atRisk
+      .map((g) => {
+        const stage = stageOf(g.guest_visits);
+        const last = visitAt(g.guest_visits, stage)?.visit_date;
+        return { guest: g, days: last ? daysSince(last, now) : 0, stage };
+      })
+      .sort((a, b) => b.days - a.days);
+  }, [atRisk, now]);
+
+  // Ready to refer: guests who had a genuinely positive reaction (the NPS-style
+  // "promoters") and haven't referred anyone yet -- the ones to actually ask.
+  const readyToRefer = useMemo(
+    () =>
+      guests.filter(
+        (g) =>
+          !g.referred_a_friend &&
+          g.guest_visits.some((v) => v.reaction === "wowed" || v.reaction === "delighted")
+      ),
+    [guests]
+  );
+
   const funnel = useMemo(() => {
     const [c1, c2, c3, c4] = stageCounts.counts;
     return [
@@ -157,6 +180,72 @@ export function GuestsClient({
         <StatTile label="At risk of churn" value={atRisk.length} sub="no visit in 30+ days" trend={atRisk.length > 0 ? "Needs action" : undefined} trendTone="down" />
         <StatTile label="Won back" value={wonBack} sub="via bounce-back offers" />
       </div>
+
+      {(winBackList.length > 0 || readyToRefer.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock size={16} className="text-[#D97706]" />
+              <span className="text-[15px] font-semibold text-ink">Win these guests back</span>
+              <span className="ml-auto text-xs font-semibold text-muted-2 tabular-nums">{winBackList.length}</span>
+            </div>
+            <div className="text-[13px] text-muted mb-3">Gone quiet 30+ days — reach out with a reason to return.</div>
+            {winBackList.length === 0 ? (
+              <p className="text-sm text-muted">No one&apos;s slipping right now. Nice.</p>
+            ) : (
+              <div className="flex flex-col divide-y divide-line">
+                {winBackList.slice(0, 5).map(({ guest, days }) => (
+                  <button
+                    key={guest.id}
+                    onClick={() => openEdit(guest)}
+                    className="flex items-center justify-between gap-3 py-2.5 text-left hover:opacity-70 transition-opacity"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-ink truncate">{guest.name}</div>
+                      <div className="text-xs text-muted truncate">{guest.phone || guest.email || "No contact on file"}</div>
+                    </div>
+                    <span className="text-xs font-semibold text-[#B45309] shrink-0 tabular-nums">{days}d quiet</span>
+                  </button>
+                ))}
+                {winBackList.length > 5 && (
+                  <div className="pt-2.5 text-xs text-muted-2">+ {winBackList.length - 5} more below</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Heart size={16} className="text-[#16A34A]" />
+              <span className="text-[15px] font-semibold text-ink">Ready to ask for a referral</span>
+              <span className="ml-auto text-xs font-semibold text-muted-2 tabular-nums">{readyToRefer.length}</span>
+            </div>
+            <div className="text-[13px] text-muted mb-3">They were wowed or delighted — now&apos;s the moment to ask.</div>
+            {readyToRefer.length === 0 ? (
+              <p className="text-sm text-muted">Log some reactions to surface your happiest guests here.</p>
+            ) : (
+              <div className="flex flex-col divide-y divide-line">
+                {readyToRefer.slice(0, 5).map((guest) => (
+                  <button
+                    key={guest.id}
+                    onClick={() => openEdit(guest)}
+                    className="flex items-center justify-between gap-3 py-2.5 text-left hover:opacity-70 transition-opacity"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-ink truncate">{guest.name}</div>
+                      <div className="text-xs text-muted truncate">{guest.phone || guest.email || "No contact on file"}</div>
+                    </div>
+                    <span className="text-xs font-semibold text-[#15803D] shrink-0">Promoter</span>
+                  </button>
+                ))}
+                {readyToRefer.length > 5 && (
+                  <div className="pt-2.5 text-xs text-muted-2">+ {readyToRefer.length - 5} more</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">

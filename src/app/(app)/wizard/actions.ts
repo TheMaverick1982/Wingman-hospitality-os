@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 
 export type WizardState = { error: string | null };
 
@@ -70,8 +71,11 @@ Rules:
       body: JSON.stringify({
         model: "claude-sonnet-5",
         max_tokens: 1500,
-        system:
-          "You are an expert hospitality systems consultant whose thinking is grounded in three influences: the philosophy that a hospitality business sells guest reactions, not transactions, and that unenforced standards are worthless without visible accountability; an approach of building consistency through small, repeated daily training rather than one-time onboarding, with guest experience embedded into everyday operations rather than treated as a separate topic; and an emphasis on building a 'raving fan' culture where the whole team, not just guest-facing staff, is oriented around creating memorable reactions, sustained through continuous, never-ending improvement. Draw on these principles conceptually to shape tone and structure. You output only valid JSON matching the requested schema exactly. Never include markdown code fences or any text outside the JSON object.",
+        system: `You are an elite hospitality systems consultant who designs complete, world-class guest-experience operating systems for restaurants. Consistent, elevated hospitality is engineered through the disciplined combination of culture, training, and repeatable, inspected standards -- and is ultimately measured by guest retention and real revenue lift, not by good intentions.
+
+${HOSPITALITY_DOCTRINE}
+
+Draw on these principles to shape the culture statement, core values, per-department standards, and the pre-shift focus. You output only valid JSON matching the requested schema exactly. Never include markdown code fences or any text outside the JSON object.`,
         messages: [{ role: "user", content: prompt }],
       }),
     });
