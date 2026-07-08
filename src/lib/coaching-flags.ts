@@ -10,7 +10,7 @@ export function computeCoachingFlags({
   discountPct: string;
   byCategory: [string, { count: number; total: number }][];
   guestsAwaitingFollowUp: number;
-  staffAverages: { name: string; avg: number }[];
+  staffAverages: { name: string; avg: number; count?: number }[];
   lastDailyCheck: { checked: boolean[] } | undefined;
 }): CoachingFlag[] {
   const flags: CoachingFlag[] = [];
@@ -29,7 +29,17 @@ export function computeCoachingFlags({
   }
   for (const s of staffAverages) {
     if (s.avg < 3.5) {
-      flags.push({ tone: "danger", text: `${s.name} is averaging ${s.avg.toFixed(1)}/5 on spot-checks — schedule a coaching session.` });
+      if ((s.count ?? 1) >= 2) {
+        flags.push({
+          tone: "danger",
+          text: `Recurring: ${s.name} has averaged ${s.avg.toFixed(1)}/5 across ${s.count} spot-checks — this is a pattern, not a bad shift. Fix the system, not just the person.`,
+        });
+      } else {
+        flags.push({
+          tone: "gold",
+          text: `${s.name} scored ${s.avg.toFixed(1)}/5 on a spot-check — a one-off for now; coach it before it becomes a pattern.`,
+        });
+      }
     }
   }
   if (lastDailyCheck && lastDailyCheck.checked.filter(Boolean).length < lastDailyCheck.checked.length) {
