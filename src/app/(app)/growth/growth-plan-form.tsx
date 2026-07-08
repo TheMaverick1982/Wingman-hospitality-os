@@ -28,6 +28,8 @@ export function GrowthPlanForm({
     targetCustomersPct: number;
     targetAvgSalePct: number;
     targetFrequencyPct: number;
+    retainedYears: number;
+    avgAcquisitionCost: number;
   };
 }) {
   const [state, formAction, pending] = useActionState(saveGrowthPlan, initialState);
@@ -63,6 +65,12 @@ export function GrowthPlanForm({
         </Field>
         <Field label="Current repurchase frequency">
           <input type="number" name="currentRepurchaseFrequency" min="0" step="0.01" defaultValue={initial.currentRepurchaseFrequency || ""} className={inputClass} />
+        </Field>
+        <Field label="Years a guest stays a guest">
+          <input type="number" name="retainedYears" min="0" step="0.5" defaultValue={initial.retainedYears || ""} placeholder="e.g. 2" className={inputClass} />
+        </Field>
+        <Field label="Cost to acquire a guest ($, optional)">
+          <input type="number" name="avgAcquisitionCost" min="0" step="0.01" defaultValue={initial.avgAcquisitionCost || ""} placeholder="e.g. 15" className={inputClass} />
         </Field>
       </div>
 

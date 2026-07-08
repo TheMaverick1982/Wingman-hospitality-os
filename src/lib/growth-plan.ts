@@ -45,6 +45,26 @@ export function buildPhases(
   };
 }
 
+export function periodsPerYear(frequency: GrowthFrequency): number {
+  return frequency === "weekly" ? 52 : 12;
+}
+
+// Guest lifetime value: a guest is worth their per-period spend (avg sale x
+// repurchase frequency) annualized, held over the years they stay a guest.
+// `ltvToCac` is the classic payback ratio -- healthy is roughly 3:1 or better.
+export function guestLifetimeValue(
+  base: GrowthBaseline,
+  frequency: GrowthFrequency,
+  retainedYears: number
+): { annualPerGuest: number; ltv: number } {
+  const annualPerGuest = base.avgSale * base.repurchaseFrequency * periodsPerYear(frequency);
+  return { annualPerGuest, ltv: annualPerGuest * Math.max(0, retainedYears) };
+}
+
+export function ltvToCac(ltv: number, cac: number): number | null {
+  return cac > 0 ? ltv / cac : null;
+}
+
 // Compounds the same per-lever % growth repeatedly over `periods` cycles, to
 // show what the trend looks like if that improvement rate is sustained
 // period over period rather than applied just once.

@@ -17,11 +17,21 @@ export async function saveGrowthPlan(_prev: ActionState, formData: FormData): Pr
   const targetCustomersPct = Number(formData.get("targetCustomersPct") || 0);
   const targetAvgSalePct = Number(formData.get("targetAvgSalePct") || 0);
   const targetFrequencyPct = Number(formData.get("targetFrequencyPct") || 0);
+  const retainedYears = Number(formData.get("retainedYears") || 0);
+  const avgAcquisitionCost = Number(formData.get("avgAcquisitionCost") || 0);
 
   if (
-    [currentCustomers, currentAvgSale, currentRepurchaseFrequency, uniformPct, targetCustomersPct, targetAvgSalePct, targetFrequencyPct].some(
-      Number.isNaN
-    )
+    [
+      currentCustomers,
+      currentAvgSale,
+      currentRepurchaseFrequency,
+      uniformPct,
+      targetCustomersPct,
+      targetAvgSalePct,
+      targetFrequencyPct,
+      retainedYears,
+      avgAcquisitionCost,
+    ].some(Number.isNaN)
   ) {
     return { error: "Enter valid numbers." };
   }
@@ -42,6 +52,8 @@ export async function saveGrowthPlan(_prev: ActionState, formData: FormData): Pr
     target_customers_pct: targetCustomersPct,
     target_avg_sale_pct: targetAvgSalePct,
     target_frequency_pct: targetFrequencyPct,
+    retained_years: retainedYears,
+    avg_acquisition_cost: avgAcquisitionCost,
     updated_by: user?.id,
     updated_at: new Date().toISOString(),
   };
