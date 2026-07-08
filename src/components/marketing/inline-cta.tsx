@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function InlineCta({ headline, sub }: { headline: string; sub?: string }) {
   return (
-    <div className="max-w-[1180px] mx-auto px-6 sm:px-10">
+    <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-6 sm:py-8">
       <div className="bg-ink rounded-[28px] px-8 sm:px-12 py-10 sm:py-12 flex flex-col sm:flex-row items-center justify-between gap-7 text-white">
         <div className="text-center sm:text-left">
           <div className="text-xl sm:text-2xl font-semibold tracking-[-0.015em] mb-1">{headline}</div>

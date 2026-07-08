@@ -205,9 +205,7 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="Build your team's system in minutes." sub="Upload what you have, or start from scratch — Wingman writes the rest." />
-      </div>
+      <InlineCta headline="Build your team's system in minutes." sub="Upload what you have, or start from scratch — Wingman writes the rest." />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-[72px] items-center">
@@ -317,9 +315,7 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="See the whole loop on your floor." sub="Set it up once — Wingman runs it with you, every shift." />
-      </div>
+      <InlineCta headline="See the whole loop on your floor." sub="Set it up once — Wingman runs it with you, every shift." />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <div className="max-w-[720px] mb-14">

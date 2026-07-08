@@ -35,15 +35,11 @@ export default async function Home() {
       <Hero />
       <StatsBand />
       <ValueProps />
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="See it running on your own floor." sub="Free to set up — no credit card required." />
-      </div>
+      <InlineCta headline="See it running on your own floor." sub="Get your team started in minutes." />
       <CustomSystem />
       <RoleBasedTraining />
       <HowItWorks />
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="Ready to set your standard?" sub="Takes minutes to get your team started." />
-      </div>
+      <InlineCta headline="Ready to set your standard?" sub="Takes minutes to get your team started." />
       <QuoteSection />
       <CtaSection />
       <MarketingFooter />
