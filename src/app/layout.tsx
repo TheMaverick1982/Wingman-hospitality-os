@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
 import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
 import "./globals.css";
@@ -42,6 +42,21 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Standalone (installed / native-shell) presentation on iOS.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Wingman",
+  },
+};
+
+// Mobile viewport + theme color. viewportFit "cover" lets the app draw into the
+// notch / home-indicator safe areas when running full-screen (native shell).
+export const viewport: Viewport = {
+  themeColor: "#0a6cff",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 const organizationJsonLd = {
