@@ -11,6 +11,7 @@ export type Section =
   | "hiring"
   | "staff"
   | "growth"
+  | "audit"
   | "reporting"
   | "settings";
 
@@ -28,6 +29,7 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   hiring: { super_admin: "full", manager: "full", staff: "none" },
   staff: { super_admin: "full", manager: "full", staff: "none" },
   growth: { super_admin: "full", manager: "full", staff: "none" },
+  audit: { super_admin: "full", manager: "full", staff: "none" },
   reporting: { super_admin: "full", manager: "view", staff: "none" },
   settings: { super_admin: "full", manager: "none", staff: "none" },
 };
@@ -46,6 +48,7 @@ export const EDITABLE_SECTIONS: Section[] = [
   "hiring",
   "staff",
   "growth",
+  "audit",
   "reporting",
 ];
 

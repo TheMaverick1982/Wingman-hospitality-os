@@ -17,6 +17,7 @@ const SECTION_LABELS: Record<Section, string> = {
   hiring: "Hiring",
   staff: "Staff",
   growth: "Revenue Growth Planner",
+  audit: "Standout Audit",
   reporting: "Reporting",
   settings: "Settings",
 };
