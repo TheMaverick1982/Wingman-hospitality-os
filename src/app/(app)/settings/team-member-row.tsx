@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import type { Location } from "@/lib/data/locations";
-import { updateTeamMember, resendInvite } from "./actions";
+import { updateTeamMember, resendInvite, deleteTeamMember } from "./actions";
 
 export type TeamMember = {
   id: string;
@@ -56,6 +56,17 @@ export function TeamMemberRow({
     startResend(async () => {
       await resendInvite({ error: null }, formData);
       setResent(true);
+    });
+  }
+
+  const [removing, startRemove] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  function doRemove() {
+    if (!window.confirm(`Remove ${member.full_name}? This permanently deletes their account and access. This can't be undone.`)) return;
+    setRemoveError(null);
+    startRemove(async () => {
+      const res = await deleteTeamMember(member.id);
+      if (res.error) setRemoveError(res.error);
     });
   }
 
@@ -127,19 +138,26 @@ export function TeamMemberRow({
         )}
       </td>
       <td className="px-5 py-3.5 text-muted text-xs">
-        {member.pending ? (
-          resent ? (
-            <span className="text-[#15803D] font-semibold">Invite sent</span>
-          ) : (
-            <Btn small kind="ghost" disabled={resending} onClick={doResend}>
-              {resending ? "Sending..." : "Resend invite"}
-            </Btn>
-          )
-        ) : isPending ? (
-          "Saving..."
-        ) : (
-          ""
-        )}
+        <div className="flex items-center justify-end gap-3">
+          {member.pending &&
+            (resent ? (
+              <span className="text-[#15803D] font-semibold">Invite sent</span>
+            ) : (
+              <Btn small kind="ghost" disabled={resending} onClick={doResend}>
+                {resending ? "Sending..." : "Resend invite"}
+              </Btn>
+            ))}
+          {isPending && <span>Saving...</span>}
+          <button
+            type="button"
+            onClick={doRemove}
+            disabled={removing}
+            className="font-semibold text-brick hover:opacity-70 disabled:opacity-50"
+          >
+            {removing ? "Removing..." : "Remove"}
+          </button>
+        </div>
+        {removeError && <div className="text-brick text-right mt-1">{removeError}</div>}
       </td>
     </tr>
   );
