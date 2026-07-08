@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { getCurrentProfile } from "@/lib/auth/profile";
+import { canEditSection } from "@/lib/auth/permissions";
 
 export type MenuUploadState = { error: string | null; parsedCount?: number };
 
@@ -16,6 +18,12 @@ type ParsedDish = {
 };
 
 export async function uploadAndParseMenu(_prev: MenuUploadState, formData: FormData): Promise<MenuUploadState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to upload menus." };
+  }
+
   const department = String(formData.get("department") || "");
   const file = formData.get("file") as File | null;
 
