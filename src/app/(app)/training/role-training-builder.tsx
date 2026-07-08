@@ -9,14 +9,48 @@ import { generateRoleTraining, type BuildState } from "./role-training-actions";
 
 const initialState: BuildState = { error: null };
 
+const WIZARD_QUESTIONS: Record<string, string[]> = {
+  Host: [
+    "What should the first 30 seconds feel like for a guest walking in -- greeting, eye contact, tone?",
+    "How do you want a longer-than-expected wait handled so it doesn't feel like a wait?",
+    "How should hosts recognize and seat returning or VIP guests differently?",
+  ],
+  Server: [
+    "What's the ideal check-in cadence during a table's visit -- how often, what tone?",
+    "How do you want servers to recommend or upsell without it feeling pushy?",
+    "What's the standard for handling a mistake or complaint right at the table?",
+  ],
+  Bartender: [
+    "What should a guest sitting alone at the bar experience, versus a group?",
+    "How do you want speed balanced against hospitality during a rush?",
+    "What's your standard for recommending drinks or upselling at the bar?",
+  ],
+  Chef: [
+    "What are your non-negotiable food safety and ticket-time standards?",
+    "How should the kitchen communicate 86'd items or delays to the front of house?",
+    "How do you want the kitchen to react when a dish comes back or gets a complaint?",
+  ],
+  Manager: [
+    "What does actually walking the floor look like for you -- how often, what are you checking?",
+    "How do you want an escalated guest complaint handled, start to finish?",
+    "What's the one leadership behavior you most want modeled for the team?",
+  ],
+};
+const DEFAULT_QUESTIONS = [
+  "What does great service look like for this role at your restaurant?",
+  "What's the #1 recurring gap or mistake you see from this role?",
+  "Any signature touch you want reflected?",
+];
+
 export function RoleTrainingBuilder({ department }: { department: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"upload" | "wizard">("upload");
   const [state, formAction, pending] = useActionState(generateRoleTraining, initialState);
+  const questions = WIZARD_QUESTIONS[department] ?? DEFAULT_QUESTIONS;
 
   return (
     <>
-      <Btn small kind="ghost" icon={Wand2} onClick={() => setOpen(true)}>
+      <Btn small kind="info" icon={Wand2} onClick={() => setOpen(true)}>
         Build training program
       </Btn>
       {open && (
@@ -73,24 +107,13 @@ export function RoleTrainingBuilder({ department }: { department: string }) {
               </div>
             ) : (
               <div className="flex flex-col gap-3 mb-2">
-                <div>
-                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
-                    What does great service look like for this role at your restaurant?
-                  </label>
-                  <textarea name="greatService" rows={2} className={`${inputClass} resize-none`} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
-                    What&apos;s the #1 recurring gap or mistake you see from this role?
-                  </label>
-                  <textarea name="painPoint" rows={2} className={`${inputClass} resize-none`} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
-                    Any signature touch you want reflected? (optional)
-                  </label>
-                  <textarea name="signature" rows={2} className={`${inputClass} resize-none`} />
-                </div>
+                {questions.map((q, i) => (
+                  <div key={i}>
+                    <input type="hidden" name={`question_${i}`} value={q} />
+                    <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">{q}</label>
+                    <textarea name={`answer_${i}`} rows={2} className={`${inputClass} resize-none`} />
+                  </div>
+                ))}
               </div>
             )}
 

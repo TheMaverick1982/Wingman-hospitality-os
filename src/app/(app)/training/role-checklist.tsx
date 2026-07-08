@@ -1,12 +1,15 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import Link from "next/link";
-import { Heart, GraduationCap, Pencil, Trash2, Plus, Check, X, Users } from "lucide-react";
+import { Heart, GraduationCap, Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import type { Location } from "@/lib/data/locations";
+import type { StaffMember } from "@/lib/data/staff";
+import type { Department } from "@/lib/constants";
 import { RoleTrainingBuilder } from "./role-training-builder";
+import { StartTrainingButton } from "./start-training-button";
 import { addChecklistItem, updateChecklistItemText, deleteChecklistItem, type ItemState } from "./role-training-actions";
 import type { ChecklistItem } from "./training-client";
 
@@ -18,12 +21,16 @@ export function RoleChecklist({
   roleItems,
   trackLabel,
   canEdit,
+  staff,
+  locations,
 }: {
-  department: string;
+  department: Department;
   hospitalityItems: ChecklistItem[];
   roleItems: ChecklistItem[];
   trackLabel: string | null;
   canEdit: boolean;
+  staff: StaffMember[];
+  locations: Location[];
 }) {
   return (
     <div className="bg-panel border border-line rounded-2xl p-6">
@@ -60,14 +67,9 @@ export function RoleChecklist({
         </div>
       )}
 
-      <div className="flex items-center gap-2 pt-4 mt-4 border-t border-line text-sm text-muted">
-        <Users size={14} />
-        <span>
-          Ready to train someone on this?{" "}
-          <Link href="/staff" className="font-semibold text-brick hover:underline">
-            Run a staff member through it in Staff →
-          </Link>
-        </span>
+      <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-line">
+        <span className="text-sm text-muted">Ready to train someone on this?</span>
+        <StartTrainingButton staff={staff} locations={locations} department={department} small />
       </div>
     </div>
   );

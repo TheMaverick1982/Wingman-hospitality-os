@@ -14,6 +14,8 @@ import { PreShiftCheckModalButton } from "./pre-shift-check-modal";
 import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS } from "@/lib/constants";
+import { ChecklistTemplateEditor } from "./checklist-template-editor";
+import { getChecklistItems } from "./template-actions";
 
 function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -62,6 +64,8 @@ export default async function AccountabilityPage({
     { data: coachingLogsData },
     { data: guests },
     locations,
+    dailyTemplateItems,
+    preShiftTemplateItems,
   ] = await Promise.all([
     discountsQ,
     spotChecksQ,
@@ -71,6 +75,8 @@ export default async function AccountabilityPage({
     coachingLogsQ,
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     getOrgLocations(),
+    getChecklistItems("daily"),
+    getChecklistItems("preshift"),
   ]);
 
   const discounts = (discountsData ?? []) as Discount[];
@@ -141,6 +147,7 @@ export default async function AccountabilityPage({
                 isGm={isSuperAdmin}
                 lockedLocationName={profile.locationName}
                 defaultLocationId={effectiveLocation ?? profile.locationId}
+                items={dailyTemplateItems.map((i) => i.item)}
               />
               <SpotCheckModalButton
                 locations={locations}
@@ -153,6 +160,7 @@ export default async function AccountabilityPage({
                 isGm={isSuperAdmin}
                 lockedLocationName={profile.locationName}
                 defaultLocationId={effectiveLocation ?? profile.locationId}
+                items={preShiftTemplateItems.map((i) => i.item)}
               />
               <AmbianceCheckModalButton
                 locations={locations}
@@ -306,6 +314,19 @@ export default async function AccountabilityPage({
           </div>
         </Card>
       </div>
+
+      {isSuperAdmin && (
+        <div>
+          <h3 className="font-display text-lg font-semibold mb-1 text-ink">Checklist templates</h3>
+          <p className="text-sm text-muted mb-4">
+            Only the account owner can edit these — add, remove, or rebuild what every manager and staff member is checked against.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <ChecklistTemplateEditor checklistType="daily" title="Manager daily checklist" items={dailyTemplateItems} />
+            <ChecklistTemplateEditor checklistType="preshift" title="Pre-shift staff checklist" items={preShiftTemplateItems} />
+          </div>
+        </div>
+      )}
 
       <h3 className="font-display text-lg font-semibold mb-3 text-ink">Spot-check log</h3>
       <div className="flex flex-col gap-3">

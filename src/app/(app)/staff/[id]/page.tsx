@@ -5,8 +5,15 @@ import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { StaffProfileClient } from "./staff-profile-client";
 
-export default async function StaffProfilePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StaffProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const access = getSectionAccess(profile.accessRole, "staff", profile.permissionOverrides);
@@ -77,6 +84,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       signoffs={signoffs ?? []}
       candidate={candidateResult?.data ?? null}
       coreValueTitles={(coreValues ?? []).map((v) => v.title)}
+      initialTab={tab === "training" || tab === "hiring" ? tab : "contact"}
     />
   );
 }

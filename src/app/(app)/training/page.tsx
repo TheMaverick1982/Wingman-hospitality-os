@@ -2,9 +2,12 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { getOrgLocations } from "@/lib/data/locations";
+import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
+import { StartTrainingButton } from "./start-training-button";
 
 export default async function TrainingPage() {
   const profile = await getCurrentProfile();
@@ -18,6 +21,8 @@ export default async function TrainingPage() {
     { data: meta },
     { data: menuItems },
     { data: signoffs },
+    locations,
+    staff,
   ] = await Promise.all([
     supabase.from("department_standards").select("id, department, item, sort_order, source").order("sort_order"),
     supabase.from("department_training_items").select("id, department, item, sort_order, source").order("sort_order"),
@@ -30,6 +35,8 @@ export default async function TrainingPage() {
       .from("training_signoffs")
       .select("id, staff_name, department, completion_pct, occurred_on")
       .order("occurred_on", { ascending: false }),
+    getOrgLocations(),
+    getStaffMembers(null),
   ]);
 
   const allSignoffs = signoffs ?? [];
@@ -68,10 +75,13 @@ export default async function TrainingPage() {
             Department-by-department progress toward your standard, with a real sign-off log.
           </p>
         </div>
-        {!canEdit && <Pill>View only</Pill>}
+        <div className="flex items-center gap-2 shrink-0">
+          {!canEdit && <Pill>View only</Pill>}
+          {canEdit && <StartTrainingButton staff={staff} locations={locations} />}
+        </div>
       </div>
 
-      <TrainingClient data={data} summaries={summaries} isGm={canEdit} />
+      <TrainingClient data={data} summaries={summaries} isGm={canEdit} staff={staff} locations={locations} />
 
       <SignoffLog signoffs={allSignoffs} />
     </>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
@@ -40,7 +41,7 @@ function toneFor(name: string) {
 export default async function HiringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; scoreDept?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -48,7 +49,8 @@ export default async function HiringPage({
   const isSuperAdmin = profile.accessRole === "super_admin";
   const canEdit = canEditSection(profile.accessRole, "hiring", profile.permissionOverrides);
 
-  const { location } = await searchParams;
+  const { location, scoreDept } = await searchParams;
+  const autoOpenDepartment = ALL_DEPARTMENTS.includes(scoreDept as Department) ? (scoreDept as Department) : undefined;
   const effectiveLocation = resolveEffectiveLocation({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
@@ -60,7 +62,7 @@ export default async function HiringPage({
   let candidatesQ = supabase.from("candidates").select("*").order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
-  const [{ data: coreValues }, { data: hiringTraits }, { data: candidates }, locations] = await Promise.all([
+  const [{ data: coreValues }, { data: hiringTraits }, { data: candidates }, locations, staff] = await Promise.all([
     supabase
       .from("core_values")
       .select("title, description, hiring_question, hiring_green_flag, hiring_red_flag")
@@ -68,6 +70,7 @@ export default async function HiringPage({
     supabase.from("hiring_traits").select("id, department, title, question, green_flag, red_flag, source").order("sort_order"),
     candidatesQ,
     getOrgLocations(),
+    getStaffMembers(null),
   ]);
 
   const traitsByDept = {} as Record<Department, HiringTrait[]>;
@@ -114,10 +117,12 @@ export default async function HiringPage({
               Object.entries(traitsByDept).map(([d, traits]) => [d, traits.map((t) => t.title)])
             ) as Record<Department, string[]>}
             locations={locations}
+            staff={staff}
             isGm={isSuperAdmin}
             lockedLocationName={profile.locationName}
             defaultLocationId={effectiveLocation ?? profile.locationId}
             defaultDepartment={ALL_DEPARTMENTS[1]}
+            autoOpenDepartment={autoOpenDepartment}
           />
         </div>
       </div>

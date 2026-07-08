@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 
-export type StaffFormState = { error: string | null };
+export type StaffFormState = { error: string | null; staffId?: string };
 
 export async function addStaffMember(_prev: StaffFormState, formData: FormData): Promise<StaffFormState> {
   const fullName = String(formData.get("fullName") || "").trim();
@@ -21,18 +21,22 @@ export async function addStaffMember(_prev: StaffFormState, formData: FormData):
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  const { error } = await supabase.from("staff_members").insert({
-    org_id: org.id,
-    location_id: locationId,
-    full_name: fullName,
-    department,
-    email,
-    phone,
-  });
+  const { data: row, error } = await supabase
+    .from("staff_members")
+    .insert({
+      org_id: org.id,
+      location_id: locationId,
+      full_name: fullName,
+      department,
+      email,
+      phone,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
 
   revalidatePath("/staff");
-  return { error: null };
+  return { error: null, staffId: row.id };
 }
 
 export type BatchState = { error: string | null; successCount: number; failures: { index: number; message: string }[] };

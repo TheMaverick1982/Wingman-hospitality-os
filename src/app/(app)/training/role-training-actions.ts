@@ -100,15 +100,18 @@ ${RESPONSE_SHAPE}`;
         .join("\n");
       generated = JSON.parse(extractJsonObject(text));
     } else {
-      const greatService = String(formData.get("greatService") || "").trim();
-      const painPoint = String(formData.get("painPoint") || "").trim();
-      const signature = String(formData.get("signature") || "").trim();
+      const qa: string[] = [];
+      let qi = 0;
+      while (formData.has(`question_${qi}`)) {
+        const q = String(formData.get(`question_${qi}`) || "").trim();
+        const a = String(formData.get(`answer_${qi}`) || "").trim();
+        if (q) qa.push(`Q: ${q}\nA: ${a || "not specified, infer from the role"}`);
+        qi++;
+      }
 
-      const prompt = `Build a complete training program from scratch for a restaurant's ${department} role.
+      const prompt = `Build a complete training program from scratch for a restaurant's ${department} role, based on the operator's own answers below.
 
-What great service looks like for this role, in the operator's own words: ${greatService || "not specified, infer from the role"}
-Current #1 recurring gap or mistake seen from this role: ${painPoint || "not specified"}
-A signature touch to weave in if relevant to this role: ${signature || "none given"}
+${qa.join("\n\n")}
 
 Generate:
 - "hospitality_items": 6-8 guest-experience and hospitality behaviors for this role -- recognition, personalization, service recovery, guiding the guest -- reflecting the operator's input above.

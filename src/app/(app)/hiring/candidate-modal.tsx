@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -10,6 +10,7 @@ import { StarRating } from "@/components/ui/star-rating";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
+import { StaffPicker, type StaffOption } from "@/components/staff-picker";
 import { addCandidate, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -19,24 +20,37 @@ export function CandidateModalButton({
   coreValueTitles,
   traitsByDept,
   locations,
+  staff,
   isGm,
   lockedLocationName,
   defaultLocationId,
   defaultDepartment,
+  autoOpenDepartment,
 }: {
   coreValueTitles: string[];
   traitsByDept: Record<Department, string[]>;
   locations: Location[];
+  staff: StaffOption[];
   isGm: boolean;
   lockedLocationName: string | null;
   defaultLocationId: string | null;
   defaultDepartment: Department;
+  autoOpenDepartment?: Department;
 }) {
   const [open, setOpen] = useState(false);
   const [department, setDepartment] = useState<Department>(defaultDepartment);
   const [recommendation, setRecommendation] = useState<(typeof RECOMMENDATION_OPTIONS)[number]>("Unsure");
   const [state, formAction, pending] = useActionState(addCandidate, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
+
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (autoOpenDepartment && !autoOpened.current) {
+      autoOpened.current = true;
+      setDepartment(autoOpenDepartment);
+      setOpen(true);
+    }
+  }, [autoOpenDepartment]);
 
   const combinedTraits = [
     ...coreValueTitles.map((title) => ({ title, universal: true })),
@@ -54,7 +68,13 @@ export function CandidateModalButton({
             <input type="hidden" name="recommendation" value={recommendation} />
             <div className="grid grid-cols-3 gap-4">
               <Field label="Candidate name">
-                <input name="name" required className={inputClass} />
+                <StaffPicker
+                  name="name"
+                  staff={staff}
+                  required
+                  placeholder="Candidate name"
+                  onSelectExisting={(s) => setDepartment(s.department as Department)}
+                />
               </Field>
               <Field label="Department applying for">
                 <select

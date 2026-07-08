@@ -1,9 +1,11 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Heart, GraduationCap, Pencil, Trash2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, GraduationCap, Pencil, Trash2, Plus, ClipboardList, ArrowRight } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
+import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
@@ -32,6 +34,10 @@ export function HiringClient({
   canEdit: boolean;
 }) {
   const [activeRole, setActiveRole] = useState<Department>(ALL_DEPARTMENTS[0]);
+  const combinedTraits = [
+    ...coreValues.map((v) => ({ title: v.title, question: hiringGuidanceFor(v).question, universal: true })),
+    ...traitsByDept[activeRole].map((t) => ({ title: t.title, question: t.question, universal: false })),
+  ];
 
   return (
     <div>
@@ -84,7 +90,10 @@ export function HiringClient({
             {activeRole}-specific — what this department needs beyond hospitality
           </h3>
         </div>
-        {canEdit && <HiringTraitBuilder department={activeRole} />}
+        <div className="flex items-center gap-2">
+          <InterviewGuideButton department={activeRole} traits={combinedTraits} />
+          {canEdit && <HiringTraitBuilder department={activeRole} />}
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-3 mb-8">
         {traitsByDept[activeRole].map((t) => (
@@ -93,6 +102,58 @@ export function HiringClient({
         {canEdit && <AddTraitCard department={activeRole} />}
       </div>
     </div>
+  );
+}
+
+function InterviewGuideButton({
+  department,
+  traits,
+}: {
+  department: Department;
+  traits: { title: string; question: string; universal: boolean }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  return (
+    <>
+      <Btn small kind="ghost" icon={ClipboardList} onClick={() => setOpen(true)}>
+        Interview guide
+      </Btn>
+      {open && (
+        <Modal
+          title={`${department} interview guide`}
+          sub="Every question to ask, in order — walk through this live, then score the candidate."
+          onClose={() => setOpen(false)}
+        >
+          <div className="flex flex-col gap-3 mb-5 max-h-[420px] overflow-y-auto pr-1">
+            {traits.map((t, i) => (
+              <div key={i} className={`p-3.5 rounded-xl border ${t.universal ? "border-line" : "border-[#ffcc80]"} bg-panel`}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Pill tone={t.universal ? "brick" : "gold"}>{t.universal ? "Universal" : department}</Pill>
+                  <span className="text-sm font-semibold text-ink">{t.title}</span>
+                </div>
+                <p className="text-sm text-charcoal-2">&quot;{t.question}&quot;</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Btn kind="ghost" onClick={() => setOpen(false)}>
+              Close
+            </Btn>
+            <Btn
+              icon={ArrowRight}
+              onClick={() => {
+                setOpen(false);
+                router.push(`/hiring?scoreDept=${encodeURIComponent(department)}`);
+              }}
+            >
+              Score this candidate
+            </Btn>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 
