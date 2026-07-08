@@ -21,7 +21,7 @@ export default async function RecoveryPage({
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const isSuperAdmin = profile.accessRole === "super_admin";
-  const canEdit = canEditSection(profile.accessRole, "recovery");
+  const canEdit = canEditSection(profile.accessRole, "recovery", profile.permissionOverrides);
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({

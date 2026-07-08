@@ -54,8 +54,8 @@ export default async function GrowthPlanPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (getSectionAccess(profile.accessRole, "growth") === "none") redirect("/dashboard");
-  const canEdit = canEditSection(profile.accessRole, "growth");
+  if (getSectionAccess(profile.accessRole, "growth", profile.permissionOverrides) === "none") redirect("/dashboard");
+  const canEdit = canEditSection(profile.accessRole, "growth", profile.permissionOverrides);
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location, tab } = await searchParams;

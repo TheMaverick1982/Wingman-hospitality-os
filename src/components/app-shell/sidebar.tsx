@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
-import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section } from "@/lib/auth/permissions";
+import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 
 const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[] = [
@@ -45,12 +45,14 @@ export function Sidebar({
   locationName,
   repeatRate,
   isPlatformAdmin,
+  permissionOverrides,
 }: {
   accessRole: AccessRole;
   fullName: string;
   locationName: string;
   repeatRate: number;
   isPlatformAdmin?: boolean;
+  permissionOverrides?: PermissionOverrides;
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
@@ -62,7 +64,7 @@ export function Sidebar({
       </Link>
 
       <nav className="flex flex-col gap-0.5">
-        {NAV.filter((item) => getSectionAccess(accessRole, item.section) !== "none").map((item) => {
+        {NAV.filter((item) => getSectionAccess(accessRole, item.section, permissionOverrides) !== "none").map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link

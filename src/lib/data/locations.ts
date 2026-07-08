@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AccessRole } from "@/lib/auth/permissions";
 
-export type Location = { id: string; name: string };
+export type Location = { id: string; name: string; address?: string; phone?: string; email?: string };
 
 export async function getOrgLocations(): Promise<Location[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("locations").select("id, name").order("name");
+  const { data } = await supabase.from("locations").select("id, name, address, phone, email").order("name");
   return data ?? [];
 }
 

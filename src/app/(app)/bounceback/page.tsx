@@ -8,7 +8,7 @@ import { GuestsClient } from "./guests-client";
 export default async function BounceBackPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (getSectionAccess(profile.accessRole, "bounceback") === "none") redirect("/dashboard");
+  if (getSectionAccess(profile.accessRole, "bounceback", profile.permissionOverrides) === "none") redirect("/dashboard");
 
   const supabase = await createClient();
   const [{ data: guests }, locations] = await Promise.all([

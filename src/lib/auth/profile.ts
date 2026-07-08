@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { AccessRole } from "./permissions";
+import type { AccessRole, PermissionOverrides } from "./permissions";
 
 export type CurrentProfile = {
   userId: string;
@@ -11,6 +11,7 @@ export type CurrentProfile = {
   orgId: string;
   orgName: string;
   isPlatformAdmin: boolean;
+  permissionOverrides: PermissionOverrides;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -23,7 +24,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, access_role, location_id, org_id, is_platform_admin, locations(name), organizations(name)")
+    .select("full_name, access_role, location_id, org_id, is_platform_admin, locations(name), organizations(name, permission_overrides)")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -37,7 +38,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     org_id: string;
     is_platform_admin: boolean;
     locations: { name: string } | null;
-    organizations: { name: string } | null;
+    organizations: { name: string; permission_overrides: PermissionOverrides | null } | null;
   };
 
   return {
@@ -50,5 +51,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     orgId: profile.org_id,
     orgName: profile.organizations?.name ?? "",
     isPlatformAdmin: profile.is_platform_admin,
+    permissionOverrides: profile.organizations?.permission_overrides ?? {},
   };
 }

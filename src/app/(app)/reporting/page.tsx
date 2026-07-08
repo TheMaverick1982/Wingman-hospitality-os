@@ -29,7 +29,7 @@ export default async function ReportingPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (getSectionAccess(profile.accessRole, "reporting") === "none") redirect("/dashboard");
+  if (getSectionAccess(profile.accessRole, "reporting", profile.permissionOverrides) === "none") redirect("/dashboard");
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { range: rangeParam } = await searchParams;

@@ -44,6 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         locationName={sidebarLocation?.name || profile.orgName}
         repeatRate={repeatRate}
         isPlatformAdmin={profile.isPlatformAdmin}
+        permissionOverrides={profile.permissionOverrides}
       />
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}

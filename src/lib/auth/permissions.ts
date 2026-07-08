@@ -30,12 +30,32 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   settings: { super_admin: "full", manager: "none", staff: "none" },
 };
 
-export function getSectionAccess(role: AccessRole, section: Section): SectionAccess {
-  return SECTION_ACCESS[section][role];
+// Settings stays fixed to the owner -- Manager/Staff access there isn't
+// overridable, since the server actions inside independently require
+// Super Admin regardless of what this matrix says, so making it editable
+// would just be a confusing dead end in the UI.
+export const EDITABLE_SECTIONS: Section[] = [
+  "dashboard",
+  "culture",
+  "bounceback",
+  "recovery",
+  "training",
+  "accountability",
+  "hiring",
+  "growth",
+  "reporting",
+];
+
+export type PermissionOverrides = Partial<Record<Section, Partial<Record<"manager" | "staff", SectionAccess>>>>;
+
+export function getSectionAccess(role: AccessRole, section: Section, overrides?: PermissionOverrides): SectionAccess {
+  if (role === "super_admin") return "full";
+  if (section === "settings") return SECTION_ACCESS.settings[role];
+  return overrides?.[section]?.[role] ?? SECTION_ACCESS[section][role];
 }
 
-export function canEditSection(role: AccessRole, section: Section): boolean {
-  return getSectionAccess(role, section) === "full";
+export function canEditSection(role: AccessRole, section: Section, overrides?: PermissionOverrides): boolean {
+  return getSectionAccess(role, section, overrides) === "full";
 }
 
 export const ROLE_LABELS: Record<AccessRole, string> = {

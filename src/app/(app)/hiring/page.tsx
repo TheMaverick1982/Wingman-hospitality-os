@@ -43,7 +43,7 @@ export default async function HiringPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (getSectionAccess(profile.accessRole, "hiring") === "none") redirect("/dashboard");
+  if (getSectionAccess(profile.accessRole, "hiring", profile.permissionOverrides) === "none") redirect("/dashboard");
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location } = await searchParams;
