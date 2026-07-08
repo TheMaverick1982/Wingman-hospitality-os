@@ -11,6 +11,7 @@ import { RoleBasedTraining } from "@/components/marketing/role-based-training";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { QuoteSection } from "@/components/marketing/quote-section";
 import { CtaSection } from "@/components/marketing/cta-section";
+import { InlineCta } from "@/components/marketing/inline-cta";
 import { MarketingFooter } from "@/components/marketing/footer";
 
 export const metadata: Metadata = {
@@ -34,9 +35,15 @@ export default async function Home() {
       <Hero />
       <StatsBand />
       <ValueProps />
+      <div className="py-16 sm:py-20">
+        <InlineCta headline="See it running on your own floor." sub="Free to set up — no credit card required." />
+      </div>
       <CustomSystem />
       <RoleBasedTraining />
       <HowItWorks />
+      <div className="py-16 sm:py-20">
+        <InlineCta headline="Ready to set your standard?" sub="Takes minutes to get your team started." />
+      </div>
       <QuoteSection />
       <CtaSection />
       <MarketingFooter />
