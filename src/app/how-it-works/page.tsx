@@ -247,7 +247,11 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <InlineCta headline="Build your team's system in minutes." sub="Upload what you have, or start from scratch — Wingman writes the rest." />
+      <InlineCta
+        headline="Build your team's system in minutes."
+        sub="Upload what you have, or start from scratch — Wingman writes the rest."
+        spacingClassName="pt-16 sm:pt-24"
+      />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-[72px] items-center">
@@ -357,7 +361,11 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <InlineCta headline="See the whole loop on your floor." sub="Set it up once — Wingman runs it with you, every shift." />
+      <InlineCta
+        headline="See the whole loop on your floor."
+        sub="Set it up once — Wingman runs it with you, every shift."
+        spacingClassName="pt-20 sm:pt-28"
+      />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <div className="max-w-[720px] mb-14">
