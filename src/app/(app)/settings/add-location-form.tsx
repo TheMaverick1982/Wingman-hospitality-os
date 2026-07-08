@@ -16,7 +16,13 @@ function emptyRow(): Row {
   return { name: "", address: "", phone: "", email: "" };
 }
 
-export function AddLocationForm({ currentLocationCount }: { currentLocationCount: number }) {
+export function AddLocationForm({
+  currentLocationCount,
+  isFreeAccount,
+}: {
+  currentLocationCount: number;
+  isFreeAccount?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([emptyRow()]);
   const [state, formAction, pending] = useActionState(bulkAddLocations, initialState);
@@ -89,12 +95,16 @@ export function AddLocationForm({ currentLocationCount }: { currentLocationCount
                   <span className="text-muted">
                     Adding {validRows.length} location{validRows.length === 1 ? "" : "s"} — {currentLocationCount} → {newTotal} total
                   </span>
-                  <span className="font-semibold text-ink tabular-nums">
-                    ${currentMonthly}/mo → ${nextMonthly}/mo
-                  </span>
+                  {!isFreeAccount && (
+                    <span className="font-semibold text-ink tabular-nums">
+                      ${currentMonthly}/mo → ${nextMonthly}/mo
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-2 mt-1.5">
-                  Billing updates automatically once a payment method is connected — see the Billing tab.
+                  {isFreeAccount
+                    ? "This is a free account — no billing, no matter how many locations you add."
+                    : "Billing updates automatically once a payment method is connected — see the Billing tab."}
                 </p>
               </div>
             )}

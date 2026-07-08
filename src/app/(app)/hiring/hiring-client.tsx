@@ -41,7 +41,7 @@ export function HiringClient({
 
   return (
     <div>
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {ALL_DEPARTMENTS.map((d) => (
           <button
             key={d}
@@ -53,6 +53,11 @@ export function HiringClient({
             {d}
           </button>
         ))}
+      </div>
+
+      <div className="flex items-center gap-2 mb-6">
+        <InterviewGuideButton department={activeRole} traits={combinedTraits} />
+        {canEdit && <HiringTraitBuilder department={activeRole} />}
       </div>
 
       <div className="flex items-center gap-2 mb-3">
