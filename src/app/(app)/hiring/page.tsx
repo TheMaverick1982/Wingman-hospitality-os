@@ -55,6 +55,8 @@ export default async function HiringPage({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const supabase = await createClient();

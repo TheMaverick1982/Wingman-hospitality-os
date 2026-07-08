@@ -29,6 +29,8 @@ export default async function RecoveryPage({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const supabase = await createClient();

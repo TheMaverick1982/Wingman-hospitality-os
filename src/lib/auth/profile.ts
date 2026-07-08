@@ -12,6 +12,8 @@ export type CurrentProfile = {
   orgName: string;
   isPlatformAdmin: boolean;
   permissionOverrides: PermissionOverrides;
+  allLocations: boolean;
+  accessibleLocationIds: string[];
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -22,11 +24,14 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("full_name, access_role, location_id, org_id, is_platform_admin, locations(name), organizations(name, permission_overrides)")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data }, { data: locRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, access_role, location_id, org_id, is_platform_admin, all_locations, locations(name), organizations(name, permission_overrides)")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.from("profile_locations").select("location_id").eq("profile_id", user.id),
+  ]);
 
   if (!data) return null;
   // `Database` is a loose placeholder type today, so postgrest-js can't infer
@@ -37,6 +42,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     location_id: string | null;
     org_id: string;
     is_platform_admin: boolean;
+    all_locations: boolean;
     locations: { name: string } | null;
     organizations: { name: string; permission_overrides: PermissionOverrides | null } | null;
   };
@@ -52,5 +58,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     orgName: profile.organizations?.name ?? "",
     isPlatformAdmin: profile.is_platform_admin,
     permissionOverrides: profile.organizations?.permission_overrides ?? {},
+    allLocations: profile.all_locations ?? false,
+    accessibleLocationIds: ((locRows ?? []) as { location_id: string }[]).map((r) => r.location_id),
   };
 }

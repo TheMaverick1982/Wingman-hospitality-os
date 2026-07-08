@@ -3,7 +3,6 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
 import type { Location } from "@/lib/data/locations";
-import { type AccessRole } from "@/lib/auth/permissions";
 import { logout } from "@/app/login/actions";
 
 const TITLES: Record<string, string> = {
@@ -21,20 +20,23 @@ const TITLES: Record<string, string> = {
 };
 
 export function Topbar({
-  accessRole,
   locations,
+  canSwitch,
+  orgIsMultiLocation,
   userLocationName,
 }: {
-  accessRole: AccessRole;
   locations: Location[];
+  canSwitch: boolean;
+  orgIsMultiLocation: boolean;
   userLocationName: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLocation = searchParams.get("location") ?? "all";
-  const isSuperAdmin = accessRole === "super_admin";
-  const isMultiLocation = locations.length > 1;
+  // Show a real switcher only when the member can span >1 location; otherwise,
+  // in a multi-location org, just label their home location.
+  const showSwitcher = canSwitch && locations.length > 1;
   const title = TITLES[pathname] ?? "Wingman";
 
   function onLocationChange(value: string) {
@@ -49,10 +51,10 @@ export function Topbar({
     <div className="sticky top-0 z-20 h-16 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex items-center justify-between px-8">
       <div className="flex items-center gap-3.5">
         <span className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</span>
-        {isMultiLocation && (
+        {(showSwitcher || orgIsMultiLocation) && (
           <div className="flex items-center gap-2 px-3 py-[7px] rounded-full border border-line hover:bg-paper transition-colors">
             <MapPin size={13} className="text-muted-2" />
-            {isSuperAdmin ? (
+            {showSwitcher ? (
               <select
                 value={currentLocation}
                 onChange={(e) => onLocationChange(e.target.value)}
@@ -68,7 +70,7 @@ export function Topbar({
             ) : (
               <span className="text-[13px] font-semibold text-charcoal-2">{userLocationName}</span>
             )}
-            <span className="text-muted-2 text-xs">⌄</span>
+            {showSwitcher && <span className="text-muted-2 text-xs">⌄</span>}
           </div>
         )}
       </div>

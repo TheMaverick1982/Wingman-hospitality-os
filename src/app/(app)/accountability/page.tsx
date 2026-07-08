@@ -36,6 +36,8 @@ export default async function AccountabilityPage({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const supabase = await createClient();
