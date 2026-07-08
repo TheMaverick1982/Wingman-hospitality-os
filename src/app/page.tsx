@@ -35,7 +35,11 @@ export default async function Home() {
       <Hero />
       <StatsBand />
       <ValueProps />
-      <InlineCta headline="See it running on your own floor." sub="Get your team started in minutes." />
+      <InlineCta
+        headline="See it running on your own floor."
+        sub="Get your team started in minutes."
+        spacingClassName="pb-20 sm:pb-32"
+      />
       <CustomSystem />
       <RoleBasedTraining />
       <HowItWorks />
