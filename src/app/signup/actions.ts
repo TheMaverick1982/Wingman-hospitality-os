@@ -22,7 +22,10 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
 
   const supabase = await createClient();
   const headersList = await headers();
-  const origin = headersList.get("origin") ?? `https://${headersList.get("host")}`;
+  // Prefer the trusted, server-configured site URL so the confirmation link
+  // (which carries the auth code) can't be pointed at an attacker host via a
+  // forged Origin/Host header. Falls back to the request header for local dev.
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? headersList.get("origin") ?? `https://${headersList.get("host")}`;
 
   const { data, error } = await supabase.auth.signUp({
     email,

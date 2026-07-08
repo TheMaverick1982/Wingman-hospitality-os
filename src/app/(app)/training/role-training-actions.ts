@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
+import { getCurrentProfile } from "@/lib/auth/profile";
+import { canEditSection } from "@/lib/auth/permissions";
 
 export type BuildState = { error: string | null; built?: { hospitality: number; role: number } };
 
@@ -49,6 +51,12 @@ You output only valid JSON matching the requested schema exactly, with no markdo
 const RESPONSE_SHAPE = `{"hospitality_items": [string], "role_items": [string], "track_label": string}`;
 
 export async function generateRoleTraining(_prev: BuildState, formData: FormData): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to generate training content." };
+  }
+
   const department = String(formData.get("department") || "");
   const mode = String(formData.get("mode") || "");
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };

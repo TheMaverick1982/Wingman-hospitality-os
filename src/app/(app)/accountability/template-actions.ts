@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DAILY_CHECKLIST_ITEMS, PRE_SHIFT_ITEMS } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
+import { getCurrentProfile } from "@/lib/auth/profile";
+import { canEditSection } from "@/lib/auth/permissions";
 
 export type ChecklistType = "daily" | "preshift";
 
@@ -56,6 +58,12 @@ You output only valid JSON matching the requested schema exactly, no markdown fe
 export type BuildState = { error: string | null; built?: number };
 
 export async function generateAccountabilityChecklist(_prev: BuildState, formData: FormData): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "accountability", profile.permissionOverrides)) {
+    return { error: "You don't have access to generate checklists." };
+  }
+
   const checklistType = String(formData.get("checklistType") || "") as ChecklistType;
   const mode = String(formData.get("mode") || "");
   if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };

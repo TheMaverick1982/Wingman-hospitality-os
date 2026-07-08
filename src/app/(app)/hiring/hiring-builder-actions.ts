@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
+import { getCurrentProfile } from "@/lib/auth/profile";
+import { canEditSection } from "@/lib/auth/permissions";
 
 export type BuildState = { error: string | null; built?: number };
 
@@ -34,6 +36,12 @@ You output only valid JSON matching the requested schema exactly, no markdown fe
 const RESPONSE_SHAPE = `[{"title": string, "question": string, "green_flag": string, "red_flag": string}]`;
 
 export async function generateHiringCriteria(_prev: BuildState, formData: FormData): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
+    return { error: "You don't have access to generate hiring criteria." };
+  }
+
   const department = String(formData.get("department") || "");
   const mode = String(formData.get("mode") || "");
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
@@ -197,8 +205,12 @@ export async function updateHiringTrait(
   id: string,
   patch: { title?: string; question?: string; green_flag?: string; red_flag?: string }
 ) {
+  const allowed = new Set(["title", "question", "green_flag", "red_flag"]);
+  const safe = Object.fromEntries(
+    Object.entries(patch as Record<string, unknown>).filter(([k]) => allowed.has(k))
+  );
   const supabase = await createClient();
-  await supabase.from("hiring_traits").update(patch).eq("id", id);
+  await supabase.from("hiring_traits").update(safe).eq("id", id);
   revalidatePath("/hiring");
 }
 
