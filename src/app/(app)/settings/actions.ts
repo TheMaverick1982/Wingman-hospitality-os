@@ -18,11 +18,19 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
 
   const email = String(formData.get("email") || "").trim();
   const fullName = String(formData.get("fullName") || "").trim();
-  const locationId = String(formData.get("locationId") || "");
   const role = String(formData.get("role") || "");
 
-  if (!email || !fullName || !locationId) return { error: "Name, email, and location are required." };
-  if (role !== "manager" && role !== "staff") return { error: "Invalid role." };
+  if (!email || !fullName) return { error: "Name and email are required." };
+  if (role !== "manager" && role !== "staff" && role !== "super_admin") return { error: "Invalid role." };
+
+  // Resolve the location scope for manager/staff (Super Admins get everything).
+  let allLocations = false;
+  let locationIds: string[] = [];
+  if (role !== "super_admin") {
+    allLocations = String(formData.get("scope") || "specific") === "all";
+    locationIds = formData.getAll("locationIds").map(String).filter(Boolean);
+    if (!allLocations && locationIds.length === 0) return { error: "Select at least one location." };
+  }
 
   const origin = (await headers()).get("origin");
   const admin = createAdminClient();
@@ -35,10 +43,32 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   const { error: assignError } = await supabase.rpc("assign_team_member_profile", {
     new_user_id: invited.user.id,
     full_name: fullName,
-    target_location_id: locationId,
     target_role: role,
+    target_location_id: role === "super_admin" || allLocations ? null : locationIds[0],
+    target_all_locations: allLocations,
+    target_location_ids: allLocations ? [] : locationIds,
   });
   if (assignError) return { error: assignError.message };
+
+  revalidatePath("/settings");
+  return { error: null };
+}
+
+export async function resendInvite(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only a Super Admin can resend invites." };
+
+  const email = String(formData.get("email") || "").trim();
+  if (!email) return { error: "Missing email." };
+
+  const origin = (await headers()).get("origin");
+  const admin = createAdminClient();
+  // Routed through Supabase so it uses the project's configured sender + the
+  // branded "Invite user" template. Works for members who haven't accepted yet.
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${origin}/auth/callback?type=invite`,
+  });
+  if (error) return { error: error.message };
 
   revalidatePath("/settings");
   return { error: null };
@@ -88,8 +118,10 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
     const { error: assignError } = await supabase.rpc("assign_team_member_profile", {
       new_user_id: invited.user.id,
       full_name: fullName,
-      target_location_id: locationId,
       target_role: role,
+      target_location_id: locationId,
+      target_all_locations: false,
+      target_location_ids: [locationId],
     });
     if (assignError) {
       failures.push({ index: i, message: assignError.message });
@@ -109,16 +141,43 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
   const userId = String(formData.get("userId") || "");
   const locationId = String(formData.get("locationId") || "");
   const role = String(formData.get("role") || "");
-  if (!userId || !locationId || (role !== "manager" && role !== "staff")) return { error: "Invalid update." };
+  if (!userId || (role !== "manager" && role !== "staff" && role !== "super_admin")) return { error: "Invalid update." };
+  if (role !== "super_admin" && !locationId) return { error: "A location is required for this role." };
 
   const supabase = await createClient();
+
+  if (role === "super_admin") {
+    // Promote to co-owner: full access, no location scope.
+    const { error } = await supabase
+      .from("profiles")
+      .update({ access_role: "super_admin", location_id: null, all_locations: false })
+      .eq("id", userId);
+    if (error) return { error: error.message };
+    await supabase.from("profile_locations").delete().eq("profile_id", userId);
+    revalidatePath("/settings");
+    revalidatePath("/", "layout");
+    return { error: null };
+  }
+
+  // Demoting? Never remove the last Super Admin.
+  const { data: current } = await supabase.from("profiles").select("access_role").eq("id", userId).single();
+  if (current?.access_role === "super_admin") {
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("access_role", "super_admin");
+    if ((count ?? 0) <= 1) return { error: "You can't remove the last Super Admin — promote someone else first." };
+  }
+
+  // Role/home change; preserves any all-locations or specific-location grants.
   const { error } = await supabase
     .from("profiles")
-    .update({ location_id: locationId, access_role: role })
+    .update({ access_role: role, location_id: locationId })
     .eq("id", userId);
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
+  revalidatePath("/", "layout");
   return { error: null };
 }
 

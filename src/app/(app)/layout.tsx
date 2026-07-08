@@ -38,6 +38,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const cookieStore = await cookies();
   const isImpersonating = Boolean(cookieStore.get("wingman_impersonator_refresh")?.value);
 
+  // Which locations this member can switch between in the top bar.
+  const canSpanLocations = isSuperAdmin || profile.allLocations || profile.accessibleLocationIds.length > 0;
+  const switchableLocations =
+    isSuperAdmin || profile.allLocations
+      ? locations
+      : locations.filter((l) => l.id === profile.locationId || profile.accessibleLocationIds.includes(l.id));
+
   return (
     <div className="w-full flex min-h-full flex-1">
       <Sidebar
@@ -52,8 +59,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         <Topbar
-          accessRole={profile.accessRole}
-          locations={locations}
+          locations={switchableLocations}
+          canSwitch={canSpanLocations}
+          orgIsMultiLocation={locations.length > 1}
           userLocationName={profile.locationName}
         />
         <div className="p-8 overflow-y-auto flex-1 bg-paper">

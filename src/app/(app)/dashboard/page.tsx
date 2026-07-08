@@ -59,6 +59,8 @@ export default async function DashboardPage({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;

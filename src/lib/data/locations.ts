@@ -10,21 +10,34 @@ export async function getOrgLocations(): Promise<Location[]> {
 }
 
 /**
- * Resolves the "effective location" for the current request: Managers and
- * Staff are always locked to their own location regardless of the URL,
- * while a Super Admin can pick any location (or "all") via the ?location=
- * query param.
+ * Resolves the "effective location" for the current request.
+ *   - A Super Admin, or a member with all-locations access, can pick any
+ *     location (or "all") via the ?location= query param.
+ *   - A member with specific extra locations can span those (and pick "all",
+ *     which RLS scopes to just their accessible rows).
+ *   - A plain single-location member is always locked to their own location.
+ * Returning null means "no location filter" — RLS still limits the rows to
+ * what the member is allowed to see, so it is always safe.
  */
 export function resolveEffectiveLocation({
   accessRole,
   userLocationId,
   requestedLocationId,
+  allLocations = false,
+  accessibleLocationIds = [],
 }: {
   accessRole: AccessRole;
   userLocationId: string | null;
   requestedLocationId: string | undefined;
+  allLocations?: boolean;
+  accessibleLocationIds?: string[];
 }): string | null {
-  if (accessRole !== "super_admin") return userLocationId;
+  const isOwnerOrAll = accessRole === "super_admin" || allLocations;
+  const canSpanLocations = isOwnerOrAll || accessibleLocationIds.length > 0;
+  if (!canSpanLocations) return userLocationId;
   if (!requestedLocationId || requestedLocationId === "all") return null;
-  return requestedLocationId;
+  if (isOwnerOrAll) return requestedLocationId;
+  // Specific-locations member: only honor a location they can actually reach.
+  const allowed = new Set([userLocationId, ...accessibleLocationIds].filter(Boolean) as string[]);
+  return allowed.has(requestedLocationId) ? requestedLocationId : null;
 }

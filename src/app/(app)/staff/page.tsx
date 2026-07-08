@@ -27,6 +27,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const supabase = await createClient();

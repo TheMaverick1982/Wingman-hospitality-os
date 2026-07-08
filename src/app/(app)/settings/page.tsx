@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
 import { CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
@@ -16,14 +17,37 @@ export default async function SettingsPage() {
   if (profile.accessRole !== "super_admin") redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: members }, locations, { data: org }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, access_role, location_id").order("full_name"),
+  const [{ data: members }, locations, { data: org }, { data: plRows }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account").single(),
+    supabase.from("profile_locations").select("profile_id"),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
 
   const allMembers = members ?? [];
+
+  // How many specific locations each member has been granted.
+  const accessibleCountByMember = new Map<string, number>();
+  for (const r of (plRows ?? []) as { profile_id: string }[]) {
+    accessibleCountByMember.set(r.profile_id, (accessibleCountByMember.get(r.profile_id) ?? 0) + 1);
+  }
+
+  // Auth confirmation status (who hasn't accepted their invite yet) + email.
+  const admin = createAdminClient();
+  const statuses = await Promise.all(
+    allMembers.map(async (m) => {
+      try {
+        const { data } = await admin.auth.admin.getUserById(m.id);
+        const u = data?.user as { email?: string; email_confirmed_at?: string; confirmed_at?: string; last_sign_in_at?: string } | undefined;
+        const confirmed = Boolean(u?.email_confirmed_at || u?.confirmed_at || u?.last_sign_in_at);
+        return { id: m.id, email: u?.email ?? "", pending: !confirmed };
+      } catch {
+        return { id: m.id, email: "", pending: false };
+      }
+    })
+  );
+  const statusById = new Map(statuses.map((s) => [s.id, s]));
   const staffCountByLocation = new Map<string, number>();
   for (const m of allMembers) {
     if (!m.location_id) continue;
@@ -55,9 +79,24 @@ export default async function SettingsPage() {
             </tr>
           </thead>
           <tbody>
-            {allMembers.map((m) => (
-              <TeamMemberRow key={m.id} member={m as TeamMember} locations={locations} />
-            ))}
+            {allMembers.map((m) => {
+              const st = statusById.get(m.id);
+              const enriched = {
+                ...m,
+                all_locations: (m as { all_locations?: boolean }).all_locations ?? false,
+                accessibleCount: accessibleCountByMember.get(m.id) ?? 0,
+                pending: st?.pending ?? false,
+                email: st?.email ?? "",
+              } as TeamMember;
+              return (
+                <TeamMemberRow
+                  key={m.id}
+                  member={enriched}
+                  locations={locations}
+                  isCurrentUser={m.id === profile.userId}
+                />
+              );
+            })}
           </tbody>
         </table>
       </div>

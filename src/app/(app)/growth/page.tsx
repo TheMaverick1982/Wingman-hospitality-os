@@ -68,6 +68,8 @@ export default async function GrowthPlanPage({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
     requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
   });
 
   const supabase = await createClient();
