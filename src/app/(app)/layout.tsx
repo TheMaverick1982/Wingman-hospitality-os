@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { getOrgLocations } from "@/lib/data/locations";
 import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
+import { getOnboardingStatus } from "@/lib/onboarding";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const isSuperAdmin = profile.accessRole === "super_admin";
   const locations = await getOrgLocations();
+  const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
 
   const supabase = await createClient();
   const sidebarLocation = isSuperAdmin
@@ -45,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         repeatRate={repeatRate}
         isPlatformAdmin={profile.isPlatformAdmin}
         permissionOverrides={profile.permissionOverrides}
+        showStartHere={!!onboarding && !onboarding.allDone}
       />
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}

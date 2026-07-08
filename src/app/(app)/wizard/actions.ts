@@ -139,5 +139,5 @@ Rules:
   revalidatePath("/training");
   revalidatePath("/hiring");
   revalidatePath("/dashboard");
-  redirect("/culture");
+  redirect("/start-here");
 }

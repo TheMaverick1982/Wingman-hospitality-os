@@ -16,6 +16,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -48,6 +49,7 @@ export function Sidebar({
   repeatRate,
   isPlatformAdmin,
   permissionOverrides,
+  showStartHere,
 }: {
   accessRole: AccessRole;
   fullName: string;
@@ -55,6 +57,7 @@ export function Sidebar({
   repeatRate: number;
   isPlatformAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
+  showStartHere?: boolean;
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
@@ -66,6 +69,17 @@ export function Sidebar({
       </Link>
 
       <nav className="flex flex-col gap-0.5">
+        {showStartHere && (
+          <Link
+            href="/start-here"
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors mb-1 ${
+              pathname.startsWith("/start-here") ? "bg-brick text-white font-semibold" : "text-brick-dark bg-brick-tint font-semibold hover:brightness-95"
+            }`}
+          >
+            <Rocket size={19} strokeWidth={2} className={pathname.startsWith("/start-here") ? "text-white/90" : "text-brick"} />
+            Start here
+          </Link>
+        )}
         {NAV.filter((item) => getSectionAccess(accessRole, item.section, permissionOverrides) !== "none").map((item) => {
           const active = pathname.startsWith(item.href);
           return (
