@@ -39,15 +39,14 @@ const STEP1 = [
 const VALUES = ["Warm, not scripted", "Own the moment", "Anticipate", "Every guest a regular", "Leave it better"];
 
 const STEP2 = [
-  "Interview guides and scorecards built from your values",
-  "Department-specific training for Host, Server, Bartender, Chef, and Manager",
-  "A real sign-off log — not a binder no one reads",
+  "Upload an existing handbook or interview guide, or start from scratch with a short wizard",
+  "AI fills the gaps with hospitality best practices — not just what you already had written down",
+  "Hiring scorecard, training progress, and coaching notes — one profile per person, not three",
 ];
-const SIGNOFFS = [
-  { name: "Greeting within 30 seconds", role: "Host · M. Reyes", status: "Signed off", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" },
-  { name: "Wine pairing knowledge", role: "Server · J. Okafor", status: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" },
-  { name: "Recovery on comped check", role: "Manager · A. Bianchi", status: "Needs coaching", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" },
-  { name: "Bar close checklist", role: "Bartender · T. Nguyen", status: "Signed off", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" },
+const STAFF_PROFILE_ITEMS = [
+  { text: "Ask: “Is this your first time dining with us?”", done: true, flag: "strong" as const },
+  { text: "Know how to enter modifiers and allergies correctly in the POS", done: true, flag: null },
+  { text: "One specific recommendation per course, every course", done: false, flag: "coaching" as const, note: "Still defaulting to the same two specials — walk her through the full board." },
 ];
 
 const STEP3 = [
@@ -172,32 +171,75 @@ export default function HowItWorksPage() {
         <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-[72px] items-center">
             <div className="bg-white border border-line rounded-3xl overflow-hidden shadow-md">
-              <div className="px-6 py-5 border-b border-line text-sm font-semibold text-ink">
-                Sign-off log · Downtown flagship
-              </div>
-              {SIGNOFFS.map((s) => (
-                <div key={s.name} className="flex items-center justify-between px-6 py-4 border-b border-line last:border-b-0">
-                  <div>
-                    <div className="text-[15px] font-medium text-ink">{s.name}</div>
-                    <div className="text-[13px] text-muted-2 mt-0.5">{s.role}</div>
-                  </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${s.bg} ${s.fg}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                    {s.status}
-                  </span>
+              <div className="flex items-center gap-3.5 px-6 py-5 border-b border-line">
+                <span className="w-11 h-11 rounded-full bg-paper text-muted flex items-center justify-center text-sm font-bold shrink-0">
+                  JE
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-bold text-ink">Jordan Ellis</div>
+                  <div className="text-[13px] text-muted-2">Server · Downtown flagship</div>
                 </div>
-              ))}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#E7F6EC] text-[#15803D]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                  Active
+                </span>
+              </div>
+              <div className="flex gap-1 px-6 border-b border-line">
+                {["Contact", "Training", "Hiring history"].map((t) => (
+                  <span
+                    key={t}
+                    className={`text-[13.5px] font-semibold py-3 -mb-px border-b-2 ${
+                      t === "Training" ? "text-brick border-brick" : "text-muted-2 border-transparent"
+                    }`}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2.5 p-6">
+                {STAFF_PROFILE_ITEMS.map((item) => (
+                  <div key={item.text} className="bg-paper border border-line rounded-2xl p-3.5">
+                    <div className="flex items-start gap-2.5">
+                      <span
+                        className={`shrink-0 w-4 h-4 rounded-[5px] flex items-center justify-center text-[10px] mt-0.5 ${
+                          item.done ? "bg-brick border-2 border-brick text-white" : "border-2 border-line-strong"
+                        }`}
+                      >
+                        {item.done ? "✓" : ""}
+                      </span>
+                      <span className={`text-sm leading-[1.45] flex-1 ${item.done ? "text-muted-2 line-through" : "text-ink"}`}>
+                        {item.text}
+                      </span>
+                      {item.flag === "strong" && (
+                        <span className="shrink-0 w-[22px] h-[22px] rounded-full bg-[#E7F6EC] text-[#15803D] flex items-center justify-center text-[11px]">
+                          👍
+                        </span>
+                      )}
+                      {item.flag === "coaching" && (
+                        <span className="shrink-0 w-[22px] h-[22px] rounded-full bg-[#FDF3E1] text-[#D97706] flex items-center justify-center text-[11px]">
+                          !
+                        </span>
+                      )}
+                    </div>
+                    {item.note && <p className="text-xs text-muted-2 mt-2 ml-[26px]">&ldquo;{item.note}&rdquo;</p>}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between px-6 py-3.5 border-t border-line bg-paper">
+                <span className="text-xs text-muted-2">67% complete</span>
+                <span className="text-xs font-semibold text-brick-dark">✦ Hired through Wingman</span>
+              </div>
             </div>
             <div>
               <div className="text-[15px] font-bold text-brick mb-4">Step 02</div>
               <h2 className="font-display text-3xl sm:text-4xl leading-[1.1] tracking-[-0.02em] font-bold text-ink mb-5">
-                Build the team around it
+                Wingman builds the team systems for you
               </h2>
               <p className="text-lg text-muted leading-[1.55] mb-7">
-                Hiring guidance matched to your values helps you screen for the right people. Then
-                each role — Host, Server, Bartender, Chef, Manager — gets department-specific
-                training with a real sign-off log, so you always know who&apos;s ready and who
-                needs another pass.
+                Already have a handbook, an interview guide, a training binder nobody reads? Upload
+                it. Starting from nothing? Answer a few questions instead. Either way, Wingman
+                writes a complete, hospitality-first program for every role — and every person you
+                hire or train lives in one profile from their first interview onward.
               </p>
               <Checkmarks items={STEP2} />
             </div>
@@ -205,9 +247,7 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="Build your team's system in minutes." sub="Upload what you have, or start from scratch — Wingman writes the rest." />
-      </div>
+      <InlineCta headline="Build your team's system in minutes." sub="Upload what you have, or start from scratch — Wingman writes the rest." />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-[72px] items-center">
@@ -317,9 +357,7 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      <div className="py-16 sm:py-20">
-        <InlineCta headline="See the whole loop on your floor." sub="Set it up once — Wingman runs it with you, every shift." />
-      </div>
+      <InlineCta headline="See the whole loop on your floor." sub="Set it up once — Wingman runs it with you, every shift." />
 
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <div className="max-w-[720px] mb-14">

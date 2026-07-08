@@ -1,28 +1,28 @@
 export function TwoOutcomesChart() {
   return (
-    <div className="relative pb-20">
+    <div className="relative pb-8 lg:pb-20">
       <div
-        className="w-full rounded-[24px] overflow-hidden border border-black/[0.06] bg-white flex flex-col px-6 sm:px-10 pt-8 pb-7"
-        style={{ aspectRatio: "16 / 9", boxShadow: "0 40px 80px rgba(0,0,0,0.16)" }}
+        className="w-full rounded-[24px] overflow-hidden border border-black/[0.06] bg-white flex flex-col px-5 sm:px-10 pt-6 sm:pt-8 pb-6 sm:pb-7 lg:aspect-[16/9]"
+        style={{ boxShadow: "0 40px 80px rgba(0,0,0,0.16)" }}
       >
-        <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex items-start justify-between gap-5 gap-y-4 flex-wrap">
           <div>
             <div className="text-lg sm:text-xl font-semibold tracking-[-0.015em] text-ink">Same guests. Two outcomes.</div>
             <div className="text-sm text-muted mt-1">Cumulative guest visits, one-time traffic vs. retained</div>
           </div>
           <div className="flex flex-col gap-2.5">
-            <div className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink">
-              <span className="w-3 h-3 rounded-[3px] bg-brick inline-block" />
+            <div className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink whitespace-nowrap">
+              <span className="w-3 h-3 rounded-[3px] bg-brick inline-block shrink-0" />
               With Wingman — they come back
             </div>
-            <div className="inline-flex items-center gap-2 text-[13px] font-semibold text-muted-2">
-              <span className="w-3 h-0.5 rounded bg-[#c4c4c4] inline-block" />
+            <div className="inline-flex items-center gap-2 text-[13px] font-semibold text-muted-2 whitespace-nowrap">
+              <span className="w-3 h-0.5 rounded bg-[#c4c4c4] inline-block shrink-0" />
               One-time visit
             </div>
           </div>
         </div>
 
-        <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 mt-2 overflow-visible">
+        <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 mt-4 lg:mt-2 min-h-[220px] overflow-visible">
           <defs>
             <linearGradient id="wmArea" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#0A6CFF" stopOpacity="0.18" />
@@ -52,10 +52,23 @@ export function TwoOutcomesChart() {
           <text x="648" y="360" textAnchor="middle" fontSize="13" fontWeight="500" fill="#A3A3A3">Visit 4</text>
           <text x="820" y="360" textAnchor="middle" fontSize="13" fontWeight="500" fill="#A3A3A3">Visit 5</text>
         </svg>
+
+        {/* Below lg the floating stat card (further down) has no room and would
+            overlap the chart, so the same stat is shown inline here instead. */}
+        <div className="lg:hidden flex items-center justify-between gap-4 mt-5 pt-5 border-t border-[#F1F1F1]">
+          <div>
+            <div className="text-[13px] text-muted font-medium">Repeat rate</div>
+            <div className="text-[13px] text-muted mt-0.5">back for visit 2</div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[30px] font-semibold tracking-[-0.02em] leading-none text-ink">62%</span>
+            <span className="text-xs font-semibold text-[#15803d] bg-[#e7f6ec] rounded-full px-[9px] py-[3px] whitespace-nowrap">+4.2%</span>
+          </div>
+        </div>
       </div>
 
       <div
-        className="hidden sm:block absolute bg-white border border-[#ededed] rounded-[18px] py-5 px-[22px] w-[210px]"
+        className="hidden lg:block absolute bg-white border border-[#ededed] rounded-[18px] py-5 px-[22px] w-[210px]"
         style={{ bottom: "47%", left: "-14px", boxShadow: "0 16px 40px rgba(0,0,0,0.12)" }}
       >
         <div className="flex items-center justify-between mb-3">
