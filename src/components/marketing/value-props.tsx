@@ -45,7 +45,7 @@ export function ValueProps() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-paper rounded-[28px] p-8 sm:p-11">
           <div className="w-[52px] h-[52px] rounded-2xl bg-white flex items-center justify-center mb-6 shadow-sm text-brick text-xl">◪</div>
           <h3 className="text-2xl sm:text-[26px] leading-[1.15] tracking-[-0.015em] font-semibold text-ink mb-3">
@@ -55,6 +55,16 @@ export function ValueProps() {
             Department training, real-time sign-offs, and spot-checks that measure whether service
             felt like a transaction or an experience — so hospitality isn&apos;t left to chance,
             shift after shift.
+          </p>
+        </div>
+        <div className="bg-paper rounded-[28px] p-8 sm:p-11">
+          <div className="w-[52px] h-[52px] rounded-2xl bg-white flex items-center justify-center mb-6 shadow-sm text-brick text-xl">✦</div>
+          <h3 className="text-2xl sm:text-[26px] leading-[1.15] tracking-[-0.015em] font-semibold text-ink mb-3">
+            Wingman builds it, you approve it
+          </h3>
+          <p className="text-base sm:text-lg text-muted leading-[1.5]">
+            Upload your handbook or interview guide, or answer a few questions — AI writes the
+            training and hiring program for every role, hospitality-first.
           </p>
         </div>
         <div className="bg-paper rounded-[28px] p-8 sm:p-11">
