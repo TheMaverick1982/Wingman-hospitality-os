@@ -12,6 +12,7 @@ import {
   constraintGapIndex,
   fallbackActionPlan,
 } from "@/lib/audit";
+import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 
 export type ActionState = { error: string | null; ok?: boolean };
 
@@ -34,8 +35,9 @@ async function generateActionPlan(
   const domainLines = AUDIT_DOMAINS.map((d, i) => `- ${d.label}: ${domainScores[i]}/5`).join("\n");
   const constraint = FIVE_GAPS[constraintGapIndex(gapScores)].label;
 
-  const system =
-    "You are Regulars OS, an expert restaurant operations consultant. You install one system: make excellent hospitality happen on purpose so first-timers become regulars. You believe service completes a task while hospitality creates a connection; a restaurant sells reactions, not transactions; standards must be specific, observable, and inspected; and growth is geometric across many small levers. You fix the single most-open constraint gap first, because effort spent elsewhere leaks out through it. You write concrete, restaurant-specific, immediately-usable actions -- never generic advice, never vague value statements.";
+  const system = `You are an elite restaurant operations consultant. You fix the single most-open constraint gap first, because effort spent elsewhere leaks out through it, and you write concrete, restaurant-specific, immediately-usable actions -- never generic advice, never vague value statements.
+
+${HOSPITALITY_DOCTRINE}`;
 
   const prompt = `A ${concept || "full-service restaurant"} just completed the Standout Audit + 5-Gap Diagnosis.
 
