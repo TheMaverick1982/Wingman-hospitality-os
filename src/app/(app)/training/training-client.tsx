@@ -5,9 +5,11 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { RoleChecklist } from "./role-checklist";
 import { MenuTrainingSection, type MenuItem } from "./menu-training-section";
 
+export type ChecklistItem = { id: string; item: string; source: "wingman" | "custom" };
+
 export type DeptData = {
-  standards: string[];
-  trainingItems: string[];
+  standards: ChecklistItem[];
+  trainingItems: ChecklistItem[];
   trackLabel: string | null;
   hasMenu: boolean;
   menuItems: MenuItem[];
@@ -76,6 +78,7 @@ export function TrainingClient({
         hospitalityItems={dept.standards}
         roleItems={dept.trainingItems}
         trackLabel={dept.trackLabel}
+        canEdit={isGm}
       />
     </div>
   );

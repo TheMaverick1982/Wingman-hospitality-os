@@ -15,6 +15,7 @@ const SECTION_LABELS: Record<Section, string> = {
   training: "Training & Standards",
   accountability: "Accountability",
   hiring: "Hiring",
+  staff: "Staff",
   growth: "Revenue Growth Planner",
   reporting: "Reporting",
   settings: "Settings",
