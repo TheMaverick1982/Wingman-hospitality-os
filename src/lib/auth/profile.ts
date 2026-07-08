@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AccessRole, PermissionOverrides } from "./permissions";
 
 export type CurrentProfile = {
@@ -19,18 +20,25 @@ export type CurrentProfile = {
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const supabase = await createClient();
 
+  // getUser() cryptographically validates the session cookie, so `user.id` is
+  // trustworthy. We then load *that user's own* profile with the service-role
+  // client, keyed strictly to their validated id. This is deliberate: the
+  // cookie-authenticated query can silently run unauthenticated when the auth
+  // cookie is chunked, and RLS would then hide the profile and bounce the user
+  // to onboarding. Reading only your own row by a verified id can't leak data.
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const admin = createAdminClient();
   const [{ data }, { data: locRows }] = await Promise.all([
-    supabase
+    admin
       .from("profiles")
       .select("full_name, access_role, location_id, org_id, is_platform_admin, all_locations, locations(name), organizations(name, permission_overrides)")
       .eq("id", user.id)
       .maybeSingle(),
-    supabase.from("profile_locations").select("location_id").eq("profile_id", user.id),
+    admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
   ]);
 
   if (!data) return null;
