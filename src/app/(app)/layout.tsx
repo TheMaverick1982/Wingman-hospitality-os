@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile) redirect("/onboarding");
 
   const isSuperAdmin = profile.accessRole === "super_admin";
-  const locations = isSuperAdmin ? await getOrgLocations() : [];
+  const locations = await getOrgLocations();
 
   const supabase = await createClient();
   const sidebarLocation = isSuperAdmin

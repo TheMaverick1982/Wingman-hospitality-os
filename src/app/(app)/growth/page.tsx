@@ -9,7 +9,7 @@ import { Pill } from "@/components/ui/pill";
 import { DeleteIconButton } from "@/components/ui/delete-icon-button";
 import { GrowthPlanForm } from "./growth-plan-form";
 import { ActualsForm } from "./actuals-form";
-import { PhaseBreakdown, PhaseComparisonChart, TrajectoryChart, ActualsChart } from "./growth-plan-charts";
+import { PhaseBreakdown, PhaseComparisonChart, TrajectoryChart, ActualsChart, ActualsGrowthChart, GoalGapAnalysis } from "./growth-plan-charts";
 import { deleteGrowthEntry } from "./actions";
 
 type GrowthPlanRow = {
@@ -206,11 +206,34 @@ export default async function GrowthPlanPage({
           {canEdit && <ActualsForm locationId={effectiveLocation} frequency={plan.frequency} />}
 
           {entries.length > 0 && (
-            <ActualsChart
-              entries={entries.map((e) => ({
-                periodDate: e.period_date,
-                total: Number(e.customers) * Number(e.avg_sale) * Number(e.repurchase_frequency),
-              }))}
+            <>
+              <ActualsChart
+                entries={entries.map((e) => ({
+                  periodDate: e.period_date,
+                  total: Number(e.customers) * Number(e.avg_sale) * Number(e.repurchase_frequency),
+                }))}
+              />
+              <ActualsGrowthChart
+                entries={entries.map((e) => ({
+                  periodDate: e.period_date,
+                  total: Number(e.customers) * Number(e.avg_sale) * Number(e.repurchase_frequency),
+                }))}
+              />
+            </>
+          )}
+
+          {entries.length > 0 && hasNumbers && (
+            <GoalGapAnalysis
+              latest={{
+                customers: Number(entries[entries.length - 1].customers),
+                avgSale: Number(entries[entries.length - 1].avg_sale),
+                repurchaseFrequency: Number(entries[entries.length - 1].repurchase_frequency),
+              }}
+              target={{
+                customers: phases.target.customers,
+                avgSale: phases.target.avgSale,
+                repurchaseFrequency: phases.target.repurchaseFrequency,
+              }}
             />
           )}
 

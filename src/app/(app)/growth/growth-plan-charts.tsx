@@ -177,3 +177,85 @@ export function ActualsChart({ entries }: { entries: { periodDate: string; total
     </div>
   );
 }
+
+export function ActualsGrowthChart({ entries }: { entries: { periodDate: string; total: number }[] }) {
+  if (entries.length < 2) return null;
+
+  const growthBars = entries.slice(1).map((e, i) => {
+    const prevTotal = entries[i].total;
+    const pct = prevTotal > 0 ? ((e.total - prevTotal) / prevTotal) * 100 : 0;
+    return { periodDate: e.periodDate, pct };
+  });
+  const maxAbs = Math.max(...growthBars.map((g) => Math.abs(g.pct)), 1);
+  const barAreaHeight = 130;
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+      <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Period-over-period growth</div>
+      <div className="text-[13px] text-muted mb-6">% change in total revenue vs. the period before.</div>
+      <div className="flex items-end gap-2.5" style={{ height: barAreaHeight + 56 }}>
+        {growthBars.map((g) => {
+          const isPositive = g.pct >= 0;
+          return (
+            <div key={g.periodDate} className="flex-1 flex flex-col items-center justify-end gap-2 min-w-0">
+              <span className={`text-[11px] font-semibold whitespace-nowrap ${isPositive ? "text-[#15803D]" : "text-danger"}`}>
+                {isPositive ? "+" : ""}
+                {g.pct.toFixed(1)}%
+              </span>
+              <div
+                className={`w-full rounded-t-md ${isPositive ? "bg-[#16A34A]" : "bg-danger"}`}
+                style={{ height: `${Math.max((Math.abs(g.pct) / maxAbs) * barAreaHeight, 4)}px` }}
+              />
+              <span className="text-[10px] text-muted-2 truncate w-full text-center">{g.periodDate}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type GoalMetrics = { customers: number; avgSale: number; repurchaseFrequency: number };
+
+export function GoalGapAnalysis({ latest, target }: { latest: GoalMetrics; target: GoalMetrics }) {
+  const levers = [
+    { key: "customers", label: "# of customers", actual: latest.customers, target: target.customers },
+    { key: "avgSale", label: "Average $ per sale", actual: latest.avgSale, target: target.avgSale },
+    { key: "repurchaseFrequency", label: "Repurchase frequency", actual: latest.repurchaseFrequency, target: target.repurchaseFrequency },
+  ].map((lv) => ({ ...lv, pctOfGoal: lv.target > 0 ? (lv.actual / lv.target) * 100 : 0 }));
+
+  const worst = [...levers].sort((a, b) => a.pctOfGoal - b.pctOfGoal)[0];
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+      <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">What needs improvement</div>
+      <div className="text-[13px] text-muted mb-6">
+        Your most recently logged numbers vs. your target plan — <strong className="text-ink">{worst.label}</strong> is furthest behind.
+      </div>
+      <div className="flex flex-col gap-4">
+        {levers.map((lv) => {
+          const isWorst = lv.key === worst.key;
+          const barPct = Math.min(Math.max(lv.pctOfGoal, 0), 100);
+          return (
+            <div key={lv.key}>
+              <div className="flex items-baseline justify-between mb-1.5 gap-3">
+                <span className={`text-sm font-medium flex items-center gap-2 ${isWorst ? "text-danger" : "text-ink"}`}>
+                  {lv.label}
+                  {isWorst && (
+                    <span className="text-[11px] font-semibold bg-danger-tint text-danger px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Focus here
+                    </span>
+                  )}
+                </span>
+                <span className="text-[13px] font-semibold text-muted tabular-nums shrink-0">{lv.pctOfGoal.toFixed(0)}% of goal</span>
+              </div>
+              <div className="h-2.5 rounded-full bg-[#F1F1F1] overflow-hidden">
+                <div className={`h-full rounded-full ${isWorst ? "bg-danger" : "bg-brick"}`} style={{ width: `${barPct}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

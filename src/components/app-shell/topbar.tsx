@@ -34,6 +34,7 @@ export function Topbar({
   const searchParams = useSearchParams();
   const currentLocation = searchParams.get("location") ?? "all";
   const isSuperAdmin = accessRole === "super_admin";
+  const isMultiLocation = locations.length > 1;
   const title = TITLES[pathname] ?? "Wingman";
 
   function onLocationChange(value: string) {
@@ -48,26 +49,28 @@ export function Topbar({
     <div className="sticky top-0 z-20 h-16 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex items-center justify-between px-8">
       <div className="flex items-center gap-3.5">
         <span className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</span>
-        <div className="flex items-center gap-2 px-3 py-[7px] rounded-full border border-line hover:bg-paper transition-colors">
-          <MapPin size={13} className="text-muted-2" />
-          {isSuperAdmin ? (
-            <select
-              value={currentLocation}
-              onChange={(e) => onLocationChange(e.target.value)}
-              className="text-[13px] font-semibold bg-transparent outline-none pr-1 text-charcoal-2"
-            >
-              <option value="all">All locations</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-[13px] font-semibold text-charcoal-2">{userLocationName}</span>
-          )}
-          <span className="text-muted-2 text-xs">⌄</span>
-        </div>
+        {isMultiLocation && (
+          <div className="flex items-center gap-2 px-3 py-[7px] rounded-full border border-line hover:bg-paper transition-colors">
+            <MapPin size={13} className="text-muted-2" />
+            {isSuperAdmin ? (
+              <select
+                value={currentLocation}
+                onChange={(e) => onLocationChange(e.target.value)}
+                className="text-[13px] font-semibold bg-transparent outline-none pr-1 text-charcoal-2"
+              >
+                <option value="all">All locations</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-[13px] font-semibold text-charcoal-2">{userLocationName}</span>
+            )}
+            <span className="text-muted-2 text-xs">⌄</span>
+          </div>
+        )}
       </div>
       <form action={logout}>
         <button className="text-[13px] font-semibold text-muted hover:text-ink transition-colors">Sign out</button>
