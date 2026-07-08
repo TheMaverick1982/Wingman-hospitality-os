@@ -32,34 +32,14 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (!user) return null;
 
   const admin = createAdminClient();
-  const [{ data, error: profileError }, { data: locRows }] = await Promise.all([
+  const [{ data }, { data: locRows }] = await Promise.all([
     admin
       .from("profiles")
-      .select("full_name, access_role, location_id, org_id, is_platform_admin, all_locations, locations(name), organizations(name, permission_overrides)")
+      .select("full_name, access_role, location_id, org_id, is_platform_admin, all_locations, locations!location_id(name), organizations(name, permission_overrides)")
       .eq("id", user.id)
       .maybeSingle(),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
   ]);
-
-  // TEMPORARY DEBUG: decode the SERVICE key's `role` claim (not a secret) to
-  // confirm it's actually service_role vs an anon key pasted by mistake, and
-  // report whether the profile lookup found the row. Remove once resolved.
-  let serviceKeyRole = "missing";
-  try {
-    const k = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-    serviceKeyRole = k ? JSON.parse(Buffer.from(k.split(".")[1] ?? "", "base64").toString()).role ?? "no-role" : "missing";
-  } catch {
-    serviceKeyRole = "unparseable";
-  }
-  console.log(
-    "[wingman-auth-debug]",
-    JSON.stringify({
-      userId: user.id,
-      profileFound: !!data,
-      profileError: profileError?.message ?? null,
-      serviceKeyRole,
-    })
-  );
 
   if (!data) return null;
   // `Database` is a loose placeholder type today, so postgrest-js can't infer
