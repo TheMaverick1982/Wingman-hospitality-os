@@ -57,11 +57,16 @@ function AddModal({ sections, onClose }: { sections: Section[]; onClose: () => v
   }
 
   return (
-    <Modal title="Add a teammate" sub="They need a Wingman account first (any org). Then choose what they can access." onClose={onClose} wide>
+    <Modal title="Add a teammate" sub="If they don't have a Wingman account yet, we'll invite them and grant access in one step." onClose={onClose} wide>
       <form action={formAction}>
-        <Field label="Their email">
-          <input name="email" type="email" required placeholder="teammate@themaverickagency.com" className={inputClass} />
-        </Field>
+        <div className="grid grid-cols-2 gap-x-4">
+          <Field label="Name">
+            <input name="fullName" placeholder="Alex Rivera" className={inputClass} />
+          </Field>
+          <Field label="Their email">
+            <input name="email" type="email" required placeholder="alex@themaverickagency.com" className={inputClass} />
+          </Field>
+        </div>
 
         <div className="flex items-center gap-2 mb-2">
           <span className="text-sm font-semibold text-ink">Access</span>
