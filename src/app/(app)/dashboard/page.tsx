@@ -79,6 +79,7 @@ export default async function DashboardPage({
     locations,
     { data: org },
     auditQuery,
+    bizHealthQuery,
   ] = await Promise.all([
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
@@ -104,12 +105,27 @@ export default async function DashboardPage({
         .limit(1),
       effectiveLocation
     ),
+    scoped(
+      supabase
+        .from("business_health_metrics")
+        .select("net_sales, labor_cost, labor_hours, comp_cost, covers, checks, seats, period_date")
+        .order("period_date", { ascending: false })
+        .limit(1),
+      effectiveLocation
+    ),
   ]);
 
   const latestAudit = (auditQuery.data ?? [])[0] as
     | { health_score: number; gap_scores: number[]; occurred_on: string }
     | undefined;
   const auditConstraint = latestAudit ? FIVE_GAPS[constraintGapIndex(latestAudit.gap_scores)] : null;
+
+  // Business health card: derive the six ratios from the latest week of raw POS
+  // inputs (pushed via POST /api/v1/business-health). Stays a placeholder until
+  // a POS integration sends data.
+  const bh = (bizHealthQuery.data ?? [])[0] as
+    | { net_sales: number; labor_cost: number; labor_hours: number; comp_cost: number; covers: number; checks: number; seats: number | null; period_date: string }
+    | undefined;
 
   const discounts = (discountsQuery.data ?? []) as Discount[];
   const spotChecks = (spotChecksQuery.data ?? []) as (SpotCheck & { created_at: string })[];
@@ -120,6 +136,23 @@ export default async function DashboardPage({
   const allGuests = (guests ?? []) as GuestWithVisits[];
   const stageCounts = computeStageCounts(allGuests);
   const guestsAwaitingFollowUp = allGuests.filter((g) => stageOf(g.guest_visits) === 1).length;
+  const returningGuestCount = allGuests.filter((g) => stageOf(g.guest_visits) >= 2).length;
+
+  const bhMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const bhMetrics = bh
+    ? (() => {
+        const seatBasis = bh.seats && bh.seats > 0 ? bh.seats : bh.covers;
+        const avgCheck = bh.checks > 0 ? bh.net_sales / bh.checks : null;
+        return [
+          { label: "Revenue / seat", value: seatBasis > 0 ? bhMoney(bh.net_sales / seatBasis) : "—" },
+          { label: "Revenue / labor hr", value: bh.labor_hours > 0 ? bhMoney(bh.net_sales / bh.labor_hours) : "—" },
+          { label: "Comp cost", value: bhMoney(bh.comp_cost) },
+          { label: "Retention $ impact", value: avgCheck != null ? bhMoney(returningGuestCount * avgCheck) : "—" },
+          { label: "Avg check", value: avgCheck != null ? bhMoney(avgCheck) : "—" },
+          { label: "Labor %", value: bh.net_sales > 0 ? `${Math.round((bh.labor_cost / bh.net_sales) * 100)}%` : "—" },
+        ];
+      })()
+    : null;
 
   const guestsByFirstLocation = new Map<string, GuestWithVisits[]>();
   for (const g of allGuests) {
@@ -386,14 +419,21 @@ export default async function DashboardPage({
           <div className="flex items-start justify-between mb-6">
             <div>
               <div className="text-[17px] font-semibold tracking-[-0.01em]">Business health</div>
-              <div className="text-[13px] text-[#A1A1A1] mt-0.5">Unlocks once Wingman is connected to your POS.</div>
+              <div className="text-[13px] text-[#A1A1A1] mt-0.5">
+                {bhMetrics && bh
+                  ? `Week of ${new Date(bh.period_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · synced from your POS`
+                  : "Unlocks once Wingman is connected to your POS."}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
-            {["Revenue / seat", "Revenue / labor hr", "Comp cost", "Retention $ impact", "Avg check", "Labor %"].map((label) => (
-              <div key={label} className="border-t border-[#2A2A2A] pt-3.5 opacity-50">
-                <div className="text-[13px] text-[#A1A1A1] font-medium">{label}</div>
-                <div className="text-2xl font-bold tracking-[-0.02em] leading-none mt-2">—</div>
+            {(bhMetrics ??
+              ["Revenue / seat", "Revenue / labor hr", "Comp cost", "Retention $ impact", "Avg check", "Labor %"].map(
+                (label) => ({ label, value: "—" })
+              )).map((m) => (
+              <div key={m.label} className={`border-t border-[#2A2A2A] pt-3.5 ${bhMetrics ? "" : "opacity-50"}`}>
+                <div className="text-[13px] text-[#A1A1A1] font-medium">{m.label}</div>
+                <div className="text-2xl font-bold tracking-[-0.02em] leading-none mt-2">{m.value}</div>
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { FileText } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
 import { createApiKey, revokeApiKey, type ApiKeyRow, type CreateApiKeyState } from "./api-actions";
@@ -14,12 +15,22 @@ export function ApiKeysManager({ keys }: { keys: ApiKeyRow[] }) {
 
   return (
     <div className="bg-white border border-line rounded-2xl p-6 shadow-sm flex flex-col gap-6">
-      <div>
-        <h3 className="font-display text-lg font-semibold text-ink mb-1">API access</h3>
-        <p className="text-sm text-muted">
-          Create a key to connect Wingman to your POS or a Zapier automation — for example, to
-          auto-populate your Revenue Growth Planner each week. Keys are only visible to Super Admins.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-display text-lg font-semibold text-ink mb-1">API access</h3>
+          <p className="text-sm text-muted">
+            Create a key to connect Wingman to your POS or a Zapier automation — for example, to
+            auto-populate your Revenue Growth Planner each week. Keys are only visible to Super Admins.
+          </p>
+        </div>
+        <a
+          href="/api-guide"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line text-sm font-semibold text-ink px-3 py-2 hover:bg-paper"
+        >
+          <FileText size={15} /> Developer guide
+        </a>
       </div>
 
       {newKey && (

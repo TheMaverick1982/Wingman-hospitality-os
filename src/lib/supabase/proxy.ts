@@ -10,6 +10,7 @@ const PUBLIC_PREFIXES = [
   "/book-a-demo",
   "/privacy",
   "/terms",
+  "/api-guide",
 ];
 
 export async function updateSession(request: NextRequest) {
