@@ -5,6 +5,10 @@ const PUBLIC_PREFIXES = [
   "/login",
   "/signup",
   "/auth",
+  // Forgot-password is used by people who are NOT logged in, so it must be
+  // reachable without a session (otherwise the middleware bounces them to
+  // /login and the link looks dead).
+  "/forgot-password",
   "/how-it-works",
   "/pricing",
   "/book-a-demo",
