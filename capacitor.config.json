@@ -9,5 +9,15 @@
   "ios": {
     "contentInset": "always"
   },
-  "backgroundColor": "#0a6cff"
+  "backgroundColor": "#0a6cff",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1800,
+      "launchAutoHide": true,
+      "backgroundColor": "#0a6cff",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashImmersive": false
+    }
+  }
 }
