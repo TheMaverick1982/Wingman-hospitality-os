@@ -117,6 +117,41 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
   },
   {
+    slug: "culture",
+    title: "Culture — your standard, in your words",
+    summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
+    categoryId: "operations",
+    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus"],
+    body: [
+      { kind: "p", text: "Culture is the standard every hire is trained to and every shift is measured against — written in your own words." },
+      { kind: "image", src: "/help/culture.png", alt: "The Culture screen", caption: "Culture — your values, weekly pre-shift focus, and recognition." },
+      { kind: "list", items: [
+        "Set this week's pre-shift focus — it shows on everyone's dashboard as the thing to rally around.",
+        "Capture culture moments to recognize people living the standard.",
+        "Keep your core values front and center for the whole team.",
+      ] },
+      { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing." },
+    ],
+  },
+  {
+    slug: "service-recovery",
+    title: "Service Recovery — every comp has a reason",
+    summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",
+    categoryId: "operations",
+    keywords: ["service recovery", "comps", "voids", "discounts", "make it right", "complaints"],
+    body: [
+      { kind: "p", text: "Service Recovery logs every comp with a reason — turning give-aways into a record of how your team makes things right." },
+      { kind: "image", src: "/help/service-recovery.png", alt: "The Service Recovery screen", caption: "Service Recovery — every comp, with its reason and category." },
+      { kind: "steps", items: [
+        "Open Service Recovery.",
+        "Log a comp with who, how much, the category, and the reason.",
+        "Watch the totals and categories so recovery stays intentional — and coaching flags catch it if comps drift high.",
+      ] },
+      { kind: "note", text: "Comp totals also feed the Business Health card once your POS is connected." },
+    ],
+    links: [{ label: "Accountability & coaching flags", href: "/help/accountability-overview" }],
+  },
+  {
     slug: "guest-bounce-back",
     title: "Guest Bounce Back & retention",
     summary: "Log guests and their visits so you can turn first-timers into regulars.",
@@ -254,6 +289,31 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "Add items with their price and food cost, or sync them from your POS via the API — send units sold and Wingman ranks popularity for you." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
+  },
+  {
+    slug: "reporting",
+    title: "Reporting",
+    summary: "Every section's numbers in one view, over the date range you pick.",
+    categoryId: "operations",
+    keywords: ["reporting", "reports", "analytics", "metrics", "date range", "overview"],
+    body: [
+      { kind: "p", text: "Reporting rolls up every section into a single view for the date range you choose — retention, checks, training, comps, and more." },
+      { kind: "image", src: "/help/reporting.png", alt: "The Reporting screen", caption: "Reporting — every section, one view, for the range you pick." },
+      { kind: "note", text: "Reporting is available to owners and (view-only) managers." },
+    ],
+  },
+  {
+    slug: "setup-wizard",
+    title: "The Setup Wizard",
+    summary: "Answer a few questions and Wingman builds your whole system at once.",
+    categoryId: "getting-started",
+    keywords: ["setup", "wizard", "onboarding", "get started", "build system", "quick start"],
+    body: [
+      { kind: "p", text: "The Setup Wizard is the fastest way to stand up Wingman: answer a few questions about your restaurant and it generates your culture, values, pre-shift focus, and role training in one pass." },
+      { kind: "image", src: "/help/setup-wizard.png", alt: "The Setup Wizard screen", caption: "The Setup Wizard — go from zero to a full system in a few answers." },
+      { kind: "note", text: "The Setup Wizard is owner-only. You can always refine anything it creates afterward." },
+    ],
+    links: [{ label: "Building training programs", href: "/help/training-programs" }],
   },
   {
     slug: "team-and-permissions",
