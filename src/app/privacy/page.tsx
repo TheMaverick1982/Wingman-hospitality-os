@@ -29,6 +29,13 @@ const SECTIONS = [
     ],
   },
   {
+    h: "Usage & analytics",
+    body: [
+      "When you use Wingman on the web or in our mobile app, we automatically collect basic usage and device information — the features and pages you use, in-app interactions, device and browser type, and general location inferred from your IP address.",
+      "We use analytics tools, including Google Analytics, to understand how the product is used and to improve it. We do not use this data to track you across other companies' apps or websites, and we do not sell it.",
+    ],
+  },
+  {
     h: "Guest data",
     body: [
       "Restaurants may log guest visit information to power bounce-back and retention features. That data belongs to the restaurant; Wingman processes it on their behalf and never uses it to advertise to guests.",
@@ -76,7 +83,7 @@ export default function PrivacyPage() {
         <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
           Privacy Policy
         </h1>
-        <p className="text-base text-muted-2">Last updated July 7, 2026</p>
+        <p className="text-base text-muted-2">Last updated July 9, 2026</p>
       </div>
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
