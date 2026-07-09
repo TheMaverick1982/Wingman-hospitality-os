@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import type { Location } from "@/lib/data/locations";
-import { updateTeamMember, resendInvite, deleteTeamMember } from "./actions";
+import { resendInvite, deleteTeamMember } from "./actions";
+import { EditTeamMemberForm } from "./edit-team-member-form";
 
 export type TeamMember = {
   id: string;
@@ -13,6 +14,7 @@ export type TeamMember = {
   location_id: string | null;
   all_locations: boolean;
   accessibleCount: number;
+  accessibleLocationIds: string[];
   pending: boolean;
   email: string;
 };
@@ -34,21 +36,9 @@ export function TeamMemberRow({
   locations: Location[];
   isCurrentUser: boolean;
 }) {
-  const [role, setRole] = useState<Role>(member.access_role);
-  const [locationId, setLocationId] = useState(member.location_id ?? locations[0]?.id ?? "");
-  const [isPending, startTransition] = useTransition();
+  const role = member.access_role;
   const [resent, setResent] = useState(false);
   const [resending, startResend] = useTransition();
-
-  function save(nextRole: Role, nextLocationId: string) {
-    const formData = new FormData();
-    formData.set("userId", member.id);
-    formData.set("role", nextRole);
-    formData.set("locationId", nextLocationId);
-    startTransition(() => {
-      updateTeamMember({ error: null }, formData);
-    });
-  }
 
   function doResend() {
     const formData = new FormData();
@@ -73,6 +63,8 @@ export function TeamMemberRow({
   const roleChip =
     role === "super_admin" ? <Pill tone="brick">Super Admin</Pill> : <Pill>{role === "manager" ? "Manager" : "Staff"}</Pill>;
 
+  const locLabel = locationLabel(role, member.all_locations, member.accessibleCount, member.location_id, locations);
+
   // The current user's own row is read-only, to avoid self-lockout footguns.
   if (isCurrentUser) {
     return (
@@ -81,9 +73,7 @@ export function TeamMemberRow({
           {member.full_name} <span className="text-xs text-muted-2">(you)</span>
         </td>
         <td className="px-5 py-3.5">{roleChip}</td>
-        <td className="px-5 py-3.5 text-muted">
-          {locationLabel(role, member.all_locations, member.accessibleCount, member.location_id, locations)}
-        </td>
+        <td className="px-5 py-3.5 text-muted">{locLabel}</td>
         <td className="px-5 py-3.5 text-muted text-xs">{role === "super_admin" ? "Account owner" : ""}</td>
       </tr>
     );
@@ -99,44 +89,8 @@ export function TeamMemberRow({
           )}
         </div>
       </td>
-      <td className="px-5 py-3.5">
-        <select
-          value={role}
-          onChange={(e) => {
-            const next = e.target.value as Role;
-            setRole(next);
-            save(next, locationId);
-          }}
-          className="text-sm border border-line-strong rounded-md px-2 py-1 bg-panel"
-        >
-          <option value="manager">Manager</option>
-          <option value="staff">Staff</option>
-          <option value="super_admin">Super Admin</option>
-        </select>
-      </td>
-      <td className="px-5 py-3.5">
-        {role === "super_admin" || member.all_locations ? (
-          <span className="text-muted text-sm">All locations</span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            <select
-              value={locationId}
-              onChange={(e) => {
-                setLocationId(e.target.value);
-                save(role, e.target.value);
-              }}
-              className="text-sm border border-line-strong rounded-md px-2 py-1 bg-panel"
-            >
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-            {member.accessibleCount > 1 && <span className="text-xs text-muted-2">+{member.accessibleCount - 1}</span>}
-          </span>
-        )}
-      </td>
+      <td className="px-5 py-3.5">{roleChip}</td>
+      <td className="px-5 py-3.5 text-muted">{locLabel}</td>
       <td className="px-5 py-3.5 text-muted text-xs">
         <div className="flex items-center justify-end gap-3">
           {member.pending &&
@@ -147,7 +101,16 @@ export function TeamMemberRow({
                 {resending ? "Sending..." : "Resend invite"}
               </Btn>
             ))}
-          {isPending && <span>Saving...</span>}
+          <EditTeamMemberForm
+            member={{
+              id: member.id,
+              full_name: member.full_name,
+              access_role: member.access_role,
+              all_locations: member.all_locations,
+              accessibleLocationIds: member.accessibleLocationIds,
+            }}
+            locations={locations}
+          />
           <button
             type="button"
             onClick={doRemove}
