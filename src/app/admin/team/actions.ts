@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
 
@@ -29,20 +30,46 @@ async function findUserIdByEmail(admin: SupabaseClient, email: string): Promise<
   return null;
 }
 
-// Add a teammate as platform staff (by email) with the chosen section access.
+// Add a teammate as platform staff with the chosen section access. If they
+// don't have a Wingman account yet, invite them into the adding admin's org (as
+// Staff) so they get a login, then grant platform access — all in one step.
 export async function addPlatformStaff(_prev: TeamState, formData: FormData): Promise<TeamState> {
   const me = await platformSectionActor("team");
   if (!me) return { error: "Only a platform admin with Team access can add staff." };
 
   const email = String(formData.get("email") || "").trim();
+  const fullName = String(formData.get("fullName") || "").trim();
   const sections = cleanSections(formData.getAll("sections").map(String));
   if (!email) return { error: "Enter the teammate's email." };
   if (sections.length === 0) return { error: "Choose at least one section they can access." };
 
   const admin = createAdminClient();
-  const userId = await findUserIdByEmail(admin, email);
+  let userId = await findUserIdByEmail(admin, email);
+
   if (!userId) {
-    return { error: "No Wingman account with that email. They need to sign up (or be invited to an organization) first, then add them here." };
+    // Invite a brand-new person, then create their profile in the adding
+    // admin's org (Staff) via the same path as a normal team invite.
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app";
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${origin}/auth/callback?type=invite`,
+    });
+    if (inviteError) return { error: inviteError.message };
+    userId = invited.user.id;
+
+    const supabase = await createClient();
+    const { error: rpcError } = await supabase.rpc("assign_team_member_profile", {
+      new_user_id: userId,
+      full_name: fullName || email.split("@")[0],
+      target_role: "staff",
+      target_location_id: null,
+      target_all_locations: true,
+      target_location_ids: [],
+    });
+    if (rpcError) {
+      return {
+        error: `Couldn't set up their account (${rpcError.message}). You need to be a Super Admin of your own organization to invite brand-new staff — otherwise have them sign up first, then add them here.`,
+      };
+    }
   }
 
   const { error } = await admin
