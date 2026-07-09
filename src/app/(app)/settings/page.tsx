@@ -10,6 +10,8 @@ import { TeamMemberRow, type TeamMember } from "./team-member-row";
 import { AddLocationForm } from "./add-location-form";
 import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
+import { ApiKeysManager } from "./api-keys-manager";
+import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
@@ -27,6 +29,11 @@ export default async function SettingsPage() {
   const isPastDue = (org?.billing_status ?? "free") === "past_due";
   const cardOnFile = org?.card_brand && org?.card_last4 ? `${org.card_brand} •••• ${org.card_last4}` : null;
   const billingPortalUrl = process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "";
+
+  const { data: apiKeys } = await supabase
+    .from("api_keys")
+    .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+    .order("created_at", { ascending: false });
 
   const allMembers = members ?? [];
 
@@ -253,7 +260,12 @@ export default async function SettingsPage() {
         <p className="text-base text-muted">Manage your team, locations, and subscription.</p>
       </div>
 
-      <SettingsTabs team={teamContent} locations={locationsContent} billing={billingContent} />
+      <SettingsTabs
+        team={teamContent}
+        locations={locationsContent}
+        billing={billingContent}
+        api={<ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} />}
+      />
     </>
   );
 }

@@ -6,6 +6,7 @@ const TABS = [
   { key: "team", label: "Team & permissions" },
   { key: "locations", label: "Locations" },
   { key: "billing", label: "Billing" },
+  { key: "api", label: "API access" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -14,10 +15,12 @@ export function SettingsTabs({
   team,
   locations,
   billing,
+  api,
 }: {
   team: React.ReactNode;
   locations: React.ReactNode;
   billing: React.ReactNode;
+  api: React.ReactNode;
 }) {
   const [tab, setTab] = useState<TabKey>("team");
 
@@ -40,6 +43,7 @@ export function SettingsTabs({
       {tab === "team" && team}
       {tab === "locations" && locations}
       {tab === "billing" && billing}
+      {tab === "api" && api}
     </>
   );
 }
