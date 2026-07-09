@@ -58,6 +58,7 @@ export function HiringClient({
 
       <div className="flex items-center gap-2 mb-6">
         <InterviewGuideButton department={activeRole} traits={combinedTraits} />
+        {canEdit && traitsByDept[activeRole].length > 0 && <RefineHiringForm department={activeRole} />}
         {canEdit && <HiringTraitBuilder department={activeRole} />}
       </div>
 
