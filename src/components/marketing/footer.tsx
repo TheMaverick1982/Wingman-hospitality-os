@@ -7,7 +7,7 @@ export function MarketingFooter() {
       <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-14 flex items-center justify-between flex-wrap gap-6">
         <div className="flex items-center gap-3">
           <WingmanLogo className="h-4 w-auto" />
-          <span className="text-sm text-muted-2">© {new Date().getFullYear()}</span>
+          <span className="text-sm text-muted-2">© {new Date().getFullYear()} Wingman — a The Maverick Agency company</span>
         </div>
         <div className="flex items-center gap-7 text-sm font-medium text-[#525252] flex-wrap">
           <Link href="/how-it-works" className="text-[#525252]">

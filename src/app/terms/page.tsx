@@ -32,6 +32,14 @@ const SECTIONS = [
     body: [
       "Wingman is billed monthly: $199 for your first location and $100 per additional location. Adding a location increases your subscription immediately, prorated to the current period.",
       "Fees are charged to your payment method on file at the start of each billing period and are non-refundable except where required by law.",
+      "Wingman is operated and billed by The Maverick Agency. Charges appear on your bank or card statement as \"The Maverick Agency.\"",
+    ],
+  },
+  {
+    h: "Failed payments and account suspension",
+    body: [
+      "If a payment fails, we'll email you and ask you to update your payment method in Settings → Billing. Your account stays active during a grace period while we retry the charge.",
+      "If the balance remains unpaid and your payment method isn't updated within 30 days, we may suspend and then close your account. After closure your data may be permanently deleted, and The Maverick Agency is not responsible for any resulting loss of data. Please export anything you need before then.",
     ],
   },
   {
@@ -76,13 +84,14 @@ export default function TermsPage() {
         <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
           Terms of Service
         </h1>
-        <p className="text-base text-muted-2">Last updated July 7, 2026</p>
+        <p className="text-base text-muted-2">Last updated July 9, 2026</p>
       </div>
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
         <p className="text-lg leading-[1.6] text-charcoal-2 mb-10">
           These terms govern your use of Wingman. By creating an account or using the service, you
-          agree to them. We&apos;ve kept them as plain as we can.
+          agree to them. We&apos;ve kept them as plain as we can. Wingman is a product of The Maverick
+          Agency, which operates and provides the service.
         </p>
         {SECTIONS.map((s) => (
           <div key={s.h} className="border-t border-line py-8">

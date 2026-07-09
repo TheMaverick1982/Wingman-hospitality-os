@@ -212,6 +212,10 @@ export default async function SettingsPage() {
           </div>
         </>
       )}
+      <p className="text-xs text-muted-2 mt-4 pt-4 border-t border-line">
+        Billing is handled by The Maverick Agency. When active, charges appear on your statement as
+        &quot;The Maverick Agency.&quot;
+      </p>
     </div>
   );
 
