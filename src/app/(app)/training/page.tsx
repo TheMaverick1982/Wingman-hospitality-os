@@ -9,6 +9,11 @@ import { TrainingClient, type DeptData, type RoleSummary } from "./training-clie
 import { SignoffLog } from "./signoff-log";
 import { StartTrainingButton } from "./start-training-button";
 
+// AI generation/refinement server actions run from this route; give them room
+// to finish instead of hitting the platform's short default function timeout
+// (which surfaces as "Unexpected end of JSON input" in the browser).
+export const maxDuration = 60;
+
 export default async function TrainingPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;

@@ -282,6 +282,187 @@ export async function updateChecklistItemText(list: ListKey, id: string, text: s
   revalidatePath("/training");
 }
 
+// ---------------------------------------------------------------------------
+// Refine with AI: the owner describes changes in plain English and Wingman
+// proposes a set of add/edit/remove changes to the CURRENT program. Nothing is
+// written until the owner accepts (see applyTrainingRefinement).
+// ---------------------------------------------------------------------------
+export type TrainingChange = { list: ListKey; id?: string; item: string; before?: string; reason: string };
+export type TrainingProposal = { summary: string; add: TrainingChange[]; edit: TrainingChange[]; remove: TrainingChange[] };
+export type RefineState = { error: string | null; proposal?: TrainingProposal };
+
+const REFINE_SHAPE = `{"summary": string, "add": [{"list": "hospitality"|"role", "item": string, "reason": string}], "edit": [{"id": string, "item": string, "reason": string}], "remove": [{"id": string, "reason": string}]}`;
+
+export async function refineTraining(_prev: RefineState, formData: FormData): Promise<RefineState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to edit training content." };
+  }
+  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+  }
+
+  const department = String(formData.get("department") || "");
+  const feedback = String(formData.get("feedback") || "").trim();
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+  if (!feedback) return { error: "Tell Wingman what you'd like to change or add." };
+  if (feedback.length > 2000) return { error: "Please keep your request under 2000 characters." };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const [{ data: hosp }, { data: role }] = await Promise.all([
+    supabase.from(LIST_TABLE.hospitality).select("id, item").eq("org_id", org.id).eq("department", department).order("sort_order"),
+    supabase.from(LIST_TABLE.role).select("id, item").eq("org_id", org.id).eq("department", department).order("sort_order"),
+  ]);
+  const byId = new Map<string, { list: ListKey; item: string }>();
+  for (const r of (hosp ?? []) as { id: string; item: string }[]) byId.set(r.id, { list: "hospitality", item: r.item });
+  for (const r of (role ?? []) as { id: string; item: string }[]) byId.set(r.id, { list: "role", item: r.item });
+
+  const currentForModel = [...byId.entries()].map(([id, v]) => ({ id, list: v.list, item: v.item }));
+
+  const prompt = `You are helping a restaurant operator improve their existing ${department} training program based on their request.
+
+CURRENT PROGRAM ITEMS (JSON — "list" is "hospitality" for guest-experience behaviors or "role" for role-specific technical skills):
+${JSON.stringify(currentForModel)}
+
+THE OWNER'S REQUEST:
+"${feedback}"
+
+Respond helpfully to what they asked. You can do any combination of:
+- "add": propose brand-new items. Set "list" to exactly "hospitality" or "role". Be generous here — if they ask to add something, ask for suggestions/ideas, or ask an open question ("what am I missing?"), propose 3-6 strong, concrete new items. Don't hold back.
+- "edit": improve the wording of an existing item by its "id" (put the improved text in "item").
+- "remove": remove an existing item by its "id".
+
+Only "edit" or "remove" items whose "id" appears in the current program above. Every item stays under 16 words and is a concrete, observable action a manager can watch for and check off — never a vague value statement. Always propose at least one change unless the program already fully covers the request. Give a one-line "reason" for each change, and a one-sentence "summary" of the whole proposal.
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${REFINE_SHAPE}`;
+
+  let parsed: {
+    summary?: string;
+    add?: { list?: string; item?: string; reason?: string }[];
+    edit?: { id?: string; item?: string; reason?: string }[];
+    remove?: { id?: string; reason?: string }[];
+  };
+  try {
+    const response = await callAnthropic(apiKey, {
+      model: "claude-sonnet-5",
+      max_tokens: 3000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const text = (data.content ?? [])
+      .filter((b: { type: string }) => b.type === "text")
+      .map((b: { text: string }) => b.text)
+      .join("\n");
+    const jsonText = extractJsonObject(text);
+    try {
+      parsed = jsonText ? JSON.parse(jsonText) : {};
+    } catch {
+      return { error: "Wingman couldn't turn that into changes — try a shorter, more specific request." };
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't generate suggestions. Try again." };
+  }
+
+  // Validate the model's output against what actually exists; ignore anything
+  // that references an unknown id or an invalid list, so the proposal can only
+  // ever touch this department's real items.
+  const clip = (s: string) => s.trim().slice(0, 200);
+  // Match the model's "list" leniently: it sometimes returns "hospitality_items"
+  // or capitalized variants. Default an unrecognized list to "role".
+  const normList = (l: unknown): ListKey => (String(l ?? "").toLowerCase().includes("hosp") ? "hospitality" : "role");
+  const add: TrainingChange[] = [];
+  for (const a of parsed.add ?? []) {
+    const item = clip(String(a.item ?? ""));
+    if (item) add.push({ list: normList(a.list), item, reason: clip(String(a.reason ?? "")) });
+  }
+  const edit: TrainingChange[] = (parsed.edit ?? [])
+    .filter((e) => e.id && byId.has(String(e.id)) && String(e.item ?? "").trim())
+    .map((e) => {
+      const cur = byId.get(String(e.id))!;
+      return { list: cur.list, id: String(e.id), item: clip(String(e.item)), before: cur.item, reason: clip(String(e.reason ?? "")) };
+    });
+  const remove: TrainingChange[] = (parsed.remove ?? [])
+    .filter((r) => r.id && byId.has(String(r.id)))
+    .map((r) => {
+      const cur = byId.get(String(r.id))!;
+      return { list: cur.list, id: String(r.id), item: cur.item, reason: clip(String(r.reason ?? "")) };
+    });
+
+  if (add.length === 0 && edit.length === 0 && remove.length === 0) {
+    return { error: "Wingman didn't find anything to change for that request. Try rephrasing what you'd like." };
+  }
+
+  return { error: null, proposal: { summary: clip(String(parsed.summary ?? "Proposed changes")), add, edit, remove } };
+}
+
+// Apply an owner-approved proposal. Re-validates every id against the DB, so a
+// tampered payload can still only add/edit/remove this department's own items.
+export async function applyTrainingRefinement(department: string, proposal: TrainingProposal): Promise<ItemState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to edit training content." };
+  }
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const [{ data: hosp }, { data: role }] = await Promise.all([
+    supabase.from(LIST_TABLE.hospitality).select("id").eq("org_id", org.id).eq("department", department),
+    supabase.from(LIST_TABLE.role).select("id").eq("org_id", org.id).eq("department", department),
+  ]);
+  const validList = new Map<string, ListKey>();
+  for (const r of (hosp ?? []) as { id: string }[]) validList.set(r.id, "hospitality");
+  for (const r of (role ?? []) as { id: string }[]) validList.set(r.id, "role");
+
+  const clip = (s: string) => String(s ?? "").trim().slice(0, 200);
+
+  // Removes first, then edits, then adds.
+  for (const r of proposal.remove ?? []) {
+    const list = validList.get(String(r.id));
+    if (!r.id || !list) continue;
+    await supabase.from("staff_training_progress").delete().eq("item_type", LIST_ITEM_TYPE[list]).eq("item_id", r.id);
+    await supabase.from(LIST_TABLE[list]).delete().eq("id", r.id).eq("org_id", org.id);
+  }
+  for (const e of proposal.edit ?? []) {
+    const list = validList.get(String(e.id));
+    const item = clip(e.item);
+    if (!e.id || !list || !item) continue;
+    await supabase.from(LIST_TABLE[list]).update({ item }).eq("id", e.id).eq("org_id", org.id);
+  }
+  for (const list of ["hospitality", "role"] as ListKey[]) {
+    const adds = (proposal.add ?? []).filter((a) => a.list === list && clip(a.item));
+    if (adds.length === 0) continue;
+    const { count } = await supabase
+      .from(LIST_TABLE[list])
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", org.id)
+      .eq("department", department);
+    let sort = count ?? 0;
+    const rows = adds.map((a) => ({ org_id: org.id, department, item: clip(a.item), sort_order: sort++, source: "custom" }));
+    const { error } = await supabase.from(LIST_TABLE[list]).insert(rows);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/training");
+  return { error: null };
+}
+
 export async function deleteChecklistItem(list: ListKey, id: string) {
   const supabase = await createClient();
   await supabase.from("staff_training_progress").delete().eq("item_type", LIST_ITEM_TYPE[list]).eq("item_id", id);

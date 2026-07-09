@@ -9,6 +9,7 @@ import type { Location } from "@/lib/data/locations";
 import type { StaffMember } from "@/lib/data/staff";
 import type { Department } from "@/lib/constants";
 import { RoleTrainingBuilder } from "./role-training-builder";
+import { RefineTrainingForm } from "./refine-training-form";
 import { StartTrainingButton } from "./start-training-button";
 import { addChecklistItem, updateChecklistItemText, deleteChecklistItem, type ItemState } from "./role-training-actions";
 import type { ChecklistItem } from "./training-client";
@@ -36,7 +37,12 @@ export function RoleChecklist({
     <div className="bg-panel border border-line rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg font-semibold text-ink">{department} training program</h3>
-        {canEdit && <RoleTrainingBuilder department={department} />}
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            {hospitalityItems.length + roleItems.length > 0 && <RefineTrainingForm department={department} />}
+            <RoleTrainingBuilder department={department} />
+          </div>
+        )}
       </div>
 
       <ItemGroup

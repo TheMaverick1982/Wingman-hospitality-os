@@ -6,6 +6,10 @@ import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import type { AuditRecord } from "@/lib/audit";
 import { AuditClient } from "./audit-client";
 
+// The audit action calls the model to build the action plan; give it room to
+// finish instead of hitting the platform's short default function timeout.
+export const maxDuration = 60;
+
 export default async function AuditPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
