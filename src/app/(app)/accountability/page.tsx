@@ -21,6 +21,10 @@ function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+// The checklist generator calls the model; give it room to finish instead of
+// hitting the platform's short default function timeout.
+export const maxDuration = 60;
+
 export default async function AccountabilityPage({
   searchParams,
 }: {

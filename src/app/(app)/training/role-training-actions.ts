@@ -365,7 +365,12 @@ ${REFINE_SHAPE}`;
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
       .join("\n");
-    parsed = JSON.parse(extractJsonObject(text));
+    const jsonText = extractJsonObject(text);
+    try {
+      parsed = jsonText ? JSON.parse(jsonText) : {};
+    } catch {
+      return { error: "Wingman couldn't turn that into changes — try a shorter, more specific request." };
+    }
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't generate suggestions. Try again." };
   }

@@ -38,6 +38,10 @@ function toneFor(name: string) {
   return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
+// AI generation/refinement server actions run from this route; give them room
+// to finish instead of hitting the platform's short default function timeout.
+export const maxDuration = 60;
+
 export default async function HiringPage({
   searchParams,
 }: {
