@@ -224,6 +224,57 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
   return { error: null };
 }
 
+// Full edit of a team member: name, access level, and (for manager/staff) which
+// locations they can access. Reuses assign_team_member_profile, which upserts
+// the profile and rebuilds the specific-location set.
+export async function editTeamMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only a Super Admin can edit team members." };
+
+  const userId = String(formData.get("userId") || "");
+  const fullName = String(formData.get("fullName") || "").trim();
+  const role = String(formData.get("role") || "");
+  if (!userId) return { error: "Missing member." };
+  if (!fullName) return { error: "Name is required." };
+  if (role !== "manager" && role !== "staff" && role !== "super_admin") return { error: "Invalid role." };
+
+  const supabase = await createClient();
+  const { data: target } = await supabase.from("profiles").select("access_role, org_id").eq("id", userId).single();
+  if (!target || target.org_id !== profile.orgId) return { error: "Member not found in your organization." };
+
+  // Never demote the last Super Admin.
+  if (target.access_role === "super_admin" && role !== "super_admin") {
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("access_role", "super_admin");
+    if ((count ?? 0) <= 1) return { error: "You can't remove the last Super Admin — promote someone else first." };
+  }
+
+  // Resolve location scope for manager/staff (Super Admins get everything).
+  let allLocations = false;
+  let locationIds: string[] = [];
+  if (role !== "super_admin") {
+    allLocations = String(formData.get("scope") || "specific") === "all";
+    locationIds = formData.getAll("locationIds").map(String).filter(Boolean);
+    if (!allLocations && locationIds.length === 0) return { error: "Select at least one location." };
+  }
+
+  const { error } = await supabase.rpc("assign_team_member_profile", {
+    new_user_id: userId,
+    full_name: fullName,
+    target_role: role,
+    target_location_id: role === "super_admin" || allLocations ? null : locationIds[0],
+    target_all_locations: allLocations,
+    target_location_ids: allLocations ? [] : locationIds,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export async function addLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can add locations." };

@@ -25,7 +25,7 @@ export default async function SettingsPage() {
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4").single(),
-    supabase.from("profile_locations").select("profile_id"),
+    supabase.from("profile_locations").select("profile_id, location_id"),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
   const isPastDue = (org?.billing_status ?? "free") === "past_due";
@@ -39,10 +39,12 @@ export default async function SettingsPage() {
 
   const allMembers = members ?? [];
 
-  // How many specific locations each member has been granted.
-  const accessibleCountByMember = new Map<string, number>();
-  for (const r of (plRows ?? []) as { profile_id: string }[]) {
-    accessibleCountByMember.set(r.profile_id, (accessibleCountByMember.get(r.profile_id) ?? 0) + 1);
+  // Which specific locations each member has been granted (and how many).
+  const locationIdsByMember = new Map<string, string[]>();
+  for (const r of (plRows ?? []) as { profile_id: string; location_id: string }[]) {
+    const list = locationIdsByMember.get(r.profile_id) ?? [];
+    list.push(r.location_id);
+    locationIdsByMember.set(r.profile_id, list);
   }
 
   // Auth confirmation status (who hasn't accepted their invite yet) + email.
@@ -93,10 +95,12 @@ export default async function SettingsPage() {
           <tbody>
             {allMembers.map((m) => {
               const st = statusById.get(m.id);
+              const accessibleLocationIds = locationIdsByMember.get(m.id) ?? [];
               const enriched = {
                 ...m,
                 all_locations: (m as { all_locations?: boolean }).all_locations ?? false,
-                accessibleCount: accessibleCountByMember.get(m.id) ?? 0,
+                accessibleCount: accessibleLocationIds.length,
+                accessibleLocationIds,
                 pending: st?.pending ?? false,
                 email: st?.email ?? "",
               } as TeamMember;
