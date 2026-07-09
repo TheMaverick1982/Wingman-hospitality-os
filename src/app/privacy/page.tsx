@@ -90,7 +90,8 @@ export default function PrivacyPage() {
         <p className="text-lg leading-[1.6] text-charcoal-2 mb-10">
           This policy explains what Wingman collects, how we use it, and the choices you have. We
           built Wingman for hospitality teams, and we treat your restaurant&apos;s data — and your
-          guests&apos; data — as something we&apos;re trusted to protect.
+          guests&apos; data — as something we&apos;re trusted to protect. Wingman is operated by The
+          Maverick Agency.
         </p>
         {SECTIONS.map((s) => (
           <div key={s.h} className="border-t border-line py-8">

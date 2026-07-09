@@ -10,6 +10,8 @@ import { TeamMemberRow, type TeamMember } from "./team-member-row";
 import { AddLocationForm } from "./add-location-form";
 import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
+import { ApiKeysManager } from "./api-keys-manager";
+import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
@@ -20,10 +22,18 @@ export default async function SettingsPage() {
   const [{ data: members }, locations, { data: org }, { data: plRows }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4").single(),
     supabase.from("profile_locations").select("profile_id"),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
+  const isPastDue = (org?.billing_status ?? "free") === "past_due";
+  const cardOnFile = org?.card_brand && org?.card_last4 ? `${org.card_brand} •••• ${org.card_last4}` : null;
+  const billingPortalUrl = process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "";
+
+  const { data: apiKeys } = await supabase
+    .from("api_keys")
+    .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+    .order("created_at", { ascending: false });
 
   const allMembers = members ?? [];
 
@@ -202,16 +212,44 @@ export default async function SettingsPage() {
         </>
       ) : (
         <>
-          <p className="text-sm text-muted mb-4">
-            Payment processing isn&apos;t connected yet. Once it is, you&apos;ll manage your plan, add or
-            remove locations, and cancel from here. This tab is only ever visible to the account owner.
-          </p>
-          <div className="flex items-center gap-2 opacity-50">
-            <CreditCard size={16} className="text-muted" />
-            <span className="text-sm text-muted">No payment method on file</span>
+          {isPastDue ? (
+            <div className="mb-4 rounded-lg border border-[#F5C2C0] bg-[#FDECEA] px-4 py-3">
+              <p className="text-sm font-semibold text-[#B42318]">Your last payment didn&apos;t go through</p>
+              <p className="text-sm text-[#912018] mt-0.5">
+                Update your payment method to keep your account active. If the balance stays unpaid for 30 days,
+                the account is suspended.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted mb-4">
+              Manage your plan, payment method, and invoices here. This tab is only ever visible to the account
+              owner.
+            </p>
+          )}
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard size={16} className={cardOnFile ? "text-ink" : "text-muted"} />
+            <span className={cardOnFile ? "text-sm text-ink" : "text-sm text-muted"}>
+              {cardOnFile ?? "No payment method on file"}
+            </span>
           </div>
+          {billingPortalUrl ? (
+            <a
+              href={billingPortalUrl}
+              className="inline-flex items-center rounded-lg bg-brick text-white text-sm font-semibold px-4 py-2 hover:opacity-90"
+            >
+              Update payment method
+            </a>
+          ) : (
+            <span className="text-xs text-muted-2">
+              Payment processing is being set up — card management will appear here soon.
+            </span>
+          )}
         </>
       )}
+      <p className="text-xs text-muted-2 mt-4 pt-4 border-t border-line">
+        Billing is handled by The Maverick Agency. When active, charges appear on your statement as
+        &quot;The Maverick Agency.&quot;
+      </p>
     </div>
   );
 
@@ -222,7 +260,12 @@ export default async function SettingsPage() {
         <p className="text-base text-muted">Manage your team, locations, and subscription.</p>
       </div>
 
-      <SettingsTabs team={teamContent} locations={locationsContent} billing={billingContent} />
+      <SettingsTabs
+        team={teamContent}
+        locations={locationsContent}
+        billing={billingContent}
+        api={<ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} />}
+      />
     </>
   );
 }

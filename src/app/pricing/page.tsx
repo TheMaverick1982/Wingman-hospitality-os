@@ -196,6 +196,10 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
+        <p className="text-center text-sm text-muted-2 mt-8">
+          Billing is handled by The Maverick Agency — charges appear as &quot;The Maverick Agency&quot; on
+          your statement.
+        </p>
       </div>
 
       <div className="bg-paper">
