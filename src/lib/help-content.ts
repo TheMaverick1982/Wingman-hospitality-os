@@ -18,7 +18,8 @@ export type HelpBlock =
   | { kind: "list"; items: string[] }
   | { kind: "tip"; text: string }
   | { kind: "note"; text: string }
-  | { kind: "image"; src: string; alt: string; caption?: string };
+  | { kind: "image"; src: string; alt: string; caption?: string }
+  | { kind: "diagram"; name: "retention-journey" | "roles" | "pos-sync"; caption?: string };
 
 export type HelpLink = { label: string; href: string; external?: boolean };
 
@@ -90,6 +91,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["roles", "permissions", "access", "super admin", "manager", "staff", "who can see"],
     body: [
       { kind: "p", text: "Every person has one of three access levels, set when they're invited (and editable anytime in Settings)." },
+      { kind: "diagram", name: "roles", caption: "Access widens from Staff up to the account owner." },
       { kind: "list", items: [
         "Super Admin — the account owner and co-owners. Full access to everything, including Settings and Billing.",
         "Manager — runs the day-to-day: full access to most sections, no Settings/Billing.",
@@ -121,6 +123,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["guests", "bounce back", "retention", "visits", "regulars", "follow up"],
     body: [
       { kind: "p", text: "Guest Bounce Back tracks each guest across their first four visits — the window where a first-timer becomes a regular." },
+      { kind: "diagram", name: "retention-journey", caption: "The four-visit window where a first-timer becomes a regular." },
       { kind: "steps", items: [
         "Open Guest Bounce Back.",
         "Add a guest (name, and phone/email if you have it).",
@@ -299,6 +302,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["api", "integration", "pos", "zapier", "key", "sync", "webhook", "developer"],
     body: [
       { kind: "p", text: "Wingman has a small API so your POS or a Zapier automation can keep it in sync — for example, pushing weekly numbers into the Business Health card and Revenue Growth Planner, syncing guests, or updating the menu." },
+      { kind: "diagram", name: "pos-sync", caption: "Your POS or a Zap pushes data through the API into each Wingman tool." },
       { kind: "steps", items: [
         "Go to Settings → API access (Super Admin only).",
         "Create a key and copy it — the full key is shown only once.",

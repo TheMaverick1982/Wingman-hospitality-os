@@ -1,5 +1,6 @@
 import { Lightbulb, Info } from "lucide-react";
 import type { HelpBlock } from "@/lib/help-content";
+import { HelpDiagram } from "./help-diagram";
 
 export function ArticleBody({ blocks }: { blocks: HelpBlock[] }) {
   return (
@@ -62,6 +63,13 @@ export function ArticleBody({ blocks }: { blocks: HelpBlock[] }) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={b.src} alt={b.alt} className="rounded-xl border border-line max-w-full" />
                 {b.caption && <figcaption className="text-xs text-muted-2 mt-1.5">{b.caption}</figcaption>}
+              </figure>
+            );
+          case "diagram":
+            return (
+              <figure key={i} className="my-1">
+                <HelpDiagram name={b.name} />
+                {b.caption && <figcaption className="text-xs text-muted-2 mt-1.5 text-center">{b.caption}</figcaption>}
               </figure>
             );
           default:
