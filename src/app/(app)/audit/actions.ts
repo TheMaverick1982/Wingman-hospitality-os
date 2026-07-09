@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getSectionAccess } from "@/lib/auth/permissions";
+import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
 import {
   FIVE_GAPS,
   AUDIT_DOMAINS,
@@ -84,6 +85,9 @@ export async function runAudit(_prev: ActionState, formData: FormData): Promise<
   if (!profile) return { error: "Not signed in." };
   if (getSectionAccess(profile.accessRole, "audit", profile.permissionOverrides) !== "full") {
     return { error: "You don't have access to run an audit." };
+  }
+  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 
   // Super Admins choose the location; everyone else is locked to their own.

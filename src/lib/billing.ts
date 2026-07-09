@@ -24,6 +24,17 @@ export function daysSince(iso: string | null | undefined): number {
 // ---------------------------------------------------------------------------
 // Email content
 // ---------------------------------------------------------------------------
+// Escape any value that gets interpolated into email HTML. Org names are set by
+// customers, so treat them as untrusted when they land in markup (belt-and-
+// suspenders: these emails go to the customer's own owners and the operator).
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 function shell(inner: string): string {
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">${inner}</div>`;
 }
@@ -32,23 +43,26 @@ function button(label: string, href: string): string {
 }
 
 function customerNudgeHtml(orgName: string): string {
+  const name = esc(orgName);
   return shell(`
     <h2 style="font-size:20px;margin:0 0 12px;">Your Wingman payment didn't go through</h2>
-    <p style="font-size:15px;line-height:1.55;color:#525252;">We couldn't process the latest payment for <strong>${orgName}</strong>. To keep your account active, please update your payment method.</p>
+    <p style="font-size:15px;line-height:1.55;color:#525252;">We couldn't process the latest payment for <strong>${name}</strong>. To keep your account active, please update your payment method.</p>
     <p style="margin:22px 0;">${button("Update payment method", PORTAL_URL)}</p>
     <p style="font-size:13px;line-height:1.5;color:#737373;">If the balance stays unpaid for 30 days, your account may be suspended and closed. Questions? Just reply to this email.</p>
   `);
 }
 function ownerFailedHtml(orgName: string): string {
+  const name = esc(orgName);
   return shell(`
-    <h2 style="font-size:18px;margin:0 0 10px;">Payment failed — ${orgName}</h2>
-    <p style="font-size:15px;line-height:1.55;color:#525252;">A payment just failed for <strong>${orgName}</strong>. They've been emailed to update their card and are now in the 30-day grace window. Reach out if you'd like to.</p>
+    <h2 style="font-size:18px;margin:0 0 10px;">Payment failed — ${name}</h2>
+    <p style="font-size:15px;line-height:1.55;color:#525252;">A payment just failed for <strong>${name}</strong>. They've been emailed to update their card and are now in the 30-day grace window. Reach out if you'd like to.</p>
   `);
 }
 function ownerClosureHtml(orgName: string, days: number): string {
+  const name = esc(orgName);
   return shell(`
-    <h2 style="font-size:18px;margin:0 0 10px;">Closed for non-payment — ${orgName}</h2>
-    <p style="font-size:15px;line-height:1.55;color:#525252;"><strong>${orgName}</strong> has been past due for ${Math.round(days)} days and is now being closed for non-payment per the Terms. Follow up if you want to try to save the account before their data is removed.</p>
+    <h2 style="font-size:18px;margin:0 0 10px;">Closed for non-payment — ${name}</h2>
+    <p style="font-size:15px;line-height:1.55;color:#525252;"><strong>${name}</strong> has been past due for ${Math.round(days)} days and is now being closed for non-payment per the Terms. Follow up if you want to try to save the account before their data is removed.</p>
   `);
 }
 

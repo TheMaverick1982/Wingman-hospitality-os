@@ -6,6 +6,7 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
+import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
 
 export type BuildState = { error: string | null; built?: number };
 
@@ -40,6 +41,9 @@ export async function generateHiringCriteria(_prev: BuildState, formData: FormDa
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
     return { error: "You don't have access to generate hiring criteria." };
+  }
+  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 
   const department = String(formData.get("department") || "");
