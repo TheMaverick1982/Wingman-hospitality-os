@@ -109,11 +109,47 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["dashboard", "repeat rate", "business health", "retention", "metrics", "needs attention"],
     body: [
       { kind: "p", text: "The dashboard is your morning glance. The top tiles show your repeat rate, spot-checks logged, sign-offs this week, and culture moments." },
+      { kind: "image", src: "/help/dashboard.png", alt: "The Wingman dashboard", caption: "Your dashboard — health at a glance, with the Business Health card at the bottom." },
       { kind: "p", text: "The Guest Retention chart shows how many guests reach each return visit. \"Needs your attention\" surfaces the few things worth acting on today." },
       { kind: "h", text: "Business Health" },
       { kind: "p", text: "The dark Business Health card (revenue/seat, labor %, avg check, and more) fills in automatically once your POS is connected and pushing weekly numbers. Until then it shows placeholders." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
+  },
+  {
+    slug: "culture",
+    title: "Culture — your standard, in your words",
+    summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
+    categoryId: "operations",
+    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus"],
+    body: [
+      { kind: "p", text: "Culture is the standard every hire is trained to and every shift is measured against — written in your own words." },
+      { kind: "image", src: "/help/culture.png", alt: "The Culture screen", caption: "Culture — your values, weekly pre-shift focus, and recognition." },
+      { kind: "list", items: [
+        "Set this week's pre-shift focus — it shows on everyone's dashboard as the thing to rally around.",
+        "Capture culture moments to recognize people living the standard.",
+        "Keep your core values front and center for the whole team.",
+      ] },
+      { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing." },
+    ],
+  },
+  {
+    slug: "service-recovery",
+    title: "Service Recovery — every comp has a reason",
+    summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",
+    categoryId: "operations",
+    keywords: ["service recovery", "comps", "voids", "discounts", "make it right", "complaints"],
+    body: [
+      { kind: "p", text: "Service Recovery logs every comp with a reason — turning give-aways into a record of how your team makes things right." },
+      { kind: "image", src: "/help/service-recovery.png", alt: "The Service Recovery screen", caption: "Service Recovery — every comp, with its reason and category." },
+      { kind: "steps", items: [
+        "Open Service Recovery.",
+        "Log a comp with who, how much, the category, and the reason.",
+        "Watch the totals and categories so recovery stays intentional — and coaching flags catch it if comps drift high.",
+      ] },
+      { kind: "note", text: "Comp totals also feed the Business Health card once your POS is connected." },
+    ],
+    links: [{ label: "Accountability & coaching flags", href: "/help/accountability-overview" }],
   },
   {
     slug: "guest-bounce-back",
@@ -124,6 +160,7 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Guest Bounce Back tracks each guest across their first four visits — the window where a first-timer becomes a regular." },
       { kind: "diagram", name: "retention-journey", caption: "The four-visit window where a first-timer becomes a regular." },
+      { kind: "image", src: "/help/guest-bounce-back.png", alt: "The Guest Bounce Back screen", caption: "Guest Bounce Back — track each guest across their return visits." },
       { kind: "steps", items: [
         "Open Guest Bounce Back.",
         "Add a guest (name, and phone/email if you have it).",
@@ -142,6 +179,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["training", "standards", "role", "build training", "refine", "ai", "checklist", "sign-off"],
     body: [
       { kind: "p", text: "Training & Standards holds a program for each role (Host, Server, Bartender, Chef, Manager) split into hospitality behaviors and role-specific skills." },
+      { kind: "image", src: "/help/training.png", alt: "The Training & Standards screen", caption: "A role's training program, with the Build and Refine with AI actions." },
       { kind: "h", text: "Build a program" },
       { kind: "steps", items: [
         "Open Training & Standards and pick a role.",
@@ -162,6 +200,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["hiring", "interview", "criteria", "traits", "green flag", "red flag", "refine", "ai"],
     body: [
       { kind: "p", text: "Hiring gives each role a set of traits, each with an interview question, a green flag (what a good answer sounds like), and a red flag." },
+      { kind: "image", src: "/help/hiring.png", alt: "The Hiring screen", caption: "Hiring criteria — traits with an interview question, green flag, and red flag." },
       { kind: "steps", items: [
         "Open Hiring and pick a role.",
         "Click \"Build hiring criteria\" — upload an existing guide or build from scratch.",
@@ -180,6 +219,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["accountability", "spot check", "daily checklist", "coaching", "flags", "score"],
     body: [
       { kind: "p", text: "Accountability keeps standards honest. Managers run spot-checks and daily/pre-shift checks; the system raises coaching flags when something drifts." },
+      { kind: "image", src: "/help/accountability.png", alt: "The Accountability screen", caption: "Accountability — checks, the staff pre-shift card, and the completion report." },
       { kind: "list", items: [
         "Spot-checks — a quick score of a staff member on the key hospitality dimensions.",
         "Daily / pre-shift / ambiance checks — location checks a manager logs.",
@@ -216,6 +256,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["audit", "standout", "health score", "gaps", "constraint"],
     body: [
       { kind: "p", text: "The Standout Audit scores your operation across the five gaps and key domains, then gives you a Health Score and the one constraint to fix first." },
+      { kind: "image", src: "/help/standout-audit.png", alt: "The Standout Audit screen", caption: "The Standout Audit — score your operation and get your Health Score." },
       { kind: "steps", items: [
         "Open Standout Audit.",
         "Score each area honestly.",
@@ -231,6 +272,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["growth", "revenue", "planner", "customers", "average sale", "repurchase"],
     body: [
       { kind: "p", text: "The Revenue Growth Planner turns three numbers — customers, average sale, and repurchase frequency — into a picture of how retention drives revenue." },
+      { kind: "image", src: "/help/revenue-growth-planner.png", alt: "The Revenue Growth Planner screen", caption: "The Revenue Growth Planner — model how retention compounds into revenue." },
       { kind: "p", text: "Enter your numbers per period, or have your POS push them weekly via the API so the planner stays current automatically." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
@@ -243,9 +285,35 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["menu", "engineering", "popularity", "profit", "food cost", "stars", "dogs"],
     body: [
       { kind: "p", text: "Menu Engineering plots each item by how popular and how profitable it is, so you can promote your stars and rework the rest." },
+      { kind: "image", src: "/help/menu-engineering.png", alt: "The Menu Engineering screen", caption: "Menu Engineering — items plotted by popularity and profitability." },
       { kind: "p", text: "Add items with their price and food cost, or sync them from your POS via the API — send units sold and Wingman ranks popularity for you." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
+  },
+  {
+    slug: "reporting",
+    title: "Reporting",
+    summary: "Every section's numbers in one view, over the date range you pick.",
+    categoryId: "operations",
+    keywords: ["reporting", "reports", "analytics", "metrics", "date range", "overview"],
+    body: [
+      { kind: "p", text: "Reporting rolls up every section into a single view for the date range you choose — retention, checks, training, comps, and more." },
+      { kind: "image", src: "/help/reporting.png", alt: "The Reporting screen", caption: "Reporting — every section, one view, for the range you pick." },
+      { kind: "note", text: "Reporting is available to owners and (view-only) managers." },
+    ],
+  },
+  {
+    slug: "setup-wizard",
+    title: "The Setup Wizard",
+    summary: "Answer a few questions and Wingman builds your whole system at once.",
+    categoryId: "getting-started",
+    keywords: ["setup", "wizard", "onboarding", "get started", "build system", "quick start"],
+    body: [
+      { kind: "p", text: "The Setup Wizard is the fastest way to stand up Wingman: answer a few questions about your restaurant and it generates your culture, values, pre-shift focus, and role training in one pass." },
+      { kind: "image", src: "/help/setup-wizard.png", alt: "The Setup Wizard screen", caption: "The Setup Wizard — go from zero to a full system in a few answers." },
+      { kind: "note", text: "The Setup Wizard is owner-only. You can always refine anything it creates afterward." },
+    ],
+    links: [{ label: "Building training programs", href: "/help/training-programs" }],
   },
   {
     slug: "team-and-permissions",
