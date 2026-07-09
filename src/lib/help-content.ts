@@ -109,6 +109,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["dashboard", "repeat rate", "business health", "retention", "metrics", "needs attention"],
     body: [
       { kind: "p", text: "The dashboard is your morning glance. The top tiles show your repeat rate, spot-checks logged, sign-offs this week, and culture moments." },
+      { kind: "image", src: "/help/dashboard.png", alt: "The Wingman dashboard", caption: "Your dashboard — health at a glance, with the Business Health card at the bottom." },
       { kind: "p", text: "The Guest Retention chart shows how many guests reach each return visit. \"Needs your attention\" surfaces the few things worth acting on today." },
       { kind: "h", text: "Business Health" },
       { kind: "p", text: "The dark Business Health card (revenue/seat, labor %, avg check, and more) fills in automatically once your POS is connected and pushing weekly numbers. Until then it shows placeholders." },
@@ -124,6 +125,7 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Guest Bounce Back tracks each guest across their first four visits — the window where a first-timer becomes a regular." },
       { kind: "diagram", name: "retention-journey", caption: "The four-visit window where a first-timer becomes a regular." },
+      { kind: "image", src: "/help/guest-bounce-back.png", alt: "The Guest Bounce Back screen", caption: "Guest Bounce Back — track each guest across their return visits." },
       { kind: "steps", items: [
         "Open Guest Bounce Back.",
         "Add a guest (name, and phone/email if you have it).",
@@ -142,6 +144,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["training", "standards", "role", "build training", "refine", "ai", "checklist", "sign-off"],
     body: [
       { kind: "p", text: "Training & Standards holds a program for each role (Host, Server, Bartender, Chef, Manager) split into hospitality behaviors and role-specific skills." },
+      { kind: "image", src: "/help/training.png", alt: "The Training & Standards screen", caption: "A role's training program, with the Build and Refine with AI actions." },
       { kind: "h", text: "Build a program" },
       { kind: "steps", items: [
         "Open Training & Standards and pick a role.",
@@ -162,6 +165,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["hiring", "interview", "criteria", "traits", "green flag", "red flag", "refine", "ai"],
     body: [
       { kind: "p", text: "Hiring gives each role a set of traits, each with an interview question, a green flag (what a good answer sounds like), and a red flag." },
+      { kind: "image", src: "/help/hiring.png", alt: "The Hiring screen", caption: "Hiring criteria — traits with an interview question, green flag, and red flag." },
       { kind: "steps", items: [
         "Open Hiring and pick a role.",
         "Click \"Build hiring criteria\" — upload an existing guide or build from scratch.",
@@ -180,6 +184,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["accountability", "spot check", "daily checklist", "coaching", "flags", "score"],
     body: [
       { kind: "p", text: "Accountability keeps standards honest. Managers run spot-checks and daily/pre-shift checks; the system raises coaching flags when something drifts." },
+      { kind: "image", src: "/help/accountability.png", alt: "The Accountability screen", caption: "Accountability — checks, the staff pre-shift card, and the completion report." },
       { kind: "list", items: [
         "Spot-checks — a quick score of a staff member on the key hospitality dimensions.",
         "Daily / pre-shift / ambiance checks — location checks a manager logs.",
@@ -216,6 +221,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["audit", "standout", "health score", "gaps", "constraint"],
     body: [
       { kind: "p", text: "The Standout Audit scores your operation across the five gaps and key domains, then gives you a Health Score and the one constraint to fix first." },
+      { kind: "image", src: "/help/standout-audit.png", alt: "The Standout Audit screen", caption: "The Standout Audit — score your operation and get your Health Score." },
       { kind: "steps", items: [
         "Open Standout Audit.",
         "Score each area honestly.",
@@ -231,6 +237,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["growth", "revenue", "planner", "customers", "average sale", "repurchase"],
     body: [
       { kind: "p", text: "The Revenue Growth Planner turns three numbers — customers, average sale, and repurchase frequency — into a picture of how retention drives revenue." },
+      { kind: "image", src: "/help/revenue-growth-planner.png", alt: "The Revenue Growth Planner screen", caption: "The Revenue Growth Planner — model how retention compounds into revenue." },
       { kind: "p", text: "Enter your numbers per period, or have your POS push them weekly via the API so the planner stays current automatically." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
@@ -243,6 +250,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["menu", "engineering", "popularity", "profit", "food cost", "stars", "dogs"],
     body: [
       { kind: "p", text: "Menu Engineering plots each item by how popular and how profitable it is, so you can promote your stars and rework the rest." },
+      { kind: "image", src: "/help/menu-engineering.png", alt: "The Menu Engineering screen", caption: "Menu Engineering — items plotted by popularity and profitability." },
       { kind: "p", text: "Add items with their price and food cost, or sync them from your POS via the API — send units sold and Wingman ranks popularity for you." },
     ],
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
