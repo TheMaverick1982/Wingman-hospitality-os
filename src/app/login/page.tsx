@@ -44,6 +44,11 @@ export default function LoginPage() {
               <Field label="Password">
                 <input name="password" type="password" placeholder="••••••••" required className={inputClass} />
               </Field>
+              <div className="flex justify-end -mt-1 mb-1">
+                <Link href="/forgot-password" className="text-sm font-medium text-brick">
+                  Forgot password?
+                </Link>
+              </div>
               {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
               <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
                 {pending ? "Logging in..." : "Log in"}
