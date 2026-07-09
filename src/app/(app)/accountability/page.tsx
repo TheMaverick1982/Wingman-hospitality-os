@@ -16,6 +16,8 @@ import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { getChecklistItems } from "./template-actions";
+import { MyPreshiftCard } from "./my-preshift-card";
+import { PreshiftReport, type TodayCompletion, type RosterRow } from "./preshift-report";
 
 function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -135,6 +137,79 @@ export default async function AccountabilityPage({
   const components = [dailyPct, preShiftPct, ambiancePct, spotCheckPct].filter((v): v is number => v !== null);
   const accountabilityScore = components.length > 0 ? Math.round(components.reduce((a, b) => a + b, 0) / components.length) : 0;
 
+  // --- Per-staff pre-shift checklist: personal card (everyone) + report (managers) ---
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
+
+  const { data: myCompletion } = await supabase
+    .from("shift_checklist_completions")
+    .select("checked, completed_count, item_count, updated_at, created_at")
+    .eq("profile_id", profile.userId)
+    .eq("checklist_type", "preshift")
+    .eq("occurred_on", todayStr)
+    .maybeSingle();
+  const myChecked = (myCompletion?.checked as boolean[] | undefined) ?? [];
+  const myCompletedAt = (myCompletion?.updated_at as string | undefined) ?? (myCompletion?.created_at as string | undefined) ?? null;
+
+  const canSeeReport = profile.accessRole !== "staff";
+  let todayCompletions: TodayCompletion[] = [];
+  let roster: RosterRow[] = [];
+  if (canSeeReport) {
+    const thirtyDaysAgo = daysAgoIso(30);
+    let compQ = supabase
+      .from("shift_checklist_completions")
+      .select("profile_id, occurred_on, completed_count, item_count, updated_at, created_at")
+      .eq("checklist_type", "preshift")
+      .gte("occurred_on", thirtyDaysAgo)
+      .order("occurred_on", { ascending: false });
+    if (effectiveLocation) compQ = compQ.eq("location_id", effectiveLocation);
+
+    const [{ data: comps }, { data: profs }] = await Promise.all([
+      compQ,
+      supabase.from("profiles").select("id, full_name, access_role, location_id"),
+    ]);
+
+    const nameById = new Map<string, string>();
+    for (const p of (profs ?? []) as { id: string; full_name: string }[]) nameById.set(p.id, p.full_name);
+
+    type Comp = { profile_id: string; occurred_on: string; completed_count: number; item_count: number; updated_at: string | null; created_at: string };
+    const allComps = (comps ?? []) as Comp[];
+
+    todayCompletions = allComps
+      .filter((c) => c.occurred_on === todayStr)
+      .map((c) => ({
+        name: nameById.get(c.profile_id) ?? "Team member",
+        completedCount: c.completed_count,
+        itemCount: c.item_count,
+        completedAt: c.updated_at ?? c.created_at,
+      }));
+
+    // Roster: staff + managers (owner excluded), scoped to the viewed location.
+    const rosterProfiles = ((profs ?? []) as { id: string; full_name: string; access_role: string; location_id: string | null }[])
+      .filter((p) => p.access_role !== "super_admin")
+      .filter((p) => !effectiveLocation || p.location_id === effectiveLocation);
+
+    const byProfile = new Map<string, { count: number; last: string | null }>();
+    for (const c of allComps) {
+      const cur = byProfile.get(c.profile_id) ?? { count: 0, last: null };
+      cur.count += 1;
+      if (!cur.last || c.occurred_on > cur.last) cur.last = c.occurred_on;
+      byProfile.set(c.profile_id, cur);
+    }
+
+    roster = rosterProfiles
+      .map((p) => {
+        const agg = byProfile.get(p.id);
+        return { name: p.full_name, lastCompleted: agg?.last ?? null, count30d: agg?.count ?? 0 };
+      })
+      .sort((a, b) => {
+        if (a.lastCompleted && b.lastCompleted) return a.lastCompleted < b.lastCompleted ? 1 : -1;
+        if (a.lastCompleted) return -1;
+        if (b.lastCompleted) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }
+
   return (
     <>
       <div className="flex items-start justify-between gap-6">
@@ -190,6 +265,16 @@ export default async function AccountabilityPage({
           trendTone="down"
         />
         <StatTile label="Checklist completion" value={dailyPct !== null ? `${dailyPct}%` : "—"} sub="opening & closing" />
+      </div>
+
+      <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+        <MyPreshiftCard
+          items={preShiftItemTexts}
+          alreadyDone={Boolean(myCompletion)}
+          completedChecked={myChecked}
+          completedAt={myCompletedAt}
+        />
+        {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
       </div>
 
       {flags.length > 0 ? (
