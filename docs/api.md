@@ -113,6 +113,32 @@ curl -X POST https://www.joinwingman.app/api/v1/business-health \
 curl https://www.joinwingman.app/api/v1/business-health -H "Authorization: Bearer $WINGMAN_KEY"
 ```
 
+### `POST /api/v1/menu` — sync the Menu Engineering matrix
+
+Non-destructive: matches existing items by name (case-insensitive) and updates
+them, inserting any new ones. Items not in the payload are left untouched. If you
+send `units_sold` but not `popularity`, Wingman ranks the batch into terciles
+(bottom third = 1, middle = 2, top = 3).
+
+Body: `{ "items": [ { name (required), price?, food_cost?, popularity? (1–3), units_sold? } ] }`
+
+```bash
+curl -X POST https://www.joinwingman.app/api/v1/menu \
+  -H "Authorization: Bearer $WINGMAN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"items":[
+        {"name":"Margherita Pizza","price":16,"food_cost":4.2,"units_sold":420},
+        {"name":"Caesar Salad","price":12,"food_cost":3.1,"units_sold":180},
+        {"name":"Tiramisu","price":9,"food_cost":2.0,"popularity":2}
+      ]}'
+```
+
+### `GET /api/v1/menu` — list Menu Engineering items
+
+```bash
+curl https://www.joinwingman.app/api/v1/menu -H "Authorization: Bearer $WINGMAN_KEY"
+```
+
 ---
 
 ## Using it with Zapier
@@ -132,6 +158,5 @@ curl https://www.joinwingman.app/api/v1/business-health -H "Authorization: Beare
 
 ## Not in v1 (easy follow-ups)
 
-- Menu sync endpoint (`/api/v1/menu`).
 - Read-only vs read-write key scopes (per-key rate limiting is now in place).
 - A branded Zapier app (v1 uses Zapier's generic Webhooks action).

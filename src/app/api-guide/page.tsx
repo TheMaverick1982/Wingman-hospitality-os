@@ -190,6 +190,32 @@ export default function ApiGuidePage() {
        "visit":{"visit_number":1,"visit_date":"2026-07-06"}}'`}</Code>
         </Endpoint>
 
+        <Endpoint method="POST" path="/api/v1/menu">
+          <p className="text-sm text-charcoal-2 mb-1">
+            Sync the Menu Engineering matrix. Non-destructive: items are matched by name and updated, new ones
+            inserted, others left alone. Send <code className="text-xs">units_sold</code> and Wingman ranks popularity
+            into terciles (bottom third = 1, middle = 2, top = 3); or send <code className="text-xs">popularity</code>{" "}
+            (1–3) directly.
+          </p>
+          <FieldTable
+            rows={[
+              ["items", "array", "✓", "One object per menu item (below)"],
+              ["items[].name", "string", "✓", "Item name (match key)"],
+              ["items[].price", "number", "—", "Menu price"],
+              ["items[].food_cost", "number", "—", "Item food cost"],
+              ["items[].popularity", "1–3", "—", "Explicit popularity"],
+              ["items[].units_sold", "number", "—", "Units sold (used to rank popularity)"],
+            ]}
+          />
+          <Code>{`curl -X POST ${BASE_URL}/api/v1/menu \\
+  -H "Authorization: Bearer $WINGMAN_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"items":[
+        {"name":"Margherita Pizza","price":16,"food_cost":4.2,"units_sold":420},
+        {"name":"Caesar Salad","price":12,"food_cost":3.1,"units_sold":180}
+      ]}'`}</Code>
+        </Endpoint>
+
         <p className="text-sm text-charcoal-2 mb-6">
           Each <code className="text-xs">POST</code> above has a matching <code className="text-xs">GET</code> that lists
           recent records (e.g. <code className="text-xs">GET /api/v1/growth</code>).
