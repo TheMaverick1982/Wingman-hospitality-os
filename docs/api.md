@@ -23,6 +23,12 @@ Base URL: `https://www.joinwingman.app`
 
 All requests must be HTTPS. `401` means the key is missing, malformed, or revoked.
 
+## Rate limits
+
+Each key may make up to **120 requests per minute**. Over that, the API returns
+`429 Rate limit exceeded` — back off briefly and retry. A weekly sync job stays
+far under this.
+
 ---
 
 ## Endpoints
@@ -93,5 +99,5 @@ curl https://www.joinwingman.app/api/v1/guests -H "Authorization: Bearer $WINGMA
 ## Not in v1 (easy follow-ups)
 
 - Menu sync endpoint (`/api/v1/menu`).
-- Per-key rate limiting and read-only vs read-write scopes.
+- Read-only vs read-write key scopes (per-key rate limiting is now in place).
 - A branded Zapier app (v1 uses Zapier's generic Webhooks action).

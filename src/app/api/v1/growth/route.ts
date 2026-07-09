@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateApiKey, apiUnauthorized, apiError } from "@/lib/api-auth";
+import { consumeRateLimit, API_V1_LIMIT } from "@/lib/rate-limit";
 
 // GET /api/v1/growth  -> recent Revenue Growth Planner entries for this org.
 export async function GET(request: NextRequest) {
   const caller = await authenticateApiKey(request);
   if (!caller) return apiUnauthorized();
+  if (!(await consumeRateLimit(`apiv1:${caller.keyId}`, API_V1_LIMIT.max, API_V1_LIMIT.windowSeconds))) {
+    return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
+  }
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -24,6 +28,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const caller = await authenticateApiKey(request);
   if (!caller) return apiUnauthorized();
+  if (!(await consumeRateLimit(`apiv1:${caller.keyId}`, API_V1_LIMIT.max, API_V1_LIMIT.windowSeconds))) {
+    return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
+  }
 
   const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!raw || typeof raw !== "object") return apiError("Invalid JSON body.");

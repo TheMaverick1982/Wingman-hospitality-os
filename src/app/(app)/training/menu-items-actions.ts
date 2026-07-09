@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
+import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
 
 export type MenuUploadState = { error: string | null; parsedCount?: number };
 
@@ -22,6 +23,9 @@ export async function uploadAndParseMenu(_prev: MenuUploadState, formData: FormD
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
     return { error: "You don't have access to upload menus." };
+  }
+  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 
   const department = String(formData.get("department") || "");
