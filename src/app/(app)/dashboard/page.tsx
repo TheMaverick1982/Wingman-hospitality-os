@@ -80,6 +80,7 @@ export default async function DashboardPage({
     { data: org },
     auditQuery,
     bizHealthQuery,
+    preshiftActivityQuery,
   ] = await Promise.all([
     supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
@@ -113,6 +114,16 @@ export default async function DashboardPage({
         .limit(1),
       effectiveLocation
     ),
+    scoped(
+      supabase
+        .from("shift_checklist_completions")
+        .select("completed_count, item_count, created_at, updated_at, profiles(full_name)")
+        .eq("checklist_type", "preshift")
+        .gte("occurred_on", daysAgoIso(SEVEN_DAYS_MS).slice(0, 10))
+        .order("updated_at", { ascending: false })
+        .limit(6),
+      effectiveLocation
+    ),
   ]);
 
   const latestAudit = (auditQuery.data ?? [])[0] as
@@ -126,6 +137,14 @@ export default async function DashboardPage({
   const bh = (bizHealthQuery.data ?? [])[0] as
     | { net_sales: number; labor_cost: number; labor_hours: number; comp_cost: number; covers: number; checks: number; seats: number | null; period_date: string }
     | undefined;
+
+  const preshiftCompletions = (preshiftActivityQuery.data ?? []) as {
+    completed_count: number;
+    item_count: number;
+    created_at: string;
+    updated_at: string | null;
+    profiles: { full_name: string } | null;
+  }[];
 
   const discounts = (discountsQuery.data ?? []) as Discount[];
   const spotChecks = (spotChecksQuery.data ?? []) as (SpotCheck & { created_at: string })[];
@@ -210,9 +229,18 @@ export default async function DashboardPage({
       created_at: c.created_at,
       tone: { fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "", label: "" },
     })),
+    ...preshiftCompletions.map((p) => {
+      const name = p.profiles?.full_name ?? "A team member";
+      return {
+        who: initialsOf(name),
+        text: `${name} completed their pre-shift checklist (${p.completed_count}/${p.item_count})`,
+        created_at: p.updated_at ?? p.created_at,
+        tone: { fg: "text-[#15803d]", bg: "bg-[#E7F6EC]", dot: "", label: "" },
+      };
+    }),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+    .slice(0, 6);
 
   const firstName = profile.fullName.split(" ")[0] || "there";
   const greetingLocation = effectiveLocation
