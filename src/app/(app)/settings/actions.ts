@@ -285,6 +285,32 @@ export async function deleteLocation(locationId: string): Promise<ActionState> {
   return { error: null };
 }
 
+export async function updateLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can edit locations." };
+
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+  if (!id) return { error: "Missing location." };
+  if (!name) return { error: "Location name is required." };
+  const address = String(formData.get("address") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+
+  const supabase = await createClient();
+  // Only these fields are updatable, and only within the caller's own org.
+  const { error } = await supabase
+    .from("locations")
+    .update({ name, address, phone, email })
+    .eq("id", id)
+    .eq("org_id", profile.orgId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export async function bulkAddLocations(_prev: BatchState, formData: FormData): Promise<BatchState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.accessRole !== "super_admin") {

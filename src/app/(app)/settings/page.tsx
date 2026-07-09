@@ -9,6 +9,7 @@ import { BulkInviteButton } from "./bulk-invite-form";
 import { TeamMemberRow, type TeamMember } from "./team-member-row";
 import { AddLocationForm } from "./add-location-form";
 import { DeleteLocationButton } from "./delete-location-button";
+import { EditLocationForm } from "./edit-location-form";
 import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
 import { ApiKeysManager } from "./api-keys-manager";
@@ -153,6 +154,9 @@ export default async function SettingsPage() {
                   {i === 0 ? "$199 base" : "+$100/mo"}
                 </span>
               )}
+              <EditLocationForm
+                location={{ id: l.id, name: l.name, address: l.address ?? "", phone: l.phone ?? "", email: l.email ?? "" }}
+              />
               {locations.length > 1 && <DeleteLocationButton locationId={l.id} locationName={l.name} />}
             </div>
           </div>
