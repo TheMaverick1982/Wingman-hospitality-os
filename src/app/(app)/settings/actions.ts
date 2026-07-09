@@ -245,6 +245,46 @@ export async function addLocation(_prev: ActionState, formData: FormData): Promi
   return { error: null };
 }
 
+export async function deleteLocation(locationId: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can remove locations." };
+  if (!locationId) return { error: "Missing location." };
+
+  const supabase = await createClient();
+
+  // Must belong to this org, and can't be the only location.
+  const { data: orgLocations } = await supabase.from("locations").select("id").eq("org_id", profile.orgId);
+  const ids = (orgLocations ?? []).map((l) => l.id);
+  if (!ids.includes(locationId)) return { error: "Location not found in your organization." };
+  if (ids.length <= 1) return { error: "You can't remove your only location." };
+
+  // Don't orphan team members homed at this location -- make them reassign first.
+  const { count: memberCount } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("location_id", locationId);
+  if ((memberCount ?? 0) > 0) {
+    const n = memberCount ?? 0;
+    return {
+      error: `${n} team member${n === 1 ? "" : "s"} ${n === 1 ? "is" : "are"} assigned to this location. Reassign ${n === 1 ? "them" : "them"} in Team & permissions before deleting it.`,
+    };
+  }
+
+  // Deleting the location cascades its operational data (checklists, spot-checks,
+  // staff roster, coaching, growth entries) and nulls references in guests/audits.
+  const { error } = await supabase.from("locations").delete().eq("id", locationId).eq("org_id", profile.orgId);
+  if (error) return { error: error.message };
+
+  // Billing is per-location: the monthly total is derived from the location
+  // count, so removing a location automatically drops it from the bill. When a
+  // payment processor is connected, sync the subscription quantity to the new
+  // location count here.
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export async function bulkAddLocations(_prev: BatchState, formData: FormData): Promise<BatchState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.accessRole !== "super_admin") {
