@@ -1,8 +1,10 @@
 import { LineChart } from "lucide-react";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { GaSettingsForm } from "./ga-settings-form";
 
 export default async function AdminAnalyticsPage() {
+  await requirePlatformSection("analytics");
   const gaMeasurementId = await getGaMeasurementId();
 
   return (

@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="w-full flex min-h-full flex-1">
-      <AdminSidebar fullName={profile.fullName} />
+      <AdminSidebar fullName={profile.fullName} platformAccess={profile.platformAccess} />
       <div className="flex-1 flex flex-col min-w-0">
         <div className="p-8 overflow-y-auto flex-1 bg-paper">
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6">{children}</div>

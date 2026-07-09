@@ -1,6 +1,8 @@
 import { CreditCard } from "lucide-react";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 
-export default function AdminBillingPage() {
+export default async function AdminBillingPage() {
+  await requirePlatformSection("billing");
   return (
     <div className="flex flex-col gap-6">
       <div>

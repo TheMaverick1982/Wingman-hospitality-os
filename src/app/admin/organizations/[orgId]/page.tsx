@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type AccessRole } from "@/lib/auth/permissions";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { impersonateUser } from "../actions";
 
 export default async function AdminOrganizationDetailPage({
@@ -10,6 +11,7 @@ export default async function AdminOrganizationDetailPage({
 }: {
   params: Promise<{ orgId: string }>;
 }) {
+  await requirePlatformSection("organizations");
   const { orgId } = await params;
   const admin = createAdminClient();
 

@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { AdminReplyForm } from "../admin-reply-form";
 
 type Msg = { id: string; from_support: boolean; body: string; created_at: string; profiles: { full_name: string } | null };
 
 export default async function AdminTicketPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePlatformSection("support");
   const { id } = await params;
   const admin = createAdminClient();
 

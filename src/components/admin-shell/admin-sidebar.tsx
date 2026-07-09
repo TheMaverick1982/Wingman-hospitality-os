@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
+import type { PlatformSection } from "@/lib/auth/platform";
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
-  { href: "/admin/support", label: "Support", icon: LifeBuoy },
-  { href: "/admin/reporting", label: "Reporting", icon: BarChart3 },
-  { href: "/admin/billing", label: "Billing", icon: CreditCard },
-  { href: "/admin/analytics", label: "Analytics", icon: LineChart },
+const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSection }[] = [
+  { href: "/admin/organizations", label: "Organizations", icon: Building2, section: "organizations" },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy, section: "support" },
+  { href: "/admin/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
+  { href: "/admin/billing", label: "Billing", icon: CreditCard, section: "billing" },
+  { href: "/admin/analytics", label: "Analytics", icon: LineChart, section: "analytics" },
+  { href: "/admin/team", label: "Team", icon: Users, section: "team" },
 ];
 
-export function AdminSidebar({ fullName }: { fullName: string }) {
+export function AdminSidebar({ fullName, platformAccess }: { fullName: string; platformAccess: string[] }) {
   const pathname = usePathname();
+  const nav = NAV.filter((item) => platformAccess.includes(item.section));
 
   return (
     <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
@@ -26,7 +29,7 @@ export function AdminSidebar({ fullName }: { fullName: string }) {
       </div>
 
       <nav className="flex flex-col gap-0.5">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link

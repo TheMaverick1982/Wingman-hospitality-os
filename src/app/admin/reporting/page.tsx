@@ -1,8 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
 import { StatTile } from "@/components/ui/stat-tile";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 
 export default async function AdminReportingPage() {
+  await requirePlatformSection("reporting");
   const admin = createAdminClient();
 
   const [{ data: orgs }, { data: locations }, { data: profiles }, { data: guests }] = await Promise.all([
