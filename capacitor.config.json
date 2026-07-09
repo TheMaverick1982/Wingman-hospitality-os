@@ -1,0 +1,13 @@
+{
+  "appId": "app.joinwingman",
+  "appName": "Wingman",
+  "webDir": "native/www",
+  "server": {
+    "url": "https://www.joinwingman.app",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "always"
+  },
+  "backgroundColor": "#0a6cff"
+}
