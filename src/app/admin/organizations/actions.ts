@@ -52,9 +52,9 @@ export async function createFreeOrganization(_prev: CreateOrgState, formData: Fo
 }
 
 export async function impersonateUser(targetProfileId: string) {
-  const profile = await platformSectionActor("organizations");
+  const profile = await platformSectionActor("client_login");
   if (!profile) {
-    throw new Error("Not authorized.");
+    throw new Error("You don't have “Log in as client” access.");
   }
 
   const admin = createAdminClient();

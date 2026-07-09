@@ -11,11 +11,17 @@ export default async function AdminOrganizationDetailPage({
 }: {
   params: Promise<{ orgId: string }>;
 }) {
-  await requirePlatformSection("organizations");
+  const me = await requirePlatformSection("organizations");
+  const canImpersonate = me.platformAccess.includes("client_login");
   const { orgId } = await params;
   const admin = createAdminClient();
 
-  const { data: org } = await admin.from("organizations").select("id, name, created_at").eq("id", orgId).maybeSingle();
+  const { data: org } = await admin
+    .from("organizations")
+    .select("id, name, created_at")
+    .eq("id", orgId)
+    .eq("is_platform", false)
+    .maybeSingle();
   if (!org) notFound();
 
   const [{ data: locations }, { data: profiles }] = await Promise.all([
@@ -73,11 +79,13 @@ export default async function AdminOrganizationDetailPage({
                     {p.locations?.name ? ` · ${p.locations.name}` : ""}
                   </div>
                 </div>
-                <form action={impersonateUser.bind(null, p.id)}>
-                  <button type="submit" className="text-xs font-semibold text-brick shrink-0">
-                    Log in as →
-                  </button>
-                </form>
+                {canImpersonate && (
+                  <form action={impersonateUser.bind(null, p.id)}>
+                    <button type="submit" className="text-xs font-semibold text-brick shrink-0">
+                      Log in as →
+                    </button>
+                  </form>
+                )}
               </div>
             ))}
             {(profiles ?? []).length === 0 && <p className="text-sm text-muted">No team members yet.</p>}

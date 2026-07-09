@@ -1,6 +1,6 @@
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
+import { PLATFORM_ACCESS_OPTIONS } from "@/lib/auth/platform";
 import { TeamManager, type StaffRow } from "./team-manager";
 
 export const maxDuration = 60;
@@ -36,7 +36,7 @@ export default async function AdminTeamPage() {
 
       <TeamManager
         staff={staff}
-        sections={PLATFORM_SECTIONS.map((s) => ({ key: s.key, label: s.label, description: s.description }))}
+        sections={PLATFORM_ACCESS_OPTIONS.map((s) => ({ key: s.key, label: s.label, description: s.description }))}
         currentUserId={me.userId}
       />
     </>
