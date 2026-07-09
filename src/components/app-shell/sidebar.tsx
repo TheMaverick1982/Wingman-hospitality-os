@@ -55,6 +55,7 @@ export function Sidebar({
   isPlatformAdmin,
   permissionOverrides,
   showStartHere,
+  variant = "desktop",
 }: {
   accessRole: AccessRole;
   fullName: string;
@@ -63,12 +64,20 @@ export function Sidebar({
   isPlatformAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
+  variant?: "desktop" | "drawer";
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
 
+  // Desktop: a fixed sticky column, hidden on small screens (a mobile drawer
+  // renders the same nav via variant="drawer").
+  const rootClass =
+    variant === "drawer"
+      ? "w-[248px] bg-white py-5 px-4 flex flex-col h-full overflow-y-auto"
+      : "hidden lg:flex w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex-col sticky top-0 h-screen";
+
   return (
-    <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
+    <div className={rootClass}>
       <Link href="/dashboard" aria-label="Wingman home" className="flex items-center px-2.5 pb-6">
         <WingmanLogo className="h-6 w-auto" />
       </Link>
