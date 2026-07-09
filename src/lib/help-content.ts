@@ -390,6 +390,23 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "contact-support",
+    title: "Contacting support",
+    summary: "Open a ticket when you need a hand — and follow the conversation right in the app.",
+    categoryId: "getting-started",
+    keywords: ["support", "ticket", "contact", "help", "email", "question", "problem", "issue"],
+    body: [
+      { kind: "p", text: "If you can't find an answer here, open a support ticket and the Wingman team will help." },
+      { kind: "steps", items: [
+        "Scroll to the bottom of the Help Center and click \"Contact support\".",
+        "Give it a subject and describe what you need — then submit.",
+        "You'll get replies by email and can follow (and reply to) the whole thread under Support.",
+      ] },
+      { kind: "note", text: "Your Super Admins and Managers can see and reply to tickets from your organization; staff see the ones they filed." },
+    ],
+    links: [{ label: "Open a ticket", href: "/support", external: true }],
+  },
+  {
     slug: "reset-your-password",
     title: "Resetting your password",
     summary: "How to get back in if you forget your password.",
