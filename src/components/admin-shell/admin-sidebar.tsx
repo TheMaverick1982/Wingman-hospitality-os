@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy },
   { href: "/admin/reporting", label: "Reporting", icon: BarChart3 },
   { href: "/admin/billing", label: "Billing", icon: CreditCard },
   { href: "/admin/analytics", label: "Analytics", icon: LineChart },
