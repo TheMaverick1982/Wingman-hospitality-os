@@ -79,6 +79,40 @@ curl -X POST https://www.joinwingman.app/api/v1/guests \
 curl https://www.joinwingman.app/api/v1/guests -H "Authorization: Bearer $WINGMAN_KEY"
 ```
 
+### `POST /api/v1/business-health` — push a week's raw POS numbers
+
+Populates the **Business health** card on the dashboard. Send the raw inputs and
+Wingman computes the ratios (revenue/seat, revenue/labor hr, labor %, avg check,
+comp cost, retention $ impact). One row per period (per location if `location_id`
+is given); posting the same `period_date` again updates it.
+
+Body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `period_date` | string `YYYY-MM-DD` | ✅ | Any day in the week the numbers cover |
+| `net_sales` | number | ✅ | Gross/net sales for the period |
+| `labor_cost` | number | ✅ | Total labor dollars |
+| `labor_hours` | number | ✅ | Total labor hours worked |
+| `comp_cost` | number | ✅ | Comps / voids / discounts, in dollars |
+| `covers` | number | ✅ | Guests served |
+| `checks` | number | ✅ | Number of checks / transactions |
+| `seats` | number | — | Physical seat count (falls back to `covers`) |
+| `location_id` | string (uuid) | — | A location in your org; omit for all-locations |
+
+```bash
+curl -X POST https://www.joinwingman.app/api/v1/business-health \
+  -H "Authorization: Bearer $WINGMAN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"period_date":"2026-07-06","net_sales":48200,"labor_cost":13100,"labor_hours":540,"comp_cost":820,"covers":1240,"checks":610,"seats":90}'
+```
+
+### `GET /api/v1/business-health` — list recent weekly inputs
+
+```bash
+curl https://www.joinwingman.app/api/v1/business-health -H "Authorization: Bearer $WINGMAN_KEY"
+```
+
 ---
 
 ## Using it with Zapier
