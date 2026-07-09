@@ -44,7 +44,7 @@ export function RefineHiringForm({ department }: { department: string }) {
       {open && (
         <Modal
           title={`Refine ${department} hiring criteria`}
-          sub="Tell Wingman what to add, reword, or remove — you'll review every change before it's applied."
+          sub="Ask Wingman to add traits, suggest ideas, reword, or remove — you'll review every change before it's applied."
           onClose={close}
           wide
         >
@@ -57,7 +57,7 @@ export function RefineHiringForm({ department }: { department: string }) {
                 rows={4}
                 required
                 maxLength={2000}
-                placeholder="e.g. Add a trait that screens for how they handle an angry guest, and make the teamwork question tougher."
+                placeholder="e.g. Add a trait that screens for how they handle an angry guest. Or: Suggest 3 more traits for a bartender. Or: Make the teamwork question tougher."
                 className={`${inputClass} resize-none`}
               />
               {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}

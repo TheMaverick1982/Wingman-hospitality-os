@@ -326,7 +326,7 @@ export async function refineTraining(_prev: RefineState, formData: FormData): Pr
 
   const currentForModel = [...byId.entries()].map(([id, v]) => ({ id, list: v.list, item: v.item }));
 
-  const prompt = `You are refining the existing ${department} training program for a restaurant based on the owner's request.
+  const prompt = `You are helping a restaurant operator improve their existing ${department} training program based on their request.
 
 CURRENT PROGRAM ITEMS (JSON — "list" is "hospitality" for guest-experience behaviors or "role" for role-specific technical skills):
 ${JSON.stringify(currentForModel)}
@@ -334,11 +334,12 @@ ${JSON.stringify(currentForModel)}
 THE OWNER'S REQUEST:
 "${feedback}"
 
-Propose the smallest set of changes that fully satisfies the request. You may:
-- "add" brand-new items (choose the right "list"),
-- "edit" an existing item by its "id" (give the improved wording in "item"),
-- "remove" an existing item by its "id".
-Only edit or remove items whose "id" appears in the current program above. Every item stays under 16 words and is a concrete, observable action a manager can check off. If the request only asks to add things, leave edit/remove empty. Give a one-line "reason" for each change, and a one-sentence "summary" of the whole proposal.
+Respond helpfully to what they asked. You can do any combination of:
+- "add": propose brand-new items. Set "list" to exactly "hospitality" or "role". Be generous here — if they ask to add something, ask for suggestions/ideas, or ask an open question ("what am I missing?"), propose 3-6 strong, concrete new items. Don't hold back.
+- "edit": improve the wording of an existing item by its "id" (put the improved text in "item").
+- "remove": remove an existing item by its "id".
+
+Only "edit" or "remove" items whose "id" appears in the current program above. Every item stays under 16 words and is a concrete, observable action a manager can watch for and check off — never a vague value statement. Always propose at least one change unless the program already fully covers the request. Give a one-line "reason" for each change, and a one-sentence "summary" of the whole proposal.
 
 Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
 ${REFINE_SHAPE}`;
@@ -352,7 +353,7 @@ ${REFINE_SHAPE}`;
   try {
     const response = await callAnthropic(apiKey, {
       model: "claude-sonnet-5",
-      max_tokens: 2000,
+      max_tokens: 3000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
     });
@@ -379,9 +380,14 @@ ${REFINE_SHAPE}`;
   // that references an unknown id or an invalid list, so the proposal can only
   // ever touch this department's real items.
   const clip = (s: string) => s.trim().slice(0, 200);
-  const add: TrainingChange[] = (parsed.add ?? [])
-    .filter((a) => (a.list === "hospitality" || a.list === "role") && String(a.item ?? "").trim())
-    .map((a) => ({ list: a.list as ListKey, item: clip(String(a.item)), reason: clip(String(a.reason ?? "")) }));
+  // Match the model's "list" leniently: it sometimes returns "hospitality_items"
+  // or capitalized variants. Default an unrecognized list to "role".
+  const normList = (l: unknown): ListKey => (String(l ?? "").toLowerCase().includes("hosp") ? "hospitality" : "role");
+  const add: TrainingChange[] = [];
+  for (const a of parsed.add ?? []) {
+    const item = clip(String(a.item ?? ""));
+    if (item) add.push({ list: normList(a.list), item, reason: clip(String(a.reason ?? "")) });
+  }
   const edit: TrainingChange[] = (parsed.edit ?? [])
     .filter((e) => e.id && byId.has(String(e.id)) && String(e.item ?? "").trim())
     .map((e) => {

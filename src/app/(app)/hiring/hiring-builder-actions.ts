@@ -287,11 +287,12 @@ ${JSON.stringify(currentForModel)}
 THE OWNER'S REQUEST:
 "${feedback}"
 
-Propose the smallest set of changes that fully satisfies the request. You may:
-- "add" brand-new traits (each with title, question, green_flag, red_flag),
-- "edit" an existing trait by its "id" (return the full improved title/question/green_flag/red_flag),
-- "remove" an existing trait by its "id".
-Only edit or remove traits whose "id" appears in the current list above. Keep every green_flag/red_flag concrete — never vague adjectives. If the request only asks to add, leave edit/remove empty. Give a one-line "reason" for each change and a one-sentence "summary" of the whole proposal.
+Respond helpfully to what they asked. You can do any combination of:
+- "add": propose brand-new traits (each with title, question, green_flag, red_flag). Be generous — if they ask to add something, ask for suggestions/ideas, or ask an open question ("what am I missing?"), propose 2-4 strong new traits. Don't hold back.
+- "edit": improve an existing trait by its "id" (return the full improved title/question/green_flag/red_flag).
+- "remove": remove an existing trait by its "id".
+
+Only "edit" or "remove" traits whose "id" appears in the current list above. Keep every green_flag/red_flag concrete — never vague adjectives. Always propose at least one change unless the criteria already fully cover the request. Give a one-line "reason" for each change and a one-sentence "summary" of the whole proposal.
 
 Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
 ${REFINE_SHAPE}`;
@@ -305,7 +306,7 @@ ${REFINE_SHAPE}`;
   try {
     const response = await callAnthropic(apiKey, {
       model: "claude-sonnet-5",
-      max_tokens: 2500,
+      max_tokens: 3500,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
     });

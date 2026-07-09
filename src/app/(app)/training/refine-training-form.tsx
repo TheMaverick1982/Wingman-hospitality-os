@@ -48,7 +48,7 @@ export function RefineTrainingForm({ department }: { department: string }) {
       {open && (
         <Modal
           title={`Refine ${department} training`}
-          sub="Tell Wingman what to add, reword, or remove — you'll review every change before it's applied."
+          sub="Ask Wingman to add items, suggest ideas, reword, or remove — you'll review every change before it's applied."
           onClose={close}
           wide
         >
@@ -61,7 +61,7 @@ export function RefineTrainingForm({ department }: { department: string }) {
                 rows={4}
                 required
                 maxLength={2000}
-                placeholder="e.g. We're big on regulars — add items about remembering names and usual orders. And make the greeting items about welcoming within 30 seconds."
+                placeholder="e.g. Add items about remembering regulars' names and usual orders. Or: What am I missing for wine service? Or: Make the greeting items about welcoming within 30 seconds."
                 className={`${inputClass} resize-none`}
               />
               {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}
