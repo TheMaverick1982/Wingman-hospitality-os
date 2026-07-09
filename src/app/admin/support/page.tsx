@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
 
 type Row = {
   id: string;
@@ -25,6 +26,7 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default async function AdminSupportPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requirePlatformSection("support");
   const { status } = await searchParams;
   const active = TABS.some((t) => t.key === status) ? status! : "open";
 

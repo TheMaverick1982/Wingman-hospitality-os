@@ -5,15 +5,15 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentProfile } from "@/lib/auth/profile";
+import { platformSectionActor } from "@/lib/auth/require-platform";
 
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
 
 export type CreateOrgState = { error: string | null };
 
 export async function createFreeOrganization(_prev: CreateOrgState, formData: FormData): Promise<CreateOrgState> {
-  const profile = await getCurrentProfile();
-  if (!profile?.isPlatformAdmin) return { error: "Only a platform admin can do this." };
+  const profile = await platformSectionActor("organizations");
+  if (!profile) return { error: "Only a platform admin with Organizations access can do this." };
 
   const orgName = String(formData.get("orgName") || "").trim();
   const ownerName = String(formData.get("ownerName") || "").trim();
@@ -52,8 +52,8 @@ export async function createFreeOrganization(_prev: CreateOrgState, formData: Fo
 }
 
 export async function impersonateUser(targetProfileId: string) {
-  const profile = await getCurrentProfile();
-  if (!profile?.isPlatformAdmin) {
+  const profile = await platformSectionActor("organizations");
+  if (!profile) {
     throw new Error("Not authorized.");
   }
 

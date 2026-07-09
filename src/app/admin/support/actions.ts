@@ -2,15 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentProfile } from "@/lib/auth/profile";
+import { platformSectionActor } from "@/lib/auth/require-platform";
 import { notifyCustomerReply } from "@/lib/support";
 
 export type AdminTicketState = { error: string | null };
 
 async function requirePlatformAdmin() {
-  const profile = await getCurrentProfile();
-  if (!profile?.isPlatformAdmin) return null;
-  return profile;
+  return platformSectionActor("support");
 }
 
 export async function adminReply(ticketId: string, body: string): Promise<AdminTicketState> {
