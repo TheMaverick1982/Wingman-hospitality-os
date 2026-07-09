@@ -14,12 +14,14 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   const { data: org } = await supabase.from("organizations").select("id, system_generated").single();
   if (!org) return { steps: [], allDone: true, doneCount: 0 };
 
-  const [{ count: wingmanStandards }, { count: wingmanTraining }, { count: wingmanTraits }, { count: staffCount }] = await Promise.all([
-    supabase.from("department_standards").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
-    supabase.from("department_training_items").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
-    supabase.from("hiring_traits").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
-    supabase.from("staff_members").select("id", { count: "exact", head: true }).eq("org_id", org.id),
-  ]);
+  const [{ count: wingmanStandards }, { count: wingmanTraining }, { count: wingmanTraits }, { count: staffCount }, { count: playbookCount }] =
+    await Promise.all([
+      supabase.from("department_standards").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
+      supabase.from("department_training_items").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
+      supabase.from("hiring_traits").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("source", "wingman"),
+      supabase.from("staff_members").select("id", { count: "exact", head: true }).eq("org_id", org.id),
+      supabase.from("playbook_articles").select("id", { count: "exact", head: true }).eq("org_id", org.id),
+    ]);
 
   const steps: OnboardingStep[] = [
     {
@@ -49,6 +51,13 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
       description: "Add your existing staff (one at a time or in bulk) so you can track their training and hiring history.",
       done: (staffCount ?? 0) > 0,
       href: "/staff",
+    },
+    {
+      key: "playbook",
+      label: "Create your team playbook",
+      description: "Upload or write your team's guides and SOPs — or let Wingman draft one. Everyone on your team can read them under Help.",
+      done: (playbookCount ?? 0) > 0,
+      href: "/help",
     },
   ];
   const doneCount = steps.filter((s) => s.done).length;
