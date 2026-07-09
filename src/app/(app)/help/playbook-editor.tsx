@@ -2,12 +2,12 @@
 
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, ChevronRight, BookOpen } from "lucide-react";
+import { Plus, ChevronRight, BookOpen, Sparkles } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { savePlaybookArticle, deletePlaybookArticle, type PlaybookArticle, type PlaybookState } from "./playbook-actions";
+import { savePlaybookArticle, deletePlaybookArticle, draftPlaybookArticle, type PlaybookArticle, type PlaybookState } from "./playbook-actions";
 
 const initialState: PlaybookState = { error: null };
 
@@ -73,6 +73,12 @@ function PlaybookModal({ article, onClose }: { article: PlaybookArticle | null; 
   const [removing, startRemove] = useTransition();
   const [removeError, setRemoveError] = useState<string | null>(null);
 
+  const [title, setTitle] = useState(article?.title ?? "");
+  const [body, setBody] = useState(article?.body ?? "");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPending, startAi] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
+
   function doDelete() {
     if (!article) return;
     if (!window.confirm(`Delete "${article.title}"? This can't be undone.`)) return;
@@ -84,19 +90,64 @@ function PlaybookModal({ article, onClose }: { article: PlaybookArticle | null; 
     });
   }
 
+  function runAi() {
+    setAiError(null);
+    startAi(async () => {
+      const res = await draftPlaybookArticle({ instruction: aiPrompt, title, currentBody: body });
+      if (res.error) setAiError(res.error);
+      else if (res.body) {
+        setBody(res.body);
+        setAiPrompt("");
+      }
+    });
+  }
+
+  const hasBody = body.trim().length > 0;
+
   return (
     <Modal title={article ? "Edit guide" : "Add a guide"} sub="Write a guide or SOP for your team. Everyone in your org can read it." onClose={onClose} wide>
       <form action={formAction}>
         {article && <input type="hidden" name="id" value={article.id} />}
         <Field label="Title">
-          <input name="title" required defaultValue={article?.title ?? ""} placeholder="e.g. Opening checklist for the bar" className={inputClass} />
+          <input
+            name="title"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Opening checklist for the bar"
+            className={inputClass}
+          />
         </Field>
+
+        {/* Write / improve with AI */}
+        <div className="rounded-xl border border-line bg-paper p-3 mb-4">
+          <div className="flex items-center gap-1.5 text-[13px] font-semibold text-ink mb-1.5">
+            <Sparkles size={14} className="text-brick" /> {hasBody ? "Improve with AI" : "Write with AI"}
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder={hasBody ? "e.g. Add a closing section and make the steps more specific" : "e.g. A bar opening checklist covering setup, stock, and cleanliness"}
+              className={`${inputClass} flex-1`}
+            />
+            <Btn type="button" kind="ghost" disabled={aiPending} icon={Sparkles} onClick={runAi}>
+              {aiPending ? "Writing…" : hasBody ? "Improve" : "Draft"}
+            </Btn>
+          </div>
+          {aiError && <p className="text-xs text-danger mt-1.5">{aiError}</p>}
+          <p className="text-[11px] text-muted-2 mt-1.5">
+            Wingman drafts it into the box below — review and edit before saving. Nothing is saved until you click Save.
+          </p>
+        </div>
+
         <Field label="Guide">
           <textarea
             name="body"
             rows={12}
-            defaultValue={article?.body ?? ""}
-            placeholder={"Write your guide here.\n\nUse:\n# Heading   for a section heading\n- item      for a bullet\nblank line  for a new paragraph"}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={"Write your guide here, or use “Write with AI” above.\n\nUse:\n# Heading   for a section heading\n- item      for a bullet\nblank line  for a new paragraph"}
             className={`${inputClass} resize-y font-mono text-[13px] leading-relaxed`}
           />
         </Field>

@@ -5,6 +5,10 @@ import { HelpBrowser } from "./help-browser";
 import { PlaybookSection } from "./playbook-editor";
 import type { PlaybookArticle } from "./playbook-actions";
 
+// The playbook's "Write with AI" runs a model call from this route; give it room
+// to finish instead of hitting the platform's short default function timeout.
+export const maxDuration = 60;
+
 export default async function HelpPage() {
   const profile = await getCurrentProfile();
   const supabase = await createClient();
