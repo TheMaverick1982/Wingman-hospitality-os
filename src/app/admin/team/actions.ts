@@ -3,13 +3,12 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { platformSectionActor } from "@/lib/auth/require-platform";
-import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
+import { PLATFORM_ACCESS_OPTIONS } from "@/lib/auth/platform";
 
 export type TeamState = { error: string | null };
 
-const VALID = new Set(PLATFORM_SECTIONS.map((s) => s.key));
+const VALID = new Set(PLATFORM_ACCESS_OPTIONS.map((s) => s.key));
 
 function cleanSections(raw: string[]): string[] {
   return [...new Set(raw.filter((s) => VALID.has(s as never)))];
@@ -47,8 +46,21 @@ export async function addPlatformStaff(_prev: TeamState, formData: FormData): Pr
   let userId = await findUserIdByEmail(admin, email);
 
   if (!userId) {
-    // Invite a brand-new person, then create their profile in the adding
-    // admin's org (Staff) via the same path as a normal team invite.
+    // Invite a brand-new person, then create their profile in the hidden
+    // internal "Wingman Platform" org — NOT in any customer org. This keeps
+    // platform staff isolated from customer data; the only way they reach a
+    // customer's account is the explicit "Log in as client" permission.
+    const { data: platformOrg } = await admin
+      .from("organizations")
+      .select("id")
+      .eq("is_platform", true)
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+    if (!platformOrg) {
+      return { error: "The internal platform organization is missing — run migration 0037 in Supabase first." };
+    }
+
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app";
     const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${origin}/auth/callback?type=invite`,
@@ -56,20 +68,18 @@ export async function addPlatformStaff(_prev: TeamState, formData: FormData): Pr
     if (inviteError) return { error: inviteError.message };
     userId = invited.user.id;
 
-    const supabase = await createClient();
-    const { error: rpcError } = await supabase.rpc("assign_team_member_profile", {
-      new_user_id: userId,
+    // super_admin needs no location, which suits the empty internal org and
+    // satisfies the profiles location constraint. The is_platform_admin flag and
+    // section access are set in the shared update below.
+    const { error: profileError } = await admin.from("profiles").insert({
+      id: userId,
+      org_id: platformOrg.id,
       full_name: fullName || email.split("@")[0],
-      target_role: "staff",
-      target_location_id: null,
-      target_all_locations: true,
-      target_location_ids: [],
+      access_role: "super_admin",
+      location_id: null,
+      all_locations: false,
     });
-    if (rpcError) {
-      return {
-        error: `Couldn't set up their account (${rpcError.message}). You need to be a Super Admin of your own organization to invite brand-new staff — otherwise have them sign up first, then add them here.`,
-      };
-    }
+    if (profileError) return { error: profileError.message };
   }
 
   const { error } = await admin

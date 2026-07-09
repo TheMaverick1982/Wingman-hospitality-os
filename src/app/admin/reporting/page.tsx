@@ -8,7 +8,7 @@ export default async function AdminReportingPage() {
   const admin = createAdminClient();
 
   const [{ data: orgs }, { data: locations }, { data: profiles }, { data: guests }] = await Promise.all([
-    admin.from("organizations").select("id, name"),
+    admin.from("organizations").select("id, name").eq("is_platform", false),
     admin.from("locations").select("id, org_id"),
     admin.from("profiles").select("id, org_id"),
     admin.from("guests").select("id, org_id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),

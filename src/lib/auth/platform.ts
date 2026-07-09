@@ -1,10 +1,15 @@
 // Granular platform-admin (staff) access. is_platform_admin marks someone as
 // platform staff; platform_access lists which /admin sections they may open.
 
+// Page-backed sections: each has its own /admin page and sidebar nav item.
 export type PlatformSection = "organizations" | "support" | "reporting" | "billing" | "analytics" | "team";
 
+// A grantable permission is either a page section or a capability toggle that
+// isn't its own page (e.g. client_login gates "Log in as client").
+export type PlatformPermission = PlatformSection | "client_login";
+
 export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; description: string; href: string }[] = [
-  { key: "organizations", label: "Organizations", description: "Customer organizations — view, create, and impersonate.", href: "/admin/organizations" },
+  { key: "organizations", label: "Organizations", description: "Customer organizations — view and create.", href: "/admin/organizations" },
   { key: "support", label: "Support", description: "View and reply to support tickets.", href: "/admin/support" },
   { key: "reporting", label: "Reporting", description: "Platform-wide reporting.", href: "/admin/reporting" },
   { key: "billing", label: "Billing", description: "Platform billing.", href: "/admin/billing" },
@@ -12,7 +17,19 @@ export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; descripti
   { key: "team", label: "Team", description: "Add and manage platform staff and their access.", href: "/admin/team" },
 ];
 
-export function canAccessPlatformSection(access: string[] | undefined, section: PlatformSection): boolean {
+// Everything grantable when setting up a teammate: the page sections above plus
+// capability toggles. client_login is a capability, not a page — and a
+// sensitive one, so it's granted explicitly rather than bundled with a section.
+export const PLATFORM_ACCESS_OPTIONS: { key: PlatformPermission; label: string; description: string }[] = [
+  ...PLATFORM_SECTIONS.map((s) => ({ key: s.key, label: s.label, description: s.description })),
+  {
+    key: "client_login",
+    label: "Log in as client",
+    description: "Open a customer's account with “Log in as client” to see exactly what they see. Grant only to people who need to troubleshoot inside a customer's account.",
+  },
+];
+
+export function canAccessPlatformSection(access: string[] | undefined, section: PlatformPermission): boolean {
   return Boolean(access?.includes(section));
 }
 
