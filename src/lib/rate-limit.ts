@@ -31,3 +31,4 @@ export async function consumeRateLimit(bucket: string, max: number, windowSecond
 // engineer prompt behavior through outputs).
 export const AI_GENERATION_LIMIT = { max: 40, windowSeconds: 3600 }; // 40 generations / org / hour
 export const API_V1_LIMIT = { max: 120, windowSeconds: 60 }; // 120 requests / key / minute
+export const ASSISTANT_LIMIT = { max: 60, windowSeconds: 3600 }; // 60 assistant messages / org / hour
