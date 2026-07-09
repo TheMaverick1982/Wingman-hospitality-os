@@ -57,6 +57,27 @@ export const CATEGORIES: HelpCategory[] = [
 
 export const ARTICLES: HelpArticle[] = [
   {
+    slug: "ask-wingman-assistant",
+    title: "Using the Ask Wingman assistant",
+    summary: "The in-app chat that answers how-to questions and reports bugs or ideas for you.",
+    categoryId: "getting-started",
+    keywords: ["assistant", "chat", "chatbot", "ask wingman", "help bot", "report bug", "suggestion", "feature request", "support"],
+    body: [
+      { kind: "p", text: "Every screen has an Ask Wingman button in the bottom-right corner. Tap it to open a chat where you can ask how to do anything in the app — it answers from this Help Center and its knowledge of how Wingman works." },
+      { kind: "h", text: "What it's great for" },
+      { kind: "list", items: [
+        "How-to questions — \"How do I log a return visit?\", \"Where do I set up report emails?\"",
+        "Understanding a screen or number — what a metric means and where to find it.",
+        "Reporting a bug — describe what went wrong and it files it to the Wingman team for you.",
+        "Suggesting an idea — ask for a change or new feature and it passes it along.",
+      ] },
+      { kind: "note", text: "The assistant can't see your live account data (your guests, numbers, or settings), so for account-specific questions it will point you to the exact place in the app to look." },
+      { kind: "h", text: "Reporting a bug or idea" },
+      { kind: "p", text: "Just tell it what happened or what you'd like. It may ask a quick clarifying question, then confirms it's reported the issue — you'll see a \"Reported to the team\" badge. The Wingman team gets the details and follows up." },
+      { kind: "tip", text: "The more specific you are — which screen you were on and what you expected — the faster the team can act on it." },
+    ],
+  },
+  {
     slug: "welcome-to-wingman",
     title: "What Wingman is (and how it's organized)",
     summary: "A quick tour of the whole system and where to find each tool.",

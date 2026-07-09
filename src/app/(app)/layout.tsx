@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/app-shell/sidebar";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -78,6 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6">{children}</div>
         </div>
       </div>
+      <AssistantWidget />
     </div>
   );
 }
