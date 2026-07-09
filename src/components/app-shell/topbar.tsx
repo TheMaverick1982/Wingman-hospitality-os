@@ -48,7 +48,7 @@ export function Topbar({
   }
 
   return (
-    <div className="sticky top-0 z-20 h-16 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex items-center justify-between px-8">
+    <div className="sticky top-0 z-20 h-16 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex items-center justify-between px-4 lg:px-8 gap-2">
       <div className="flex items-center gap-3.5">
         <span className="text-lg font-semibold tracking-[-0.01em] text-ink">{title}</span>
         {(showSwitcher || orgIsMultiLocation) && (

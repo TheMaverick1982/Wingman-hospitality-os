@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
 import { getOnboardingStatus } from "@/lib/onboarding";
 import { Sidebar } from "@/components/app-shell/sidebar";
+import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 
@@ -58,13 +59,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
+        <MobileNav
+          accessRole={profile.accessRole}
+          fullName={profile.fullName}
+          locationName={sidebarLocation?.name || profile.orgName}
+          repeatRate={repeatRate}
+          isPlatformAdmin={profile.isPlatformAdmin}
+          permissionOverrides={profile.permissionOverrides}
+          showStartHere={!!onboarding && !onboarding.allDone}
+        />
         <Topbar
           locations={switchableLocations}
           canSwitch={canSpanLocations}
           orgIsMultiLocation={locations.length > 1}
           userLocationName={profile.locationName}
         />
-        <div className="p-8 overflow-y-auto flex-1 bg-paper">
+        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto flex-1 bg-paper">
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6">{children}</div>
         </div>
       </div>
