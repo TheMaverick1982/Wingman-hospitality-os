@@ -16,6 +16,13 @@ const GREETING: Msg = {
     "Hi — I'm the Wingman assistant. Ask me how to do anything in the app, and if you hit a bug or have an idea, tell me and I'll pass it straight to the team.",
 };
 
+const STARTERS = [
+  "How do I log a return visit?",
+  "How do I set up report emails?",
+  "What does my repeat rate mean?",
+  "How do I invite a team member?",
+];
+
 export function AssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
@@ -32,8 +39,8 @@ export function AssistantWidget() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(raw?: string) {
+    const text = (raw ?? input).trim();
     if (!text || loading) return;
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
@@ -108,6 +115,20 @@ export function AssistantWidget() {
                 )}
               </div>
             ))}
+            {messages.length === 1 && !loading && (
+              <div className="flex flex-col gap-1.5 mt-1">
+                {STARTERS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => send(s)}
+                    className="self-start text-left text-[13px] font-medium text-charcoal-2 bg-white border border-line rounded-full px-3 py-1.5 hover:border-brick hover:text-brick transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             {loading && (
               <div className="self-start">
                 <div className="bg-white border border-line rounded-2xl rounded-bl-md px-3.5 py-3 flex items-center gap-1">
@@ -133,7 +154,7 @@ export function AssistantWidget() {
               />
               <button
                 type="button"
-                onClick={send}
+                onClick={() => send()}
                 disabled={!input.trim() || loading}
                 aria-label="Send message"
                 className="shrink-0 w-9 h-9 rounded-full bg-brick text-white flex items-center justify-center disabled:opacity-40 hover:opacity-90"
