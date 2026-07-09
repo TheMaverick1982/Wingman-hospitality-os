@@ -1,0 +1,170 @@
+"use client";
+
+import { useActionState, useState, useTransition } from "react";
+import { MessagesSquare, Plus, Pencil, Trash2, Sparkles } from "lucide-react";
+import { Btn } from "@/components/ui/btn";
+import { Modal } from "@/components/ui/modal";
+import { inputClass } from "@/components/ui/field";
+import { refineTraining, applyTrainingRefinement, type RefineState, type TrainingProposal } from "./role-training-actions";
+
+const initialState: RefineState = { error: null };
+
+function listLabel(list: string) {
+  return list === "hospitality" ? "Hospitality" : "Role skill";
+}
+
+export function RefineTrainingForm({ department }: { department: string }) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState(refineTraining, initialState);
+  const [applying, startApply] = useTransition();
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  const proposal: TrainingProposal | undefined = dismissed ? undefined : state.proposal;
+
+  function close() {
+    setOpen(false);
+    setApplyError(null);
+    setDismissed(false);
+  }
+
+  function accept() {
+    if (!proposal) return;
+    setApplyError(null);
+    startApply(async () => {
+      const res = await applyTrainingRefinement(department, proposal);
+      if (res.error) setApplyError(res.error);
+      else close();
+    });
+  }
+
+  const changeCount = proposal ? proposal.add.length + proposal.edit.length + proposal.remove.length : 0;
+
+  return (
+    <>
+      <Btn small kind="ghost" icon={MessagesSquare} onClick={() => setOpen(true)}>
+        Refine with AI
+      </Btn>
+      {open && (
+        <Modal
+          title={`Refine ${department} training`}
+          sub="Tell Wingman what to add, reword, or remove — you'll review every change before it's applied."
+          onClose={close}
+          wide
+        >
+          {!proposal ? (
+            <form action={formAction} onSubmit={() => setDismissed(false)}>
+              <input type="hidden" name="department" value={department} />
+              <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">What would you like to change?</label>
+              <textarea
+                name="feedback"
+                rows={4}
+                required
+                maxLength={2000}
+                placeholder="e.g. We're big on regulars — add items about remembering names and usual orders. And make the greeting items about welcoming within 30 seconds."
+                className={`${inputClass} resize-none`}
+              />
+              {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}
+              <div className="flex justify-end gap-2 mt-4">
+                <Btn type="button" kind="ghost" onClick={close}>
+                  Cancel
+                </Btn>
+                <Btn type="submit" disabled={pending} icon={Sparkles}>
+                  {pending ? "Thinking..." : "Get suggestions"}
+                </Btn>
+              </div>
+            </form>
+          ) : (
+            <div>
+              <p className="text-sm text-muted mb-4">{proposal.summary}</p>
+
+              <div className="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-1">
+                {proposal.add.length > 0 && (
+                  <Section title="New items" tone="add" icon={<Plus size={14} />}>
+                    {proposal.add.map((c, i) => (
+                      <ChangeCard key={`a${i}`} tag={listLabel(c.list)} reason={c.reason}>
+                        <span className="text-ink">{c.item}</span>
+                      </ChangeCard>
+                    ))}
+                  </Section>
+                )}
+                {proposal.edit.length > 0 && (
+                  <Section title="Reworded items" tone="edit" icon={<Pencil size={14} />}>
+                    {proposal.edit.map((c, i) => (
+                      <ChangeCard key={`e${i}`} tag={listLabel(c.list)} reason={c.reason}>
+                        <span className="text-muted-2 line-through">{c.before}</span>
+                        <span className="text-ink block mt-0.5">{c.item}</span>
+                      </ChangeCard>
+                    ))}
+                  </Section>
+                )}
+                {proposal.remove.length > 0 && (
+                  <Section title="Removed items" tone="remove" icon={<Trash2 size={14} />}>
+                    {proposal.remove.map((c, i) => (
+                      <ChangeCard key={`r${i}`} tag={listLabel(c.list)} reason={c.reason}>
+                        <span className="text-muted-2 line-through">{c.item}</span>
+                      </ChangeCard>
+                    ))}
+                  </Section>
+                )}
+              </div>
+
+              {applyError && <p className="text-sm text-danger mt-3">{applyError}</p>}
+
+              <div className="flex justify-between gap-2 mt-5">
+                <Btn type="button" kind="ghost" onClick={() => setDismissed(true)}>
+                  Start over
+                </Btn>
+                <div className="flex gap-2">
+                  <Btn type="button" kind="ghost" onClick={close}>
+                    Discard
+                  </Btn>
+                  <Btn type="button" disabled={applying} onClick={accept} icon={Sparkles}>
+                    {applying ? "Applying..." : `Apply ${changeCount} change${changeCount === 1 ? "" : "s"}`}
+                  </Btn>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function Section({
+  title,
+  tone,
+  icon,
+  children,
+}: {
+  title: string;
+  tone: "add" | "edit" | "remove";
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const color =
+    tone === "add" ? "text-[#15803d]" : tone === "remove" ? "text-brick" : "text-[#B45309]";
+  return (
+    <div>
+      <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2 ${color}`}>
+        {icon} {title}
+      </div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
+
+function ChangeCard({ tag, reason, children }: { tag: string; reason: string; children: React.ReactNode }) {
+  return (
+    <div className="border border-line rounded-xl p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm min-w-0">{children}</div>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-2 bg-paper px-2 py-0.5 rounded-full shrink-0">
+          {tag}
+        </span>
+      </div>
+      {reason && <p className="text-xs text-muted mt-1.5">{reason}</p>}
+    </div>
+  );
+}

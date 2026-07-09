@@ -11,6 +11,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { hiringGuidanceFor, type CoreValueRow } from "@/lib/hiring";
 import { HiringTraitBuilder } from "./hiring-trait-builder";
+import { RefineHiringForm } from "./refine-hiring-form";
 import { addHiringTrait, updateHiringTrait, deleteHiringTrait, type TraitState } from "./hiring-builder-actions";
 
 export type HiringTrait = {
@@ -97,6 +98,7 @@ export function HiringClient({
         </div>
         <div className="flex items-center gap-2">
           <InterviewGuideButton department={activeRole} traits={combinedTraits} />
+          {canEdit && traitsByDept[activeRole].length > 0 && <RefineHiringForm department={activeRole} />}
           {canEdit && <HiringTraitBuilder department={activeRole} />}
         </div>
       </div>

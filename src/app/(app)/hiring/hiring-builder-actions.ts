@@ -223,3 +223,192 @@ export async function deleteHiringTrait(id: string) {
   await supabase.from("hiring_traits").delete().eq("id", id);
   revalidatePath("/hiring");
 }
+
+// ---------------------------------------------------------------------------
+// Refine with AI: the owner describes changes in plain English and Wingman
+// proposes add/edit/remove changes to the CURRENT hiring criteria. Nothing is
+// written until the owner accepts (see applyHiringRefinement).
+// ---------------------------------------------------------------------------
+function extractJsonObject(text: string): string {
+  let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
+  return cleaned;
+}
+
+type TraitFields = { title: string; question: string; green_flag: string; red_flag: string };
+export type HiringChange = TraitFields & { id?: string; reason: string; before?: TraitFields };
+export type HiringProposal = { summary: string; add: HiringChange[]; edit: HiringChange[]; remove: HiringChange[] };
+export type RefineState = { error: string | null; proposal?: HiringProposal };
+
+const REFINE_SHAPE = `{"summary": string, "add": [{"title": string, "question": string, "green_flag": string, "red_flag": string, "reason": string}], "edit": [{"id": string, "title": string, "question": string, "green_flag": string, "red_flag": string, "reason": string}], "remove": [{"id": string, "reason": string}]}`;
+
+export async function refineHiring(_prev: RefineState, formData: FormData): Promise<RefineState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
+    return { error: "You don't have access to edit hiring criteria." };
+  }
+  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+  }
+
+  const department = String(formData.get("department") || "");
+  const feedback = String(formData.get("feedback") || "").trim();
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+  if (!feedback) return { error: "Tell Wingman what you'd like to change or add." };
+  if (feedback.length > 2000) return { error: "Please keep your request under 2000 characters." };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const { data: rows } = await supabase
+    .from("hiring_traits")
+    .select("id, title, question, green_flag, red_flag")
+    .eq("org_id", org.id)
+    .eq("department", department)
+    .order("sort_order");
+  const byId = new Map<string, TraitFields>();
+  for (const r of (rows ?? []) as (TraitFields & { id: string })[]) {
+    byId.set(r.id, { title: r.title, question: r.question, green_flag: r.green_flag, red_flag: r.red_flag });
+  }
+  const currentForModel = [...byId.entries()].map(([id, v]) => ({ id, ...v }));
+
+  const prompt = `You are refining the existing ${department} hiring criteria for a restaurant based on the owner's request.
+
+CURRENT INTERVIEW TRAITS (JSON — each has a title, an interview question, a green_flag = what a good answer sounds like, and a red_flag = what a concerning answer sounds like):
+${JSON.stringify(currentForModel)}
+
+THE OWNER'S REQUEST:
+"${feedback}"
+
+Propose the smallest set of changes that fully satisfies the request. You may:
+- "add" brand-new traits (each with title, question, green_flag, red_flag),
+- "edit" an existing trait by its "id" (return the full improved title/question/green_flag/red_flag),
+- "remove" an existing trait by its "id".
+Only edit or remove traits whose "id" appears in the current list above. Keep every green_flag/red_flag concrete — never vague adjectives. If the request only asks to add, leave edit/remove empty. Give a one-line "reason" for each change and a one-sentence "summary" of the whole proposal.
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${REFINE_SHAPE}`;
+
+  let parsed: {
+    summary?: string;
+    add?: Partial<TraitFields & { reason: string }>[];
+    edit?: Partial<TraitFields & { id: string; reason: string }>[];
+    remove?: { id?: string; reason?: string }[];
+  };
+  try {
+    const response = await callAnthropic(apiKey, {
+      model: "claude-sonnet-5",
+      max_tokens: 2500,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const text = (data.content ?? [])
+      .filter((b: { type: string }) => b.type === "text")
+      .map((b: { text: string }) => b.text)
+      .join("\n");
+    parsed = JSON.parse(extractJsonObject(text));
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't generate suggestions. Try again." };
+  }
+
+  const clip = (s: unknown, n = 400) => String(s ?? "").trim().slice(0, n);
+  const fields = (o: Partial<TraitFields>): TraitFields => ({
+    title: clip(o.title, 120),
+    question: clip(o.question),
+    green_flag: clip(o.green_flag),
+    red_flag: clip(o.red_flag),
+  });
+  const add: HiringChange[] = (parsed.add ?? [])
+    .filter((a) => String(a.title ?? "").trim() && String(a.question ?? "").trim())
+    .map((a) => ({ ...fields(a), reason: clip(a.reason) }));
+  const edit: HiringChange[] = (parsed.edit ?? [])
+    .filter((e) => e.id && byId.has(String(e.id)) && String(e.title ?? "").trim())
+    .map((e) => ({ id: String(e.id), ...fields(e), before: byId.get(String(e.id)), reason: clip(e.reason) }));
+  const remove: HiringChange[] = (parsed.remove ?? [])
+    .filter((r) => r.id && byId.has(String(r.id)))
+    .map((r) => ({ id: String(r.id), ...byId.get(String(r.id))!, reason: clip(r.reason) }));
+
+  if (add.length === 0 && edit.length === 0 && remove.length === 0) {
+    return { error: "Wingman didn't find anything to change for that request. Try rephrasing what you'd like." };
+  }
+
+  return { error: null, proposal: { summary: clip(parsed.summary || "Proposed changes"), add, edit, remove } };
+}
+
+// Apply an owner-approved proposal. Re-validates every id against the DB, so a
+// tampered payload can still only add/edit/remove this department's own traits.
+export async function applyHiringRefinement(department: string, proposal: HiringProposal): Promise<TraitState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
+    return { error: "You don't have access to edit hiring criteria." };
+  }
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const { data: rows } = await supabase
+    .from("hiring_traits")
+    .select("id")
+    .eq("org_id", org.id)
+    .eq("department", department);
+  const validIds = new Set((rows ?? []).map((r) => (r as { id: string }).id));
+
+  const clip = (s: unknown, n = 400) => String(s ?? "").trim().slice(0, n);
+
+  for (const r of proposal.remove ?? []) {
+    if (!r.id || !validIds.has(String(r.id))) continue;
+    await supabase.from("hiring_traits").delete().eq("id", r.id).eq("org_id", org.id);
+  }
+  for (const e of proposal.edit ?? []) {
+    if (!e.id || !validIds.has(String(e.id)) || !clip(e.title, 120)) continue;
+    await supabase
+      .from("hiring_traits")
+      .update({
+        title: clip(e.title, 120),
+        question: clip(e.question),
+        green_flag: clip(e.green_flag),
+        red_flag: clip(e.red_flag),
+      })
+      .eq("id", e.id)
+      .eq("org_id", org.id);
+  }
+  const adds = (proposal.add ?? []).filter((a) => clip(a.title, 120) && clip(a.question));
+  if (adds.length > 0) {
+    const { count } = await supabase
+      .from("hiring_traits")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", org.id)
+      .eq("department", department);
+    let sort = count ?? 0;
+    const rowsToInsert = adds.map((a) => ({
+      org_id: org.id,
+      department,
+      title: clip(a.title, 120),
+      question: clip(a.question),
+      green_flag: clip(a.green_flag),
+      red_flag: clip(a.red_flag),
+      sort_order: sort++,
+      source: "custom",
+    }));
+    const { error } = await supabase.from("hiring_traits").insert(rowsToInsert);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/hiring");
+  return { error: null };
+}
