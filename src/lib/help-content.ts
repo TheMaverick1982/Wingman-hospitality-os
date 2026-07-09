@@ -64,6 +64,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["assistant", "chat", "chatbot", "ask wingman", "help bot", "report bug", "suggestion", "feature request", "support"],
     body: [
       { kind: "p", text: "Every screen has an Ask Wingman button in the bottom-right corner. Tap it to open a chat where you can ask how to do anything in the app — it answers from this Help Center and its knowledge of how Wingman works." },
+      { kind: "image", src: "/help/ask-wingman.png", alt: "The Ask Wingman assistant panel showing a greeting and tappable suggested questions.", caption: "Open the assistant from the button in the bottom-right of any screen." },
       { kind: "h", text: "What it's great for" },
       { kind: "list", items: [
         "How-to questions — \"How do I log a return visit?\", \"Where do I set up report emails?\"",
