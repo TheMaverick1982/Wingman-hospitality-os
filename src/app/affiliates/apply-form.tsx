@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { HoneypotField } from "@/components/honeypot-field";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { applyAsAffiliate, type ApplyState } from "./actions";
 
 const initial: ApplyState = { error: null, ok: false };
@@ -68,6 +69,8 @@ export function AffiliateApplyForm() {
           — no spam, no self-referrals, and no bidding on Wingman-branded search terms.
         </span>
       </label>
+
+      <TurnstileWidget />
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
 

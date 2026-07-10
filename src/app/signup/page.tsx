@@ -7,6 +7,7 @@ import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { HoneypotField } from "@/components/honeypot-field";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = { error: null, checkEmail: false };
@@ -101,6 +102,9 @@ export default function SignupPage() {
                   className={inputClass}
                 />
               </Field>
+              <div className="mt-1">
+                <TurnstileWidget />
+              </div>
               {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
               <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
                 {pending ? "Creating..." : "Create workspace"}

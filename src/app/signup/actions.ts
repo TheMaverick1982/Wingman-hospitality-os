@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import { formTrippedHoneypot } from "@/lib/honeypot";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export type SignupState = { error: string | null; checkEmail: boolean };
 
@@ -13,6 +14,9 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   // sent so the bot moves on, but create no account.
   if (formTrippedHoneypot(formData)) {
     return { error: null, checkEmail: true };
+  }
+  if (!(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null))) {
+    return { error: "Couldn't verify you're human. Please refresh the page and try again.", checkEmail: false };
   }
 
   const orgName = String(formData.get("orgName") || "").trim();
