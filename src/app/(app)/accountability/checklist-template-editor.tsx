@@ -12,6 +12,7 @@ import {
   updateAccountabilityItemText,
   deleteAccountabilityItem,
   generateAccountabilityChecklist,
+  saveAccountabilityChecklist,
   type ChecklistType,
   type TemplateItem,
   type ItemState,
@@ -123,19 +124,88 @@ export function ChecklistTemplateEditor({
   );
 }
 
+function BuilderItemList({ items, setItems }: { items: string[]; setItems: (v: string[]) => void }) {
+  return (
+    <div>
+      <div className="text-[13px] font-semibold text-ink mb-2">
+        Checklist items <span className="text-muted-2">({items.length})</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {items.map((it, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              value={it}
+              onChange={(e) => setItems(items.map((x, j) => (j === i ? e.target.value : x)))}
+              className={`${inputClass} text-[13px] py-1.5`}
+            />
+            <button
+              type="button"
+              onClick={() => setItems(items.filter((_, j) => j !== i))}
+              aria-label="Remove item"
+              className="shrink-0 text-muted-2 hover:text-danger"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        ))}
+        {items.length === 0 && <p className="text-xs text-muted">None — removed.</p>}
+      </div>
+    </div>
+  );
+}
+
 function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType; label: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
   const [state, formAction, pending] = useActionState(generateAccountabilityChecklist, buildInitial);
 
-  // On a successful build, show the confirmation briefly, then close so the new
-  // checklist is visible on the page.
+  // Review state.
+  const [items, setItems] = useState<string[]>([]);
+  const [ignore, setIgnore] = useState(true);
+  const [saving, startSave] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<number | null>(null);
+
+  const reviewing = state.items != null && !ignore;
+
+  // Fresh preview arrives → load it into the editable review list. Syncing an
+  // async action result into local editable state is the intended use here.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (state.built != null && !state.error) {
+    if (state.items) {
+      setItems(state.items);
+      setIgnore(false);
+      setSaved(null);
+      setSaveError(null);
+    }
+  }, [state.items]);
+
+  // Reset to the input step each time the modal opens.
+  useEffect(() => {
+    if (open) {
+      setIgnore(true);
+      setSaved(null);
+      setSaveError(null);
+    }
+  }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Confirm the save briefly, then close so the new checklist is visible on the page.
+  useEffect(() => {
+    if (saved != null) {
       const t = setTimeout(() => setOpen(false), 1400);
       return () => clearTimeout(t);
     }
-  }, [state.built, state.error]);
+  }, [saved]);
+
+  function doSave() {
+    setSaveError(null);
+    startSave(async () => {
+      const res = await saveAccountabilityChecklist(checklistType, items);
+      if (res.error) setSaveError(res.error);
+      else setSaved(res.built ?? items.length);
+    });
+  }
 
   return (
     <>
@@ -144,106 +214,129 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
       </Btn>
       {open && (
         <Modal
-          title={`Build ${label}`}
-          sub="Upload what you already use, or let Wingman build it from scratch -- guest experience woven in alongside operational discipline."
+          title={reviewing ? `Review ${label}` : `Build ${label}`}
+          sub={
+            reviewing
+              ? "Edit or remove anything below, then save. Nothing changes until you save."
+              : "Upload what you already use, or let Wingman build it from scratch -- guest experience woven in alongside operational discipline."
+          }
           onClose={() => setOpen(false)}
           wide
         >
-          <div className="flex gap-2 mb-5 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setMode("paste")}
-              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
-                mode === "paste" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
-              }`}
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
-                <Clipboard size={15} /> Paste text
+          {reviewing ? (
+            <div>
+              <div className="max-h-[52vh] overflow-y-auto pr-1">
+                <BuilderItemList items={items} setItems={setItems} />
               </div>
-              <p className="text-xs text-muted">Paste your checklist — the most reliable way in.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("upload")}
-              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
-                mode === "upload" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
-              }`}
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
-                <Upload size={15} /> Upload a file
+              {saveError && <p className="text-sm text-danger mt-3">{saveError}</p>}
+              {saved != null && <p className="text-sm text-[#15803d] mt-3">Saved {saved} items.</p>}
+              <div className="flex justify-between gap-2 mt-4">
+                <Btn type="button" kind="ghost" onClick={() => setIgnore(true)}>
+                  Start over
+                </Btn>
+                <Btn type="button" onClick={doSave} disabled={saving || saved != null || items.length === 0} icon={Sparkles}>
+                  {saving ? "Saving..." : saved != null ? "Saved" : "Save checklist"}
+                </Btn>
               </div>
-              <p className="text-xs text-muted">A PDF or photo of what you already use.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("wizard")}
-              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
-                mode === "wizard" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
-              }`}
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
-                <Sparkles size={15} /> Build from scratch
-              </div>
-              <p className="text-xs text-muted">Answer a couple questions and Wingman writes it.</p>
-            </button>
-          </div>
-
-          <form action={formAction}>
-            <input type="hidden" name="checklistType" value={checklistType} />
-            <input type="hidden" name="mode" value={mode} />
-
-            {mode === "paste" ? (
-              <div className="mb-2">
-                <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Paste your existing checklist</label>
-                <textarea
-                  name="pastedText"
-                  rows={7}
-                  required
-                  placeholder="Paste your checklist items or SOP text here…"
-                  className={`${inputClass} resize-y`}
-                />
-              </div>
-            ) : mode === "upload" ? (
-              <div className="mb-2">
-                <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Existing checklist document</label>
-                <input
-                  type="file"
-                  name="file"
-                  accept="image/*,application/pdf"
-                  required
-                  className="text-sm text-charcoal-2 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-paper file:text-ink file:text-sm file:font-semibold w-full"
-                />
-                <p className="text-xs text-muted mt-1.5">Best for a clear PDF or sharp photo. If it errors, use Paste instead.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 mb-2">
-                <div>
-                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
-                    What&apos;s the #1 recurring issue this checklist should catch?
-                  </label>
-                  <textarea name="painPoint" rows={2} className={`${inputClass} resize-none`} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
-                    What does &quot;guest experience done right&quot; look like on your floor, that this should reinforce?
-                  </label>
-                  <textarea name="mustHave" rows={2} className={`${inputClass} resize-none`} />
-                </div>
-              </div>
-            )}
-
-            {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}
-            {state.built != null && !state.error && <p className="text-sm text-[#15803d] mt-2">Built {state.built} items.</p>}
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
-                Close
-              </Btn>
-              <Btn type="submit" disabled={pending} icon={Sparkles}>
-                {pending ? "Building..." : "Build checklist"}
-              </Btn>
             </div>
-          </form>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setMode("paste")}
+                  className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
+                    mode === "paste" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                    <Clipboard size={15} /> Paste text
+                  </div>
+                  <p className="text-xs text-muted">Paste your checklist — the most reliable way in.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("upload")}
+                  className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
+                    mode === "upload" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                    <Upload size={15} /> Upload a file
+                  </div>
+                  <p className="text-xs text-muted">A PDF or photo of what you already use.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("wizard")}
+                  className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
+                    mode === "wizard" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                    <Sparkles size={15} /> Build from scratch
+                  </div>
+                  <p className="text-xs text-muted">Answer a couple questions and Wingman writes it.</p>
+                </button>
+              </div>
+
+              <form action={formAction}>
+                <input type="hidden" name="checklistType" value={checklistType} />
+                <input type="hidden" name="mode" value={mode} />
+
+                {mode === "paste" ? (
+                  <div className="mb-2">
+                    <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Paste your existing checklist</label>
+                    <textarea
+                      name="pastedText"
+                      rows={7}
+                      required
+                      placeholder="Paste your checklist items or SOP text here…"
+                      className={`${inputClass} resize-y`}
+                    />
+                  </div>
+                ) : mode === "upload" ? (
+                  <div className="mb-2">
+                    <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Existing checklist document</label>
+                    <input
+                      type="file"
+                      name="file"
+                      accept="image/*,application/pdf"
+                      required
+                      className="text-sm text-charcoal-2 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-paper file:text-ink file:text-sm file:font-semibold w-full"
+                    />
+                    <p className="text-xs text-muted mt-1.5">Best for a clear PDF or sharp photo. If it errors, use Paste instead.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 mb-2">
+                    <div>
+                      <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
+                        What&apos;s the #1 recurring issue this checklist should catch?
+                      </label>
+                      <textarea name="painPoint" rows={2} className={`${inputClass} resize-none`} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">
+                        What does &quot;guest experience done right&quot; look like on your floor, that this should reinforce?
+                      </label>
+                      <textarea name="mustHave" rows={2} className={`${inputClass} resize-none`} />
+                    </div>
+                  </div>
+                )}
+
+                {state.error && <p className="text-sm text-danger mt-2">{state.error}</p>}
+
+                <div className="flex justify-end gap-2 mt-4">
+                  <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
+                    Close
+                  </Btn>
+                  <Btn type="submit" disabled={pending} icon={Sparkles}>
+                    {pending ? "Building..." : "Build & review"}
+                  </Btn>
+                </div>
+              </form>
+            </>
+          )}
         </Modal>
       )}
     </>

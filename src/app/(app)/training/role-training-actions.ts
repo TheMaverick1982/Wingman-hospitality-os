@@ -8,7 +8,11 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
 
-export type BuildState = { error: string | null; built?: { hospitality: number; role: number } };
+export type BuildState = {
+  error: string | null;
+  program?: GeneratedProgram; // preview from generate (not yet saved)
+  built?: { hospitality: number; role: number }; // result after save
+};
 
 type GeneratedProgram = {
   hospitality_items: string[];
@@ -202,12 +206,33 @@ ${RESPONSE_SHAPE}`;
     return { error: err instanceof Error ? err.message : "Training generation failed. Try again." };
   }
 
+  // Return the preview for review — nothing is saved until saveRoleTraining().
+  return { error: null, program: generated };
+}
+
+// Persist the reviewed program. Replaces this department's previous AI/upload
+// output (source = 'wingman') but leaves hand-typed 'custom' items untouched.
+export async function saveRoleTraining(
+  department: string,
+  hospitalityItems: string[],
+  roleItems: string[],
+  trackLabel?: string
+): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to save training content." };
+  }
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+
+  const hospitality = hospitalityItems.map((s) => String(s).trim()).filter(Boolean);
+  const role = roleItems.map((s) => String(s).trim()).filter(Boolean);
+  if (hospitality.length === 0 && role.length === 0) return { error: "Nothing to save — add at least one item." };
+
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  // Replace this department's previous AI/upload output, but leave anything
-  // a manager typed in by hand (source = 'custom') untouched.
   const { data: oldStandards } = await supabase
     .from("department_standards")
     .select("id")
@@ -244,40 +269,24 @@ ${RESPONSE_SHAPE}`;
     .eq("org_id", org.id)
     .eq("department", department);
 
-  if (generated.hospitality_items.length > 0) {
+  if (hospitality.length > 0) {
     const { error } = await supabase.from("department_standards").insert(
-      generated.hospitality_items.map((item, i) => ({
-        org_id: org.id,
-        department,
-        item,
-        sort_order: (standardsBase ?? 0) + i,
-        source: "wingman",
-      }))
+      hospitality.map((item, i) => ({ org_id: org.id, department, item, sort_order: (standardsBase ?? 0) + i, source: "wingman" }))
     );
     if (error) return { error: error.message };
   }
-  if (generated.role_items.length > 0) {
+  if (role.length > 0) {
     const { error } = await supabase.from("department_training_items").insert(
-      generated.role_items.map((item, i) => ({
-        org_id: org.id,
-        department,
-        item,
-        sort_order: (trainingBase ?? 0) + i,
-        source: "wingman",
-      }))
+      role.map((item, i) => ({ org_id: org.id, department, item, sort_order: (trainingBase ?? 0) + i, source: "wingman" }))
     );
     if (error) return { error: error.message };
   }
-  if (generated.track_label) {
-    await supabase
-      .from("department_meta")
-      .update({ track_label: generated.track_label })
-      .eq("org_id", org.id)
-      .eq("department", department);
+  if (trackLabel) {
+    await supabase.from("department_meta").update({ track_label: trackLabel }).eq("org_id", org.id).eq("department", department);
   }
 
   revalidatePath("/training");
-  return { error: null, built: { hospitality: generated.hospitality_items.length, role: generated.role_items.length } };
+  return { error: null, built: { hospitality: hospitality.length, role: role.length } };
 }
 
 export type ItemState = { error: string | null };

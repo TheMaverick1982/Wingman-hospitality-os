@@ -84,7 +84,7 @@ ${HOSPITALITY_DOCTRINE}
 
 You output only valid JSON matching the requested schema exactly, no markdown fences, no commentary outside the JSON.`;
 
-export type BuildState = { error: string | null; built?: number };
+export type BuildState = { error: string | null; items?: string[]; built?: number };
 
 export async function generateAccountabilityChecklist(_prev: BuildState, formData: FormData): Promise<BuildState> {
   const profile = await getCurrentProfile();
@@ -195,6 +195,22 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
     return { error: err instanceof Error ? err.message : "Checklist generation failed. Try again." };
   }
 
+  // Return the preview for review — nothing is saved until saveAccountabilityChecklist().
+  return { error: null, items: items.map((i) => String(i)) };
+}
+
+// Persist the reviewed checklist, replacing this checklist's previous AI output.
+export async function saveAccountabilityChecklist(checklistType: ChecklistType, items: string[]): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "accountability", profile.permissionOverrides)) {
+    return { error: "You don't have access to save checklists." };
+  }
+  if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };
+
+  const clean = (items ?? []).map((s) => String(s).trim()).filter(Boolean);
+  if (clean.length === 0) return { error: "Nothing to save — keep at least one item." };
+
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
@@ -208,7 +224,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
     .eq("checklist_type", checklistType);
 
   const { error } = await supabase.from("accountability_checklist_items").insert(
-    items.map((item, i) => ({
+    clean.map((item, i) => ({
       org_id: org.id,
       checklist_type: checklistType,
       item,
@@ -219,7 +235,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
   if (error) return { error: error.message };
 
   revalidatePath("/accountability");
-  return { error: null, built: items.length };
+  return { error: null, built: clean.length };
 }
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
