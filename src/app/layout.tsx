@@ -90,7 +90,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-paper text-ink font-sans">
+      <body className="force-light min-h-full flex flex-col bg-paper text-ink font-sans">
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
