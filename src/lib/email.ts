@@ -1,15 +1,22 @@
 import "server-only";
 
+// Transactional email via Resend. Sends from the verified `updates.joinwingman.app`
+// subdomain (the root joinwingman.app isn't verified in Resend). Use `replyTo`
+// when a human might reply (e.g. support) so replies reach a real inbox.
+export const MAIL_FROM = "Wingman <reports@updates.joinwingman.app>";
+
 export async function sendEmail({
   to,
   subject,
   html,
   from,
+  replyTo,
 }: {
   to: string[];
   subject: string;
   html: string;
   from?: string;
+  replyTo?: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY isn't configured yet.");
@@ -21,10 +28,11 @@ export async function sendEmail({
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: from ?? "Wingman Reports <reports@joinwingman.app>",
+      from: from ?? MAIL_FROM,
       to,
       subject,
       html,
+      ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });
 
