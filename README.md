@@ -21,3 +21,4 @@ by Supabase Row Level Security.
 
 Schema and RLS policies live in `supabase/migrations/`. Apply them to your Supabase
 project via the SQL Editor or `supabase db push`.
+
