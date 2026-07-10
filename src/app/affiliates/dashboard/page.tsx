@@ -8,7 +8,10 @@ import {
   effectiveCookieDays,
   referralLink,
 } from "@/lib/affiliate";
+import { commissionSummaryForAffiliate } from "@/lib/affiliate-commissions";
 import { CopyLink, SettingsForm } from "./dashboard-client";
+
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export default async function AffiliateDashboardPage() {
   const supabase = await createClient();
@@ -43,9 +46,10 @@ export default async function AffiliateDashboardPage() {
 
   const link = affiliate.code ? referralLink(affiliate.code) : "";
   const pct = effectiveCommissionPct(affiliate, settings);
-  const [{ count: clicks }, { count: signups }] = await Promise.all([
+  const [{ count: clicks }, { count: signups }, earnings] = await Promise.all([
     admin.from("affiliate_clicks").select("id", { count: "exact", head: true }).eq("affiliate_id", affiliate.id),
     admin.from("affiliate_referrals").select("id", { count: "exact", head: true }).eq("affiliate_id", affiliate.id),
+    commissionSummaryForAffiliate(admin, affiliate.id),
   ]);
 
   const stats = [
@@ -82,13 +86,26 @@ export default async function AffiliateDashboardPage() {
         ))}
       </div>
 
-      {/* Earnings placeholder */}
+      {/* Earnings */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-        <div className="text-[13px] font-semibold uppercase tracking-wide text-muted-2 mb-2">Earnings</div>
-        <p className="text-[15px] text-muted leading-relaxed">
-          Commissions appear here once your referred restaurants become paying customers. Each commission is held until the
-          customer&apos;s second successful payment, then paid to your PayPal once your balance clears the $
-          {(settings.min_payout_cents / 100).toFixed(0)} minimum.
+        <div className="text-[13px] font-semibold uppercase tracking-wide text-muted-2 mb-4">Earnings</div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div>
+            <div className="text-[22px] font-bold tracking-[-0.02em] text-ink">{money(earnings.approvedCents)}</div>
+            <div className="text-[12.5px] text-muted-2 mt-0.5">Approved (owed)</div>
+          </div>
+          <div>
+            <div className="text-[22px] font-bold tracking-[-0.02em] text-charcoal-2">{money(earnings.pendingCents)}</div>
+            <div className="text-[12.5px] text-muted-2 mt-0.5">Pending (on hold)</div>
+          </div>
+          <div>
+            <div className="text-[22px] font-bold tracking-[-0.02em] text-olive">{money(earnings.paidCents)}</div>
+            <div className="text-[12.5px] text-muted-2 mt-0.5">Paid out</div>
+          </div>
+        </div>
+        <p className="text-[13px] text-muted-2 leading-relaxed">
+          Each commission is held until the customer&apos;s second successful payment, then becomes approved. Approved
+          balances are paid to your PayPal once they clear the ${(settings.min_payout_cents / 100).toFixed(0)} minimum.
         </p>
       </div>
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { markPastDue, markActive, markCanceled } from "@/lib/billing";
+import { recordReferralPayment, voidPendingForOrg } from "@/lib/affiliate-commissions";
 
 // ---------------------------------------------------------------------------
 // PROCESSOR-AGNOSTIC PAYMENT WEBHOOK (stub).
@@ -43,9 +44,13 @@ export async function POST(request: NextRequest) {
       break;
     case "payment_succeeded":
       await markActive(admin, orgId, card);
+      // Accrue/advance the affiliate commission for this successful payment.
+      await recordReferralPayment(admin, orgId);
       break;
     case "subscription_canceled":
       await markCanceled(admin, orgId);
+      // Clawback: void any still-held (pending) affiliate commission.
+      await voidPendingForOrg(admin, orgId);
       break;
     default:
       return NextResponse.json({ ignored: type ?? "unknown" });
