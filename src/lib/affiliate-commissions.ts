@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAffiliateSettings } from "@/lib/affiliate";
+import { effectiveMonthlyCents } from "@/lib/pricing";
 
 // -----------------------------------------------------------------------------
 // Affiliate commission engine (Phase 2).
@@ -11,19 +12,19 @@ import { getAffiliateSettings } from "@/lib/affiliate";
 // period_month), so running both never double-accrues.
 // -----------------------------------------------------------------------------
 
-const BASE_CENTS = 19900; // $199 first location
-const ADDL_CENTS = 10000; // $100 each additional location
-
 function monthStartISO(d = new Date()): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
-// Monthly subscription for an org from its location count (matches published
-// pricing). Used until the payment processor sends real amounts.
+// Monthly subscription for an org — the effective price (honoring any custom
+// enterprise pricing), used as the commission basis until the payment processor
+// sends real charged amounts.
 export async function monthlySubscriptionCents(admin: SupabaseClient, orgId: string): Promise<number> {
-  const { count } = await admin.from("locations").select("id", { count: "exact", head: true }).eq("org_id", orgId);
-  const locations = Math.max(1, count ?? 1);
-  return BASE_CENTS + ADDL_CENTS * (locations - 1);
+  const [{ count }, { data: org }] = await Promise.all([
+    admin.from("locations").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    admin.from("organizations").select("custom_monthly_cents, custom_addl_location_cents").eq("id", orgId).maybeSingle(),
+  ]);
+  return effectiveMonthlyCents(org as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null } | null, count ?? 1);
 }
 
 // Record one successful payment for a referred org: approve the previously-held

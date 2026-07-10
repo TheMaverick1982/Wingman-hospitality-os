@@ -4,7 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type AccessRole } from "@/lib/auth/permissions";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { effectiveMonthlyCents, pricingLabel } from "@/lib/pricing";
 import { impersonateUser } from "../actions";
+import { PricingForm } from "./pricing-form";
 
 export default async function AdminOrganizationDetailPage({
   params,
@@ -18,7 +20,7 @@ export default async function AdminOrganizationDetailPage({
 
   const { data: org } = await admin
     .from("organizations")
-    .select("id, name, created_at")
+    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note")
     .eq("id", orgId)
     .eq("is_platform", false)
     .maybeSingle();
@@ -34,6 +36,12 @@ export default async function AdminOrganizationDetailPage({
   ]);
 
   type ProfileRow = { id: string; full_name: string; access_role: AccessRole; location_id: string | null; locations: { name: string } | null };
+
+  const pricing = org as unknown as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; pricing_note: string | null };
+  const locCount = (locations ?? []).length || 1;
+  const effCents = effectiveMonthlyCents(pricing, locCount);
+  const kind = pricingLabel(pricing);
+  const effectiveLabel = `$${(effCents / 100).toFixed(0)}/mo · ${kind === "standard" ? "standard pricing" : kind === "flat" ? "flat custom price" : "custom per-location rate"}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,6 +99,20 @@ export default async function AdminOrganizationDetailPage({
             {(profiles ?? []).length === 0 && <p className="text-sm text-muted">No team members yet.</p>}
           </div>
         </div>
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-1">Custom pricing</h2>
+        <p className="text-[13px] text-muted mb-4">
+          Enterprise override for this organization only — never advertised or shown to other customers.
+        </p>
+        <PricingForm
+          orgId={org.id}
+          monthlyCents={pricing.custom_monthly_cents}
+          addlCents={pricing.custom_addl_location_cents}
+          note={pricing.pricing_note ?? ""}
+          effectiveLabel={effectiveLabel}
+        />
       </div>
     </div>
   );
