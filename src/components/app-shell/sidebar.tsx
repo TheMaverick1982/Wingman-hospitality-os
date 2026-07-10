@@ -82,7 +82,7 @@ export function Sidebar({
         <WingmanLogo className="h-6 w-auto" />
       </Link>
 
-      <nav className="flex flex-col gap-0.5">
+      <nav className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto">
         {showStartHere && (
           <Link
             href="/start-here"
@@ -154,7 +154,7 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="mt-auto">
+      <div className="mt-auto shrink-0 pt-3">
         {isPlatformAdmin && (
           <Link
             href="/admin/organizations"
