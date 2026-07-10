@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { formTrippedHoneypot } from "@/lib/honeypot";
 import { sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/affiliate";
 
@@ -34,6 +35,11 @@ async function findUserIdByEmail(admin: SupabaseClient, email: string): Promise<
 // Public affiliate application. Creates a login immediately (or links an
 // existing Wingman account) and files a PENDING affiliate for admin review.
 export async function applyAsAffiliate(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
+  // Spam bot filled the hidden honeypot field. Pretend it worked so the bot
+  // moves on, but create no login, no affiliate row, and send no email.
+  if (formTrippedHoneypot(formData)) {
+    return { error: null, ok: true, message: "Application received. We'll review it and email you shortly." };
+  }
   if (!(await consumeRateLimit(`affiliate_apply:${await clientIp()}`, 5, 3600))) {
     return { error: "Too many applications from this connection. Please try again later.", ok: false };
   }

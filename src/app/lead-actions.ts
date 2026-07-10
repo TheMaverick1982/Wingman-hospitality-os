@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { isHoneypotFilled } from "@/lib/honeypot";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 
@@ -28,7 +29,11 @@ export async function captureLead(input: {
   payload?: Record<string, unknown>;
   summary?: string; // short human summary for the team email
   resultHtml?: string; // if set, also emailed to the prospect
+  hp?: string; // honeypot; real users leave this empty
 }): Promise<LeadState> {
+  // Spam bot filled the hidden honeypot field. Pretend success; store nothing.
+  if (isHoneypotFilled(input.hp)) return { error: null, ok: true };
+
   const email = String(input.email || "").trim().toLowerCase();
   const source = String(input.source || "");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address.", ok: false };

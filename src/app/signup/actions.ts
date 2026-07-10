@@ -4,10 +4,17 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
+import { formTrippedHoneypot } from "@/lib/honeypot";
 
 export type SignupState = { error: string | null; checkEmail: boolean };
 
 export async function signup(_prev: SignupState, formData: FormData): Promise<SignupState> {
+  // Spam bot filled the hidden honeypot field. Pretend a confirmation email was
+  // sent so the bot moves on, but create no account.
+  if (formTrippedHoneypot(formData)) {
+    return { error: null, checkEmail: true };
+  }
+
   const orgName = String(formData.get("orgName") || "").trim();
   const locationName = String(formData.get("locationName") || "").trim();
   const fullName = String(formData.get("fullName") || "").trim();

@@ -6,6 +6,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
+import { HoneypotField } from "@/components/honeypot-field";
 import { signup, type SignupState } from "./actions";
 
 const initialState: SignupState = { error: null, checkEmail: false };
@@ -76,6 +77,7 @@ export default function SignupPage() {
             <p className="text-[15px] text-muted mb-7">No credit card required.</p>
 
             <form action={formAction} className="flex flex-col gap-1">
+              <HoneypotField />
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Your name">
                   <input name="fullName" placeholder="Nadia K." required className={inputClass} />
