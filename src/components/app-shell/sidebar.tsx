@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
+import { SidebarLocationStat, type LocationStat } from "./sidebar-location-stat";
 
 const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" },
@@ -50,8 +51,9 @@ function initialsOf(fullName: string): string {
 export function Sidebar({
   accessRole,
   fullName,
-  locationName,
-  repeatRate,
+  locationStats,
+  fallbackLocationName,
+  fallbackRepeatRate,
   isPlatformAdmin,
   permissionOverrides,
   showStartHere,
@@ -59,8 +61,9 @@ export function Sidebar({
 }: {
   accessRole: AccessRole;
   fullName: string;
-  locationName: string;
-  repeatRate: number;
+  locationStats: LocationStat[];
+  fallbackLocationName: string;
+  fallbackRepeatRate: number;
   isPlatformAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
@@ -164,13 +167,7 @@ export function Sidebar({
             Platform admin
           </Link>
         )}
-        <div className="bg-paper rounded-[14px] p-4 mb-3">
-          <div className="text-[13px] font-semibold text-ink mb-1 truncate">{locationName}</div>
-          <div className="text-xs text-muted mb-3">{repeatRate}% repeat rate this month</div>
-          <div className="h-1.5 rounded-full bg-line overflow-hidden">
-            <div className="h-full rounded-full bg-brick" style={{ width: `${Math.min(repeatRate, 100)}%` }} />
-          </div>
-        </div>
+        <SidebarLocationStat stats={locationStats} fallbackName={fallbackLocationName} fallbackRate={fallbackRepeatRate} />
         <div className="flex items-center gap-2.5 px-2.5 py-2 border-t border-line">
           <div className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center shrink-0 text-[13px] font-semibold">
             {initialsOf(fullName)}
