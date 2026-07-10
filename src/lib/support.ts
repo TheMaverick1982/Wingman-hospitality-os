@@ -4,8 +4,9 @@ import { sendEmail } from "@/lib/email";
 // Where new tickets / customer replies are emailed. A shared inbox so the team
 // can triage and assign, rather than a personal address.
 export const SUPPORT_INBOX = "hello@joinwingman.app";
-// Support emails are sent from the same verified domain the app already uses.
-const SUPPORT_FROM = "Wingman Support <hello@joinwingman.app>";
+// Sent from the verified `updates.` subdomain; replies route back to the real
+// hello@joinwingman.app inbox via Reply-To (set on each send below).
+const SUPPORT_FROM = "Wingman Support <hello@updates.joinwingman.app>";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://www.joinwingman.app";
 
 export type TicketStatus = "open" | "pending" | "closed";
@@ -34,6 +35,7 @@ export async function notifySupportNewTicket(o: { orgName: string; fromName: str
   await sendEmail({
     to: [SUPPORT_INBOX],
     from: SUPPORT_FROM,
+    replyTo: SUPPORT_INBOX,
     subject: `New ticket — ${o.orgName}: ${o.subject}`,
     html: shell(`
       <h2 style="font-size:18px;margin:0 0 6px;">New support ticket</h2>
@@ -49,6 +51,7 @@ export async function notifySupportReply(o: { orgName: string; fromName: string;
   await sendEmail({
     to: [SUPPORT_INBOX],
     from: SUPPORT_FROM,
+    replyTo: SUPPORT_INBOX,
     subject: `New reply — ${o.orgName}: ${o.subject}`,
     html: shell(`
       <h2 style="font-size:18px;margin:0 0 6px;">New reply on a ticket</h2>
@@ -64,6 +67,7 @@ export async function notifyCustomerReply(o: { toEmail: string; subject: string;
   await sendEmail({
     to: [o.toEmail],
     from: SUPPORT_FROM,
+    replyTo: SUPPORT_INBOX,
     subject: `Re: ${o.subject} — Wingman Support`,
     html: shell(`
       <h2 style="font-size:18px;margin:0 0 10px;">Wingman Support replied</h2>
