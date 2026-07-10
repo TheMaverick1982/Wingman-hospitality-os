@@ -43,9 +43,13 @@ const SECTIONS = [
     ],
   },
   {
-    h: "Cancellation",
+    h: "Cancellations and refunds",
     body: [
-      "You can cancel any time from Settings → Billing. Your plan stays active through the end of the current billing period, after which access ends. Your data is available to export for 30 days following cancellation.",
+      "You can cancel any time from Settings → Billing. There is no notice period and no cancellation fee. Cancellation takes effect at the end of your current billing period — your plan stays fully active until then, after which access ends.",
+      "Wingman is billed one month at a time, and your subscription renews on the same day each month (the anniversary of your signup). To avoid the next charge, cancel before that renewal date. Once a new billing period begins, that month's fee has already been charged.",
+      "Fees already charged are non-refundable, and we do not provide partial or prorated refunds for unused time, except where a refund is required by law. Any goodwill exception we choose to make is at our sole discretion and does not waive this policy.",
+      "Removing a location takes effect at your next renewal; the current period is not refunded or prorated. (Adding a location increases your subscription immediately, prorated to the current period, as described above.)",
+      "After cancellation, your data is available to export for 30 days. Please export anything you need before then.",
     ],
   },
   {
@@ -84,7 +88,7 @@ export default function TermsPage() {
         <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
           Terms of Service
         </h1>
-        <p className="text-base text-muted-2">Last updated July 9, 2026</p>
+        <p className="text-base text-muted-2">Last updated July 10, 2026</p>
       </div>
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
@@ -105,8 +109,8 @@ export default function TermsPage() {
         ))}
         <div className="border-t border-line pt-8 text-base text-charcoal-2 leading-[1.6]">
           Questions about these terms? Email{" "}
-          <a href="mailto:legal@joinwingman.app" className="text-brick font-medium">
-            legal@joinwingman.app
+          <a href="mailto:hello@joinwingman.app" className="text-brick font-medium">
+            hello@joinwingman.app
           </a>
           .
         </div>

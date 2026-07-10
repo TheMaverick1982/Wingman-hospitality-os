@@ -8,7 +8,7 @@ import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/
 import { Pill } from "@/components/ui/pill";
 import { StatusPill } from "@/components/ui/status-pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
-import { CandidateModalButton } from "./candidate-modal";
+import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { HireCandidateButton } from "./hire-candidate-button";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
@@ -118,10 +118,18 @@ export default async function HiringPage({
         </div>
         <div className="shrink-0">
           <CandidateModalButton
-            coreValueTitles={(coreValues ?? []).map((v) => v.title)}
+            universalTraits={(coreValues ?? []).map((v) => ({
+              title: v.title,
+              question: v.hiring_question,
+              green_flag: v.hiring_green_flag,
+              red_flag: v.hiring_red_flag,
+            }))}
             traitsByDept={Object.fromEntries(
-              Object.entries(traitsByDept).map(([d, traits]) => [d, traits.map((t) => t.title)])
-            ) as Record<Department, string[]>}
+              Object.entries(traitsByDept).map(([d, traits]) => [
+                d,
+                traits.map((t) => ({ title: t.title, question: t.question, green_flag: t.green_flag, red_flag: t.red_flag })),
+              ])
+            ) as Record<Department, ScoreTrait[]>}
             locations={locations}
             staff={staff}
             isGm={isSuperAdmin}
