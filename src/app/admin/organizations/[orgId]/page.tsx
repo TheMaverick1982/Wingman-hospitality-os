@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type AccessRole } from "@/lib/auth/permissions";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
-import { effectiveMonthlyCents, pricingLabel } from "@/lib/pricing";
+import { effectiveMonthlyCents, pricingLabel, BASE_CENTS, ADDL_CENTS } from "@/lib/pricing";
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
 
@@ -41,7 +41,22 @@ export default async function AdminOrganizationDetailPage({
   const locCount = (locations ?? []).length || 1;
   const effCents = effectiveMonthlyCents(pricing, locCount);
   const kind = pricingLabel(pricing);
-  const effectiveLabel = `$${(effCents / 100).toFixed(0)}/mo · ${kind === "standard" ? "standard pricing" : kind === "flat" ? "flat custom price" : "custom per-location rate"}`;
+  const dollars = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const kindLabel = kind === "standard" ? "standard pricing" : kind === "flat" ? "flat custom price" : "custom per-location rate";
+  const extra = locCount - 1;
+
+  // Show the math so it stays clear (and auto-updates if their per-location rate changes).
+  let effectiveLabel: string;
+  if (kind === "flat") {
+    effectiveLabel = `${dollars(effCents)}/mo · ${kindLabel} (flat — ignores location count)`;
+  } else {
+    const addlRate = pricing.custom_addl_location_cents ?? ADDL_CENTS;
+    const breakdown =
+      `${dollars(BASE_CENTS)} base` +
+      (extra > 0 ? ` + ${extra} × ${dollars(addlRate)}/location` : "") +
+      ` = ${dollars(effCents)}/mo`;
+    effectiveLabel = `${breakdown} · ${kindLabel}`;
+  }
 
   return (
     <div className="flex flex-col gap-6">
