@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, MessageSquareText, Check, X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
@@ -16,8 +16,15 @@ import { addCandidate, type ActionState } from "./actions";
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
 
+export type ScoreTrait = {
+  title: string;
+  question: string | null;
+  green_flag: string | null;
+  red_flag: string | null;
+};
+
 export function CandidateModalButton({
-  coreValueTitles,
+  universalTraits,
   traitsByDept,
   locations,
   staff,
@@ -27,8 +34,8 @@ export function CandidateModalButton({
   defaultDepartment,
   autoOpenDepartment,
 }: {
-  coreValueTitles: string[];
-  traitsByDept: Record<Department, string[]>;
+  universalTraits: ScoreTrait[];
+  traitsByDept: Record<Department, ScoreTrait[]>;
   locations: Location[];
   staff: StaffOption[];
   isGm: boolean;
@@ -40,6 +47,7 @@ export function CandidateModalButton({
   const [open, setOpen] = useState(false);
   const [department, setDepartment] = useState<Department>(defaultDepartment);
   const [recommendation, setRecommendation] = useState<(typeof RECOMMENDATION_OPTIONS)[number]>("Unsure");
+  const [showGuide, setShowGuide] = useState(true);
   const [state, formAction, pending] = useActionState(addCandidate, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
@@ -53,9 +61,10 @@ export function CandidateModalButton({
   }, [autoOpenDepartment]);
 
   const combinedTraits = [
-    ...coreValueTitles.map((title) => ({ title, universal: true })),
-    ...traitsByDept[department].map((title) => ({ title, universal: false })),
+    ...universalTraits.map((t) => ({ ...t, universal: true })),
+    ...traitsByDept[department].map((t) => ({ ...t, universal: false })),
   ];
+  const hasAnyGuide = combinedTraits.some((t) => t.question || t.green_flag || t.red_flag);
 
   return (
     <>
@@ -112,19 +121,54 @@ export function CandidateModalButton({
               <input type="date" name="occurredOn" defaultValue={today()} required className={inputClass} />
             </Field>
 
+            {hasAnyGuide && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[13px] font-semibold text-muted">Score each trait</span>
+                <button
+                  type="button"
+                  onClick={() => setShowGuide((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-brick hover:text-brick-dark"
+                >
+                  <MessageSquareText size={14} />
+                  {showGuide ? "Hide interview questions" : "Show interview questions"}
+                </button>
+              </div>
+            )}
+
             <div key={department} className="flex flex-col gap-3 mb-4">
               {combinedTraits.map((t, i) => (
                 <div
                   key={i}
                   className={`p-3.5 rounded-2xl border ${t.universal ? "border-line" : "border-[#ffcc80]"} bg-panel`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <Pill tone={t.universal ? "brick" : "gold"}>{t.universal ? "Universal" : department}</Pill>
                       <span className="text-sm font-semibold text-ink">{t.title}</span>
                     </div>
                     <StarRating name={`score_${i}`} />
                   </div>
+                  {showGuide && (t.question || t.green_flag || t.red_flag) && (
+                    <div className="mt-2.5 pt-2.5 border-t border-line/70 flex flex-col gap-1.5">
+                      {t.question && (
+                        <p className="text-[13px] text-charcoal-2">
+                          <span className="font-semibold text-ink">Ask:</span> {t.question}
+                        </p>
+                      )}
+                      {t.green_flag && (
+                        <p className="text-[12.5px] text-muted flex items-start gap-1.5">
+                          <Check size={13} className="mt-0.5 shrink-0 text-[#15803d]" />
+                          <span><span className="font-semibold text-[#15803d]">Green flag:</span> {t.green_flag}</span>
+                        </p>
+                      )}
+                      {t.red_flag && (
+                        <p className="text-[12.5px] text-muted flex items-start gap-1.5">
+                          <X size={13} className="mt-0.5 shrink-0 text-danger" />
+                          <span><span className="font-semibold text-danger">Red flag:</span> {t.red_flag}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

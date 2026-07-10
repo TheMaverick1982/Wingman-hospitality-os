@@ -231,6 +231,7 @@ export const ARTICLES: HelpArticle[] = [
         "Use \"Refine with AI\" to add or reword traits (e.g. \"Add a trait for handling an angry guest\"). Review, then apply.",
         "Use the interview guide to run consistent interviews.",
       ] },
+      { kind: "tip", text: "When you click \"Score a candidate\" and pick the role, the interview questions for that role appear right on the scorecard — with each trait's green flag and red flag — so the manager can ask and score in one place. Use \"Hide interview questions\" to collapse them for a quicker score." },
       { kind: "note", text: "Training and hiring content is shared org-wide, so it's the same across all your locations." },
     ],
     links: [{ label: "Training programs", href: "/help/training-programs" }],
