@@ -8,6 +8,7 @@ import { effectiveMonthlyCents, pricingLabel, BASE_CENTS, ADDL_CENTS } from "@/l
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
 import { BillingCard } from "./billing-card";
+import { billingBadge, BILLING_TONE_CLASSES } from "@/lib/billing-label";
 
 export default async function AdminOrganizationDetailPage({
   params,
@@ -68,13 +69,10 @@ export default async function AdminOrganizationDetailPage({
         </Link>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">{org.name}</h1>
-          {billing.is_free_account ? (
-            <span className="text-[12px] font-semibold text-olive bg-olive-tint px-2.5 py-1 rounded-full">Free account</span>
-          ) : (
-            <span className="text-[12px] font-semibold text-brick bg-brick-tint px-2.5 py-1 rounded-full capitalize">
-              Paid · {billing.billing_status}
-            </span>
-          )}
+          {(() => {
+            const b = billingBadge(billing.is_free_account, billing.billing_status);
+            return <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-full ${BILLING_TONE_CLASSES[b.tone]}`}>{b.label}</span>;
+          })()}
         </div>
         <p className="text-sm text-muted mt-1">
           Created {org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}

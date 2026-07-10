@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { sendBillingSetupEmail, setOrgBillingMode } from "../actions";
+import { billingBadge } from "@/lib/billing-label";
 
 export function BillingCard({
   orgId,
@@ -45,8 +46,7 @@ export function BillingCard({
     <div className="bg-white border border-line rounded-2xl p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-3">Billing</h2>
       <div className="text-[14px] text-charcoal-2 mb-4">
-        Status:{" "}
-        <span className="font-semibold text-ink">{isFree ? "Free account" : `Paid · ${billingStatus}`}</span>
+        Status: <span className="font-semibold text-ink">{billingBadge(isFree, billingStatus).label}</span>
         {cardLast4 && (
           <span className="text-muted-2">
             {" "}
