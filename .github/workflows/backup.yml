@@ -43,6 +43,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17 gnupg
           curl -fsSL https://rclone.org/install.sh | sudo bash
+          # The runner ships an older pg_dump (v16) that wins in PATH; put the
+          # freshly installed v17 client ahead of it so pg_dump matches the
+          # Postgres 17 server (pg_dump refuses to dump a newer server).
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Verify pg_dump version
+        run: pg_dump --version
 
       - name: Dump database
         env:
