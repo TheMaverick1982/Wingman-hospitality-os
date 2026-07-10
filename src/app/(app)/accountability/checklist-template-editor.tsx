@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Pencil, Trash2, Plus, Check, X, Wand2, Sparkles, Upload } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X, Wand2, Sparkles, Upload, Clipboard } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Pill } from "@/components/ui/pill";
@@ -125,7 +125,7 @@ export function ChecklistTemplateEditor({
 
 function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType; label: string }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"upload" | "wizard">("upload");
+  const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
   const [state, formAction, pending] = useActionState(generateAccountabilityChecklist, buildInitial);
 
   return (
@@ -140,23 +140,35 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
           onClose={() => setOpen(false)}
           wide
         >
-          <div className="flex gap-2 mb-5">
+          <div className="flex gap-2 mb-5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setMode("paste")}
+              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
+                mode === "paste" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
+                <Clipboard size={15} /> Paste text
+              </div>
+              <p className="text-xs text-muted">Paste your checklist — the most reliable way in.</p>
+            </button>
             <button
               type="button"
               onClick={() => setMode("upload")}
-              className={`flex-1 rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
                 mode === "upload" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
               }`}
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-ink mb-1">
-                <Upload size={15} /> I have an existing checklist
+                <Upload size={15} /> Upload a file
               </div>
-              <p className="text-xs text-muted">Upload a PDF or photo of what you already use.</p>
+              <p className="text-xs text-muted">A PDF or photo of what you already use.</p>
             </button>
             <button
               type="button"
               onClick={() => setMode("wizard")}
-              className={`flex-1 rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`flex-1 min-w-[160px] rounded-xl border px-4 py-3 text-left transition-colors ${
                 mode === "wizard" ? "border-brick bg-brick-tint" : "border-line hover:border-line-strong"
               }`}
             >
@@ -171,7 +183,18 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
             <input type="hidden" name="checklistType" value={checklistType} />
             <input type="hidden" name="mode" value={mode} />
 
-            {mode === "upload" ? (
+            {mode === "paste" ? (
+              <div className="mb-2">
+                <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Paste your existing checklist</label>
+                <textarea
+                  name="pastedText"
+                  rows={7}
+                  required
+                  placeholder="Paste your checklist items or SOP text here…"
+                  className={`${inputClass} resize-y`}
+                />
+              </div>
+            ) : mode === "upload" ? (
               <div className="mb-2">
                 <label className="text-sm font-medium text-charcoal-2 mb-1.5 block">Existing checklist document</label>
                 <input
@@ -181,6 +204,7 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
                   required
                   className="text-sm text-charcoal-2 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-paper file:text-ink file:text-sm file:font-semibold w-full"
                 />
+                <p className="text-xs text-muted mt-1.5">Best for a clear PDF or sharp photo. If it errors, use Paste instead.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3 mb-2">

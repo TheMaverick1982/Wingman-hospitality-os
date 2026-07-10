@@ -70,7 +70,7 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 4000,
+        max_tokens: 8000,
         messages: [
           {
             role: "user",
@@ -89,12 +89,21 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
-      .join("\n");
+      .join("\n")
+      .trim();
+    if (!text) throw new Error("Couldn't read that menu. Try a clearer, well-lit photo or a text-based PDF.");
     let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
     const first = cleaned.indexOf("[");
     const last = cleaned.lastIndexOf("]");
     if (first !== -1 && last !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
-    dishes = JSON.parse(cleaned);
+    try {
+      dishes = JSON.parse(cleaned);
+    } catch {
+      if (data.stop_reason === "max_tokens") {
+        throw new Error("That menu was too long to read in one pass — try uploading one page or section at a time.");
+      }
+      throw new Error("Couldn't read the full menu from that file. Try a clearer photo, or upload one section at a time.");
+    }
 
     if (!Array.isArray(dishes) || dishes.length === 0) {
       throw new Error("Couldn't find any menu items in that file. Try a clearer photo or PDF.");

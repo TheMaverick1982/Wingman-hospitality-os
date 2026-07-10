@@ -28,6 +28,34 @@ function extractJsonArray(text: string): string {
   return cleaned;
 }
 
+// Parse the model's JSON-array response with friendly errors instead of a raw
+// "Unexpected end of JSON input" when the output is empty or truncated.
+async function parseGeneratedArray(response: Response): Promise<unknown[]> {
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const text = (data.content ?? [])
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("\n")
+    .trim();
+  if (!text) {
+    throw new Error("The AI couldn't read that file. If it's a scanned image, try a text-based PDF or a clear photo — or paste the text instead.");
+  }
+  try {
+    const parsed = JSON.parse(extractJsonArray(text));
+    if (!Array.isArray(parsed)) throw new Error("not an array");
+    return parsed;
+  } catch {
+    if (data.stop_reason === "max_tokens") {
+      throw new Error("That document was too long to process in one pass. Try fewer pages, or paste the key parts.");
+    }
+    throw new Error("Couldn't read a complete set from that file. Try a clearer or shorter PDF, or paste the text instead.");
+  }
+}
+
 const SYSTEM_PROMPT = `You are an elite restaurant hiring architect. Your job is to help operators screen for the person, not the resume: hospitality instinct, coachability, resilience under pressure, and a genuine guest-first mindset predict success far more than years of experience. You screen hardest for candidates who instinctively create connection and reactions, weighing role competence alongside. Every trait must be checkable through a real interview question with a concrete green flag (what a good answer sounds like) and a red flag (what a concerning answer sounds like) -- never vague adjectives -- and include at least one trait that surfaces what genuinely drives the candidate and whether it aligns with the role.
 
 ${HOSPITALITY_DOCTRINE}
@@ -49,7 +77,7 @@ export async function generateHiringCriteria(_prev: BuildState, formData: FormDa
   const department = String(formData.get("department") || "");
   const mode = String(formData.get("mode") || "");
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
-  if (mode !== "upload" && mode !== "wizard") return { error: "Invalid mode." };
+  if (mode !== "upload" && mode !== "paste" && mode !== "wizard") return { error: "Invalid mode." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -83,20 +111,38 @@ ${RESPONSE_SHAPE}`;
 
       const response = await callAnthropic(apiKey, {
         model: "claude-sonnet-5",
-        max_tokens: 2500,
+        max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      traits = JSON.parse(extractJsonArray(text));
+      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
+    } else if (mode === "paste") {
+      const pastedText = String(formData.get("pastedText") || "").trim();
+      if (!pastedText) return { error: "Paste your existing interview guide or criteria first." };
+      if (pastedText.length > 30000) return { error: "That's a lot of text — trim it to the essentials (30,000 characters max)." };
+
+      const prompt = `Below is an existing interview guide, scorecard, or hiring criteria for a restaurant's ${department} role. Read all of it.
+
+Your job:
+1. Extract every trait or question already used to screen ${department} candidates, and turn each into a structured entry: a short trait title, the actual interview question, a green flag (what a good answer sounds like), and a red flag (what a concerning answer sounds like).
+2. Then ADD any traits missing that would help find someone who's genuinely a fit for this role -- not just experienced -- weighing characteristics (hospitality instinct, coachability, resilience, guest-first mindset, teamwork under pressure) alongside role-specific competence.
+3. Keep every field concrete and interview-usable, not a vague value statement.
+
+HIRING TEXT:
+"""
+${pastedText}
+"""
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${RESPONSE_SHAPE}`;
+
+      const response = await callAnthropic(apiKey, {
+        model: "claude-sonnet-5",
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      });
+      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
     } else {
       const hardToFill = String(formData.get("hardToFill") || "").trim();
       const pastMiss = String(formData.get("pastMiss") || "").trim();
@@ -119,16 +165,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      traits = JSON.parse(extractJsonArray(text));
+      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
     }
 
     if (!Array.isArray(traits) || traits.length === 0) {

@@ -43,6 +43,32 @@ function extractJsonObject(text: string): string {
   return cleaned;
 }
 
+// Parse the model's JSON response with friendly errors instead of a raw
+// "Unexpected end of JSON input" when the output is empty or truncated.
+async function parseGeneratedResponse(response: Response): Promise<GeneratedProgram> {
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const text = (data.content ?? [])
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("\n")
+    .trim();
+  if (!text) {
+    throw new Error("The AI couldn't read that file. If it's a scanned image, try a text-based PDF or a clear photo — or use the guided builder instead.");
+  }
+  try {
+    return JSON.parse(extractJsonObject(text)) as GeneratedProgram;
+  } catch {
+    if (data.stop_reason === "max_tokens") {
+      throw new Error("That document was too long to process in one pass. Try uploading fewer pages, or use the guided builder.");
+    }
+    throw new Error("Couldn't read a complete program from that file. Try a clearer or shorter PDF, or use the guided builder.");
+  }
+}
+
 const SYSTEM_PROMPT = `You are an elite hospitality training designer who builds world-class, role-specific training programs for restaurants -- the kind a great operator would be proud to run. Guest experience is woven into every role, and every item is a concrete behavior a manager can watch for. For any guest-facing role, always include at least one suggestive-selling behavior and one guest-recovery behavior built on the guided-influence structure; for roles that shape the room (Host, Manager, Chef, Bartender), include the physical environment as part of the job. Order the hospitality behaviors along the guest's journey -- greeting and first impression, discovery and personalization, guiding and selling, the check, then a warm goodbye that sets up the next visit -- so the program reads as a journey a guest actually travels, not a random list.
 
 ${HOSPITALITY_DOCTRINE}
@@ -64,7 +90,7 @@ export async function generateRoleTraining(_prev: BuildState, formData: FormData
   const department = String(formData.get("department") || "");
   const mode = String(formData.get("mode") || "");
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
-  if (mode !== "upload" && mode !== "wizard") return { error: "Invalid mode." };
+  if (mode !== "upload" && mode !== "paste" && mode !== "wizard") return { error: "Invalid mode." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -101,20 +127,41 @@ ${RESPONSE_SHAPE}`;
 
       const response = await callAnthropic(apiKey, {
         model: "claude-sonnet-5",
-        max_tokens: 2500,
+        max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      generated = JSON.parse(extractJsonObject(text));
+      generated = await parseGeneratedResponse(response);
+    } else if (mode === "paste") {
+      const pastedText = String(formData.get("pastedText") || "").trim();
+      if (!pastedText) return { error: "Paste your existing training text first." };
+      if (pastedText.length > 30000) return { error: "That's a lot of text — trim it to the essentials (30,000 characters max)." };
+
+      const prompt = `Below is existing training text or handbook material for a restaurant's ${department} role. Read all of it.
+
+Your job:
+1. Extract every concrete, checkable standard already described in the text, split into two buckets:
+   - "hospitality_items": guest-experience and hospitality behaviors -- recognition, personalization, service recovery, guiding the guest -- as they apply to this role.
+   - "role_items": role-specific technical/operational skills unique to being a great ${department} (POS steps, food safety, pour specs, seating logic, etc.) that aren't primarily about the guest interaction itself.
+2. Then ADD any additional items you'd recommend from hospitality and guest-experience best practices that are missing, so the result is a complete, best-practice ${department} training program, not just a transcription.
+3. Keep every item under 16 words, phrased as a concrete observable action a manager could watch for and check off.
+4. Propose a short track_label (2-4 words) naming this role's specific skill track, e.g. "Steps of Service" or "Bar & Beverage Program".
+
+TRAINING TEXT:
+"""
+${pastedText}
+"""
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${RESPONSE_SHAPE}`;
+
+      const response = await callAnthropic(apiKey, {
+        model: "claude-sonnet-5",
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      });
+      generated = await parseGeneratedResponse(response);
     } else {
       const qa: string[] = [];
       let qi = 0;
@@ -141,20 +188,11 @@ ${RESPONSE_SHAPE}`;
 
       const response = await callAnthropic(apiKey, {
         model: "claude-sonnet-5",
-        max_tokens: 1500,
+        max_tokens: 2500,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      generated = JSON.parse(extractJsonObject(text));
+      generated = await parseGeneratedResponse(response);
     }
 
     if (!Array.isArray(generated.hospitality_items) || !Array.isArray(generated.role_items)) {
