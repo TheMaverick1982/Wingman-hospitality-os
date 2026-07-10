@@ -33,7 +33,7 @@ export function AnalyticsDashboard({ data, days }: { data: AnalyticsData; days: 
         ) : (
           <div className="flex items-end gap-[3px] h-40">
             {data.daily.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end group" title={`${d.date}: ${d.users}`}>
+              <div key={i} className="flex-1 h-full flex flex-col items-center justify-end group" title={`${d.date}: ${d.users}`}>
                 <div
                   className="w-full rounded-t bg-brick/80 group-hover:bg-brick transition-colors"
                   style={{ height: `${Math.max(2, (d.users / maxDaily) * 100)}%` }}

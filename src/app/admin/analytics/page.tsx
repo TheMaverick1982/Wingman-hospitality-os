@@ -30,15 +30,6 @@ export default async function AdminAnalyticsPage() {
         <p className="text-sm text-muted mt-1">Site traffic and conversion metrics from Google Analytics.</p>
       </div>
 
-      <div className="bg-white border border-line rounded-2xl p-8">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-4">Tracking code</h2>
-        <p className="text-sm text-muted mb-5 max-w-lg">
-          Paste your GA4 Measurement ID (found in Google Analytics under Admin → Data Streams → your
-          stream) to start tracking visits across the whole site.
-        </p>
-        <GaSettingsForm currentValue={gaMeasurementId} />
-      </div>
-
       {data ? (
         <AnalyticsDashboard data={data} days={REPORT_DAYS} />
       ) : (
@@ -68,6 +59,15 @@ export default async function AdminAnalyticsPage() {
           )}
         </div>
       )}
+
+      <div className="bg-white border border-line rounded-2xl p-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-4">Tracking code</h2>
+        <p className="text-sm text-muted mb-5 max-w-lg">
+          Paste your GA4 Measurement ID (found in Google Analytics under Admin → Data Streams → your
+          stream) to start tracking visits across the whole site.
+        </p>
+        <GaSettingsForm currentValue={gaMeasurementId} />
+      </div>
     </div>
   );
 }
