@@ -21,6 +21,9 @@ const PUBLIC_PREFIXES = [
   "/affiliates",
   // Referral link entry point (/r/<code>) — visitors aren't logged in.
   "/r",
+  // Public lead-magnet tools.
+  "/calculator",
+  "/scorecard",
 ];
 
 export async function updateSession(request: NextRequest) {

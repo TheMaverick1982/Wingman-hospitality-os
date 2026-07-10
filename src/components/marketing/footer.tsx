@@ -16,6 +16,12 @@ export function MarketingFooter() {
           <Link href="/pricing" className="text-[#525252]">
             Pricing
           </Link>
+          <Link href="/calculator" className="text-[#525252]">
+            Calculator
+          </Link>
+          <Link href="/scorecard" className="text-[#525252]">
+            Scorecard
+          </Link>
           <Link href="/affiliates" className="text-[#525252]">
             Affiliates
           </Link>
