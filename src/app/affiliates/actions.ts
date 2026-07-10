@@ -6,9 +6,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { sendEmail } from "@/lib/email";
+import { siteUrl } from "@/lib/affiliate";
 
 export type ApplyState = { error: string | null; ok: boolean; message?: string };
 export type AffiliateLoginState = { error: string | null };
+export type AffiliateForgotState = { error: string | null; sent: boolean };
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -80,6 +83,21 @@ export async function applyAsAffiliate(_prev: ApplyState, formData: FormData): P
   });
   if (insErr) return { error: insErr.message, ok: false };
 
+  // Confirmation email (best-effort, via Resend).
+  try {
+    await sendEmail({
+      to: [email],
+      subject: "We received your Wingman affiliate application",
+      html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
+        <p style="font-size:16px;">Thanks for applying to the Wingman affiliate program, ${fullName.replace(/[<>&]/g, "")}!</p>
+        <p style="font-size:15px;color:#525252;">We review each application before your referral link goes live. You'll get another email the moment you're approved, with your link and where to log in.</p>
+        <p style="font-size:15px;color:#525252;">You can check your status any time at <a href="${siteUrl()}/affiliates/login" style="color:#0a6cff;">${siteUrl()}/affiliates/login</a>.</p>
+      </div>`,
+    });
+  } catch {
+    /* email is best-effort */
+  }
+
   if (linkedExisting) {
     return {
       error: null,
@@ -113,4 +131,19 @@ export async function affiliateLogout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/affiliates");
+}
+
+// Password reset for affiliates. Reuses Supabase's recovery email but routes the
+// link back to the affiliate dashboard (not the client app). Always reports
+// success so it can't be used to probe which emails have accounts.
+export async function affiliateForgotPassword(_prev: AffiliateForgotState, formData: FormData): Promise<AffiliateForgotState> {
+  const email = String(formData.get("email") || "").trim();
+  if (!email) return { error: "Enter your email address.", sent: false };
+
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?type=recovery&next=/affiliates/dashboard`,
+  });
+  return { error: null, sent: true };
 }

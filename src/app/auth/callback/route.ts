@@ -20,8 +20,15 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
+  // Optional post-set-password landing spot (e.g. affiliates return to their
+  // dashboard). Only accept safe, in-app relative paths to avoid open redirects.
+  const rawNext = searchParams.get("next") || "";
+  const safeNext = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
+
   const needsPassword = type === "invite" || type === "recovery";
-  const destination = needsPassword ? "/set-password" : "/";
+  const destination = needsPassword
+    ? `/set-password${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
+    : "/";
 
   const supabase = await createClient();
 

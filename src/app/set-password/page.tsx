@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { use, useActionState } from "react";
 import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
 import { setPassword, type SetPasswordState } from "./actions";
 
 const initialState: SetPasswordState = { error: null };
 
-export default function SetPasswordPage() {
+export default function SetPasswordPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = use(searchParams);
   const [state, formAction, pending] = useActionState(setPassword, initialState);
 
   return (
@@ -15,6 +16,7 @@ export default function SetPasswordPage() {
       <h1 className="font-display text-2xl font-semibold mb-1 text-ink">Set your password</h1>
       <p className="text-sm text-muted mb-6">Choose a password for your Wingman account.</p>
       <form action={formAction} className="flex flex-col gap-1">
+        {next && <input type="hidden" name="next" value={next} />}
         <Field label="Password">
           <input name="password" type="password" placeholder="At least 8 characters" required className={inputClass} />
         </Field>
