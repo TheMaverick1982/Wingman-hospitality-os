@@ -1,23 +1,45 @@
 import { LineChart } from "lucide-react";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
-import { ga4Configured, getAnalytics, type AnalyticsData } from "@/lib/ga4";
+import { ga4Configured, getAnalytics, type AnalyticsData, type DateRange } from "@/lib/ga4";
 import { GaSettingsForm } from "./ga-settings-form";
 import { AnalyticsDashboard } from "./analytics-dashboard";
+import { DateRangePicker } from "./date-range-picker";
 
 export const maxDuration = 60;
 
-const REPORT_DAYS = 28;
+const isDate = (s?: string) => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
-export default async function AdminAnalyticsPage() {
+// Resolve the selected range from the URL: a custom start/end, else a days preset.
+function resolveRange(sp: { days?: string; start?: string; end?: string }): {
+  range: DateRange;
+  label: string;
+  preset: string;
+  start: string;
+  end: string;
+} {
+  if (isDate(sp.start) && isDate(sp.end)) {
+    return { range: { startDate: sp.start!, endDate: sp.end! }, label: `${sp.start} – ${sp.end}`, preset: "custom", start: sp.start!, end: sp.end! };
+  }
+  const days = [7, 28, 90].includes(Number(sp.days)) ? Number(sp.days) : 28;
+  return { range: { startDate: `${days}daysAgo`, endDate: "today" }, label: `Last ${days} days`, preset: String(days), start: "", end: "" };
+}
+
+export default async function AdminAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ days?: string; start?: string; end?: string }>;
+}) {
   await requirePlatformSection("analytics");
   const gaMeasurementId = await getGaMeasurementId();
+  const { range, label, preset, start, end } = resolveRange(await searchParams);
 
+  const connected = ga4Configured();
   let data: AnalyticsData | null = null;
   let loadError: string | null = null;
-  if (ga4Configured()) {
+  if (connected) {
     try {
-      data = await getAnalytics(REPORT_DAYS);
+      data = await getAnalytics(range);
     } catch (err) {
       loadError = err instanceof Error ? err.message : "Couldn't load analytics.";
     }
@@ -30,8 +52,10 @@ export default async function AdminAnalyticsPage() {
         <p className="text-sm text-muted mt-1">Site traffic and conversion metrics from Google Analytics.</p>
       </div>
 
+      {connected && <DateRangePicker preset={preset} start={start} end={end} />}
+
       {data ? (
-        <AnalyticsDashboard data={data} days={REPORT_DAYS} />
+        <AnalyticsDashboard data={data} rangeLabel={label} />
       ) : (
         <div className="bg-white border border-line rounded-2xl p-10 text-center">
           <div className="w-12 h-12 rounded-full bg-brick-tint flex items-center justify-center mx-auto mb-5">

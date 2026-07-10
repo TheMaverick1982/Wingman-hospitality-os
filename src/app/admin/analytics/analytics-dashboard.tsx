@@ -1,6 +1,6 @@
 import type { AnalyticsData } from "@/lib/ga4";
 
-export function AnalyticsDashboard({ data, days }: { data: AnalyticsData; days: number }) {
+export function AnalyticsDashboard({ data, rangeLabel }: { data: AnalyticsData; rangeLabel: string }) {
   const tiles = [
     { label: "Active users", value: data.totals.users.toLocaleString() },
     { label: "Sessions", value: data.totals.sessions.toLocaleString() },
@@ -13,7 +13,7 @@ export function AnalyticsDashboard({ data, days }: { data: AnalyticsData; days: 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="text-[13px] text-muted-2">Last {days} days · live from Google Analytics</div>
+      <div className="text-[13px] text-muted-2">{rangeLabel} · live from Google Analytics</div>
 
       {/* Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

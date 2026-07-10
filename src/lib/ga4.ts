@@ -98,9 +98,11 @@ function shortDate(yyyymmdd: string): string {
   return `${m}/${d}`;
 }
 
-export async function getAnalytics(days = 28): Promise<AnalyticsData> {
+export type DateRange = { startDate: string; endDate: string };
+
+export async function getAnalytics(range: DateRange): Promise<AnalyticsData> {
   const token = await accessToken();
-  const dateRanges = [{ startDate: `${days}daysAgo`, endDate: "today" }];
+  const dateRanges = [range];
 
   const reports = await batchRunReports(token, [
     { dateRanges, metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "screenPageViews" }, { name: "engagementRate" }] },
