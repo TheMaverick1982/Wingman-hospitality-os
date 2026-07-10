@@ -4,13 +4,15 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { Sidebar } from "./sidebar";
+import type { LocationStat } from "./sidebar-location-stat";
 import type { AccessRole, PermissionOverrides } from "@/lib/auth/permissions";
 
 type SidebarProps = {
   accessRole: AccessRole;
   fullName: string;
-  locationName: string;
-  repeatRate: number;
+  locationStats: LocationStat[];
+  fallbackLocationName: string;
+  fallbackRepeatRate: number;
   isPlatformAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;

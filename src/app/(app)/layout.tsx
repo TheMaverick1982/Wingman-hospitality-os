@@ -25,17 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
 
   const supabase = await createClient();
-  const sidebarLocation = isSuperAdmin
-    ? locations[0]
-      ? { id: locations[0].id, name: locations[0].name }
-      : null
-    : profile.locationId
-      ? { id: profile.locationId, name: profile.locationName ?? "" }
-      : null;
   const { data: guests } = await supabase
     .from("guests")
     .select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)");
-  const repeatRate = computeRepeatRate((guests ?? []) as GuestWithVisits[], sidebarLocation?.id ?? null);
+  const guestRows = (guests ?? []) as GuestWithVisits[];
 
   const cookieStore = await cookies();
   const isImpersonating = Boolean(cookieStore.get("wingman_impersonator_refresh")?.value);
@@ -47,13 +40,35 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? locations
       : locations.filter((l) => l.id === profile.locationId || profile.accessibleLocationIds.includes(l.id));
 
+  // Per-location repeat rates so the sidebar footer can follow the top-bar
+  // location switcher (which lives in the `?location=` URL param), instead of
+  // being stuck on one location. When nothing is selected we fall back to the
+  // same default the top bar shows: "All locations" for members who can span
+  // locations, otherwise their home location.
+  const locationStats = switchableLocations.map((l) => ({
+    id: l.id,
+    name: l.name,
+    repeatRate: computeRepeatRate(guestRows, l.id),
+  }));
+  const showsAllLocationsDefault = canSpanLocations && switchableLocations.length > 1;
+  const homeLocation = profile.locationId
+    ? switchableLocations.find((l) => l.id === profile.locationId) ?? null
+    : null;
+  const fallbackLocationName = showsAllLocationsDefault
+    ? "All locations"
+    : homeLocation?.name || profile.locationName || profile.orgName;
+  const fallbackRepeatRate = showsAllLocationsDefault
+    ? computeRepeatRate(guestRows, null)
+    : computeRepeatRate(guestRows, homeLocation?.id ?? profile.locationId ?? null);
+
   return (
     <div className="w-full flex min-h-full flex-1">
       <Sidebar
         accessRole={profile.accessRole}
         fullName={profile.fullName}
-        locationName={sidebarLocation?.name || profile.orgName}
-        repeatRate={repeatRate}
+        locationStats={locationStats}
+        fallbackLocationName={fallbackLocationName}
+        fallbackRepeatRate={fallbackRepeatRate}
         isPlatformAdmin={profile.isPlatformAdmin}
         permissionOverrides={profile.permissionOverrides}
         showStartHere={!!onboarding && !onboarding.allDone}
@@ -63,8 +78,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <MobileNav
           accessRole={profile.accessRole}
           fullName={profile.fullName}
-          locationName={sidebarLocation?.name || profile.orgName}
-          repeatRate={repeatRate}
+          locationStats={locationStats}
+          fallbackLocationName={fallbackLocationName}
+          fallbackRepeatRate={fallbackRepeatRate}
           isPlatformAdmin={profile.isPlatformAdmin}
           permissionOverrides={profile.permissionOverrides}
           showStartHere={!!onboarding && !onboarding.allDone}
