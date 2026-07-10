@@ -109,8 +109,8 @@ export default function TermsPage() {
         ))}
         <div className="border-t border-line pt-8 text-base text-charcoal-2 leading-[1.6]">
           Questions about these terms? Email{" "}
-          <a href="mailto:legal@joinwingman.app" className="text-brick font-medium">
-            legal@joinwingman.app
+          <a href="mailto:hello@joinwingman.app" className="text-brick font-medium">
+            hello@joinwingman.app
           </a>
           .
         </div>

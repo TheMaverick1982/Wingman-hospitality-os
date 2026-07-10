@@ -105,8 +105,8 @@ export default function PrivacyPage() {
         ))}
         <div className="border-t border-line pt-8 text-base text-charcoal-2 leading-[1.6]">
           Questions about your data? Email{" "}
-          <a href="mailto:privacy@joinwingman.app" className="text-brick font-medium">
-            privacy@joinwingman.app
+          <a href="mailto:hello@joinwingman.app" className="text-brick font-medium">
+            hello@joinwingman.app
           </a>
           .
         </div>
