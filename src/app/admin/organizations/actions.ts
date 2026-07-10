@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { platformSectionActor } from "@/lib/auth/require-platform";
+import { getOrgOwnerEmails } from "@/lib/billing";
+import { sendEmail } from "@/lib/email";
 
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
 
@@ -84,6 +86,59 @@ export async function createFreeOrganization(_prev: CreateOrgState, formData: Fo
 
   revalidatePath("/admin/organizations");
   return { error: null };
+}
+
+export type BillingAdminState = { error: string | null; ok: boolean };
+
+// Email the org's owners a link to set up paid billing (add a card). The setup
+// page hosts the payment fields; the actual card capture arrives with the
+// payment processor. Platform-admin only.
+export async function sendBillingSetupEmail(orgId: string): Promise<BillingAdminState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+
+  const admin = createAdminClient();
+  const { data: org } = await admin.from("organizations").select("name").eq("id", orgId).maybeSingle();
+  const orgName = (org as { name: string } | null)?.name ?? "your organization";
+  const emails = await getOrgOwnerEmails(admin, orgId);
+  if (emails.length === 0) return { error: "This organization has no owner email on file.", ok: false };
+
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app";
+  const link = `${origin}/billing/setup`;
+  try {
+    await sendEmail({
+      to: emails,
+      subject: "Set up billing for your Wingman account",
+      html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
+        <p style="font-size:16px;">It's time to set up billing for <strong>${orgName.replace(/[<>&]/g, "")}</strong>.</p>
+        <p style="font-size:15px;color:#525252;">Add your payment method to keep your account active:</p>
+        <p style="font-size:15px;"><a href="${link}" style="color:#0a6cff;font-weight:600;">${link}</a></p>
+        <p style="font-size:13px;color:#767676;">You may be asked to log in first.</p>
+      </div>`,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't send the email.", ok: false };
+  }
+  return { error: null, ok: true };
+}
+
+// Manually flip an org between Free and Paid (comps, or when a card is collected
+// another way). Writes with the service-role client, which bypasses the billing
+// guard trigger.
+export async function setOrgBillingMode(orgId: string, paid: boolean): Promise<BillingAdminState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!orgId) return { error: "Missing organization.", ok: false };
+
+  const admin = createAdminClient();
+  const update = paid
+    ? { is_free_account: false, billing_status: "active" }
+    : { is_free_account: true, billing_status: "free" };
+  const { error } = await admin.from("organizations").update(update).eq("id", orgId);
+  if (error) return { error: error.message, ok: false };
+
+  revalidatePath(`/admin/organizations/${orgId}`);
+  return { error: null, ok: true };
 }
 
 export async function impersonateUser(targetProfileId: string) {

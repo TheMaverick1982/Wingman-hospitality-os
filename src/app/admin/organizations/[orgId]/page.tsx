@@ -7,6 +7,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { effectiveMonthlyCents, pricingLabel, BASE_CENTS, ADDL_CENTS } from "@/lib/pricing";
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
+import { BillingCard } from "./billing-card";
 
 export default async function AdminOrganizationDetailPage({
   params,
@@ -20,7 +21,7 @@ export default async function AdminOrganizationDetailPage({
 
   const { data: org } = await admin
     .from("organizations")
-    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note")
+    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4")
     .eq("id", orgId)
     .eq("is_platform", false)
     .maybeSingle();
@@ -37,6 +38,7 @@ export default async function AdminOrganizationDetailPage({
 
   type ProfileRow = { id: string; full_name: string; access_role: AccessRole; location_id: string | null; locations: { name: string } | null };
 
+  const billing = org as unknown as { is_free_account: boolean; billing_status: string; card_brand: string | null; card_last4: string | null };
   const pricing = org as unknown as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; pricing_note: string | null };
   const locCount = (locations ?? []).length || 1;
   const effCents = effectiveMonthlyCents(pricing, locCount);
@@ -64,7 +66,16 @@ export default async function AdminOrganizationDetailPage({
         <Link href="/admin/organizations" className="inline-flex items-center gap-1.5 text-sm font-medium text-charcoal-2 mb-3">
           <ArrowLeft size={15} /> All organizations
         </Link>
-        <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">{org.name}</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">{org.name}</h1>
+          {billing.is_free_account ? (
+            <span className="text-[12px] font-semibold text-olive bg-olive-tint px-2.5 py-1 rounded-full">Free account</span>
+          ) : (
+            <span className="text-[12px] font-semibold text-brick bg-brick-tint px-2.5 py-1 rounded-full capitalize">
+              Paid · {billing.billing_status}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-muted mt-1">
           Created {org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}
         </p>
@@ -115,6 +126,14 @@ export default async function AdminOrganizationDetailPage({
           </div>
         </div>
       </div>
+
+      <BillingCard
+        orgId={org.id}
+        isFree={billing.is_free_account}
+        billingStatus={billing.billing_status}
+        cardBrand={billing.card_brand}
+        cardLast4={billing.card_last4}
+      />
 
       <div className="bg-white border border-line rounded-2xl p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-1">Custom pricing</h2>
