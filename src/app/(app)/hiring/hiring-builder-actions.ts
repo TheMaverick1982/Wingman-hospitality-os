@@ -8,9 +8,9 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
 
-export type BuildState = { error: string | null; built?: number };
+export type BuildState = { error: string | null; traits?: GeneratedTrait[]; built?: number };
 
-type GeneratedTrait = { title: string; question: string; green_flag: string; red_flag: string };
+export type GeneratedTrait = { title: string; question: string; green_flag: string; red_flag: string };
 
 function callAnthropic(apiKey: string, body: Record<string, unknown>) {
   return fetch("https://api.anthropic.com/v1/messages", {
@@ -175,6 +175,29 @@ ${RESPONSE_SHAPE}`;
     return { error: err instanceof Error ? err.message : "Hiring criteria generation failed. Try again." };
   }
 
+  // Return the preview for review — nothing is saved until saveHiringCriteria().
+  return { error: null, traits };
+}
+
+// Persist the reviewed traits, replacing this department's previous AI output.
+export async function saveHiringCriteria(department: string, traits: GeneratedTrait[]): Promise<BuildState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
+    return { error: "You don't have access to save hiring criteria." };
+  }
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+
+  const clean = (traits ?? [])
+    .map((t) => ({
+      title: String(t.title ?? "").trim(),
+      question: String(t.question ?? "").trim(),
+      green_flag: String(t.green_flag ?? "").trim(),
+      red_flag: String(t.red_flag ?? "").trim(),
+    }))
+    .filter((t) => t.title || t.question);
+  if (clean.length === 0) return { error: "Nothing to save — keep at least one trait." };
+
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
@@ -188,7 +211,7 @@ ${RESPONSE_SHAPE}`;
     .eq("department", department);
 
   const { error } = await supabase.from("hiring_traits").insert(
-    traits.map((t, i) => ({
+    clean.map((t, i) => ({
       org_id: org.id,
       department,
       title: t.title,
@@ -202,7 +225,7 @@ ${RESPONSE_SHAPE}`;
   if (error) return { error: error.message };
 
   revalidatePath("/hiring");
-  return { error: null, built: traits.length };
+  return { error: null, built: clean.length };
 }
 
 export type TraitState = { error: string | null };

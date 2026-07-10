@@ -206,7 +206,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "steps", items: [
         "Open Training & Standards and pick a role.",
         "Click \"Build training program\".",
-        "Either upload what you already use, or answer a few questions and let Wingman write a complete program.",
+        "Paste your existing training, upload a file, or answer a few questions and let Wingman write a complete program.",
+        "Review the draft — edit or remove any item — then click \"Save program\". Nothing is saved until you do.",
       ] },
       { kind: "h", text: "Refine with AI" },
       { kind: "p", text: "Once a program exists, use \"Refine with AI\" to improve it conversationally — ask it to add items, suggest ideas, reword, or remove. You review every proposed change before anything is applied." },
@@ -225,7 +226,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "image", src: "/help/hiring.png", alt: "The Hiring screen", caption: "Hiring criteria — traits with an interview question, green flag, and red flag." },
       { kind: "steps", items: [
         "Open Hiring and pick a role.",
-        "Click \"Build hiring criteria\" — upload an existing guide or build from scratch.",
+        "Click \"Build hiring criteria\" — paste or upload an existing guide, or build from scratch.",
+        "Review the drafted traits — edit or remove any — then click \"Save criteria\". Nothing is saved until you do.",
         "Use \"Refine with AI\" to add or reword traits (e.g. \"Add a trait for handling an angry guest\"). Review, then apply.",
         "Use the interview guide to run consistent interviews.",
       ] },
