@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { PLATFORM_ACCESS_OPTIONS } from "@/lib/auth/platform";
+
+const ORIGIN = () => process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app";
 
 export type TeamState = { error: string | null };
 
@@ -131,6 +134,40 @@ export async function removePlatformStaff(profileId: string): Promise<TeamState>
   if (error) return { error: error.message };
 
   revalidatePath("/admin/team");
+  return { error: null };
+}
+
+// Resend the account-setup (invite) email to a teammate who hasn't accepted
+// yet. Routed through Supabase so it uses the project's branded invite template
+// and configured sender — the same path as a normal team invite.
+export async function resendPlatformInvite(email: string): Promise<TeamState> {
+  const me = await platformSectionActor("team");
+  if (!me) return { error: "Not authorized." };
+  const clean = email.trim();
+  if (!clean) return { error: "Missing email." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.inviteUserByEmail(clean, {
+    redirectTo: `${ORIGIN()}/auth/callback?type=invite`,
+  });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+// Send a password-reset email to a teammate — same flow as the login page's
+// "Forgot password" (recovery link → /auth/callback → /set-password). Useful
+// once they've accepted and just need a new password.
+export async function sendPlatformPasswordReset(email: string): Promise<TeamState> {
+  const me = await platformSectionActor("team");
+  if (!me) return { error: "Not authorized." };
+  const clean = email.trim();
+  if (!clean) return { error: "Missing email." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(clean, {
+    redirectTo: `${ORIGIN()}/auth/callback?type=recovery`,
+  });
+  if (error) return { error: error.message };
   return { error: null };
 }
 

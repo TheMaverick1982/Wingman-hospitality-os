@@ -18,13 +18,17 @@ export default async function AdminTeamPage() {
   const staff: StaffRow[] = [];
   for (const p of (profiles ?? []) as { id: string; full_name: string; platform_access: string[] | null }[]) {
     let email = "";
+    let pending = false;
     try {
       const { data } = await admin.auth.admin.getUserById(p.id);
-      email = data?.user?.email ?? "";
+      const u = data?.user as { email?: string; email_confirmed_at?: string; confirmed_at?: string; last_sign_in_at?: string } | undefined;
+      email = u?.email ?? "";
+      // "Pending" = invited but hasn't confirmed / signed in yet.
+      pending = !(u?.email_confirmed_at || u?.confirmed_at || u?.last_sign_in_at);
     } catch {
       /* skip */
     }
-    staff.push({ id: p.id, fullName: p.full_name, email, access: p.platform_access ?? [] });
+    staff.push({ id: p.id, fullName: p.full_name, email, access: p.platform_access ?? [], pending });
   }
 
   return (
