@@ -15,6 +15,12 @@ const PUBLIC_PREFIXES = [
   "/privacy",
   "/terms",
   "/api-guide",
+  // Affiliate program: public marketing + apply + login. The dashboard lives
+  // under /affiliates/dashboard and is gated in its own layout (redirects
+  // non-affiliates to /affiliates/login).
+  "/affiliates",
+  // Referral link entry point (/r/<code>) — visitors aren't logged in.
+  "/r",
 ];
 
 export async function updateSession(request: NextRequest) {

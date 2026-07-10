@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { captureReferralForCurrentUser } from "@/lib/affiliate";
 
 export type SignupState = { error: string | null; checkEmail: boolean };
 
@@ -60,5 +61,6 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     return { error: rpcError.message, checkEmail: false };
   }
 
+  await captureReferralForCurrentUser(supabase);
   redirect("/dashboard");
 }
