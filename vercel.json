@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/support-cleanup",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/affiliate-commissions",
+      "schedule": "0 6 1 * *"
     }
   ]
 }

@@ -60,8 +60,8 @@ export function AffiliateApplyForm() {
         <input type="checkbox" name="agree" className="mt-0.5 accent-brick" />
         <span>
           I agree to the{" "}
-          <Link href="/terms" className="font-semibold text-brick hover:opacity-70">
-            affiliate terms
+          <Link href="/affiliates/terms" target="_blank" className="font-semibold text-brick hover:opacity-70">
+            Affiliate Agreement
           </Link>{" "}
           — no spam, no self-referrals, and no bidding on Wingman-branded search terms.
         </span>

@@ -16,5 +16,9 @@ export async function setPassword(_prev: SetPasswordState, formData: FormData): 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
 
-  redirect("/dashboard");
+  // Honor a safe in-app return path (affiliates return to their dashboard);
+  // reject anything that isn't a plain relative path to avoid open redirects.
+  const rawNext = String(formData.get("next") || "");
+  const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "/dashboard";
+  redirect(next);
 }

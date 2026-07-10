@@ -23,6 +23,7 @@ export type AffRow = {
   createdAt: string;
   clicks: number;
   signups: number;
+  owedCents: number;
 };
 export type ProgramSettings = { commissionPct: number; termMonths: number; cookieDays: number; minPayoutDollars: number };
 
@@ -166,6 +167,9 @@ function ActiveCard({ a, defaults }: { a: AffRow; defaults: ProgramSettings }) {
             {a.clicks} clicks · {a.signups} signups · {a.commissionPct ?? defaults.commissionPct}% · {a.cookieDays ?? defaults.cookieDays}d cookie
             {a.paypalEmail ? ` · PayPal: ${a.paypalEmail}` : " · no PayPal yet"}
           </div>
+          {a.owedCents > 0 && (
+            <div className="text-[13px] font-semibold text-olive mt-0.5">${(a.owedCents / 100).toFixed(2)} owed (approved)</div>
+          )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <button type="button" onClick={() => setEditing((v) => !v)} className="text-[13px] font-semibold text-charcoal-2 hover:opacity-70">

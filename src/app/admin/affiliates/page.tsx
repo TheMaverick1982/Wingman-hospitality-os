@@ -1,6 +1,7 @@
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAffiliateSettings } from "@/lib/affiliate";
+import { owedByAffiliate } from "@/lib/affiliate-commissions";
 import { AffiliatesManager, type AffRow, type ProgramSettings } from "./affiliates-manager";
 
 export const maxDuration = 60;
@@ -22,11 +23,12 @@ export default async function AdminAffiliatesPage() {
   await requirePlatformSection("affiliates");
   const admin = createAdminClient();
 
-  const [settings, { data: affiliates }, { data: clicks }, { data: referrals }] = await Promise.all([
+  const [settings, { data: affiliates }, { data: clicks }, { data: referrals }, owed] = await Promise.all([
     getAffiliateSettings(admin),
     admin.from("affiliates").select("id, full_name, email, code, status, commission_pct, cookie_days, paypal_email, promo_method, created_at").order("created_at", { ascending: false }),
     admin.from("affiliate_clicks").select("affiliate_id"),
     admin.from("affiliate_referrals").select("affiliate_id"),
+    owedByAffiliate(admin),
   ]);
 
   const clickCount = new Map<string, number>();
@@ -47,6 +49,7 @@ export default async function AdminAffiliatesPage() {
     createdAt: a.created_at,
     clicks: clickCount.get(a.id) ?? 0,
     signups: signupCount.get(a.id) ?? 0,
+    owedCents: owed.get(a.id) ?? 0,
   }));
 
   const pending = rows.filter((r) => r.status === "pending");
