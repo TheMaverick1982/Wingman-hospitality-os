@@ -6,9 +6,16 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { addPlatformStaff, updatePlatformStaffAccess, removePlatformStaff, type TeamState } from "./actions";
+import {
+  addPlatformStaff,
+  updatePlatformStaffAccess,
+  removePlatformStaff,
+  resendPlatformInvite,
+  sendPlatformPasswordReset,
+  type TeamState,
+} from "./actions";
 
-export type StaffRow = { id: string; fullName: string; email: string; access: string[] };
+export type StaffRow = { id: string; fullName: string; email: string; access: string[]; pending: boolean };
 type Section = { key: string; label: string; description: string };
 
 const initialState: TeamState = { error: null };
@@ -109,9 +116,23 @@ function StaffCard({ staff, sections, isSelf }: { staff: StaffRow; sections: Sec
   const [checked, setChecked] = useState<Set<string>>(new Set(staff.access));
   const [pending, start] = useTransition();
   const [removing, startRemove] = useTransition();
+  const [emailing, startEmail] = useTransition();
+  const [sentLabel, setSentLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const labelFor = (k: string) => sections.find((s) => s.key === k)?.label ?? k;
+
+  // Pending teammates get a "Resend invite" (account-setup email); active ones
+  // get "Send password reset" — same flows as your regular logins.
+  function emailAction() {
+    setError(null);
+    setSentLabel(null);
+    startEmail(async () => {
+      const res = staff.pending ? await resendPlatformInvite(staff.email) : await sendPlatformPasswordReset(staff.email);
+      if (res.error) setError(res.error);
+      else setSentLabel(staff.pending ? "Invite sent" : "Reset link sent");
+    });
+  }
 
   function toggle(key: string) {
     setChecked((prev) => {
@@ -144,12 +165,24 @@ function StaffCard({ staff, sections, isSelf }: { staff: StaffRow; sections: Sec
     <div className="px-5 py-4 border-b border-[#F5F5F5] last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[15px] font-medium text-ink">
-            {staff.fullName || staff.email} {isSelf && <span className="text-xs text-muted-2">(you)</span>}
+          <div className="text-[15px] font-medium text-ink flex items-center gap-2">
+            <span>
+              {staff.fullName || staff.email} {isSelf && <span className="text-xs text-muted-2">(you)</span>}
+            </span>
+            {staff.pending && (
+              <span className="text-[11px] font-semibold text-[#B45309] bg-[#FDF3E1] px-2 py-0.5 rounded-full">Pending</span>
+            )}
           </div>
           <div className="text-[13px] text-muted-2 truncate">{staff.email}</div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          {sentLabel ? (
+            <span className="text-[13px] font-semibold text-olive">{sentLabel}</span>
+          ) : (
+            <button type="button" onClick={emailAction} disabled={emailing} className="text-[13px] font-semibold text-charcoal-2 hover:opacity-70 disabled:opacity-50">
+              {emailing ? "Sending…" : staff.pending ? "Resend invite" : "Send password reset"}
+            </button>
+          )}
           <button type="button" onClick={() => setEditing((v) => !v)} className="text-[13px] font-semibold text-charcoal-2 hover:opacity-70">
             {editing ? "Cancel" : "Edit access"}
           </button>
