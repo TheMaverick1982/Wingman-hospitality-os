@@ -50,6 +50,34 @@ function extractJsonArray(text: string): string {
   return cleaned;
 }
 
+// Parse the model's JSON-array response with friendly errors instead of a raw
+// "Unexpected end of JSON input" when the output is empty or truncated.
+async function parseGeneratedArray(response: Response): Promise<unknown[]> {
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const text = (data.content ?? [])
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("\n")
+    .trim();
+  if (!text) {
+    throw new Error("The AI couldn't read that file. If it's a scanned image, try a text-based PDF or a clear photo — or paste the text instead.");
+  }
+  try {
+    const parsed = JSON.parse(extractJsonArray(text));
+    if (!Array.isArray(parsed)) throw new Error("not an array");
+    return parsed;
+  } catch {
+    if (data.stop_reason === "max_tokens") {
+      throw new Error("That document was too long to process in one pass. Try fewer pages, or paste the key parts.");
+    }
+    throw new Error("Couldn't read a complete checklist from that file. Try a clearer or shorter PDF, or paste the text instead.");
+  }
+}
+
 const SYSTEM_PROMPT = `You are an elite restaurant accountability-systems consultant. Every checklist you build makes guest experience inseparable from operational discipline: items should catch whether the team actually connected with guests and shaped the room, not only whether the mechanical steps were done. Every item must be specific and observable enough that someone could watch for it or self-check it in seconds -- never a vague value statement -- and environment-facing checks must name the concrete sensory and sanitation levers.
 
 ${HOSPITALITY_DOCTRINE}
@@ -71,7 +99,7 @@ export async function generateAccountabilityChecklist(_prev: BuildState, formDat
   const checklistType = String(formData.get("checklistType") || "") as ChecklistType;
   const mode = String(formData.get("mode") || "");
   if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };
-  if (mode !== "upload" && mode !== "wizard") return { error: "Invalid mode." };
+  if (mode !== "upload" && mode !== "paste" && mode !== "wizard") return { error: "Invalid mode." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -107,20 +135,37 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
 
       const response = await callAnthropic(apiKey, {
         model: "claude-sonnet-5",
-        max_tokens: 2000,
+        max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      items = JSON.parse(extractJsonArray(text));
+      items = (await parseGeneratedArray(response)) as string[];
+    } else if (mode === "paste") {
+      const pastedText = String(formData.get("pastedText") || "").trim();
+      if (!pastedText) return { error: "Paste your existing checklist text first." };
+      if (pastedText.length > 30000) return { error: "That's a lot of text — trim it to the essentials (30,000 characters max)." };
+
+      const prompt = `Below is an existing "${label}" completed by ${who} at a restaurant. Read all of it.
+
+Your job:
+1. Extract every concrete, checkable item already used.
+2. Then ADD any additional items you'd recommend from hospitality and guest-experience best practices that are missing, so the result is a complete, best-practice checklist, not just a transcription. Guest experience must show up alongside operational/cleanliness items.
+3. Keep every item under 14 words, phrased as a short, concrete, checkable action.
+
+CHECKLIST TEXT:
+"""
+${pastedText}
+"""
+
+Respond with ONLY a valid JSON array of strings, no markdown fences, no commentary, e.g. ["item one", "item two"]`;
+
+      const response = await callAnthropic(apiKey, {
+        model: "claude-sonnet-5",
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      });
+      items = (await parseGeneratedArray(response)) as string[];
     } else {
       const painPoint = String(formData.get("painPoint") || "").trim();
       const mustHave = String(formData.get("mustHave") || "").trim();
@@ -140,16 +185,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const text = (data.content ?? [])
-        .filter((b: { type: string }) => b.type === "text")
-        .map((b: { text: string }) => b.text)
-        .join("\n");
-      items = JSON.parse(extractJsonArray(text));
+      items = (await parseGeneratedArray(response)) as string[];
     }
 
     if (!Array.isArray(items) || items.length === 0) {

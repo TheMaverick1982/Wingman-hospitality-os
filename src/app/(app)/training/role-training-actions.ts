@@ -90,7 +90,7 @@ export async function generateRoleTraining(_prev: BuildState, formData: FormData
   const department = String(formData.get("department") || "");
   const mode = String(formData.get("mode") || "");
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
-  if (mode !== "upload" && mode !== "wizard") return { error: "Invalid mode." };
+  if (mode !== "upload" && mode !== "paste" && mode !== "wizard") return { error: "Invalid mode." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -130,6 +130,36 @@ ${RESPONSE_SHAPE}`;
         max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
+      });
+      generated = await parseGeneratedResponse(response);
+    } else if (mode === "paste") {
+      const pastedText = String(formData.get("pastedText") || "").trim();
+      if (!pastedText) return { error: "Paste your existing training text first." };
+      if (pastedText.length > 30000) return { error: "That's a lot of text — trim it to the essentials (30,000 characters max)." };
+
+      const prompt = `Below is existing training text or handbook material for a restaurant's ${department} role. Read all of it.
+
+Your job:
+1. Extract every concrete, checkable standard already described in the text, split into two buckets:
+   - "hospitality_items": guest-experience and hospitality behaviors -- recognition, personalization, service recovery, guiding the guest -- as they apply to this role.
+   - "role_items": role-specific technical/operational skills unique to being a great ${department} (POS steps, food safety, pour specs, seating logic, etc.) that aren't primarily about the guest interaction itself.
+2. Then ADD any additional items you'd recommend from hospitality and guest-experience best practices that are missing, so the result is a complete, best-practice ${department} training program, not just a transcription.
+3. Keep every item under 16 words, phrased as a concrete observable action a manager could watch for and check off.
+4. Propose a short track_label (2-4 words) naming this role's specific skill track, e.g. "Steps of Service" or "Bar & Beverage Program".
+
+TRAINING TEXT:
+"""
+${pastedText}
+"""
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${RESPONSE_SHAPE}`;
+
+      const response = await callAnthropic(apiKey, {
+        model: "claude-sonnet-5",
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
       });
       generated = await parseGeneratedResponse(response);
     } else {
