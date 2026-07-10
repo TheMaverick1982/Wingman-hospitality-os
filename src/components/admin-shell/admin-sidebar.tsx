@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import type { PlatformSection } from "@/lib/auth/platform";
 
@@ -12,6 +12,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSec
   { href: "/admin/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
   { href: "/admin/billing", label: "Billing", icon: CreditCard, section: "billing" },
   { href: "/admin/analytics", label: "Analytics", icon: LineChart, section: "analytics" },
+  { href: "/admin/affiliates", label: "Affiliates", icon: Share2, section: "affiliates" },
   { href: "/admin/team", label: "Team", icon: Users, section: "team" },
 ];
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import OnboardingForm from "./form";
 
 export const metadata: Metadata = {
@@ -29,7 +30,10 @@ export default async function OnboardingPage() {
       gm_full_name: pendingFullName,
       first_location_name: pendingLocationName,
     });
-    if (!error) redirect("/dashboard");
+    if (!error) {
+      await captureReferralForCurrentUser(supabase);
+      redirect("/dashboard");
+    }
   }
 
   return (

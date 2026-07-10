@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { captureReferralForCurrentUser } from "@/lib/affiliate";
 
 export type OnboardingState = { error: string | null };
 
@@ -28,5 +29,6 @@ export async function completeOnboarding(
     return { error: error.message };
   }
 
+  await captureReferralForCurrentUser(supabase);
   redirect("/start-here");
 }
