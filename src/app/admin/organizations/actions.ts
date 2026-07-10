@@ -10,6 +10,41 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
 
 export type CreateOrgState = { error: string | null };
+export type PricingState = { error: string | null; ok: boolean };
+
+// Dollars string -> integer cents, or null if blank. Returns undefined on bad input.
+function dollarsToCents(raw: string): number | null | undefined {
+  const s = raw.trim();
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return Math.round(n * 100);
+}
+
+// Set (or clear) an organization's custom enterprise pricing. Platform-admin
+// only; writes with the service-role client, which bypasses the pricing guard
+// trigger. Flat monthly price takes precedence over a per-location rate.
+export async function updateOrgPricing(orgId: string, formData: FormData): Promise<PricingState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!orgId) return { error: "Missing organization.", ok: false };
+
+  const monthly = dollarsToCents(String(formData.get("monthly") || ""));
+  const addl = dollarsToCents(String(formData.get("addl") || ""));
+  const note = String(formData.get("note") || "").trim();
+  if (monthly === undefined) return { error: "Flat monthly price must be a positive number.", ok: false };
+  if (addl === undefined) return { error: "Per-location price must be a positive number.", ok: false };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("organizations")
+    .update({ custom_monthly_cents: monthly, custom_addl_location_cents: addl, pricing_note: note || null })
+    .eq("id", orgId);
+  if (error) return { error: error.message, ok: false };
+
+  revalidatePath(`/admin/organizations/${orgId}`);
+  return { error: null, ok: true };
+}
 
 export async function createFreeOrganization(_prev: CreateOrgState, formData: FormData): Promise<CreateOrgState> {
   const profile = await platformSectionActor("organizations");
