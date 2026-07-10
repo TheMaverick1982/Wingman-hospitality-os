@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Sparkles, Upload, Wand2, Clipboard } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -47,6 +47,15 @@ export function RoleTrainingBuilder({ department }: { department: string }) {
   const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
   const [state, formAction, pending] = useActionState(generateRoleTraining, initialState);
   const questions = WIZARD_QUESTIONS[department] ?? DEFAULT_QUESTIONS;
+
+  // On a successful build, show the confirmation briefly, then close so the new
+  // program is visible on the page (which revalidated with the fresh items).
+  useEffect(() => {
+    if (state.built && !state.error) {
+      const t = setTimeout(() => setOpen(false), 1400);
+      return () => clearTimeout(t);
+    }
+  }, [state.built, state.error]);
 
   return (
     <>

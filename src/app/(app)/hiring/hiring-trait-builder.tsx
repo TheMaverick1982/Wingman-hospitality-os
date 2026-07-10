@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Sparkles, Upload, Wand2, Clipboard } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -13,6 +13,15 @@ export function HiringTraitBuilder({ department }: { department: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
   const [state, formAction, pending] = useActionState(generateHiringCriteria, initialState);
+
+  // On a successful build, show the confirmation briefly, then close so the new
+  // criteria are visible on the page.
+  useEffect(() => {
+    if (state.built != null && !state.error) {
+      const t = setTimeout(() => setOpen(false), 1400);
+      return () => clearTimeout(t);
+    }
+  }, [state.built, state.error]);
 
   return (
     <>
