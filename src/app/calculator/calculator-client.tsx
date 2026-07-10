@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { HoneypotField } from "@/components/honeypot-field";
+import { HONEYPOT_FIELD } from "@/lib/honeypot";
 import { captureLead } from "../lead-actions";
 
 const field =
@@ -27,13 +29,15 @@ export function CalculatorClient() {
     return { extraRegularsYear, perYear, perMonth: perYear / 12 };
   }, [guests, check, current, target, visits]);
 
-  async function emailMe(e: React.FormEvent) {
+  async function emailMe(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setBusy(true);
+    const hp = String(new FormData(e.currentTarget).get(HONEYPOT_FIELD) ?? "");
     const res = await captureLead({
       source: "calculator",
       email,
+      hp,
       payload: { guests, check, current, target, visits, perYear: Math.round(result.perYear) },
       summary: `${guests} new guests/mo · $${check} check · ${current}%→${target}% repeat · est. +${money(result.perYear)}/yr`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
@@ -101,6 +105,7 @@ export function CalculatorClient() {
             <p className="text-[15px] text-[#8FB6FF] font-semibold">Sent — check your inbox for the full breakdown.</p>
           ) : (
             <form onSubmit={emailMe} className="flex flex-col gap-2.5">
+              <HoneypotField />
               <div className="text-[14px] text-[#E5E5E5]">Email me this breakdown:</div>
               <div className="flex gap-2">
                 <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@restaurant.com" className="flex-1 rounded-xl bg-white/10 border border-white/15 px-4 py-3 text-[15px] text-white placeholder:text-white/40 outline-none focus:border-white/40" />

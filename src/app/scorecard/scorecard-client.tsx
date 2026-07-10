@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { HoneypotField } from "@/components/honeypot-field";
+import { HONEYPOT_FIELD } from "@/lib/honeypot";
 import { captureLead } from "../lead-actions";
 
 type Q = { id: string; pillar: string; text: string; fix: string };
@@ -47,13 +49,15 @@ export function ScorecardClient() {
   const { grade, blurb } = gradeFor(pct);
   const weakest = [...QUESTIONS].sort((a, b) => (answers[a.id] ?? 0) - (answers[b.id] ?? 0)).slice(0, 3);
 
-  async function getReport(e: React.FormEvent) {
+  async function getReport(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setBusy(true);
+    const hp = String(new FormData(e.currentTarget).get(HONEYPOT_FIELD) ?? "");
     const res = await captureLead({
       source: "scorecard",
       email,
+      hp,
       payload: { pct, grade, answers },
       summary: `Scored ${pct}% (${grade}). Weakest: ${weakest.map((w) => w.pillar).join(", ")}`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
@@ -141,6 +145,7 @@ export function ScorecardClient() {
           </div>
         ) : (
           <form onSubmit={getReport} className="flex flex-col gap-2.5">
+            <HoneypotField />
             <div className="text-[14px] text-charcoal-2">Get the fixes + your full scorecard emailed:</div>
             <div className="flex gap-2">
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@restaurant.com" className="flex-1 rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-brick" />

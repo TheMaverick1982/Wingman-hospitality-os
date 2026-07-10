@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { HoneypotField } from "@/components/honeypot-field";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { applyAsAffiliate, type ApplyState } from "./actions";
 
 const initial: ApplyState = { error: null, ok: false };
@@ -27,6 +29,7 @@ export function AffiliateApplyForm() {
 
   return (
     <form action={action} className="bg-white border border-line rounded-[22px] p-6 sm:p-8 shadow-sm flex flex-col gap-4">
+      <HoneypotField />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-[13px] font-semibold text-ink mb-1.5">Your name</label>
@@ -66,6 +69,8 @@ export function AffiliateApplyForm() {
           — no spam, no self-referrals, and no bidding on Wingman-branded search terms.
         </span>
       </label>
+
+      <TurnstileWidget />
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
 
