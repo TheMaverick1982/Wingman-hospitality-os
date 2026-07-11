@@ -20,10 +20,16 @@ export function Hero() {
               training, and accountability system that makes teams deliver on it, every single
               shift.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                href="/demo"
+                className="text-[17px] font-semibold text-white bg-brick rounded-full px-[30px] py-[15px] hover:bg-brick-dark transition-colors"
+              >
+                Try it live →
+              </Link>
               <Link
                 href="/signup"
-                className="text-[17px] font-semibold text-white bg-brick rounded-full px-[30px] py-[15px] hover:bg-brick-dark transition-colors"
+                className="text-[17px] font-semibold text-brick hover:text-brick-dark transition-colors px-3 py-[15px]"
               >
                 Get Started
               </Link>

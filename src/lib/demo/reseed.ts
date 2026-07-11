@@ -1,6 +1,10 @@
 import "server-only";
+import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "./constants";
+
+/** How long a per-visitor "Try the demo" sandbox lives before the reaper deletes it. */
+export const SANDBOX_TTL_HOURS = 3;
 
 // ---------------------------------------------------------------------------
 // Demo reseed engine.
@@ -106,7 +110,14 @@ async function ensureDemoOrg(userId: string): Promise<DemoContext> {
   const { data: profile } = await admin.from("profiles").select("org_id").eq("id", userId).maybeSingle();
   if (profile?.org_id) orgId = profile.org_id as string;
   if (!orgId) {
-    const { data: demoOrg } = await admin.from("organizations").select("id").eq("is_demo", true).maybeSingle();
+    // The shared master is the one durable demo org (ephemeral sandboxes carry a
+    // demo_expires_at), so filter those out to avoid a multiple-row match.
+    const { data: demoOrg } = await admin
+      .from("organizations")
+      .select("id")
+      .eq("is_demo", true)
+      .is("demo_expires_at", null)
+      .maybeSingle();
     if (demoOrg?.id) orgId = demoOrg.id as string;
   }
 
@@ -712,4 +723,113 @@ export async function reseedDemoOrg(): Promise<DemoContext> {
   await wipeDemoOrg(ctx.orgId);
   await populateDemoOrg(ctx);
   return ctx;
+}
+
+// ---------------------------------------------------------------------------
+// Per-visitor sandboxes ("Try the live demo" funnel)
+// ---------------------------------------------------------------------------
+
+/**
+ * Provisions a brand-new, fully-isolated demo sandbox: a throwaway auth user, a
+ * fresh org (marked ephemeral via demo_expires_at), two locations, a super-admin
+ * profile, and the full seeded showcase. Returns credentials the caller uses to
+ * sign the visitor in. The org auto-expires and is reaped by /api/cron/demo-cleanup.
+ *
+ * Unlike the shared wingmandemo org, each call creates a NEW org, so any number
+ * of visitors can explore and edit concurrently without touching each other.
+ */
+export async function provisionDemoSandbox(
+  lead?: { leadEmail?: string; leadName?: string }
+): Promise<{ email: string; password: string; orgId: string }> {
+  const admin = createAdminClient();
+
+  // Throwaway identity. No email is ever sent (email_confirm: true), so the
+  // domain only needs to be syntactically valid. The captured lead email is
+  // stashed in metadata so a sandbox can be traced back to a prospect.
+  const token = randomUUID();
+  const email = `demo-${token}@demo.wingman.app`;
+  const password = `${randomUUID()}Aa1!`;
+
+  const { data: created, error: userErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: lead?.leadName || "Demo Visitor",
+      demo_sandbox: true,
+      lead_email: lead?.leadEmail ?? null,
+    },
+  });
+  if (userErr || !created.user) throw userErr ?? new Error("Failed to create sandbox user");
+  const userId = created.user.id;
+
+  const expiresAt = new Date(Date.now() + SANDBOX_TTL_HOURS * 3600 * 1000).toISOString();
+  const { data: org, error: orgErr } = await admin
+    .from("organizations")
+    .insert({ name: ORG_NAME, is_demo: true, demo_expires_at: expiresAt })
+    .select("id")
+    .single();
+  if (orgErr || !org) {
+    // Don't leave an orphan auth user behind if the org insert fails.
+    await admin.auth.admin.deleteUser(userId).catch(() => {});
+    throw orgErr ?? new Error("Failed to create sandbox org");
+  }
+  const orgId = org.id as string;
+
+  const locationIds: string[] = [];
+  for (const want of LOCATIONS) {
+    const { data: loc, error } = await admin
+      .from("locations")
+      .insert({ org_id: orgId, ...want })
+      .select("id")
+      .single();
+    if (error || !loc) throw error ?? new Error("Failed to create sandbox location");
+    locationIds.push(loc.id as string);
+  }
+
+  const { error: profErr } = await admin.from("profiles").insert({
+    id: userId,
+    org_id: orgId,
+    full_name: "Demo Visitor",
+    access_role: "super_admin",
+    location_id: null,
+    all_locations: true,
+  });
+  if (profErr) throw profErr;
+
+  await populateDemoOrg({ userId, orgId, locationIds });
+  return { email, password, orgId };
+}
+
+/**
+ * Reaps expired sandbox orgs and their throwaway users. Deleting the auth user
+ * cascade-deletes its profile; deleting the org cascade-deletes all tenant data.
+ * Called by the demo-cleanup cron.
+ */
+export async function cleanupExpiredSandboxes(): Promise<{ orgs: number; users: number }> {
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: expired, error } = await admin
+    .from("organizations")
+    .select("id")
+    .eq("is_demo", true)
+    .not("demo_expires_at", "is", null)
+    .lt("demo_expires_at", now)
+    .limit(500);
+  if (error) throw error;
+
+  let orgs = 0;
+  let users = 0;
+  for (const o of expired ?? []) {
+    const orgId = (o as { id: string }).id;
+    const { data: profs } = await admin.from("profiles").select("id").eq("org_id", orgId);
+    for (const p of profs ?? []) {
+      const { error: delErr } = await admin.auth.admin.deleteUser((p as { id: string }).id);
+      if (!delErr) users++;
+    }
+    const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
+    if (!orgDelErr) orgs++;
+  }
+  return { orgs, users };
 }

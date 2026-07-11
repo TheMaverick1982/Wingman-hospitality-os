@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
-import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
+import { consumeAiLimit } from "@/lib/rate-limit";
 
 export type WizardState = { error: string | null };
 
@@ -22,7 +22,7 @@ export async function generateAndApplySystem(_prev: WizardState, formData: FormD
   if (!profile || profile.accessRole !== "super_admin") {
     return { error: "Only a Super Admin can run the setup wizard." };
   }
-  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+  if (!(await consumeAiLimit(profile))) {
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 

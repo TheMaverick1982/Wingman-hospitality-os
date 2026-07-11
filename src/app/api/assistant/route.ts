@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { consumeRateLimit, ASSISTANT_LIMIT } from "@/lib/rate-limit";
+import { consumeAiLimit, ASSISTANT_LIMIT } from "@/lib/rate-limit";
 import { notifySupportNewTicket } from "@/lib/support";
 import {
   ASSISTANT_MODEL,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!(await consumeRateLimit(`assistant:${profile.orgId}`, ASSISTANT_LIMIT.max, ASSISTANT_LIMIT.windowSeconds))) {
+  if (!(await consumeAiLimit(profile, { bucketPrefix: "assistant", max: ASSISTANT_LIMIT.max, windowSeconds: ASSISTANT_LIMIT.windowSeconds }))) {
     return NextResponse.json(
       { error: "You've hit the hourly limit for the assistant. Please try again a bit later." },
       { status: 429 }
