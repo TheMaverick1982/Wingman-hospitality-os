@@ -2,7 +2,7 @@
 // platform staff; platform_access lists which /admin sections they may open.
 
 // Page-backed sections: each has its own /admin page and sidebar nav item.
-export type PlatformSection = "organizations" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "team";
+export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "team";
 
 // A grantable permission is either a page section or a capability toggle that
 // isn't its own page (e.g. client_login gates "Log in as client").
@@ -10,6 +10,7 @@ export type PlatformPermission = PlatformSection | "client_login";
 
 export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; description: string; href: string }[] = [
   { key: "organizations", label: "Organizations", description: "Customer organizations — view and create.", href: "/admin/organizations" },
+  { key: "crm", label: "CRM", description: "Sales pipeline — leads, contacts, and outreach.", href: "/admin/crm" },
   { key: "support", label: "Support", description: "View and reply to support tickets.", href: "/admin/support" },
   { key: "reporting", label: "Reporting", description: "Platform-wide reporting.", href: "/admin/reporting" },
   { key: "billing", label: "Billing", description: "Platform billing.", href: "/admin/billing" },

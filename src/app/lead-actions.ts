@@ -48,6 +48,36 @@ export async function captureLead(input: {
   const { error } = await admin.from("leads").insert({ email, name, source, payload: input.payload ?? {} });
   if (error) return { error: error.message, ok: false };
 
+  // Mirror the lead into the CRM: upsert the contact and log a timeline activity.
+  // Best-effort — a CRM hiccup must never fail lead capture.
+  try {
+    const nowIso = new Date().toISOString();
+    const { data: existing } = await admin.from("crm_contacts").select("id").eq("email", email).maybeSingle();
+    let contactId = (existing as { id: string } | null)?.id;
+    if (contactId) {
+      const upd: Record<string, unknown> = { last_activity_at: nowIso, updated_at: nowIso };
+      if (name) upd.name = name;
+      await admin.from("crm_contacts").update(upd).eq("id", contactId);
+    } else {
+      const { data: created } = await admin
+        .from("crm_contacts")
+        .insert({ email, name, first_source: source, last_activity_at: nowIso })
+        .select("id")
+        .single();
+      contactId = (created as { id: string } | null)?.id;
+    }
+    if (contactId) {
+      await admin.from("crm_activities").insert({
+        contact_id: contactId,
+        kind: "lead",
+        body: `Lead captured via ${source}`,
+        meta: { source, ...(input.payload ?? {}) },
+      });
+    }
+  } catch (e) {
+    console.error("[crm] lead mirror failed", e);
+  }
+
   // Notify the team (best-effort).
   try {
     await sendEmail({
