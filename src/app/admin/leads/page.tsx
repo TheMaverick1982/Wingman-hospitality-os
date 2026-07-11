@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { LeadsTable, type LeadRow } from "./leads-table";
 
 export const maxDuration = 60;
 
@@ -12,18 +13,6 @@ type Lead = {
   payload: Record<string, unknown>;
   created_at: string;
 };
-
-function summarize(l: Lead): string {
-  const p = l.payload || {};
-  if (l.source === "calculator") {
-    const yr = typeof p.perYear === "number" ? `+$${Math.round(p.perYear).toLocaleString()}/yr` : "";
-    return [`${p.current ?? "?"}%→${p.target ?? "?"}% repeat`, `$${p.check ?? "?"} check`, yr].filter(Boolean).join(" · ");
-  }
-  if (l.source === "scorecard") {
-    return `Grade ${p.grade ?? "?"} · ${p.pct ?? "?"}%`;
-  }
-  return "";
-}
 
 export default async function AdminLeadsPage() {
   await requirePlatformSection("analytics");
@@ -53,6 +42,17 @@ export default async function AdminLeadsPage() {
     return acc;
   }, {});
 
+  const rows: LeadRow[] = leads.map((l) => ({
+    id: l.id,
+    name: l.name,
+    email: l.email,
+    source: l.source,
+    payload: l.payload,
+    created_at: l.created_at,
+    automation: automationFor(l.email),
+    contactId: contactIdByEmail.get(l.email.toLowerCase()) ?? null,
+  }));
+
   return (
     <>
       <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
@@ -70,50 +70,7 @@ export default async function AdminLeadsPage() {
         </Link>
       </div>
 
-      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
-        {leads.length === 0 ? (
-          <p className="text-sm text-muted p-6">No leads yet. They&apos;ll appear here as people use the demo, chat, calculator, and scorecard.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-[12px] font-semibold uppercase tracking-wide text-muted-2 border-b border-line">
-                  <th className="px-5 py-3">Name</th>
-                  <th className="px-5 py-3">Source</th>
-                  <th className="px-5 py-3">Automation</th>
-                  <th className="px-5 py-3">Detail</th>
-                  <th className="px-5 py-3 whitespace-nowrap">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.map((l) => {
-                  const seq = automationFor(l.email);
-                  return (
-                    <tr key={l.id} className="border-b border-[#F5F5F5] last:border-0">
-                      <td className="px-5 py-3">
-                        <div className="text-[14px] font-semibold text-ink">{l.name || "—"}</div>
-                        <a href={`mailto:${l.email}`} className="text-[12.5px] text-brick hover:opacity-70">{l.email}</a>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-[12px] font-semibold text-charcoal-2 bg-paper border border-line px-2 py-0.5 rounded-full capitalize">{l.source}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        {seq ? (
-                          <span className="text-[12px] font-medium text-olive bg-olive-tint px-2 py-0.5 rounded-full">{seq}</span>
-                        ) : (
-                          <span className="text-[13px] text-muted-2">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-[13px] text-charcoal-2">{summarize(l)}</td>
-                      <td className="px-5 py-3 text-[13px] text-muted-2 whitespace-nowrap">{new Date(l.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <LeadsTable rows={rows} />
     </>
   );
 }
