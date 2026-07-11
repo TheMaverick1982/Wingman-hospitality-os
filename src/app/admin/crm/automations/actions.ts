@@ -9,13 +9,24 @@ async function guard() {
   return platformSectionActor("crm");
 }
 
+export type ResyncState = { done: boolean; message: string | null };
+
 // One-click resync of the spec nurture copy (demo / calculator / scorecard) —
 // same work as the CRON_SECRET route, behind admin auth. Leaves everything in
-// draft; skips any sequence you've already published.
-export async function resyncSpecCopy(): Promise<void> {
-  if (!(await guard())) return;
-  await seedNurtureSequences(false);
+// draft; skips any sequence you've already published. Returns a summary so the
+// UI can confirm completion.
+export async function resyncSpecCopy(_prev: ResyncState, _formData: FormData): Promise<ResyncState> {
+  if (!(await guard())) return { done: false, message: "Not authorized." };
+  const results = await seedNurtureSequences(false);
   revalidatePath("/admin/crm/automations");
+
+  const seeded = results.filter((r) => r.action === "reseeded" || r.action === "created").length;
+  const skipped = results.filter((r) => r.action.startsWith("skipped")).length;
+  const retired = results.filter((r) => r.action === "retired").length;
+  const parts = [`${seeded} sequence${seeded === 1 ? "" : "s"} synced`];
+  if (skipped) parts.push(`${skipped} left alone (already published)`);
+  if (retired) parts.push(`${retired} retired`);
+  return { done: true, message: parts.join(" · ") };
 }
 
 export async function setSequenceActive(formData: FormData): Promise<void> {
