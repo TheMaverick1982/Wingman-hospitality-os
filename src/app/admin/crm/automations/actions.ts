@@ -54,7 +54,7 @@ export async function addStep(formData: FormData): Promise<void> {
     step_order: nextOrder,
     delay_days: nextDelay,
     subject: "New email subject",
-    body: "Write your message here.\n\nhttps://www.joinwingman.app/demo",
+    body: "Hi {{first_name}},\n\nWrite your message here.\n\nhttps://www.joinwingman.app/demo",
   });
   revalidatePath(`/admin/crm/automations/${sequenceId}`);
 }

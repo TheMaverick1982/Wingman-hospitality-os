@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
+import { personalize } from "@/lib/name-safety";
 
 // Runs daily. Sends any due nurture-sequence step, honoring stop conditions
 // (unsubscribed / booked a call / became a customer / sequence turned off).
@@ -13,7 +14,7 @@ type Enrollment = {
   contact_id: string;
   next_step_order: number;
   enrolled_at: string;
-  crm_contacts: { email: string; unsubscribed: boolean; booked_at: string | null; customer_at: string | null } | null;
+  crm_contacts: { email: string; name: string | null; unsubscribed: boolean; booked_at: string | null; customer_at: string | null } | null;
   crm_sequences: { source: string; active: boolean } | null;
 };
 type Step = { step_order: number; delay_days: number; subject: string; body: string };
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await admin
     .from("crm_enrollments")
-    .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, unsubscribed, booked_at, customer_at), crm_sequences(source, active)")
+    .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, name, unsubscribed, booked_at, customer_at), crm_sequences(source, active)")
     .eq("status", "active")
     .lte("next_run_at", nowIso)
     .order("next_run_at", { ascending: true })
@@ -76,8 +77,10 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    const subject = personalize(current.subject, contact.name);
+    const body = personalize(current.body, contact.name);
     try {
-      await sendEmail({ to: [contact.email], subject: current.subject, html: buildSequenceEmailHtml(current.body, contact.email) });
+      await sendEmail({ to: [contact.email], subject, html: buildSequenceEmailHtml(body, contact.email) });
     } catch (err) {
       // Leave the enrollment due; it retries next run (e.g. hit a daily send cap).
       console.error("[crm] sequence send failed", err);
@@ -88,8 +91,8 @@ export async function GET(request: NextRequest) {
     await admin.from("crm_activities").insert({
       contact_id: e.contact_id,
       kind: "email_out",
-      subject: current.subject,
-      body: current.body,
+      subject,
+      body,
       meta: { sequence: seq.source, automated: true, to: contact.email },
     });
     await admin.from("crm_contacts").update({ last_activity_at: nowIso }).eq("id", e.contact_id);

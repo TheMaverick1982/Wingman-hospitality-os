@@ -116,3 +116,7 @@ join (values
   ('sales-chat', 5, 45, 'Ready when you are',
    E'No rush — whenever you want to set your standard, it takes minutes to start: https://www.joinwingman.app/signup')
 ) as v(source, step_order, delay_days, subject, body) on v.source = s.source;
+
+-- Greet every seeded email by first name. {{first_name}} is replaced at send
+-- time with the recipient's safe first name (or "there" if missing/filtered).
+update crm_sequence_steps set body = 'Hi {{first_name}},' || E'\n\n' || body;

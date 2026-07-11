@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isCrmStage, stageLabel } from "@/lib/crm";
 import { stopEnrollments, suppressEmail } from "@/lib/crm-sequences";
+import { personalize } from "@/lib/name-safety";
 
 export type CrmActionState = { error: string | null; ok: boolean };
 
@@ -123,18 +124,22 @@ export async function sendContactEmail(_prev: CrmActionState, formData: FormData
   if (!contactId || !subject || !body) return { error: "Subject and message are required.", ok: false };
 
   const admin = createAdminClient();
-  const { data: contact } = await admin.from("crm_contacts").select("email, unsubscribed").eq("id", contactId).maybeSingle();
-  const c = contact as { email: string; unsubscribed: boolean } | null;
+  const { data: contact } = await admin.from("crm_contacts").select("email, name, unsubscribed").eq("id", contactId).maybeSingle();
+  const c = contact as { email: string; name: string | null; unsubscribed: boolean } | null;
   if (!c) return { error: "Contact not found.", ok: false };
   if (c.unsubscribed) return { error: "This contact has unsubscribed — can't email them.", ok: false };
 
+  // Support {{first_name}} merge fields with the safe-name fallback.
+  const finalSubject = personalize(subject, c.name);
+  const finalBody = personalize(body, c.name);
+
   // Minimal branded HTML wrapper around the typed message (newlines → <br>).
-  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:560px;">${body
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:560px;">${finalBody
     .replace(/[<>&]/g, (ch) => (ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : "&amp;"))
     .replace(/\n/g, "<br>")}</div>`;
 
   try {
-    await sendEmail({ to: [c.email], subject, html, replyTo: me.email });
+    await sendEmail({ to: [c.email], subject: finalSubject, html, replyTo: me.email });
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Couldn't send the email.", ok: false };
   }
@@ -142,8 +147,8 @@ export async function sendContactEmail(_prev: CrmActionState, formData: FormData
   await admin.from("crm_activities").insert({
     contact_id: contactId,
     kind: "email_out",
-    subject,
-    body,
+    subject: finalSubject,
+    body: finalBody,
     meta: { to: c.email },
     created_by: me.userId,
   });

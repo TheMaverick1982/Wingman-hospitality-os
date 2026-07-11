@@ -37,6 +37,7 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">{sequence.name}</h1>
           <p className="text-sm text-muted mt-1">Nurtures leads from the {sourceLabel(sequence.source)} funnel. Days are counted from when they enter the sequence.</p>
+          <p className="text-[13px] text-muted-2 mt-1">Use <code className="text-brick">{"{{first_name}}"}</code> to personalize — it becomes their first name, or &ldquo;there&rdquo; if it&apos;s missing or inappropriate.</p>
         </div>
         <form action={setSequenceActive}>
           <input type="hidden" name="sequenceId" value={sequence.id} />
