@@ -67,9 +67,19 @@ export async function markContactBooked(contactId: string): Promise<CrmActionSta
   if (!me) return { error: "Not authorized.", ok: false };
   const admin = createAdminClient();
   const now = new Date().toISOString();
-  await admin.from("crm_contacts").update({ booked_at: now, last_activity_at: now, updated_at: now }).eq("id", contactId);
+  const { data: c } = await admin.from("crm_contacts").select("stage").eq("id", contactId).maybeSingle();
+  const cur = (c as { stage: string } | null)?.stage;
+  const keepStage = cur === "signed_up" || cur === "lost";
+  const stage = keepStage ? cur : "demoed";
+  await admin.from("crm_contacts").update({ booked_at: now, stage, last_activity_at: now, updated_at: now }).eq("id", contactId);
   await stopEnrollments(contactId, "booked", admin);
-  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Booked a call — sequences stopped", created_by: me.userId });
+  await admin.from("crm_activities").insert({
+    contact_id: contactId,
+    kind: "system",
+    body: keepStage ? "Booked a call — sequences stopped" : "Booked a call — moved to Demo, sequences stopped",
+    created_by: me.userId,
+  });
+  revalidatePath("/admin/crm");
   revalidatePath(`/admin/crm/${contactId}`);
   return { error: null, ok: true };
 }

@@ -92,13 +92,20 @@ export async function stopEnrollments(contactId: string, reason: string, adminAr
 export async function markBookedByEmail(email: string, adminArg?: Admin): Promise<boolean> {
   const admin = adminArg ?? createAdminClient();
   const lower = email.toLowerCase();
-  const { data: c } = await admin.from("crm_contacts").select("id").eq("email", lower).maybeSingle();
-  const contact = c as { id: string } | null;
+  const { data: c } = await admin.from("crm_contacts").select("id, stage").eq("email", lower).maybeSingle();
+  const contact = c as { id: string; stage: string } | null;
   if (!contact) return false;
   const now = new Date().toISOString();
-  await admin.from("crm_contacts").update({ booked_at: now, last_activity_at: now, updated_at: now }).eq("id", contact.id);
+  // Booking a call auto-advances them to Demo (unless already won/lost).
+  const keepStage = contact.stage === "signed_up" || contact.stage === "lost";
+  const stage = keepStage ? contact.stage : "demoed";
+  await admin.from("crm_contacts").update({ booked_at: now, stage, last_activity_at: now, updated_at: now }).eq("id", contact.id);
   await stopEnrollments(contact.id, "booked", admin);
-  await admin.from("crm_activities").insert({ contact_id: contact.id, kind: "system", body: "Booked a call — sequences stopped" });
+  await admin.from("crm_activities").insert({
+    contact_id: contact.id,
+    kind: "system",
+    body: keepStage ? "Booked a call — sequences stopped" : "Booked a call — moved to Demo, sequences stopped",
+  });
   return true;
 }
 
