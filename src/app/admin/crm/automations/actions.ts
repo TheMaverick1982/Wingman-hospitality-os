@@ -19,6 +19,18 @@ export async function setSequenceActive(formData: FormData): Promise<void> {
   revalidatePath(`/admin/crm/automations/${sequenceId}`);
 }
 
+// Draft ⇄ Published. Drafts never enroll or send.
+export async function setSequencePublished(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const sequenceId = String(formData.get("sequenceId") || "");
+  const published = String(formData.get("published") || "") === "true";
+  if (!sequenceId) return;
+  const admin = createAdminClient();
+  await admin.from("crm_sequences").update({ published, updated_at: new Date().toISOString() }).eq("id", sequenceId);
+  revalidatePath("/admin/crm/automations");
+  revalidatePath(`/admin/crm/automations/${sequenceId}`);
+}
+
 export async function updateStep(formData: FormData): Promise<void> {
   if (!(await guard())) return;
   const stepId = String(formData.get("stepId") || "");

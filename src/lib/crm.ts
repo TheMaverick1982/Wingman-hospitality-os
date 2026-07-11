@@ -1,14 +1,17 @@
 // Shared CRM constants and types. Pure (no server-only imports) so both the
 // admin server pages and the client board/panel can use it.
 
-export type CrmStage = "new" | "engaged" | "demoed" | "signed_up" | "lost";
+export type CrmStage = "new" | "engaged" | "demoed" | "demo_completed" | "signed_up" | "lost";
 
+// Labels track the automation spec's "Wingman Sales" pipeline. Keys are stable
+// (existing cards don't move); "demo_completed" is the one new stage.
 export const CRM_STAGES: { key: CrmStage; label: string }[] = [
-  { key: "new", label: "New" },
-  { key: "engaged", label: "Engaged" },
-  { key: "demoed", label: "Demo" },
-  { key: "signed_up", label: "Signed up" },
-  { key: "lost", label: "Lost" },
+  { key: "new", label: "New Lead" },
+  { key: "engaged", label: "Nurturing" },
+  { key: "demoed", label: "Demo Booked" },
+  { key: "demo_completed", label: "Demo Completed" },
+  { key: "signed_up", label: "Signed Up" },
+  { key: "lost", label: "Lost / Dormant" },
 ];
 
 export const CRM_STAGE_KEYS = CRM_STAGES.map((s) => s.key) as CrmStage[];
@@ -35,6 +38,35 @@ export function sourceLabel(source: string | null | undefined): string {
 }
 
 export type CrmActivityKind = "lead" | "note" | "email_out" | "email_in" | "stage_change" | "system";
+
+// Map a captured lead's payload into the contact custom fields the emails merge
+// ({{contact.calc_annual_upside}}, {{contact.scorecard_gap_1}}, ...). Reads both
+// the spec field keys and our current landing-page keys, so it works before and
+// after the landing pages are updated to the spec payload.
+export function contactFieldsFromLead(source: string, payload: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  const p = payload || {};
+  const num = (v: unknown) => (v == null || v === "" ? undefined : Number(v));
+  const f: Record<string, unknown> = { lead_source_page: `/${source}` };
+  if (source === "calculator") {
+    f.calc_new_guests_month = num(p.new_guests_month ?? p.guests);
+    f.calc_avg_check = num(p.avg_check ?? p.check);
+    f.calc_current_repeat_rate = num(p.current_repeat_rate ?? p.current);
+    f.calc_target_repeat_rate = num(p.target_repeat_rate ?? p.target);
+    f.calc_regular_visits_year = num(p.regular_visits_year ?? p.visits);
+    const annual = num(p.annual_upside ?? p.perYear);
+    if (annual != null) f.calc_annual_upside = annual;
+    const monthly = num(p.monthly_upside);
+    f.calc_monthly_upside = monthly != null ? monthly : annual != null ? Math.round(annual / 12) : undefined;
+  }
+  if (source === "scorecard") {
+    f.scorecard_score = num(p.score ?? p.pct);
+    if (p.gap_1) f.scorecard_gap_1 = p.gap_1;
+    if (p.gap_2) f.scorecard_gap_2 = p.gap_2;
+    if (p.gap_3) f.scorecard_gap_3 = p.gap_3;
+  }
+  for (const k of Object.keys(f)) if (f[k] === undefined) delete f[k];
+  return f;
+}
 
 // Human-readable result rows from a lead's captured payload (calculator inputs,
 // scorecard grade, etc.) — used on the contact timeline and the Leads popup.

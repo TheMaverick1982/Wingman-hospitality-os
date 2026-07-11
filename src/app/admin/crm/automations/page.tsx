@@ -12,7 +12,7 @@ export default async function AutomationsPage() {
   const admin = createAdminClient();
 
   const [{ data: sequences }, { data: steps }, { data: enrolls }] = await Promise.all([
-    admin.from("crm_sequences").select("id, source, name, active").order("source", { ascending: true }),
+    admin.from("crm_sequences").select("id, source, name, active, published").order("source", { ascending: true }),
     admin.from("crm_sequence_steps").select("sequence_id, active"),
     admin.from("crm_enrollments").select("sequence_id, status"),
   ]);
@@ -26,7 +26,7 @@ export default async function AutomationsPage() {
     if (e.status === "active") activeEnroll.set(e.sequence_id, (activeEnroll.get(e.sequence_id) ?? 0) + 1);
   }
 
-  const list = (sequences ?? []) as { id: string; source: string; name: string; active: boolean }[];
+  const list = (sequences ?? []) as { id: string; source: string; name: string; active: boolean; published: boolean }[];
 
   return (
     <div className="flex flex-col gap-5">
@@ -56,8 +56,8 @@ export default async function AutomationsPage() {
                 <td className="px-5 py-4 text-charcoal-2">{stepCount.get(s.id) ?? 0}</td>
                 <td className="px-5 py-4 text-charcoal-2">{activeEnroll.get(s.id) ?? 0}</td>
                 <td className="px-5 py-4">
-                  <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${s.active ? "text-olive bg-olive-tint" : "text-muted-2 bg-paper border border-line"}`}>
-                    {s.active ? "Active" : "Paused"}
+                  <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${s.published ? "text-olive bg-olive-tint" : "text-[#b4884a] bg-gold-tint"}`}>
+                    {s.published ? "Published" : "Draft"}
                   </span>
                 </td>
                 <td className="px-5 py-4 text-right">
