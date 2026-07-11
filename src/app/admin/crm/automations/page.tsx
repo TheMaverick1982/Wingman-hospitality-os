@@ -4,6 +4,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceLabel } from "@/lib/crm";
 import { CrmTabs } from "../crm-tabs";
+import { resyncSpecCopy } from "./actions";
 
 export const metadata: Metadata = { title: "Automations · CRM" };
 
@@ -30,9 +31,20 @@ export default async function AutomationsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">CRM</h1>
-        <p className="text-sm text-muted mt-1">Nurture sequences that email each lead based on the funnel they came in through.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">CRM</h1>
+          <p className="text-sm text-muted mt-1">Nurture sequences that email each lead based on the funnel they came in through.</p>
+        </div>
+        <form action={resyncSpecCopy}>
+          <button
+            type="submit"
+            className="shrink-0 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors"
+            title="Load the latest spec copy into the demo, calculator, and scorecard sequences. Leaves everything in draft; won't touch sequences you've already published."
+          >
+            Resync spec copy
+          </button>
+        </form>
       </div>
       <CrmTabs />
 
