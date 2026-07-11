@@ -50,7 +50,13 @@ export function buildSequenceEmailHtml(body: string, email: string): string {
 //   - the sequence is missing, inactive, or a draft.
 // Any lead-field updates are applied by the caller before this runs, so "abort"
 // here simply means "return without enrolling".
-export async function enrollContactInSource(contactId: string, email: string, source: string, adminArg?: Admin): Promise<void> {
+export async function enrollContactInSource(
+  contactId: string,
+  email: string,
+  source: string,
+  adminArg?: Admin,
+  opts?: { ignoreWonGuards?: boolean }
+): Promise<void> {
   const admin = adminArg ?? createAdminClient();
   const lower = email.toLowerCase();
 
@@ -72,13 +78,17 @@ export async function enrollContactInSource(contactId: string, email: string, so
   } | null;
   if (!contact || contact.unsubscribed) return;
   const tags = contact.tags ?? [];
-  const isCustomer = contact.customer_at != null || contact.stage === "signed_up" || tags.includes("status:customer");
-  const isBooked =
-    contact.booked_at != null ||
-    contact.stage === "demoed" ||
-    contact.stage === "demo_completed" ||
-    tags.includes("status:demo-booked");
-  if (isCustomer || isBooked) return; // won leads never re-enter nurture
+  // The won-lead guards don't apply to the signup onboarding sequence — becoming
+  // a customer is exactly what starts it. (ignoreWonGuards is set by that path.)
+  if (!opts?.ignoreWonGuards) {
+    const isCustomer = contact.customer_at != null || contact.stage === "signed_up" || tags.includes("status:customer");
+    const isBooked =
+      contact.booked_at != null ||
+      contact.stage === "demoed" ||
+      contact.stage === "demo_completed" ||
+      tags.includes("status:demo-booked");
+    if (isCustomer || isBooked) return; // won leads never re-enter nurture
+  }
 
   // One nurture at a time: skip if any active enrollment already exists.
   const { data: active } = await admin
@@ -158,28 +168,58 @@ export async function markBookedByEmail(email: string, adminArg?: Admin): Promis
   return true;
 }
 
-// Mark a signup as a customer — creates the contact if new, marks them won, and
-// stops their sequences. Best-effort; never blocks signup.
-export async function markCustomerByEmail(email: string, orgId?: string): Promise<void> {
+// Mark a signup as a customer — creates the contact if new, marks them won, tags
+// them status:customer / src:signup, moves them to Signed Up, MASTER KILL-SWITCH
+// stops any running nurture, then enrolls them in the post-signup onboarding
+// sequence (wf-05). Best-effort; never blocks signup.
+export async function markCustomerByEmail(
+  email: string,
+  opts?: { orgId?: string; workspaceName?: string; name?: string }
+): Promise<void> {
   try {
     const admin = createAdminClient();
     const lower = email.toLowerCase();
     const now = new Date().toISOString();
-    const { data: c } = await admin.from("crm_contacts").select("id").eq("email", lower).maybeSingle();
-    let contactId = (c as { id: string } | null)?.id;
+
+    const { data: c } = await admin.from("crm_contacts").select("id, name, tags, fields").eq("email", lower).maybeSingle();
+    const ex = c as { id: string; name: string | null; tags: string[] | null; fields: Record<string, unknown> | null } | null;
+
+    // Tag src:signup + status:customer; clear any nurturing tags.
+    const nextTags = Array.from(new Set([...(ex?.tags ?? []), "src:signup", "status:customer"])).filter(
+      (t) => t !== "status:nurturing" && t !== "status:nurture-finished"
+    );
+    const nextFields = { ...(ex?.fields ?? {}) };
+    if (opts?.workspaceName) nextFields.workspace_name = opts.workspaceName;
+
+    let contactId = ex?.id;
+    const base: Record<string, unknown> = {
+      stage: "signed_up",
+      customer_at: now,
+      tags: nextTags,
+      fields: nextFields,
+      last_activity_at: now,
+      updated_at: now,
+    };
+    if (opts?.orgId) base.org_id = opts.orgId; // only set when known — never null out an existing link
+    if (opts?.name) base.name = opts.name;
+
     if (contactId) {
-      await admin.from("crm_contacts").update({ stage: "signed_up", customer_at: now, org_id: orgId ?? null, last_activity_at: now, updated_at: now }).eq("id", contactId);
+      await admin.from("crm_contacts").update(base).eq("id", contactId);
     } else {
       const { data: created } = await admin
         .from("crm_contacts")
-        .insert({ email: lower, stage: "signed_up", customer_at: now, org_id: orgId ?? null, first_source: "signup", last_activity_at: now })
+        .insert({ email: lower, first_source: "signup", ...base })
         .select("id")
         .single();
       contactId = (created as { id: string } | null)?.id;
     }
+
     if (contactId) {
+      // Kill switch: stop any running nurture before starting onboarding.
       await stopEnrollments(contactId, "customer", admin);
-      await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Became a customer — sequences stopped" });
+      await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Became a customer — nurture stopped, onboarding started" });
+      // Enroll in the signup onboarding sequence (won-guards don't apply here).
+      await enrollContactInSource(contactId, lower, "signup", admin, { ignoreWonGuards: true });
     }
   } catch (e) {
     console.error("[crm] markCustomerByEmail failed", e);

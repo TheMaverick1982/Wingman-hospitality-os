@@ -32,6 +32,13 @@ export async function completeOnboarding(
 
   const { data: { user } } = await supabase.auth.getUser();
   await captureReferralForCurrentUser(supabase);
-  if (user?.email) await markCustomerByEmail(user.email);
+  if (user?.email) {
+    const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
+    await markCustomerByEmail(user.email, {
+      orgId: (prof as { org_id: string } | null)?.org_id,
+      workspaceName: orgName,
+      name: fullName,
+    });
+  }
   redirect("/start-here");
 }

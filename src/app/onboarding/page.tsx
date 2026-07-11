@@ -33,7 +33,14 @@ export default async function OnboardingPage() {
     });
     if (!error) {
       await captureReferralForCurrentUser(supabase);
-      if (user.email) await markCustomerByEmail(user.email);
+      if (user.email) {
+        const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
+        await markCustomerByEmail(user.email, {
+          orgId: (prof as { org_id: string } | null)?.org_id,
+          workspaceName: pendingOrgName,
+          name: pendingFullName,
+        });
+      }
       redirect("/dashboard");
     }
   }
