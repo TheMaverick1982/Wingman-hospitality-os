@@ -40,8 +40,16 @@ export function buildSequenceEmailHtml(body: string, email: string): string {
   </div>`;
 }
 
-// Enroll a contact into the sequence for their lead source, if one is active,
-// they're not suppressed, and they're not already enrolled. Best-effort.
+// Enroll a contact into the sequence for their lead source, subject to the spec's
+// global entry guards. Best-effort. A contact is NOT enrolled if they:
+//   - are suppressed / unsubscribed,
+//   - are already a customer or have booked a demo (never nurture won leads),
+//   - already have an active nurture running (one nurture at a time),
+//   - already ran this exact sequence (no re-entry — a resubmission only refreshes
+//     their fields, which happens upstream in captureLead before this call),
+//   - the sequence is missing, inactive, or a draft.
+// Any lead-field updates are applied by the caller before this runs, so "abort"
+// here simply means "return without enrolling".
 export async function enrollContactInSource(contactId: string, email: string, source: string, adminArg?: Admin): Promise<void> {
   const admin = adminArg ?? createAdminClient();
   const lower = email.toLowerCase();
@@ -49,9 +57,50 @@ export async function enrollContactInSource(contactId: string, email: string, so
   const { data: supp } = await admin.from("crm_suppression").select("email").eq("email", lower).maybeSingle();
   if (supp) return;
 
+  // Entry guards from the contact's current state.
+  const { data: c } = await admin
+    .from("crm_contacts")
+    .select("stage, booked_at, customer_at, unsubscribed, tags")
+    .eq("id", contactId)
+    .maybeSingle();
+  const contact = c as {
+    stage: string | null;
+    booked_at: string | null;
+    customer_at: string | null;
+    unsubscribed: boolean | null;
+    tags: string[] | null;
+  } | null;
+  if (!contact || contact.unsubscribed) return;
+  const tags = contact.tags ?? [];
+  const isCustomer = contact.customer_at != null || contact.stage === "signed_up" || tags.includes("status:customer");
+  const isBooked =
+    contact.booked_at != null ||
+    contact.stage === "demoed" ||
+    contact.stage === "demo_completed" ||
+    tags.includes("status:demo-booked");
+  if (isCustomer || isBooked) return; // won leads never re-enter nurture
+
+  // One nurture at a time: skip if any active enrollment already exists.
+  const { data: active } = await admin
+    .from("crm_enrollments")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("status", "active")
+    .limit(1);
+  if ((active ?? []).length) return;
+
   const { data: seq } = await admin.from("crm_sequences").select("id, active, published").eq("source", source).maybeSingle();
   const s = seq as { id: string; active: boolean; published: boolean } | null;
   if (!s || !s.active || !s.published) return; // drafts never enroll/send
+
+  // No re-entry: skip if they ever enrolled in THIS sequence (any status).
+  const { data: prior } = await admin
+    .from("crm_enrollments")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("sequence_id", s.id)
+    .limit(1);
+  if ((prior ?? []).length) return;
 
   const { data: steps } = await admin
     .from("crm_sequence_steps")

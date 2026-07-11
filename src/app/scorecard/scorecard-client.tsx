@@ -60,7 +60,15 @@ export function ScorecardClient() {
       email,
       name,
       hp,
-      payload: { pct, grade, answers },
+      payload: {
+        pct,
+        grade,
+        answers,
+        score: Math.round(total / 2), // 0–10 for {{contact.scorecard_score}}
+        gap_1: weakest[0]?.pillar,
+        gap_2: weakest[1]?.pillar,
+        gap_3: weakest[2]?.pillar,
+      },
       summary: `Scored ${pct}% (${grade}). Weakest: ${weakest.map((w) => w.pillar).join(", ")}`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
         <p style="font-size:16px;">Your Wingman Hospitality Scorecard:</p>

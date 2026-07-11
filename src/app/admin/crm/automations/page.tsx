@@ -70,7 +70,7 @@ export default async function AutomationsPage() {
             {list.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-muted">
-                  No sequences yet. Run migration 0047 to seed them.
+                  No sequences yet. Seed them via <code>/api/crm/seed-nurtures</code>.
                 </td>
               </tr>
             )}
@@ -78,7 +78,7 @@ export default async function AutomationsPage() {
         </table>
       </div>
       <p className="text-[13px] text-muted-2">
-        Sequences auto-stop when a contact books a call, becomes a customer, or unsubscribes. Emails send daily via the CRM cron.
+        Sequences auto-stop when a contact books a call, becomes a customer, or unsubscribes. Emails send hourly via the CRM cron, within the Mon–Sat 7am–7pm (contact&rsquo;s ET) send window — except transactional first emails, which go out immediately.
       </p>
     </div>
   );
