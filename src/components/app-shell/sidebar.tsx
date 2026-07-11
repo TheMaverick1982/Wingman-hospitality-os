@@ -80,7 +80,7 @@ export function Sidebar({
       : "hidden lg:flex w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex-col sticky top-0 h-screen";
 
   return (
-    <div className={rootClass}>
+    <div className={rootClass} data-tour="nav">
       <Link href="/dashboard" aria-label="Wingman home" className="flex items-center px-2.5 pb-6">
         <WingmanLogo className="h-6 w-auto" />
       </Link>

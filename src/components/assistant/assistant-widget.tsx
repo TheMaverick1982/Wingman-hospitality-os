@@ -74,7 +74,7 @@ export function AssistantWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 print:hidden">
+    <div className="fixed bottom-5 right-5 z-50 print:hidden" data-tour="assistant">
       {open && (
         <div className="mb-3 w-[min(92vw,380px)] h-[min(70vh,560px)] bg-white border border-line rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}

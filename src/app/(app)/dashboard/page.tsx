@@ -297,7 +297,7 @@ export default async function DashboardPage({
         </Link>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-tour="kpis">
         <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[13px] text-muted font-medium">Repeat rate</span>
@@ -331,7 +331,7 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
-        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm" data-tour="retention">
           <div className="flex items-start justify-between mb-2">
             <div>
               <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Guest retention</div>
