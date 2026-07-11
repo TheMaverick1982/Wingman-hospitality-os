@@ -3,9 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { seedNurtureSequences } from "@/lib/crm-seed";
 
 async function guard() {
   return platformSectionActor("crm");
+}
+
+// One-click resync of the spec nurture copy (demo / calculator / scorecard) —
+// same work as the CRON_SECRET route, behind admin auth. Leaves everything in
+// draft; skips any sequence you've already published.
+export async function resyncSpecCopy(): Promise<void> {
+  if (!(await guard())) return;
+  await seedNurtureSequences(false);
+  revalidatePath("/admin/crm/automations");
 }
 
 export async function setSequenceActive(formData: FormData): Promise<void> {
