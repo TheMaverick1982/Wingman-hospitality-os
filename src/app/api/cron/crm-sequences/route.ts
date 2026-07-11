@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { renderMerge, CRM_REPLY_TO } from "@/lib/crm-merge";
+import { resolveStep } from "@/lib/crm-step-resolver";
 
 // Runs hourly. Sends due nurture/onboarding steps, honoring:
 //   - draft/publish (drafts never send)
@@ -95,49 +96,24 @@ export async function GET(request: NextRequest) {
       .order("step_order", { ascending: true });
     const steps = (stepRows ?? []) as Step[];
 
-    // Resolve the next sendable step: skip past not-yet-due, and skip steps whose
-    // send_condition doesn't match (the "other arm" of a conditional day).
-    let activated: boolean | null = null;
-    let ptr = e.next_step_order;
-    let toSend: Step | null = null;
-    let terminal: "complete" | "reschedule" | null = null;
-    let rescheduleAt = nowIso;
+    // Resolve the next sendable step (pure logic in crm-step-resolver). Only pay
+    // for the activation check when a conditional step still lies ahead.
+    const enrolledMs = new Date(e.enrolled_at).getTime();
+    const hasConditional = steps.some((s) => s.step_order >= e.next_step_order && s.send_condition !== "always");
+    const activated = hasConditional ? await isActivated(admin, contact.org_id) : false;
+    const decision = resolveStep(steps, e.next_step_order, now - enrolledMs, activated);
 
-    for (;;) {
-      const step = steps.find((s) => s.step_order >= ptr);
-      if (!step) {
-        terminal = "complete";
-        break;
-      }
-      const dueAt = new Date(e.enrolled_at).getTime() + step.delay_days * 86400000;
-      if (dueAt > now) {
-        terminal = "reschedule";
-        rescheduleAt = new Date(dueAt).toISOString();
-        ptr = step.step_order;
-        break;
-      }
-      if (step.send_condition !== "always") {
-        if (activated === null) activated = await isActivated(admin, contact.org_id);
-        const ok = step.send_condition === "activated" ? activated : !activated;
-        if (!ok) {
-          ptr = step.step_order + 1;
-          continue;
-        }
-      }
-      toSend = step;
-      ptr = step.step_order;
-      break;
-    }
-
-    if (terminal === "complete") {
-      await admin.from("crm_enrollments").update({ status: "completed", next_step_order: ptr, updated_at: nowIso }).eq("id", e.id);
+    if (decision.action === "complete") {
+      await admin.from("crm_enrollments").update({ status: "completed", next_step_order: decision.lastOrder, updated_at: nowIso }).eq("id", e.id);
       completed++;
       continue;
     }
-    if (terminal === "reschedule" || !toSend) {
-      await admin.from("crm_enrollments").update({ next_step_order: ptr, next_run_at: rescheduleAt, updated_at: nowIso }).eq("id", e.id);
+    if (decision.action === "reschedule") {
+      const rescheduleAt = new Date(enrolledMs + decision.atMs).toISOString();
+      await admin.from("crm_enrollments").update({ next_step_order: decision.nextOrder, next_run_at: rescheduleAt, updated_at: nowIso }).eq("id", e.id);
       continue;
     }
+    const toSend = decision.step as Step;
 
     // Send-window hold for non-transactional emails.
     if (!toSend.transactional && !windowOpen) {
