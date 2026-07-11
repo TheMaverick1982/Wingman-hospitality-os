@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { GhlCalendar } from "@/components/marketing/ghl-calendar";
+import { WingmanMark } from "@/components/ui/wingman-mark";
 
 export const metadata: Metadata = {
   title: "Book a Demo",
@@ -52,8 +53,8 @@ export default function BookADemoPage() {
             ))}
           </div>
           <div className="flex items-center gap-3.5 border-t border-line pt-7">
-            <div className="w-11 h-11 rounded-xl bg-ink text-white flex items-center justify-center text-xl font-bold">
-              W
+            <div className="w-11 h-11 rounded-xl bg-[#EAF1FF] flex items-center justify-center">
+              <WingmanMark className="w-6 h-6" />
             </div>
             <div>
               <div className="text-[15px] font-semibold text-ink">Hosted by the Wingman team</div>
