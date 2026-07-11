@@ -10,7 +10,9 @@ export default async function AdminOrganizationsPage() {
   const admin = createAdminClient();
 
   const [{ data: orgs }, { data: locations }, { data: profiles }, { data: guests }] = await Promise.all([
-    admin.from("organizations").select("id, name, is_free_account, created_at").eq("is_platform", false).order("created_at", { ascending: false }),
+    // Real customer accounts only — exclude the internal platform org AND all
+    // demo orgs (the shared sales demo + auto-created "Try the live demo" sandboxes).
+    admin.from("organizations").select("id, name, is_free_account, created_at").eq("is_platform", false).eq("is_demo", false).order("created_at", { ascending: false }),
     admin.from("locations").select("id, org_id"),
     admin.from("profiles").select("id, org_id"),
     admin.from("guests").select("id, org_id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
