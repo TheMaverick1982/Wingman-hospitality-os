@@ -39,6 +39,15 @@ export async function startDemoSandbox(_prev: DemoStartState, formData: FormData
   const headerList = await headers();
   const ip = clientIp(headerList);
 
+  // The demo is public and hands out a full AI-enabled workspace, so unlike the
+  // fail-open signup form we HARD-REQUIRE Turnstile here: if the secret isn't
+  // configured, refuse to open the demo rather than leave the funnel wide open
+  // to credit-farming bots. (verifyTurnstile still fails open on a Cloudflare
+  // outage so a CF blip can't take the funnel down; honeypot + IP limit remain.)
+  if (!process.env.TURNSTILE_SECRET_KEY) {
+    console.error("[demo] TURNSTILE_SECRET_KEY is not set — refusing to open the public demo");
+    return { error: "The demo is temporarily unavailable. Please try again shortly." };
+  }
   if (!(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null, ip))) {
     return { error: "Couldn't verify you're human. Please refresh the page and try again." };
   }
