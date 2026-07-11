@@ -38,6 +38,7 @@ function gradeFor(pct: number): { grade: string; blurb: string } {
 export function ScorecardClient() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [scored, setScored] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,6 +58,7 @@ export function ScorecardClient() {
     const res = await captureLead({
       source: "scorecard",
       email,
+      name,
       hp,
       payload: { pct, grade, answers },
       summary: `Scored ${pct}% (${grade}). Weakest: ${weakest.map((w) => w.pillar).join(", ")}`,
@@ -147,6 +149,7 @@ export function ScorecardClient() {
           <form onSubmit={getReport} className="flex flex-col gap-2.5">
             <HoneypotField />
             <div className="text-[14px] text-charcoal-2">Get the fixes + your full scorecard emailed:</div>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-brick" />
             <div className="flex gap-2">
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@restaurant.com" className="flex-1 rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-brick" />
               <button type="submit" disabled={busy} className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-xl px-5 hover:bg-brick-dark disabled:opacity-60">{busy ? "…" : "Get it"}</button>

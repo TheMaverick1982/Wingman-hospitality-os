@@ -19,8 +19,8 @@ export function LaunchDemoForm() {
         <Field label="Work email">
           <input name="email" type="email" required placeholder="you@restaurant.com" className={inputClass} />
         </Field>
-        <Field label="Name (optional)">
-          <input name="name" type="text" placeholder="Nadia K." className={inputClass} />
+        <Field label="Name">
+          <input name="name" type="text" required placeholder="Nadia K." className={inputClass} />
         </Field>
       </div>
 

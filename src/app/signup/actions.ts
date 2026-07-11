@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
+import { markCustomerByEmail } from "@/lib/crm-sequences";
 import { formTrippedHoneypot } from "@/lib/honeypot";
 import { verifyTurnstile } from "@/lib/turnstile";
 
@@ -73,5 +74,6 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   await captureReferralForCurrentUser(supabase);
+  await markCustomerByEmail(email); // convert their CRM contact + stop nurture sequences
   redirect("/dashboard");
 }
