@@ -49,9 +49,9 @@ export async function enrollContactInSource(contactId: string, email: string, so
   const { data: supp } = await admin.from("crm_suppression").select("email").eq("email", lower).maybeSingle();
   if (supp) return;
 
-  const { data: seq } = await admin.from("crm_sequences").select("id, active").eq("source", source).maybeSingle();
-  const s = seq as { id: string; active: boolean } | null;
-  if (!s || !s.active) return;
+  const { data: seq } = await admin.from("crm_sequences").select("id, active, published").eq("source", source).maybeSingle();
+  const s = seq as { id: string; active: boolean; published: boolean } | null;
+  if (!s || !s.active || !s.published) return; // drafts never enroll/send
 
   const { data: steps } = await admin
     .from("crm_sequence_steps")

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceLabel } from "@/lib/crm";
-import { setSequenceActive, updateStep, addStep, deleteStep } from "../actions";
+import { setSequencePublished, updateStep, addStep, deleteStep } from "../actions";
 
 export const metadata: Metadata = { title: "Edit sequence · CRM" };
 
@@ -16,9 +16,9 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
   const { id } = await params;
   const admin = createAdminClient();
 
-  const { data: seq } = await admin.from("crm_sequences").select("id, source, name, active").eq("id", id).maybeSingle();
+  const { data: seq } = await admin.from("crm_sequences").select("id, source, name, active, published").eq("id", id).maybeSingle();
   if (!seq) notFound();
-  const sequence = seq as { id: string; source: string; name: string; active: boolean };
+  const sequence = seq as { id: string; source: string; name: string; active: boolean; published: boolean };
 
   const { data: stepRows } = await admin
     .from("crm_sequence_steps")
@@ -39,13 +39,18 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
           <p className="text-sm text-muted mt-1">Nurtures leads from the {sourceLabel(sequence.source)} funnel. Days are counted from when they enter the sequence.</p>
           <p className="text-[13px] text-muted-2 mt-1">Use <code className="text-brick">{"{{first_name}}"}</code> to personalize — it becomes their first name, or &ldquo;there&rdquo; if it&apos;s missing or inappropriate.</p>
         </div>
-        <form action={setSequenceActive}>
-          <input type="hidden" name="sequenceId" value={sequence.id} />
-          <input type="hidden" name="active" value={(!sequence.active).toString()} />
-          <button type="submit" className={`text-[13px] font-semibold px-3.5 py-2 rounded-lg transition-colors ${sequence.active ? "bg-paper border border-line text-charcoal-2 hover:bg-white" : "bg-brick text-white hover:bg-brick-dark"}`}>
-            {sequence.active ? "Pause sequence" : "Activate sequence"}
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-full ${sequence.published ? "text-olive bg-olive-tint" : "text-[#b4884a] bg-gold-tint"}`}>
+            {sequence.published ? "Published" : "Draft"}
+          </span>
+          <form action={setSequencePublished}>
+            <input type="hidden" name="sequenceId" value={sequence.id} />
+            <input type="hidden" name="published" value={(!sequence.published).toString()} />
+            <button type="submit" className={`text-[13px] font-semibold px-3.5 py-2 rounded-lg transition-colors ${sequence.published ? "bg-paper border border-line text-charcoal-2 hover:bg-white" : "bg-brick text-white hover:bg-brick-dark"}`}>
+              {sequence.published ? "Unpublish" : "Publish"}
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

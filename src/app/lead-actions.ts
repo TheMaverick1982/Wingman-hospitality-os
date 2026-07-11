@@ -7,6 +7,7 @@ import { isHoneypotFilled } from "@/lib/honeypot";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 import { enrollContactInSource } from "@/lib/crm-sequences";
+import { contactFieldsFromLead } from "@/lib/crm";
 
 export type LeadState = { error: string | null; ok: boolean };
 
@@ -53,16 +54,21 @@ export async function captureLead(input: {
   // Best-effort — a CRM hiccup must never fail lead capture.
   try {
     const nowIso = new Date().toISOString();
-    const { data: existing } = await admin.from("crm_contacts").select("id").eq("email", email).maybeSingle();
-    let contactId = (existing as { id: string } | null)?.id;
+    const newFields = contactFieldsFromLead(source, input.payload ?? {});
+    const srcTag = `src:${source}`;
+    const { data: existing } = await admin.from("crm_contacts").select("id, fields, tags").eq("email", email).maybeSingle();
+    const ex = existing as { id: string; fields: Record<string, unknown> | null; tags: string[] | null } | null;
+    let contactId = ex?.id;
     if (contactId) {
-      const upd: Record<string, unknown> = { last_activity_at: nowIso, updated_at: nowIso };
+      const mergedFields = { ...(ex?.fields ?? {}), ...newFields };
+      const mergedTags = Array.from(new Set([...(ex?.tags ?? []), srcTag]));
+      const upd: Record<string, unknown> = { last_activity_at: nowIso, updated_at: nowIso, fields: mergedFields, tags: mergedTags };
       if (name) upd.name = name;
       await admin.from("crm_contacts").update(upd).eq("id", contactId);
     } else {
       const { data: created } = await admin
         .from("crm_contacts")
-        .insert({ email, name, first_source: source, last_activity_at: nowIso })
+        .insert({ email, name, first_source: source, last_activity_at: nowIso, fields: newFields, tags: [srcTag] })
         .select("id")
         .single();
       contactId = (created as { id: string } | null)?.id;
