@@ -168,6 +168,39 @@ export async function markBookedByEmail(email: string, adminArg?: Admin): Promis
   return true;
 }
 
+// Demo happened (appointment marked "showed") — move to Demo Completed. Booking
+// already stopped their nurtures; this just advances the pipeline + tags.
+export async function markDemoCompletedByEmail(email: string, adminArg?: Admin): Promise<boolean> {
+  const admin = adminArg ?? createAdminClient();
+  const lower = email.toLowerCase();
+  const { data: c } = await admin.from("crm_contacts").select("id, stage, tags").eq("email", lower).maybeSingle();
+  const contact = c as { id: string; stage: string; tags: string[] | null } | null;
+  if (!contact) return false;
+  if (contact.stage === "signed_up" || contact.stage === "lost") return true; // don't regress a won/dead deal
+  const now = new Date().toISOString();
+  const tags = Array.from(new Set([...(contact.tags ?? []), "status:demo-completed"])).filter((t) => t !== "status:demo-booked" && t !== "status:demo-no-show");
+  await admin.from("crm_contacts").update({ stage: "demo_completed", tags, last_activity_at: now, updated_at: now }).eq("id", contact.id);
+  await admin.from("crm_activities").insert({ contact_id: contact.id, kind: "system", body: "Demo completed — moved to Demo Completed" });
+  return true;
+}
+
+// Demo no-show — tag them, clear the booking (so a rebook re-triggers Demo Booked
+// and the cron stops the follow-up), and start the draft no-show re-engagement.
+export async function markDemoNoShowByEmail(email: string, adminArg?: Admin): Promise<boolean> {
+  const admin = adminArg ?? createAdminClient();
+  const lower = email.toLowerCase();
+  const { data: c } = await admin.from("crm_contacts").select("id, stage, tags").eq("email", lower).maybeSingle();
+  const contact = c as { id: string; stage: string; tags: string[] | null } | null;
+  if (!contact) return false;
+  if (contact.stage === "signed_up" || contact.stage === "lost") return true;
+  const now = new Date().toISOString();
+  const tags = Array.from(new Set([...(contact.tags ?? []), "status:demo-no-show"])).filter((t) => t !== "status:demo-booked");
+  await admin.from("crm_contacts").update({ booked_at: null, tags, last_activity_at: now, updated_at: now }).eq("id", contact.id);
+  await admin.from("crm_activities").insert({ contact_id: contact.id, kind: "system", body: "Demo no-show — re-engagement started" });
+  await enrollContactInSource(contact.id, lower, "demo-no-show", admin, { ignoreWonGuards: true });
+  return true;
+}
+
 // Mark a signup as a customer — creates the contact if new, marks them won, tags
 // them status:customer / src:signup, moves them to Signed Up, MASTER KILL-SWITCH
 // stops any running nurture, then enrolls them in the post-signup onboarding
