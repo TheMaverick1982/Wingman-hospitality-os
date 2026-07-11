@@ -18,6 +18,14 @@ const PUBLIC_PREFIXES = [
   // Public pre-sales chat API — called by logged-out marketing visitors, so it
   // must not be bounced to /login (the route does its own IP/rate limiting).
   "/api/sales-chat",
+  // Machine-to-machine / no-session API routes that authenticate themselves and
+  // must never be redirected to the HTML login page:
+  //   /api/webhooks       — inbound webhooks (e.g. GHL booking) guarded by a token
+  //   /api/crm/unsubscribe — one-click email unsubscribe (HMAC-signed link)
+  //   /api/cron           — scheduled jobs guarded by CRON_SECRET (Vercel cron)
+  "/api/webhooks",
+  "/api/crm",
+  "/api/cron",
   "/privacy",
   "/terms",
   "/api-guide",
