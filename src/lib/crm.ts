@@ -30,6 +30,7 @@ const SOURCE_LABELS: Record<string, string> = {
   calculator: "ROI calculator",
   scorecard: "Scorecard",
   "book-a-demo": "Booked call",
+  signup: "Signup onboarding",
 };
 
 export function sourceLabel(source: string | null | undefined): string {

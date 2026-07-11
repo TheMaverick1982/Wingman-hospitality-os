@@ -74,6 +74,12 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   await captureReferralForCurrentUser(supabase);
-  await markCustomerByEmail(email); // convert their CRM contact + stop nurture sequences
+  // Convert their CRM contact, stop nurtures, start onboarding.
+  const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", data.user?.id ?? "").maybeSingle();
+  await markCustomerByEmail(email, {
+    orgId: (prof as { org_id: string } | null)?.org_id,
+    workspaceName: orgName,
+    name: fullName,
+  });
   redirect("/dashboard");
 }
