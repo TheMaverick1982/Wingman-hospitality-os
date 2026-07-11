@@ -265,6 +265,28 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
       },
     ],
   },
+  {
+    source: "demo-no-show",
+    name: "Demo No-Show Re-Engagement",
+    steps: [
+      {
+        step_order: 1,
+        delay_days: 0,
+        subject: "We missed each other",
+        body: "{{contact.first_name}} — no stress, restaurant life happens. A no-show to a software demo usually means a walk-in rush, a callout, or both.\n\nGrab a better time here: {{calendar.booking_link}}\n\nIf the timing's just wrong this month, reply and tell me — I'd rather wait than chase.\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 2,
+        delay_days: 2,
+        subject: "Should I close your file?",
+        body: "I'll assume the timing isn't right and stop nudging after this one.\n\nBefore I do — the reason you reached out hasn't gone anywhere. First-time guests are still walking out the door unconverted, every shift.\n\nOne click if you want that conversation: {{calendar.booking_link}}\n\nEither way — good luck out there.\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+    ],
+  },
 ];
 
 // Legacy source whose sequence is retired by the spec (folded into the demo funnel).

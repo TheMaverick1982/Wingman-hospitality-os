@@ -31,6 +31,7 @@ const SOURCE_LABELS: Record<string, string> = {
   scorecard: "Scorecard",
   "book-a-demo": "Booked call",
   signup: "Signup onboarding",
+  "demo-no-show": "Demo no-show",
 };
 
 export function sourceLabel(source: string | null | undefined): string {
