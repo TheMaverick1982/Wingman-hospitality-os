@@ -40,7 +40,16 @@ export function CalculatorClient() {
       email,
       name,
       hp,
-      payload: { guests, check, current, target, visits, perYear: Math.round(result.perYear) },
+      payload: {
+        guests,
+        check,
+        current,
+        target,
+        visits,
+        perYear: Math.round(result.perYear),
+        annual_upside: Math.round(result.perYear),
+        monthly_upside: Math.round(result.perMonth),
+      },
       summary: `${guests} new guests/mo · $${check} check · ${current}%→${target}% repeat · est. +${money(result.perYear)}/yr`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
         <p style="font-size:16px;">Here's your Wingman revenue estimate:</p>
