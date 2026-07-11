@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
 import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
+import { SalesChat } from "@/components/marketing/sales-chat";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app";
@@ -97,6 +98,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <main className="flex-1 flex flex-col min-h-0">{children}</main>
+        <SalesChat />
       </body>
       <DelayedThirdParties gtmId="GTM-P7CJ3J7G" gaId={gaMeasurementId} />
     </html>
