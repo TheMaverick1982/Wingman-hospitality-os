@@ -11,6 +11,7 @@ import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
+import { DemoTour } from "@/components/demo/demo-tour";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export const metadata: Metadata = {
@@ -98,6 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <AssistantWidget />
+      {profile.isDemoSandbox && <DemoTour email={profile.demoLeadEmail} />}
     </div>
   );
 }
