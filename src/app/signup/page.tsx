@@ -76,10 +76,9 @@ function SignupForm() {
           </div>
 
           <div className="bg-paper rounded-[28px] p-8 sm:p-11">
-            <h2 className="text-2xl font-semibold tracking-[-0.015em] text-ink mb-1">
+            <h2 className="text-2xl font-semibold tracking-[-0.015em] text-ink mb-7">
               Create your workspace
             </h2>
-            <p className="text-[15px] text-muted mb-7">No credit card required.</p>
 
             <form action={formAction} className="flex flex-col gap-1">
               <HoneypotField />

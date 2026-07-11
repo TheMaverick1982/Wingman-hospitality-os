@@ -65,7 +65,7 @@ export function ScorecardClient() {
         <p style="font-size:32px;font-weight:700;margin:6px 0;">${grade} · ${pct}%</p>
         <p style="font-size:15px;color:#525252;">Your three biggest opportunities:</p>
         <ul style="font-size:15px;color:#1a1a1a;">${weakest.map((w) => `<li><strong>${w.pillar}:</strong> ${w.fix}</li>`).join("")}</ul>
-        <p style="font-size:15px;">Wingman builds all of this into one system. <a href="https://www.joinwingman.app/signup" style="color:#0a6cff;font-weight:600;">Start free</a>.</p>
+        <p style="font-size:15px;">Wingman builds all of this into one system. <a href="https://www.joinwingman.app/signup" style="color:#0a6cff;font-weight:600;">Get Started</a>.</p>
       </div>`,
     });
     setBusy(false);
@@ -141,7 +141,7 @@ export function ScorecardClient() {
         {revealed ? (
           <div>
             <p className="text-[15px] text-olive font-semibold mb-4">Full scorecard sent to your inbox.</p>
-            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Start free</Link>
+            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</Link>
           </div>
         ) : (
           <form onSubmit={getReport} className="flex flex-col gap-2.5">

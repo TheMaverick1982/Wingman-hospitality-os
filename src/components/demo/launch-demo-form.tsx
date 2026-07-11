@@ -27,7 +27,7 @@ export function LaunchDemoForm() {
       <Btn type="submit" loading={pending} disabled={pending} className="w-full justify-center py-3.5 text-[17px] mt-1">
         {pending ? "Building your demo…" : "Launch my demo →"}
       </Btn>
-      <p className="text-[13px] text-muted-2 text-center">No signup. No card. Ready in a few seconds.</p>
+      <p className="text-[13px] text-muted-2 text-center">No signup needed. Ready in a few seconds.</p>
 
       <div className="flex justify-center">
         <TurnstileWidget />

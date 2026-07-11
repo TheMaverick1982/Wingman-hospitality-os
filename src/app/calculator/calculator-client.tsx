@@ -44,7 +44,7 @@ export function CalculatorClient() {
         <p style="font-size:16px;">Here's your Wingman revenue estimate:</p>
         <p style="font-size:28px;font-weight:700;margin:6px 0;">${money(result.perYear)} / year</p>
         <p style="font-size:15px;color:#525252;">by lifting your repeat rate from ${current}% to ${target}% (${Math.round(result.extraRegularsYear).toLocaleString()} more regulars a year).</p>
-        <p style="font-size:15px;">Ready to make it real? <a href="https://www.joinwingman.app/signup" style="color:#0a6cff;font-weight:600;">Start free</a> or <a href="https://www.joinwingman.app/book-a-demo" style="color:#0a6cff;font-weight:600;">book a demo</a>.</p>
+        <p style="font-size:15px;">Ready to make it real? <a href="https://www.joinwingman.app/signup" style="color:#0a6cff;font-weight:600;">Get Started</a> or <a href="https://www.joinwingman.app/book-a-demo" style="color:#0a6cff;font-weight:600;">book a demo</a>.</p>
       </div>`,
     });
     setBusy(false);
@@ -117,7 +117,7 @@ export function CalculatorClient() {
             </form>
           )}
           <div className="flex items-center gap-3 mt-5">
-            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Start free</Link>
+            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</Link>
             <Link href="/book-a-demo" className="text-[15px] font-semibold text-white/90 hover:text-white">Book a demo →</Link>
           </div>
         </div>
