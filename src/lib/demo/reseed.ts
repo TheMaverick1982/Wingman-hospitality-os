@@ -65,15 +65,23 @@ async function findUserIdByEmail(admin: ReturnType<typeof createAdminClient>, em
 }
 
 /**
- * Ensures the wingmandemo auth user exists and its password is the known demo
- * password, so /login always works with the documented credential. Idempotent.
+ * Ensures the wingmandemo auth user exists (created with the known demo
+ * password on first run). Idempotent.
+ *
+ * IMPORTANT: for an existing user we do NOT touch the password by default.
+ * Resetting a user's password revokes their active sessions in GoTrue — and
+ * since reseed runs *after* signInWithPassword, resetting here would silently
+ * log the demo viewer straight back out to the homepage. Pass
+ * `{ resetPassword: true }` only from an out-of-band path (the ops route),
+ * never during login.
  */
-export async function ensureDemoAuthUser(): Promise<string> {
+export async function ensureDemoUser(opts?: { resetPassword?: boolean }): Promise<string> {
   const admin = createAdminClient();
   const existingId = await findUserIdByEmail(admin, DEMO_EMAIL);
   if (existingId) {
-    // Keep the password in sync with DEMO_PASSWORD in case it was rotated.
-    await admin.auth.admin.updateUserById(existingId, { password: DEMO_PASSWORD, email_confirm: true });
+    if (opts?.resetPassword) {
+      await admin.auth.admin.updateUserById(existingId, { password: DEMO_PASSWORD, email_confirm: true });
+    }
     return existingId;
   }
   const { data, error } = await admin.auth.admin.createUser({
@@ -699,7 +707,7 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
  * Idempotent and safe to call on every demo login.
  */
 export async function reseedDemoOrg(): Promise<DemoContext> {
-  const userId = await ensureDemoAuthUser();
+  const userId = await ensureDemoUser();
   const ctx = await ensureDemoOrg(userId);
   await wipeDemoOrg(ctx.orgId);
   await populateDemoOrg(ctx);

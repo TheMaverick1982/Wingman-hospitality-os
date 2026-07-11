@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoEmail } from "@/lib/demo/constants";
-import { ensureDemoAuthUser, reseedDemoOrg } from "@/lib/demo/reseed";
+import { ensureDemoUser, reseedDemoOrg } from "@/lib/demo/reseed";
 
 export type LoginState = { error: string | null };
 
@@ -21,9 +21,9 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   // sign in, so the very first login (and any password rotation) self-heals.
   if (isDemoEmail(email)) {
     try {
-      await ensureDemoAuthUser();
+      await ensureDemoUser();
     } catch (e) {
-      console.error("[demo] ensureDemoAuthUser failed", e);
+      console.error("[demo] ensureDemoUser failed", e);
     }
   }
 
