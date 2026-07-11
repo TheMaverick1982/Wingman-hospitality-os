@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
@@ -18,8 +19,11 @@ const POINTS = [
   "Daily checklists, spot-checks, and guest retention tracking",
 ];
 
-export default function SignupPage() {
+function SignupForm() {
   const [state, formAction, pending] = useActionState(signup, initialState);
+  // Carried over from the demo's "Create your account" nudge so a converting
+  // visitor doesn't retype the email they already gave.
+  const prefillEmail = useSearchParams().get("email") ?? "";
 
   return (
     <div className="min-h-full flex flex-col force-light bg-panel">
@@ -91,7 +95,7 @@ export default function SignupPage() {
                 <input name="locationName" placeholder="Delray Beach" required className={inputClass} />
               </Field>
               <Field label="Work email">
-                <input name="email" type="email" placeholder="you@restaurant.com" required className={inputClass} />
+                <input name="email" type="email" defaultValue={prefillEmail} placeholder="you@restaurant.com" required className={inputClass} />
               </Field>
               <Field label="Password">
                 <input
@@ -126,5 +130,13 @@ export default function SignupPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

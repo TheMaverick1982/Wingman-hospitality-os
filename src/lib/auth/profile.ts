@@ -16,7 +16,15 @@ export type CurrentProfile = {
   permissionOverrides: PermissionOverrides;
   allLocations: boolean;
   accessibleLocationIds: string[];
+  // Any demo org (the shared sales-rep master OR an ephemeral visitor sandbox).
   isDemo: boolean;
+  // Only an ephemeral, self-serve visitor sandbox (has a demo_expires_at). The
+  // shared wingmandemo master used for sales calls is NOT a sandbox, so
+  // conversion nudges and the global demo AI cap key off this, not isDemo.
+  isDemoSandbox: boolean;
+  // The email a self-serve visitor entered at the demo gate (from the sandbox
+  // user's metadata), used to pre-fill signup. Null outside sandboxes.
+  demoLeadEmail: string | null;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -37,7 +45,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const [{ data }, { data: locRows }] = await Promise.all([
     admin
       .from("profiles")
-      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo)")
+      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo, demo_expires_at)")
       .eq("id", user.id)
       .maybeSingle(),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
@@ -55,7 +63,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     platform_access: string[] | null;
     all_locations: boolean;
     locations: { name: string } | null;
-    organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null } | null;
+    organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null; demo_expires_at: string | null } | null;
   };
 
   return {
@@ -73,5 +81,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     allLocations: profile.all_locations ?? false,
     accessibleLocationIds: ((locRows ?? []) as { location_id: string }[]).map((r) => r.location_id),
     isDemo: profile.organizations?.is_demo ?? false,
+    isDemoSandbox: !!profile.organizations?.demo_expires_at,
+    demoLeadEmail: (user.user_metadata?.lead_email as string | null) ?? null,
   };
 }

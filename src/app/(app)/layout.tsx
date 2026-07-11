@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/app-shell/sidebar";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
+import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export const metadata: Metadata = {
@@ -75,6 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
+        {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
         <MobileNav
           accessRole={profile.accessRole}
           fullName={profile.fullName}
