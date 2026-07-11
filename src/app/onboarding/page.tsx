@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
+import { markCustomerByEmail } from "@/lib/crm-sequences";
 import OnboardingForm from "./form";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default async function OnboardingPage() {
     });
     if (!error) {
       await captureReferralForCurrentUser(supabase);
+      if (user.email) await markCustomerByEmail(user.email);
       redirect("/dashboard");
     }
   }

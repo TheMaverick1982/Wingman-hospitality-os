@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isCrmStage, stageLabel } from "@/lib/crm";
+import { stopEnrollments, suppressEmail } from "@/lib/crm-sequences";
 
 export type CrmActionState = { error: string | null; ok: boolean };
 
@@ -39,6 +41,60 @@ export async function moveContactStage(contactId: string, stage: string): Promis
   revalidatePath("/admin/crm");
   revalidatePath(`/admin/crm/${contactId}`);
   return { error: null, ok: true };
+}
+
+// Edit a contact's details (name, phone, freeform notes).
+export async function updateContactDetails(_prev: CrmActionState, formData: FormData): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const contactId = String(formData.get("contactId") || "");
+  if (!contactId) return { error: "Missing contact.", ok: false };
+  const name = String(formData.get("name") || "").trim() || null;
+  const phone = String(formData.get("phone") || "").trim() || null;
+  const notes = String(formData.get("notes") || "").trim();
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("crm_contacts").update({ name, phone, notes, updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (error) return { error: error.message, ok: false };
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Mark this contact as having booked a call — stops all their sequences.
+export async function markContactBooked(contactId: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+  await admin.from("crm_contacts").update({ booked_at: now, last_activity_at: now, updated_at: now }).eq("id", contactId);
+  await stopEnrollments(contactId, "booked", admin);
+  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Booked a call — sequences stopped", created_by: me.userId });
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Unsubscribe / suppress this contact — no more automated emails.
+export async function unsubscribeContact(contactId: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("crm_contacts").select("email").eq("id", contactId).maybeSingle();
+  const email = (c as { email: string } | null)?.email;
+  if (!email) return { error: "Contact not found.", ok: false };
+  await suppressEmail(email, "manual", admin);
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Permanently delete a contact and everything attached (activities +
+// enrollments cascade via FK). Redirects back to the pipeline.
+export async function deleteContact(contactId: string): Promise<void> {
+  const me = await platformSectionActor("crm");
+  if (!me) return;
+  const admin = createAdminClient();
+  await admin.from("crm_contacts").delete().eq("id", contactId);
+  revalidatePath("/admin/crm");
+  redirect("/admin/crm");
 }
 
 // Add an internal note to a contact's timeline.

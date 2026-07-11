@@ -17,6 +17,7 @@ export function CalculatorClient() {
   const [target, setTarget] = useState(35); // target repeat rate %
   const [visits, setVisits] = useState(6); // visits / year for a regular
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ export function CalculatorClient() {
     const res = await captureLead({
       source: "calculator",
       email,
+      name,
       hp,
       payload: { guests, check, current, target, visits, perYear: Math.round(result.perYear) },
       summary: `${guests} new guests/mo · $${check} check · ${current}%→${target}% repeat · est. +${money(result.perYear)}/yr`,
@@ -107,6 +109,7 @@ export function CalculatorClient() {
             <form onSubmit={emailMe} className="flex flex-col gap-2.5">
               <HoneypotField />
               <div className="text-[14px] text-[#E5E5E5]">Email me this breakdown:</div>
+              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 text-[15px] text-white placeholder:text-white/40 outline-none focus:border-white/40" />
               <div className="flex gap-2">
                 <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@restaurant.com" className="flex-1 rounded-xl bg-white/10 border border-white/15 px-4 py-3 text-[15px] text-white placeholder:text-white/40 outline-none focus:border-white/40" />
                 <button type="submit" disabled={busy} className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-xl px-5 hover:bg-brick-dark disabled:opacity-60">

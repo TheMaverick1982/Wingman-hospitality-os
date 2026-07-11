@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { sourceLabel, type CrmStage } from "@/lib/crm";
 import { moveContactStage } from "./actions";
 
@@ -31,6 +31,7 @@ function timeAgo(iso: string): string {
 }
 
 export function PipelineBoard({ contacts, stages }: { contacts: BoardContact[]; stages: { key: CrmStage; label: string }[] }) {
+  const router = useRouter();
   const [items, setItems] = useState<BoardContact[]>(contacts);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<CrmStage | null>(null);
@@ -79,16 +80,26 @@ export function PipelineBoard({ contacts, stages }: { contacts: BoardContact[]; 
 
             <div className="flex flex-col gap-2 mt-1">
               {list.map((c) => (
-                <Link
+                <div
                   key={c.id}
-                  href={`/admin/crm/${c.id}`}
+                  role="button"
+                  tabIndex={0}
                   draggable
-                  onDragStart={() => setDragId(c.id)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "move";
+                    setDragId(c.id);
+                  }}
                   onDragEnd={() => {
                     setDragId(null);
                     setOverStage(null);
                   }}
-                  className="block bg-white border border-line rounded-xl p-3 shadow-sm hover:border-brick/50 transition-colors cursor-grab active:cursor-grabbing"
+                  onClick={() => {
+                    if (!dragId) router.push(`/admin/crm/${c.id}`);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") router.push(`/admin/crm/${c.id}`);
+                  }}
+                  className={`block bg-white border border-line rounded-xl p-3 shadow-sm hover:border-brick/50 transition-colors cursor-grab active:cursor-grabbing ${dragId === c.id ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="shrink-0 w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center text-[11px] font-semibold">
@@ -105,7 +116,7 @@ export function PipelineBoard({ contacts, stages }: { contacts: BoardContact[]; 
                     </span>
                     <span className="text-[11px] text-muted-2">{timeAgo(c.last_activity_at)}</span>
                   </div>
-                </Link>
+                </div>
               ))}
               {list.length === 0 && <div className="text-[12px] text-muted-2 px-2 py-3 text-center">Empty</div>}
             </div>

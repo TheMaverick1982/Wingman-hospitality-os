@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
+import { markCustomerByEmail } from "@/lib/crm-sequences";
 
 export type OnboardingState = { error: string | null };
 
@@ -29,6 +30,8 @@ export async function completeOnboarding(
     return { error: error.message };
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
   await captureReferralForCurrentUser(supabase);
+  if (user?.email) await markCustomerByEmail(user.email);
   redirect("/start-here");
 }

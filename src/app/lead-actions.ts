@@ -6,6 +6,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { isHoneypotFilled } from "@/lib/honeypot";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
+import { enrollContactInSource } from "@/lib/crm-sequences";
 
 export type LeadState = { error: string | null; ok: boolean };
 
@@ -73,6 +74,8 @@ export async function captureLead(input: {
         body: `Lead captured via ${source}`,
         meta: { source, ...(input.payload ?? {}) },
       });
+      // Enroll them in the nurture sequence for this funnel (best-effort).
+      await enrollContactInSource(contactId, email, source, admin);
     }
   } catch (e) {
     console.error("[crm] lead mirror failed", e);
