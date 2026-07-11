@@ -32,3 +32,30 @@ export async function consumeRateLimit(bucket: string, max: number, windowSecond
 export const AI_GENERATION_LIMIT = { max: 40, windowSeconds: 3600 }; // 40 generations / org / hour
 export const API_V1_LIMIT = { max: 120, windowSeconds: 60 }; // 120 requests / key / minute
 export const ASSISTANT_LIMIT = { max: 60, windowSeconds: 3600 }; // 60 assistant messages / org / hour
+
+// Global ceiling on AI spend across ALL demo orgs combined. Demo sandboxes are
+// public and each is its own org, so the per-org limits above don't bound a
+// bot that mass-creates orgs. This single shared bucket caps total demo AI use
+// no matter how many sandboxes exist, protecting the Anthropic budget.
+export const DEMO_AI_GLOBAL_LIMIT = { max: 120, windowSeconds: 3600 }; // 120 AI calls / hour across all demos
+
+/**
+ * Consume an AI-generation token for an org. Enforces the per-org limit and, for
+ * demo orgs, ALSO a global demo-wide ceiling. Returns false if either is
+ * exhausted. `bucketPrefix` lets the assistant use its own per-org window.
+ */
+export async function consumeAiLimit(
+  profile: { orgId: string; isDemo: boolean },
+  opts?: { bucketPrefix?: string; max?: number; windowSeconds?: number }
+): Promise<boolean> {
+  const prefix = opts?.bucketPrefix ?? "ai";
+  const max = opts?.max ?? AI_GENERATION_LIMIT.max;
+  const windowSeconds = opts?.windowSeconds ?? AI_GENERATION_LIMIT.windowSeconds;
+
+  const perOrg = await consumeRateLimit(`${prefix}:${profile.orgId}`, max, windowSeconds);
+  if (!perOrg) return false;
+  if (profile.isDemo) {
+    return consumeRateLimit("ai:demo-global", DEMO_AI_GLOBAL_LIMIT.max, DEMO_AI_GLOBAL_LIMIT.windowSeconds);
+  }
+  return true;
+}

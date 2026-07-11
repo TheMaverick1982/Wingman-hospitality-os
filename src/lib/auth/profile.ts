@@ -16,6 +16,7 @@ export type CurrentProfile = {
   permissionOverrides: PermissionOverrides;
   allLocations: boolean;
   accessibleLocationIds: string[];
+  isDemo: boolean;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -36,7 +37,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const [{ data }, { data: locRows }] = await Promise.all([
     admin
       .from("profiles")
-      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides)")
+      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo)")
       .eq("id", user.id)
       .maybeSingle(),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
@@ -54,7 +55,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     platform_access: string[] | null;
     all_locations: boolean;
     locations: { name: string } | null;
-    organizations: { name: string; permission_overrides: PermissionOverrides | null } | null;
+    organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null } | null;
   };
 
   return {
@@ -71,5 +72,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     permissionOverrides: profile.organizations?.permission_overrides ?? {},
     allLocations: profile.all_locations ?? false,
     accessibleLocationIds: ((locRows ?? []) as { location_id: string }[]).map((r) => r.location_id),
+    isDemo: profile.organizations?.is_demo ?? false,
   };
 }

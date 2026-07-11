@@ -64,6 +64,13 @@ export default function LoginPage() {
             <GoogleSignInButton />
           </div>
 
+          <p className="text-center text-sm text-muted mt-6">
+            Just want to look around?{" "}
+            <Link href="/demo" className="font-semibold text-brick">
+              Try the live demo →
+            </Link>
+          </p>
+
           <p className="text-center text-sm text-muted mt-7">
             New to Wingman?{" "}
             <Link href="/signup" className="font-semibold text-brick">

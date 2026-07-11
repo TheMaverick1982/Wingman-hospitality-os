@@ -6,7 +6,7 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
-import { consumeRateLimit, AI_GENERATION_LIMIT } from "@/lib/rate-limit";
+import { consumeAiLimit } from "@/lib/rate-limit";
 
 export type BuildState = {
   error: string | null;
@@ -87,7 +87,7 @@ export async function generateRoleTraining(_prev: BuildState, formData: FormData
   if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
     return { error: "You don't have access to generate training content." };
   }
-  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+  if (!(await consumeAiLimit(profile))) {
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 
@@ -346,7 +346,7 @@ export async function refineTraining(_prev: RefineState, formData: FormData): Pr
   if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
     return { error: "You don't have access to edit training content." };
   }
-  if (!(await consumeRateLimit(`ai:${profile.orgId}`, AI_GENERATION_LIMIT.max, AI_GENERATION_LIMIT.windowSeconds))) {
+  if (!(await consumeAiLimit(profile))) {
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 

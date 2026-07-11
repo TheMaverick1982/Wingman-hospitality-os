@@ -12,6 +12,9 @@ const PUBLIC_PREFIXES = [
   "/how-it-works",
   "/pricing",
   "/book-a-demo",
+  // Self-serve "Try the live demo" — provisions a throwaway sandbox for a
+  // visitor who is (by definition) not yet logged in.
+  "/demo",
   "/privacy",
   "/terms",
   "/api-guide",
