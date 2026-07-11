@@ -15,6 +15,9 @@ const PUBLIC_PREFIXES = [
   // Self-serve "Try the live demo" — provisions a throwaway sandbox for a
   // visitor who is (by definition) not yet logged in.
   "/demo",
+  // Public pre-sales chat API — called by logged-out marketing visitors, so it
+  // must not be bounced to /login (the route does its own IP/rate limiting).
+  "/api/sales-chat",
   "/privacy",
   "/terms",
   "/api-guide",
