@@ -9,7 +9,7 @@ import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 
 export type LeadState = { error: string | null; ok: boolean };
 
-const VALID_SOURCES = new Set(["calculator", "scorecard", "demo"]);
+const VALID_SOURCES = new Set(["calculator", "scorecard", "demo", "sales-chat"]);
 
 async function clientIp(): Promise<string> {
   const h = await headers();
