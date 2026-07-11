@@ -112,7 +112,7 @@ export function HiringTraitBuilder({ department }: { department: string }) {
                 <Btn type="button" kind="ghost" onClick={() => setIgnore(true)}>
                   Start over
                 </Btn>
-                <Btn type="button" onClick={doSave} disabled={saving || saved != null || traits.length === 0} icon={Sparkles}>
+                <Btn type="button" onClick={doSave} loading={saving} disabled={saved != null || traits.length === 0} icon={Sparkles}>
                   {saving ? "Saving..." : saved != null ? "Saved" : "Save criteria"}
                 </Btn>
               </div>
@@ -179,7 +179,7 @@ export function HiringTraitBuilder({ department }: { department: string }) {
                   <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
                     Close
                   </Btn>
-                  <Btn type="submit" disabled={pending} icon={Sparkles}>
+                  <Btn type="submit" loading={pending} icon={Sparkles}>
                     {pending ? "Building..." : "Build & review"}
                   </Btn>
                 </div>

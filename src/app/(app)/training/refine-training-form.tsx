@@ -69,7 +69,7 @@ export function RefineTrainingForm({ department }: { department: string }) {
                 <Btn type="button" kind="ghost" onClick={close}>
                   Cancel
                 </Btn>
-                <Btn type="submit" disabled={pending} icon={Sparkles}>
+                <Btn type="submit" loading={pending} icon={Sparkles}>
                   {pending ? "Thinking..." : "Get suggestions"}
                 </Btn>
               </div>

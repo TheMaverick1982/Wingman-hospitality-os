@@ -156,7 +156,7 @@ export function RoleTrainingBuilder({ department }: { department: string }) {
                 <Btn type="button" kind="ghost" onClick={() => setIgnoreProgram(true)}>
                   Start over
                 </Btn>
-                <Btn type="button" onClick={doSave} disabled={saving || saved != null || (hospitality.length === 0 && role.length === 0)} icon={Sparkles}>
+                <Btn type="button" onClick={doSave} loading={saving} disabled={saved != null || (hospitality.length === 0 && role.length === 0)} icon={Sparkles}>
                   {saving ? "Saving..." : saved ? "Saved" : "Save program"}
                 </Btn>
               </div>
@@ -236,7 +236,7 @@ export function RoleTrainingBuilder({ department }: { department: string }) {
                   <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
                     Close
                   </Btn>
-                  <Btn type="submit" disabled={pending} icon={Sparkles}>
+                  <Btn type="submit" loading={pending} icon={Sparkles}>
                     {pending ? "Building..." : "Build & review"}
                   </Btn>
                 </div>

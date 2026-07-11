@@ -282,7 +282,7 @@ export function AuditClient({
               <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
                 Cancel
               </Btn>
-              <Btn type="submit" disabled={pending}>
+              <Btn type="submit" loading={pending}>
                 {pending ? "Scoring & writing your plan..." : "Save audit & get plan"}
               </Btn>
             </div>

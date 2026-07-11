@@ -234,7 +234,7 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
                 <Btn type="button" kind="ghost" onClick={() => setIgnore(true)}>
                   Start over
                 </Btn>
-                <Btn type="button" onClick={doSave} disabled={saving || saved != null || items.length === 0} icon={Sparkles}>
+                <Btn type="button" onClick={doSave} loading={saving} disabled={saved != null || items.length === 0} icon={Sparkles}>
                   {saving ? "Saving..." : saved != null ? "Saved" : "Save checklist"}
                 </Btn>
               </div>
@@ -330,7 +330,7 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
                   <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
                     Close
                   </Btn>
-                  <Btn type="submit" disabled={pending} icon={Sparkles}>
+                  <Btn type="submit" loading={pending} icon={Sparkles}>
                     {pending ? "Building..." : "Build & review"}
                   </Btn>
                 </div>
