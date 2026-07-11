@@ -50,7 +50,7 @@ export default function ScorecardPage() {
           Wingman turns your scorecard into a plan your team runs every shift.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <a href="/signup" className="text-[17px] font-semibold text-white bg-brick rounded-full px-8 py-[15px] hover:bg-brick-dark transition-colors">Start free</a>
+          <a href="/signup" className="text-[17px] font-semibold text-white bg-brick rounded-full px-8 py-[15px] hover:bg-brick-dark transition-colors">Get Started</a>
           <a href="/calculator" className="text-[17px] font-semibold text-ink bg-white border border-line-strong rounded-full px-[30px] py-3.5 hover:bg-[#efefef] transition-colors">Try the revenue calculator</a>
         </div>
       </div>

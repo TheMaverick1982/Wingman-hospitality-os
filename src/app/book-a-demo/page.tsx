@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+import { GhlCalendar } from "@/components/marketing/ghl-calendar";
 
 export const metadata: Metadata = {
   title: "Book a Demo",
@@ -20,40 +21,6 @@ const POINTS = [
   "How culture, training, and accountability connect",
   "What setup looks like for one location or a whole group",
   "Straight answers on pricing and rollout",
-];
-
-const DOWS = ["S", "M", "T", "W", "T", "F", "S"];
-
-type Cell = { label: string; className: string };
-
-function buildJuly2026(): Cell[] {
-  const blank = { label: "", className: "opacity-0" };
-  const past = (d: number) => ({ label: String(d), className: "text-line cursor-default" });
-  const weekend = (d: number) => ({ label: String(d), className: "text-line cursor-default" });
-  const open = (d: number) => ({ label: String(d), className: "bg-paper text-ink cursor-pointer" });
-  const selected = (d: number) => ({ label: String(d), className: "bg-brick text-white cursor-pointer" });
-
-  const cells: Cell[] = [blank, blank, blank];
-  for (let d = 1; d <= 31; d++) {
-    const dow = (3 + (d - 1)) % 7;
-    const isWeekend = dow === 0 || dow === 6;
-    const isPast = d < 7;
-    if (d === 9) cells.push(selected(d));
-    else if (isPast) cells.push(past(d));
-    else if (isWeekend) cells.push(weekend(d));
-    else cells.push(open(d));
-  }
-  return cells;
-}
-
-const DAYS = buildJuly2026();
-
-const TIMES = [
-  { label: "9:00 AM", selected: false },
-  { label: "10:30 AM", selected: true },
-  { label: "1:00 PM", selected: false },
-  { label: "2:30 PM", selected: false },
-  { label: "4:00 PM", selected: false },
 ];
 
 export default function BookADemoPage() {
@@ -95,67 +62,8 @@ export default function BookADemoPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-line rounded-3xl shadow-lg overflow-hidden">
-          <div className="bg-brick-tint text-brick-dark text-[13px] font-semibold text-center py-2.5 tracking-[0.01em]">
-            Calendar placeholder — your embeddable scheduler drops in here
-          </div>
-          <div className="p-6 sm:p-8">
-            <div className="grid grid-cols-2 gap-7">
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <span className="text-[17px] font-semibold text-ink">July 2026</span>
-                  <div className="flex gap-1.5">
-                    <span className="w-[30px] h-[30px] rounded-lg border border-line flex items-center justify-center text-muted text-sm cursor-pointer">
-                      ‹
-                    </span>
-                    <span className="w-[30px] h-[30px] rounded-lg border border-line flex items-center justify-center text-muted text-sm cursor-pointer">
-                      ›
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {DOWS.map((d, i) => (
-                    <div key={i} className="text-center text-[11px] font-semibold text-muted-2">
-                      {d}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {DAYS.map((c, i) => (
-                    <div
-                      key={i}
-                      className={`aspect-square flex items-center justify-center text-sm font-medium rounded-[9px] ${c.className}`}
-                    >
-                      {c.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-ink mb-4">Thursday, July 9</div>
-                <div className="flex flex-col gap-2.5">
-                  {TIMES.map((t) => (
-                    <div
-                      key={t.label}
-                      className={`text-center rounded-[10px] py-3 text-[15px] font-semibold cursor-pointer border ${
-                        t.selected
-                          ? "border-brick bg-brick-tint text-brick-dark"
-                          : "border-line text-ink"
-                      }`}
-                    >
-                      {t.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <a
-              href="mailto:hello@joinwingman.app"
-              className="mt-7 block w-full text-center text-base font-semibold text-white bg-brick rounded-[10px] py-3.5 hover:bg-brick-dark transition-colors"
-            >
-              Confirm 10:30 AM · Jul 9
-            </a>
-          </div>
+        <div className="bg-white border border-line rounded-3xl shadow-lg overflow-hidden p-2 sm:p-3">
+          <GhlCalendar />
         </div>
       </div>
 
