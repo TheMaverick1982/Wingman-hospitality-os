@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CRM_STAGES, sourceLabel, type CrmStage, type CrmActivityKind } from "@/lib/crm";
+import { CRM_STAGES, sourceLabel, leadResultRows, type CrmStage, type CrmActivityKind } from "@/lib/crm";
 import {
   moveContactStage,
   addNote,
@@ -300,6 +300,29 @@ function ActivityRow({ a }: { a: ActivityRecord }) {
       <div className="self-stretch bg-gold-tint rounded-xl px-3.5 py-2.5">
         <div className="text-[13px] text-[#8a5a00] whitespace-pre-line">{a.body}</div>
         <div className="text-[11px] text-[#b4884a] mt-1">Note · {when(a.created_at)}</div>
+      </div>
+    );
+  }
+
+  if (a.kind === "lead") {
+    const source = (a.meta as { source?: string })?.source;
+    const rows = leadResultRows(source, a.meta);
+    return (
+      <div className="self-stretch bg-paper border border-line rounded-xl px-3.5 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12.5px] font-semibold text-ink">Lead captured via {sourceLabel(source)}</span>
+          <span className="text-[11px] text-muted-2">{when(a.created_at)}</span>
+        </div>
+        {rows.length > 0 && (
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+            {rows.map((r) => (
+              <div key={r.label} className="flex justify-between gap-2 text-[12.5px]">
+                <dt className="text-muted-2">{r.label}</dt>
+                <dd className="text-ink font-medium text-right">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
     );
   }
