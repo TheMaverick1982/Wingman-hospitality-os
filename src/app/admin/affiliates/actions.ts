@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { generateAffiliateCode, referralLink, siteUrl } from "@/lib/affiliate";
+import { mirrorAffiliateToCrm } from "@/lib/crm-affiliate";
 import { sendEmail } from "@/lib/email";
 
 export type AdminAffState = { error: string | null };
@@ -28,6 +29,8 @@ export async function approveAffiliate(affiliateId: string): Promise<AdminAffSta
     .update({ status: "approved", code, approved_at: new Date().toISOString() })
     .eq("id", affiliateId);
   if (error) return { error: error.message };
+
+  await mirrorAffiliateToCrm({ email: a.email, name: a.full_name, statusTag: "aff:approved" }, admin);
 
   const link = referralLink(code);
   try {
@@ -55,8 +58,12 @@ export async function rejectAffiliate(affiliateId: string): Promise<AdminAffStat
   if (!affiliateId) return { error: "Missing affiliate." };
 
   const admin = createAdminClient();
+  const { data: aff } = await admin.from("affiliates").select("email, full_name").eq("id", affiliateId).maybeSingle();
   const { error } = await admin.from("affiliates").update({ status: "rejected" }).eq("id", affiliateId);
   if (error) return { error: error.message };
+
+  const a = aff as { email: string; full_name: string } | null;
+  if (a) await mirrorAffiliateToCrm({ email: a.email, name: a.full_name, statusTag: "aff:rejected" }, admin);
 
   revalidatePath("/admin/affiliates");
   return { error: null };
@@ -68,8 +75,12 @@ export async function setAffiliateStatus(affiliateId: string, status: "approved"
   if (!affiliateId) return { error: "Missing affiliate." };
 
   const admin = createAdminClient();
+  const { data: aff } = await admin.from("affiliates").select("email, full_name").eq("id", affiliateId).maybeSingle();
   const { error } = await admin.from("affiliates").update({ status }).eq("id", affiliateId);
   if (error) return { error: error.message };
+
+  const a = aff as { email: string; full_name: string } | null;
+  if (a) await mirrorAffiliateToCrm({ email: a.email, name: a.full_name, statusTag: status === "suspended" ? "aff:suspended" : "aff:approved" }, admin);
 
   revalidatePath("/admin/affiliates");
   return { error: null };

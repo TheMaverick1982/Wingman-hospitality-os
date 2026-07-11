@@ -10,6 +10,7 @@ import { formTrippedHoneypot } from "@/lib/honeypot";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/affiliate";
+import { mirrorAffiliateToCrm } from "@/lib/crm-affiliate";
 
 export type ApplyState = { error: string | null; ok: boolean; message?: string };
 export type AffiliateLoginState = { error: string | null };
@@ -92,6 +93,9 @@ export async function applyAsAffiliate(_prev: ApplyState, formData: FormData): P
     status: "pending",
   });
   if (insErr) return { error: insErr.message, ok: false };
+
+  // Mirror into the CRM tagged src:affiliate + aff:pending (best-effort).
+  await mirrorAffiliateToCrm({ email, name: fullName, statusTag: "aff:pending" }, admin);
 
   // Confirmation email (best-effort, via Resend).
   try {
