@@ -305,9 +305,11 @@ export default async function ReportingPage({
                     <div className="text-xs text-muted mt-0.5">To: {s.recipient_emails.join(", ")}</div>
                   )}
                 </div>
-                <button onClick={() => deleteReportSchedule(s.id)} className="text-muted-2 hover:text-danger text-xs font-semibold shrink-0">
-                  Remove
-                </button>
+                <form action={deleteReportSchedule.bind(null, s.id)}>
+                  <button type="submit" className="text-muted-2 hover:text-danger text-xs font-semibold shrink-0">
+                    Remove
+                  </button>
+                </form>
               </div>
             ))}
             {(schedules ?? []).length === 0 && <p className="text-sm text-muted">No scheduled reports yet.</p>}
