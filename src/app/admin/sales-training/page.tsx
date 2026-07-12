@@ -8,6 +8,8 @@ import {
   WHY_IT_MATTERS,
   PRODUCT_TOUR,
   GOLDEN_RULES,
+  RAPPORT,
+  VOSS_TACTICS,
   PREP,
   MOVEMENTS,
   QUESTION_BANK,
@@ -172,6 +174,33 @@ export default async function SalesTrainingPage() {
                 {i + 1}
               </span>
               <p className="text-[14.5px] text-charcoal-2 leading-[1.5] self-center">{r}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Rapport first */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Before you sell anything" title="Build rapport first" sub="The demo only works if it feels like two restaurant people talking. Earn the conversation before you earn the sale." />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {RAPPORT.map((r, i) => (
+            <div key={i} className="flex gap-3 bg-white border border-line rounded-2xl p-5">
+              <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brick shrink-0" />
+              <p className="text-[14px] text-charcoal-2 leading-[1.5]">{r}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Conversation tactics (Chris Voss) */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Tactical empathy" title="Conversation techniques (from Chris Voss)" sub="Adapted from the negotiation method in “Never Split the Difference.” The goal is a genuine, trust-first conversation where the operator feels understood — never manipulation." />
+        <div className="flex flex-col gap-3">
+          {VOSS_TACTICS.map((t) => (
+            <div key={t.name} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[15px] font-semibold text-ink">{t.name}</div>
+              <p className="text-[13.5px] text-charcoal-2 mt-1 leading-[1.5]">{t.what}</p>
+              <div className="mt-2.5 text-[13.5px] text-ink italic border-l-2 border-brick/30 pl-3 leading-[1.5]">{t.example}</div>
             </div>
           ))}
         </div>
