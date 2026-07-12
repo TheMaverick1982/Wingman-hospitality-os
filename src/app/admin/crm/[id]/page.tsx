@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { listSalesReps } from "@/lib/sales-reps";
 import { ContactPanel, type ContactRecord, type ActivityRecord, type EnrollmentRecord } from "./contact-panel";
 
 export const metadata: Metadata = { title: "Contact · CRM" };
@@ -17,11 +18,12 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
 
   const { data: contact } = await admin
     .from("crm_contacts")
-    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, created_at")
+    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, assigned_rep_id, created_at")
     .eq("id", id)
     .maybeSingle();
   if (!contact) notFound();
 
+  const reps = await listSalesReps();
   const [{ data: activities }, { data: enrollments }] = await Promise.all([
     admin
       .from("crm_activities")
@@ -46,6 +48,7 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
         activities={(activities ?? []) as ActivityRecord[]}
         enrollments={(enrollments ?? []) as unknown as EnrollmentRecord[]}
         canDelete={canDelete}
+        reps={reps}
       />
     </div>
   );

@@ -11,8 +11,11 @@ import {
   markContactBooked,
   unsubscribeContact,
   deleteContact,
+  assignContact,
   type CrmActionState,
 } from "../actions";
+
+export type SalesRep = { id: string; name: string };
 
 export type ContactRecord = {
   id: string;
@@ -26,6 +29,7 @@ export type ContactRecord = {
   booked_at: string | null;
   customer_at: string | null;
   org_id: string | null;
+  assigned_rep_id: string | null;
   created_at: string;
 };
 
@@ -52,12 +56,21 @@ function when(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export function ContactPanel({ contact, activities, enrollments, canDelete }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean }) {
+export function ContactPanel({ contact, activities, enrollments, canDelete, reps }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean; reps: SalesRep[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<"email" | "note">("email");
   const [savingStage, setSavingStage] = useState(false);
+  const [savingRep, setSavingRep] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  function onAssign(repId: string) {
+    setSavingRep(true);
+    assignContact(contact.id, repId).then(() => {
+      setSavingRep(false);
+      router.refresh();
+    });
+  }
 
   const [detailsState, detailsAction, detailsPending] = useActionState(updateContactDetails, initial);
   const [emailState, emailAction, emailPending] = useActionState(sendContactEmail, initial);
@@ -149,6 +162,20 @@ export function ContactPanel({ contact, activities, enrollments, canDelete }: { 
                   <option key={s.key} value={s.key}>
                     {s.label}
                   </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Sales rep</label>
+              <select
+                defaultValue={contact.assigned_rep_id ?? ""}
+                onChange={(e) => onAssign(e.target.value)}
+                disabled={savingRep}
+                className="mt-1 w-full text-sm bg-paper border border-line rounded-lg px-3 py-2 outline-none focus:border-brick text-ink"
+              >
+                <option value="">— Unassigned —</option>
+                {reps.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
             </div>
