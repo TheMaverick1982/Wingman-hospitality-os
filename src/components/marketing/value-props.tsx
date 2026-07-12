@@ -73,9 +73,9 @@ export function ValueProps() {
             One system, every location
           </h3>
           <p className="text-base sm:text-lg text-muted leading-[1.5]">
-            General Managers see everything across every location. Store Managers stay focused on
-            their own floor. Built-in permissions mean everyone sees exactly what they need —
-            nothing more, nothing less.
+            Owners see every location at a glance, and managers can be scoped to just their own
+            floor. Built-in permissions mean everyone — owner, manager, or staff — sees exactly what
+            they need, nothing more, nothing less.
           </p>
         </div>
       </div>

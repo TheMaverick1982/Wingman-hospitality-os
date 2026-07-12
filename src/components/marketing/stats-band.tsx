@@ -7,7 +7,9 @@ const STATS = [
 export function StatsBand() {
   return (
     <div className="bg-[#0a0a0a] text-white">
-      <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-[88px] grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-[88px]">
+        <div className="text-xs font-semibold tracking-[0.1em] uppercase text-[#6b6b6b] mb-10">What a strong month looks like</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {STATS.map((s) => (
           <div key={s.label} className="px-0 sm:px-2">
             <div
@@ -19,6 +21,7 @@ export function StatsBand() {
             <div className="text-base text-[#a1a1a1] mt-4 leading-[1.45] max-w-[280px]">{s.label}</div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );
