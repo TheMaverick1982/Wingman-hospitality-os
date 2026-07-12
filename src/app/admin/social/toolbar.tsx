@@ -9,30 +9,43 @@ const initial: SocialFormState = { error: null, ok: false };
 const SAMPLE = `[
   {
     "caption": "You pay to win a guest once — then lose them out the bottom.",
-    "link": "https://www.joinwingman.app/demo",
     "first_comment": "#restauranttech #hospitality",
+    "link": "https://www.joinwingman.app/demo",
     "platforms": ["instagram", "facebook"],
-    "scheduled_at": "2026-07-15T09:00"
+    "scheduled_at": "2026-07-15T09:00:00-04:00",
+    "image": "post1.png"
   }
 ]`;
 
 function ImportPanel({ onDone }: { onDone: () => void }) {
   const [state, action, pending] = useActionState(importPosts, initial);
-  if (state.ok) onDone();
+  // state.ok can be true even with a warning message (missing images), so only
+  // auto-close on a clean success.
+  if (state.ok && !state.error) onDone();
   return (
     <form action={action} className="flex flex-col gap-3">
       <p className="text-[13px] text-muted">
-        Paste a JSON array of posts (from Claude Design). Each needs a <code>caption</code>; optional{" "}
-        <code>link</code>, <code>first_comment</code>, <code>platforms</code>, and <code>scheduled_at</code>. Posts with a time come in
-        scheduled; without, as drafts. Images you add after importing.
+        Paste the JSON plan from Claude Design and select all its image files below — each post&rsquo;s{" "}
+        <code>image</code> (or <code>images</code>) filename is matched to the files you upload, so everything lands ready. Posts
+        with a <code>scheduled_at</code> come in scheduled; without, as drafts.
       </p>
       <textarea
         name="json"
-        rows={10}
+        rows={9}
         defaultValue=""
         placeholder={SAMPLE}
         className="w-full rounded-xl border border-line bg-white px-4 py-3 text-[13px] text-ink outline-none focus:border-brick font-mono leading-relaxed"
       />
+      <div>
+        <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Image files (select all of them at once)</label>
+        <input
+          type="file"
+          name="images"
+          multiple
+          accept="image/*,video/mp4"
+          className="block w-full text-[13px] text-charcoal-2 file:mr-3 file:rounded-full file:border-0 file:bg-paper file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-ink hover:file:bg-line"
+        />
+      </div>
       <div className="flex items-center gap-3">
         <button
           type="submit"
@@ -44,7 +57,8 @@ function ImportPanel({ onDone }: { onDone: () => void }) {
         <button type="button" onClick={onDone} className="text-[14px] text-muted-2 hover:text-ink">
           Cancel
         </button>
-        {state.error && <span className="text-[14px] text-danger">{state.error}</span>}
+        {state.ok && state.error && <span className="text-[13px] text-[#b4884a]">Imported{state.error}</span>}
+        {!state.ok && state.error && <span className="text-[14px] text-danger">{state.error}</span>}
       </div>
     </form>
   );
