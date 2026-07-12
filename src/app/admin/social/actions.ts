@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SOCIAL_PLATFORMS, type SocialPlatform, type SocialPost } from "@/lib/social";
-import { uploadSocialImages, deleteSocialImages } from "@/lib/social-storage";
+import { uploadSocialImages, deleteSocialImages, createSocialUploadTargets } from "@/lib/social-storage";
 import { getSocialSettings, isConnected, publishPost } from "@/lib/social-meta";
 
 async function guard() {
@@ -181,9 +181,21 @@ type ImportedPost = {
   images?: string[]; // or several (carousel), in order
 };
 
-export async function importPosts(_prev: SocialFormState, formData: FormData): Promise<SocialFormState> {
+// Issue signed upload targets so the browser can push image files DIRECTLY to
+// storage (bypassing Vercel's 4.5MB server-request cap). Called before import.
+export async function signSocialUploads(names: string[]): Promise<{ name: string; path: string; token: string }[]> {
+  if (!(await guard())) return [];
+  const clean = names.map((n) => String(n)).filter(Boolean);
+  if (clean.length === 0) return [];
+  return createSocialUploadTargets(clean);
+}
+
+// Create the posts from the JSON plan, attaching images that were already
+// uploaded to storage from the browser. `pathsJson` maps lowercased filename →
+// storage path (built client-side from the signed uploads).
+export async function importPosts(json: string, pathsJson: string): Promise<SocialFormState> {
   if (!(await guard())) return { error: "Not authorized.", ok: false };
-  const raw = String(formData.get("json") || "").trim();
+  const raw = String(json || "").trim();
   if (!raw) return { error: "Paste a JSON plan first.", ok: false };
 
   let parsed: unknown;
@@ -195,39 +207,30 @@ export async function importPosts(_prev: SocialFormState, formData: FormData): P
   const items = (Array.isArray(parsed) ? parsed : (parsed as { posts?: unknown[] })?.posts) as ImportedPost[] | undefined;
   if (!Array.isArray(items) || items.length === 0) return { error: "No posts found in the JSON.", ok: false };
 
-  // Map uploaded image files by filename (case-insensitive) so each post's
-  // "image"/"images" field can pull in the right graphics.
-  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
-  const byName = new Map<string, File>();
-  for (const f of files) byName.set(f.name.toLowerCase().trim(), f);
+  let pathMap: Record<string, string> = {};
+  try {
+    pathMap = pathsJson ? (JSON.parse(pathsJson) as Record<string, string>) : {};
+  } catch {
+    pathMap = {};
+  }
   const missing = new Set<string>();
 
-  const admin = createAdminClient();
-  const rows: Record<string, unknown>[] = [];
-
-  for (const p of items.slice(0, 200)) {
+  const rows: Record<string, unknown>[] = items.slice(0, 200).map((p) => {
     const platforms = Array.isArray(p.platforms) ? p.platforms.filter((x) => VALID_PLATFORMS.has(x as SocialPlatform)) : [];
     const scheduled_at = p.scheduled_at ? parseScheduledAt(String(p.scheduled_at)) : null;
 
-    // Resolve referenced filenames → uploaded files (preserving order).
+    // Resolve referenced filenames → uploaded storage paths (preserving order).
     const names: string[] = [];
     if (typeof p.image === "string" && p.image.trim()) names.push(p.image.trim());
     if (Array.isArray(p.images)) for (const n of p.images) if (typeof n === "string" && n.trim()) names.push(n.trim());
-    const matched: File[] = [];
+    const image_paths: string[] = [];
     for (const n of names) {
-      const f = byName.get(n.toLowerCase());
-      if (f) matched.push(f);
+      const path = pathMap[n.toLowerCase()];
+      if (path) image_paths.push(path);
       else missing.add(n);
     }
 
-    let image_paths: string[] = [];
-    if (matched.length) {
-      const { paths, error } = await uploadSocialImages(matched);
-      if (error) return { error: `Image upload failed: ${error}`, ok: false };
-      image_paths = paths;
-    }
-
-    rows.push({
+    return {
       caption: String(p.caption ?? "").trim(),
       link: p.link ? String(p.link).trim() : null,
       first_comment: p.first_comment ? String(p.first_comment).trim() : null,
@@ -236,14 +239,14 @@ export async function importPosts(_prev: SocialFormState, formData: FormData): P
       image_paths,
       // Imported with a time → scheduled; without → draft to fill in.
       status: scheduled_at ? "scheduled" : "draft",
-    });
-  }
+    };
+  });
 
+  const admin = createAdminClient();
   const { error } = await admin.from("social_posts").insert(rows);
   if (error) return { error: error.message, ok: false };
 
   revalidatePath("/admin/social");
-  // Flag any referenced images that weren't among the uploaded files.
   const warn = missing.size ? ` (couldn't find ${missing.size} image${missing.size === 1 ? "" : "s"}: ${[...missing].slice(0, 5).join(", ")} — add them to those posts manually)` : "";
   return { error: warn ? warn.trim() : null, ok: true };
 }

@@ -35,3 +35,20 @@ export async function deleteSocialImages(paths: string[]): Promise<void> {
   const admin = createAdminClient();
   await admin.storage.from(SOCIAL_BUCKET).remove(paths);
 }
+
+// Create signed upload targets so the browser can upload images DIRECTLY to
+// storage (bypassing Vercel's 4.5MB request-body limit on server actions).
+// Returns one {name, path, token} per requested filename; the client uploads
+// each file with uploadToSignedUrl(path, token, file).
+export async function createSocialUploadTargets(names: string[]): Promise<{ name: string; path: string; token: string }[]> {
+  const admin = createAdminClient();
+  const out: { name: string; path: string; token: string }[] = [];
+  for (const name of names.slice(0, 200)) {
+    const safe = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "file";
+    const path = `${randomUUID()}-${safe}`;
+    const { data, error } = await admin.storage.from(SOCIAL_BUCKET).createSignedUploadUrl(path);
+    if (error || !data) continue;
+    out.push({ name, path, token: data.token });
+  }
+  return out;
+}
