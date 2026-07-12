@@ -4,7 +4,8 @@ import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 import { publicImageUrl, IMAGE_RETENTION_DAYS, type SocialPost } from "@/lib/social";
 import { deleteSocialImages } from "@/lib/social-storage";
-import { getSocialSettings, isConnected, publishPost } from "@/lib/social-meta";
+import { getSocialSettings } from "@/lib/social-meta";
+import { publishAll, anyConnected } from "@/lib/social-publish";
 
 // Social planner cron. Runs hourly:
 //   1. Scheduled posts whose time has arrived: auto-PUBLISH via Meta if the
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   let purged = 0;
 
   const settings = await getSocialSettings();
-  const autoPublish = Boolean(settings?.auto_publish) && isConnected(settings);
+  const autoPublish = Boolean(settings?.auto_publish) && anyConnected(settings);
 
   // 1. Due scheduled posts.
   const { data: due } = await admin
@@ -47,12 +48,13 @@ export async function GET(request: NextRequest) {
     // Auto-publish path: publish via Meta, mark posted, store live URLs. On a
     // failure, record the error and fall through to a reminder so it's not lost.
     if (autoPublish && settings) {
-      const outcome = await publishPost(p, settings);
-      const anyLive = Boolean(outcome.facebook || outcome.instagram);
+      const outcome = await publishAll(p, settings);
+      const anyLive = Boolean(outcome.facebook || outcome.instagram || outcome.linkedin);
       const publishedUrls = {
         ...(p.published_urls ?? {}),
         ...(outcome.facebook ? { facebook: outcome.facebook } : {}),
         ...(outcome.instagram ? { instagram: outcome.instagram } : {}),
+        ...(outcome.linkedin ? { linkedin: outcome.linkedin } : {}),
       };
       if (anyLive && !outcome.error) {
         await admin

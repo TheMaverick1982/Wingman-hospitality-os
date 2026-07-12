@@ -5,7 +5,8 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SOCIAL_PLATFORMS, type SocialPlatform, type SocialPost } from "@/lib/social";
 import { uploadSocialImages, deleteSocialImages, createSocialUploadTargets } from "@/lib/social-storage";
-import { getSocialSettings, isConnected, publishPost } from "@/lib/social-meta";
+import { getSocialSettings } from "@/lib/social-meta";
+import { publishAll, anyConnected } from "@/lib/social-publish";
 
 async function guard() {
   return platformSectionActor("social");
@@ -41,6 +42,24 @@ export async function disconnectMeta(): Promise<void> {
   revalidatePath("/admin/social");
 }
 
+// Disconnect LinkedIn (clears the stored member token).
+export async function disconnectLinkedIn(): Promise<void> {
+  if (!(await guard())) return;
+  const admin = createAdminClient();
+  await admin
+    .from("social_settings")
+    .update({
+      li_member_id: null,
+      li_member_name: null,
+      li_access_token: null,
+      li_token_expires_at: null,
+      li_connected_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+  revalidatePath("/admin/social");
+}
+
 // Publish (or retry) a single post right now.
 export async function publishNow(formData: FormData): Promise<void> {
   if (!(await guard())) return;
@@ -48,16 +67,21 @@ export async function publishNow(formData: FormData): Promise<void> {
   if (!id) return;
   const admin = createAdminClient();
   const settings = await getSocialSettings();
-  if (!isConnected(settings) || !settings) return;
+  if (!settings || !anyConnected(settings)) return;
 
   const { data } = await admin.from("social_posts").select("*").eq("id", id).maybeSingle();
   const post = data as SocialPost | null;
   if (!post) return;
 
   const now = new Date().toISOString();
-  const outcome = await publishPost(post, settings);
-  const publishedUrls = { ...(post.published_urls ?? {}), ...(outcome.facebook ? { facebook: outcome.facebook } : {}), ...(outcome.instagram ? { instagram: outcome.instagram } : {}) };
-  const anyLive = Boolean(outcome.facebook || outcome.instagram);
+  const outcome = await publishAll(post, settings);
+  const publishedUrls = {
+    ...(post.published_urls ?? {}),
+    ...(outcome.facebook ? { facebook: outcome.facebook } : {}),
+    ...(outcome.instagram ? { instagram: outcome.instagram } : {}),
+    ...(outcome.linkedin ? { linkedin: outcome.linkedin } : {}),
+  };
+  const anyLive = Boolean(outcome.facebook || outcome.instagram || outcome.linkedin);
 
   await admin
     .from("social_posts")
