@@ -380,6 +380,7 @@ export const ARTICLES: HelpArticle[] = [
         "Repeat rate by cohort — for each of the last 6 months, the share of that month's first-timers who came back for a 2nd visit. It's the truest read on whether you're turning guests into regulars, and it shows the direction, not just today's number.",
         "The money layer — once your POS data is flowing, the latest week's net sales, average check, labor %, and comp % each show their week-over-week change.",
         "Training vs. retention — team training completion and repeat rate side by side, month by month, so you can see them move together: a team held to standard brings more guests back.",
+        "Menu profitability — your menu items sorted into Stars, Plowhorses, Puzzles, and Dogs, with a one-line takeaway (e.g. how many Dogs are dragging your margin) pulled straight from Menu Engineering.",
       ] },
       { kind: "h", text: "Scheduled email reports" },
       { kind: "p", text: "Owners can have a report emailed automatically on a schedule — weekly, biweekly, or monthly — to whoever needs it (you, an investor, a GM). Click \"Schedule report,\" pick the cadence, the sections to include, and the recipient emails. Each recipient gets a clean digest on cadence without anyone lifting a finger." },
