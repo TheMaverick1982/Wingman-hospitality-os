@@ -43,8 +43,9 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   experimental: {
     serverActions: {
-      // Menu photo/PDF uploads (Role Training) can exceed the 1MB default.
-      bodySizeLimit: "10mb",
+      // Menu photo/PDF uploads (Role Training) and bulk social-post image
+      // imports can exceed the 1MB default.
+      bodySizeLimit: "25mb",
     },
   },
   async headers() {

@@ -171,7 +171,15 @@ export async function deletePost(formData: FormData): Promise<void> {
   revalidatePath("/admin/social");
 }
 
-type ImportedPost = { caption?: string; link?: string; first_comment?: string; platforms?: string[]; scheduled_at?: string };
+type ImportedPost = {
+  caption?: string;
+  link?: string;
+  first_comment?: string;
+  platforms?: string[];
+  scheduled_at?: string;
+  image?: string; // single image filename
+  images?: string[]; // or several (carousel), in order
+};
 
 export async function importPosts(_prev: SocialFormState, formData: FormData): Promise<SocialFormState> {
   if (!(await guard())) return { error: "Not authorized.", ok: false };
@@ -187,24 +195,55 @@ export async function importPosts(_prev: SocialFormState, formData: FormData): P
   const items = (Array.isArray(parsed) ? parsed : (parsed as { posts?: unknown[] })?.posts) as ImportedPost[] | undefined;
   if (!Array.isArray(items) || items.length === 0) return { error: "No posts found in the JSON.", ok: false };
 
-  const rows = items.slice(0, 200).map((p) => {
+  // Map uploaded image files by filename (case-insensitive) so each post's
+  // "image"/"images" field can pull in the right graphics.
+  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  const byName = new Map<string, File>();
+  for (const f of files) byName.set(f.name.toLowerCase().trim(), f);
+  const missing = new Set<string>();
+
+  const admin = createAdminClient();
+  const rows: Record<string, unknown>[] = [];
+
+  for (const p of items.slice(0, 200)) {
     const platforms = Array.isArray(p.platforms) ? p.platforms.filter((x) => VALID_PLATFORMS.has(x as SocialPlatform)) : [];
     const scheduled_at = p.scheduled_at ? parseScheduledAt(String(p.scheduled_at)) : null;
-    return {
+
+    // Resolve referenced filenames → uploaded files (preserving order).
+    const names: string[] = [];
+    if (typeof p.image === "string" && p.image.trim()) names.push(p.image.trim());
+    if (Array.isArray(p.images)) for (const n of p.images) if (typeof n === "string" && n.trim()) names.push(n.trim());
+    const matched: File[] = [];
+    for (const n of names) {
+      const f = byName.get(n.toLowerCase());
+      if (f) matched.push(f);
+      else missing.add(n);
+    }
+
+    let image_paths: string[] = [];
+    if (matched.length) {
+      const { paths, error } = await uploadSocialImages(matched);
+      if (error) return { error: `Image upload failed: ${error}`, ok: false };
+      image_paths = paths;
+    }
+
+    rows.push({
       caption: String(p.caption ?? "").trim(),
       link: p.link ? String(p.link).trim() : null,
       first_comment: p.first_comment ? String(p.first_comment).trim() : null,
       platforms: platforms.length ? platforms : SOCIAL_PLATFORMS.map((x) => x.key),
       scheduled_at,
+      image_paths,
       // Imported with a time → scheduled; without → draft to fill in.
       status: scheduled_at ? "scheduled" : "draft",
-    };
-  });
+    });
+  }
 
-  const admin = createAdminClient();
   const { error } = await admin.from("social_posts").insert(rows);
   if (error) return { error: error.message, ok: false };
 
   revalidatePath("/admin/social");
-  return { error: null, ok: true };
+  // Flag any referenced images that weren't among the uploaded files.
+  const warn = missing.size ? ` (couldn't find ${missing.size} image${missing.size === 1 ? "" : "s"}: ${[...missing].slice(0, 5).join(", ")} — add them to those posts manually)` : "";
+  return { error: warn ? warn.trim() : null, ok: true };
 }
