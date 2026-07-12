@@ -6,6 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { PLATFORM_ACCESS_OPTIONS } from "@/lib/auth/platform";
+import { sendEmail } from "@/lib/email";
+import { BILLING_OWNER_EMAIL } from "@/lib/billing";
+import { uploadW9File, w9RequestEmailHtml } from "@/lib/w9";
 
 const ORIGIN = () => process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app";
 
@@ -15,6 +18,25 @@ const VALID = new Set(PLATFORM_ACCESS_OPTIONS.map((s) => s.key));
 
 function cleanSections(raw: string[]): string[] {
   return [...new Set(raw.filter((s) => VALID.has(s as never)))];
+}
+
+// Email a staff member the W-9 to complete and mark it requested. Best-effort:
+// the caller decides how to surface a failure.
+async function sendW9Request(admin: SupabaseClient, userId: string, email: string, name: string): Promise<{ error: string | null }> {
+  try {
+    await sendEmail({
+      to: [email],
+      subject: "Please complete your W-9 for Wingman",
+      html: w9RequestEmailHtml(name, BILLING_OWNER_EMAIL),
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not send the W-9 email." };
+  }
+  await admin
+    .from("profiles")
+    .update({ w9_status: "requested", w9_requested_at: new Date().toISOString() })
+    .eq("id", userId);
+  return { error: null };
 }
 
 // Page through auth users to find one by email. Platform staff are few, so this
@@ -91,6 +113,50 @@ export async function addPlatformStaff(_prev: TeamState, formData: FormData): Pr
     .eq("id", userId);
   if (error) return { error: error.message };
 
+  // Sales reps are paid contractors, so auto-send the W-9 when Sales Training
+  // access is granted (our signal for "this is a sales rep"). Best-effort — a
+  // failed email never blocks adding the teammate; the owner can resend later.
+  if (sections.includes("sales_training")) {
+    await sendW9Request(admin, userId, email, fullName);
+  }
+
+  revalidatePath("/admin/team");
+  return { error: null };
+}
+
+// Manually (re)send the W-9 request to a staff member.
+export async function requestW9(profileId: string): Promise<TeamState> {
+  const me = await platformSectionActor("team");
+  if (!me) return { error: "Not authorized." };
+  if (!profileId) return { error: "Missing teammate." };
+  const admin = createAdminClient();
+  const { data } = await admin.auth.admin.getUserById(profileId);
+  const email = data?.user?.email;
+  if (!email) return { error: "Couldn't find that teammate's email." };
+  const { data: prof } = await admin.from("profiles").select("full_name").eq("id", profileId).maybeSingle();
+  const name = (prof as { full_name: string } | null)?.full_name ?? "";
+  const res = await sendW9Request(admin, profileId, email, name);
+  if (res.error) return res;
+  revalidatePath("/admin/team");
+  return { error: null };
+}
+
+// Attach a returned W-9 to a staff member's profile and mark it received.
+export async function uploadW9(profileId: string, formData: FormData): Promise<TeamState> {
+  const me = await platformSectionActor("team");
+  if (!me) return { error: "Not authorized." };
+  if (!profileId) return { error: "Missing teammate." };
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { error: "Choose a file to upload." };
+
+  const { path, error } = await uploadW9File(profileId, file);
+  if (error || !path) return { error: error ?? "Upload failed." };
+
+  const admin = createAdminClient();
+  await admin
+    .from("profiles")
+    .update({ w9_status: "received", w9_received_at: new Date().toISOString(), w9_file_path: path })
+    .eq("id", profileId);
   revalidatePath("/admin/team");
   return { error: null };
 }
