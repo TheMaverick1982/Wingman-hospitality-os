@@ -32,6 +32,8 @@ export type SocialSettings = {
   li_access_token: string | null;
   li_token_expires_at: string | null;
   li_connected_at: string | null;
+  // When we last emailed the "content running low" nudge (null = clear).
+  content_runway_alert_at: string | null;
 };
 
 export function siteUrl(): string {
