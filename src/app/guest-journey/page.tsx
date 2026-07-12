@@ -95,6 +95,36 @@ function JourneyGraphic() {
   );
 }
 
+// Phone/tablet version: a vertical timeline so each stage stays legible instead
+// of being squeezed into a tiny horizontal strip.
+function JourneyGraphicMobile() {
+  const n = GRAPHIC_STAGES.length;
+  return (
+    <ol className="flex flex-col">
+      {GRAPHIC_STAGES.map((label, i) => {
+        const last = i === n - 1;
+        return (
+          <li key={label} className="flex items-stretch gap-4">
+            <div className="flex flex-col items-center">
+              <span
+                className={`w-10 h-10 shrink-0 rounded-full border-2 border-brick flex items-center justify-center text-[15px] font-bold ${
+                  last ? "bg-brick text-white" : "bg-white text-brick"
+                }`}
+              >
+                {i + 1}
+              </span>
+              {!last && <span className="w-0 flex-1 border-l-2 border-dashed border-brick/40 my-1.5" />}
+            </div>
+            <div className={`pt-2 ${last ? "" : "pb-6"}`}>
+              <div className="text-[16px] font-semibold text-ink">{label}</div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function GuestJourneyPage() {
   return (
     <div className="flex-1 flex flex-col force-light bg-panel">
@@ -124,8 +154,13 @@ export default function GuestJourneyPage() {
 
       {/* Journey line graphic */}
       <section className="max-w-[1080px] mx-auto px-6 sm:px-10 w-full pb-6 sm:pb-10">
-        <div className="bg-white border border-line rounded-[28px] px-6 sm:px-12 py-10 sm:py-14 shadow-sm overflow-x-auto">
-          <JourneyGraphic />
+        <div className="bg-white border border-line rounded-[28px] px-6 sm:px-12 py-10 sm:py-14 shadow-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <JourneyGraphic />
+          </div>
+          <div className="sm:hidden">
+            <JourneyGraphicMobile />
+          </div>
         </div>
       </section>
 
