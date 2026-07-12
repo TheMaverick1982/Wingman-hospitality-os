@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { markPosted, setStatus, deletePost } from "./actions";
+import { markPosted, setStatus, deletePost, publishNow } from "./actions";
 import { Composer } from "./composer";
 import { SOCIAL_PLATFORMS, type SocialPost } from "@/lib/social";
 
@@ -40,9 +40,10 @@ function whenLabel(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export function PostCard({ post }: { post: CardPost }) {
+export function PostCard({ post, connected }: { post: CardPost; connected: boolean }) {
   const [editing, setEditing] = useState(false);
   const platformLabels = post.platforms.map((p) => SOCIAL_PLATFORMS.find((x) => x.key === p)?.label ?? p).join(" · ");
+  const liveUrls = Object.entries(post.published_urls ?? {}) as [string, string][];
 
   if (editing) {
     return (
@@ -77,6 +78,19 @@ export function PostCard({ post }: { post: CardPost }) {
       {post.link && <a href={post.link} className="text-[13px] text-brick font-semibold break-all">{post.link}</a>}
       {post.first_comment && <p className="text-[13px] text-muted">1st comment: {post.first_comment}</p>}
 
+      {liveUrls.length > 0 && (
+        <div className="flex flex-wrap gap-3 text-[13px]">
+          {liveUrls.map(([platform, url]) => (
+            <a key={platform} href={url} className="text-olive font-semibold capitalize">
+              View on {platform} ↗
+            </a>
+          ))}
+        </div>
+      )}
+      {post.publish_error && (
+        <p className="text-[12px] text-danger bg-[#FDECEC] rounded-lg px-3 py-2">Publish failed — {post.publish_error}</p>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#F1F1F1] mt-1 pt-3">
         {post.caption && <CopyButton text={post.caption + (post.link ? `\n\n${post.link}` : "")} label="Copy caption" />}
         {post.first_comment && <CopyButton text={post.first_comment} label="Copy 1st comment" />}
@@ -93,6 +107,14 @@ export function PostCard({ post }: { post: CardPost }) {
 
         <div className="flex-1" />
 
+        {connected && post.status !== "posted" && (
+          <form action={publishNow}>
+            <input type="hidden" name="id" value={post.id} />
+            <button type="submit" className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
+              {post.publish_error ? "Retry publish" : "Publish now"}
+            </button>
+          </form>
+        )}
         {post.status !== "posted" && (
           <form action={markPosted}>
             <input type="hidden" name="id" value={post.id} />

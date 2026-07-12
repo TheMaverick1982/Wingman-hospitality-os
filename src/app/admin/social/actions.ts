@@ -3,11 +3,74 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SOCIAL_PLATFORMS, type SocialPlatform } from "@/lib/social";
+import { SOCIAL_PLATFORMS, type SocialPlatform, type SocialPost } from "@/lib/social";
 import { uploadSocialImages, deleteSocialImages } from "@/lib/social-storage";
+import { getSocialSettings, isConnected, publishPost } from "@/lib/social-meta";
 
 async function guard() {
   return platformSectionActor("social");
+}
+
+// Turn auto-publish on/off (publishes scheduled posts automatically at their time).
+export async function setAutoPublish(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const on = String(formData.get("on") || "") === "true";
+  const admin = createAdminClient();
+  await admin.from("social_settings").update({ auto_publish: on, updated_at: new Date().toISOString() }).eq("id", 1);
+  revalidatePath("/admin/social");
+}
+
+// Disconnect the Meta account (clears the stored token + Page/IG link).
+export async function disconnectMeta(): Promise<void> {
+  if (!(await guard())) return;
+  const admin = createAdminClient();
+  await admin
+    .from("social_settings")
+    .update({
+      fb_page_id: null,
+      fb_page_name: null,
+      page_access_token: null,
+      ig_user_id: null,
+      ig_username: null,
+      token_expires_at: null,
+      auto_publish: false,
+      connected_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+  revalidatePath("/admin/social");
+}
+
+// Publish (or retry) a single post right now.
+export async function publishNow(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const admin = createAdminClient();
+  const settings = await getSocialSettings();
+  if (!isConnected(settings) || !settings) return;
+
+  const { data } = await admin.from("social_posts").select("*").eq("id", id).maybeSingle();
+  const post = data as SocialPost | null;
+  if (!post) return;
+
+  const now = new Date().toISOString();
+  const outcome = await publishPost(post, settings);
+  const publishedUrls = { ...(post.published_urls ?? {}), ...(outcome.facebook ? { facebook: outcome.facebook } : {}), ...(outcome.instagram ? { instagram: outcome.instagram } : {}) };
+  const anyLive = Boolean(outcome.facebook || outcome.instagram);
+
+  await admin
+    .from("social_posts")
+    .update({
+      status: anyLive && !outcome.error ? "posted" : post.status,
+      posted_at: anyLive && !outcome.error ? now : post.posted_at,
+      published_urls: publishedUrls,
+      publish_error: outcome.error ?? null,
+      last_publish_at: now,
+      updated_at: now,
+    })
+    .eq("id", id);
+  revalidatePath("/admin/social");
 }
 
 const VALID_PLATFORMS = new Set(SOCIAL_PLATFORMS.map((p) => p.key));
