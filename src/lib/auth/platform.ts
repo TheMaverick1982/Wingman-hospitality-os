@@ -2,7 +2,7 @@
 // platform staff; platform_access lists which /admin sections they may open.
 
 // Page-backed sections: each has its own /admin page and sidebar nav item.
-export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "social" | "coupons" | "sales_training" | "team";
+export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "social" | "coupons" | "sales_training" | "commissions" | "team";
 
 // A grantable permission is either a page section or a capability toggle that
 // isn't its own page (e.g. client_login gates "Log in as client").
@@ -19,6 +19,7 @@ export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; descripti
   { key: "social", label: "Social", description: "Plan and schedule social media posts.", href: "/admin/social" },
   { key: "coupons", label: "Coupons", description: "Create discount codes and free trials.", href: "/admin/coupons" },
   { key: "sales_training", label: "Sales Training", description: "Demo playbook and guidance for staff who run demos.", href: "/admin/sales-training" },
+  { key: "commissions", label: "Sales Commissions", description: "Track what sales reps are owed and mark commissions paid.", href: "/admin/sales-commissions" },
   { key: "team", label: "Team", description: "Add and manage platform staff and their access.", href: "/admin/team" },
 ];
 

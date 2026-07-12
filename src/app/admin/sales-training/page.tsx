@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { commissionsForRep, formatCents, totalsFor } from "@/lib/sales-commissions";
 import {
   PRODUCT_ONE_LINER,
   WHY_IT_MATTERS,
@@ -11,6 +13,9 @@ import {
   REFRAMES,
   NEVER_DO,
   CLOSE_CHECKLIST,
+  COMP_PLAN,
+  COMP_RULES,
+  AFFILIATE_CONTEXT,
 } from "@/lib/sales-playbook";
 
 export const metadata: Metadata = { title: "Sales Training · Admin" };
@@ -26,7 +31,12 @@ function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: strin
 }
 
 export default async function SalesTrainingPage() {
-  await requirePlatformSection("sales_training");
+  const profile = await requirePlatformSection("sales_training");
+
+  const admin = createAdminClient();
+  const myCommissions = await commissionsForRep(admin, profile.userId);
+  const myTotals = totalsFor(myCommissions);
+  const recent = myCommissions.filter((c) => c.status !== "void").slice(0, 5);
 
   return (
     <div className="flex flex-col gap-10 pb-10">
@@ -38,6 +48,41 @@ export default async function SalesTrainingPage() {
           real conversations with operators.
         </p>
       </div>
+
+      {/* Your earnings — only shown once a rep has commission activity */}
+      {(myTotals.owedCents > 0 || myTotals.paidCents > 0) && (
+        <div className="bg-white border border-line rounded-2xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-[15px] font-semibold text-ink">Your commissions</div>
+            <div className="flex gap-6">
+              <div>
+                <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#B45309]">Owed to you</div>
+                <div className="text-[22px] font-bold text-[#B45309] tabular-nums">{formatCents(myTotals.owedCents)}</div>
+              </div>
+              <div>
+                <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive">Paid to date</div>
+                <div className="text-[22px] font-bold text-olive tabular-nums">{formatCents(myTotals.paidCents)}</div>
+              </div>
+            </div>
+          </div>
+          {recent.length > 0 && (
+            <div className="mt-4 border-t border-[#F5F5F5] pt-3 flex flex-col gap-2">
+              {recent.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3 text-[13.5px]">
+                  <span className="text-charcoal-2 truncate">{c.label}</span>
+                  <span className="flex items-center gap-3 shrink-0">
+                    <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
+                    <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${c.status === "paid" ? "text-olive bg-olive-tint" : "text-[#B45309] bg-gold-tint"}`}>
+                      {c.status === "paid" ? "Paid" : "Owed"}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="text-[12px] text-muted-2 mt-3">These are the same numbers the owner sees. Questions on a line item? Ask them directly.</div>
+        </div>
+      )}
 
       {/* The one rule banner */}
       <div className="bg-[#0A0A0A] rounded-[20px] p-8 text-white">
@@ -226,6 +271,35 @@ export default async function SalesTrainingPage() {
           </ul>
         </section>
       </div>
+
+      {/* How you're paid */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Your compensation" title="How you're paid" sub="Straightforward and aligned with keeping accounts, not just signing them." />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {COMP_PLAN.map((c) => (
+            <div key={c.name} className="bg-white border border-line rounded-2xl p-5 flex flex-col">
+              <div className="text-[14px] font-semibold text-ink">{c.name}</div>
+              <div className="text-[20px] font-bold text-brick tracking-[-0.01em] mt-1">{c.amount}</div>
+              <div className="text-[13px] text-muted mt-2 leading-[1.5]">{c.detail}</div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white border border-line rounded-2xl p-6">
+          <div className="text-[14px] font-semibold text-ink mb-3">The rules, plainly</div>
+          <ul className="flex flex-col gap-2.5">
+            {COMP_RULES.map((r, i) => (
+              <li key={i} className="flex gap-3 text-[13.5px] text-charcoal-2 leading-[1.5]">
+                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brick shrink-0" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-5">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">Affiliates &amp; your deals</div>
+          <p className="text-[13.5px] text-charcoal-2 leading-[1.5]">{AFFILIATE_CONTEXT}</p>
+        </div>
+      </section>
     </div>
   );
 }

@@ -239,3 +239,40 @@ export const CLOSE_CHECKLIST: string[] = [
   "Did you surface — and actually address — their real hesitation?",
   "Is there one clear next step with a date on the calendar?",
 ];
+
+// -----------------------------------------------------------------------------
+// How reps are paid. Kept here so the plan lives next to the playbook the rep
+// reads. The live per-rep ledger (what's owed, what's paid) is separate.
+// -----------------------------------------------------------------------------
+
+export type CompComponent = { name: string; amount: string; detail: string };
+
+export const COMP_PLAN: CompComponent[] = [
+  {
+    name: "Base / draw",
+    amount: "Set with the owner",
+    detail: "A steady base so you can stay consultative and never feel pushed to force a bad-fit sale. Your exact base is agreed individually.",
+  },
+  {
+    name: "Activation bonus",
+    amount: "$125 per location",
+    detail: "A one-time bonus for each location activated — paid after the account clears its first paid month, not on signature. Real, paying customers only.",
+  },
+  {
+    name: "Recurring tail",
+    amount: "5% of monthly revenue, 6 months",
+    detail: "You keep earning a slice of each account you land for its first six months — so it pays to close accounts that actually stick, not just sign.",
+  },
+];
+
+export const COMP_RULES: string[] = [
+  "You're paid on cleared payment — never on a demo, a verbal yes, or a signature alone.",
+  "Clawback: if an account cancels within 90 days, the activation bonus for that account is reversed.",
+  "Affiliate overlap: when an affiliate referred the account, they keep their full commission and you still earn your activation bonus — but the 6-month recurring tail is waived on that one account.",
+  "Your current balance — what's owed and what's been paid — is always visible to you and the owner in the commission ledger.",
+];
+
+// Plain-language context on the affiliate program, so reps understand how a
+// referred deal is paid alongside their own commission.
+export const AFFILIATE_CONTEXT =
+  "Wingman also has an affiliate program: partners who refer a restaurant earn 20% of that account's monthly revenue for its first 12 months. If you close a deal an affiliate referred, you both get paid — they keep their full 20%, you get your activation bonus (tail waived on that account).";
