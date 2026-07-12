@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { payableDateFrom } from "@/lib/sales-commissions";
 
 async function guard() {
   return platformSectionActor("commissions");
@@ -34,6 +35,9 @@ export async function recordCommission(prev: CommissionFormState, formData: Form
 
   const orgId = String(formData.get("org_id") || "").trim() || null;
   const note = String(formData.get("note") || "").trim() || null;
+  // Expected pay date: what the owner typed, else the policy default (~30 days).
+  const payableInput = String(formData.get("payable_on") || "").trim();
+  const payable_on = /^\d{4}-\d{2}-\d{2}$/.test(payableInput) ? payableInput : payableDateFrom(Date.now());
 
   const admin = createAdminClient();
   const { error } = await admin.from("sales_commissions").insert({
@@ -43,6 +47,7 @@ export async function recordCommission(prev: CommissionFormState, formData: Form
     label,
     amount_cents,
     note,
+    payable_on,
     created_by: actor.userId,
   });
   if (error) return fail(error.message);
@@ -100,6 +105,18 @@ export async function deleteCommission(formData: FormData): Promise<void> {
   if (!id) return;
   const admin = createAdminClient();
   await admin.from("sales_commissions").delete().eq("id", id);
+  revalidatePath("/admin/sales-commissions");
+  revalidatePath("/admin/sales-training");
+}
+
+// Adjust the expected pay date on a line.
+export async function setPayableDate(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const id = String(formData.get("id") || "");
+  const date = String(formData.get("payable_on") || "").trim();
+  if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const admin = createAdminClient();
+  await admin.from("sales_commissions").update({ payable_on: date }).eq("id", id);
   revalidatePath("/admin/sales-commissions");
   revalidatePath("/admin/sales-training");
 }

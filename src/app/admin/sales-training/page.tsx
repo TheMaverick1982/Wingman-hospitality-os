@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { commissionsForRep, formatCents, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
+import { commissionsForRep, formatCents, formatDate, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
 import { ClaimForm } from "./claim-form";
 import {
   PRODUCT_ONE_LINER,
@@ -88,12 +88,21 @@ export default async function SalesTrainingPage() {
         <ClaimForm orgs={orgs} />
 
         {hasActivity && (
-          <div className="border-t border-[#F5F5F5] pt-3 flex flex-col gap-2">
+          <div className="border-t border-[#F5F5F5] pt-3 flex flex-col gap-2.5">
             {recent.map((c) => {
               const badge = STATUS_BADGE[c.status];
+              const timing =
+                c.status === "paid" && c.paid_at
+                  ? `Paid ${new Date(c.paid_at).toLocaleDateString()}`
+                  : c.status === "owed" || c.status === "pending"
+                    ? `Expected ${formatDate(c.payable_on)}`
+                    : null;
               return (
                 <div key={c.id} className="flex items-center justify-between gap-3 text-[13.5px]">
-                  <span className="text-charcoal-2 truncate">{c.label}</span>
+                  <span className="min-w-0">
+                    <span className="text-charcoal-2 block truncate">{c.label}</span>
+                    {timing && <span className="text-[12px] text-muted-2">{timing}</span>}
+                  </span>
                   <span className="flex items-center gap-3 shrink-0">
                     <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
                     <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${badge.className}`}>{badge.label}</span>

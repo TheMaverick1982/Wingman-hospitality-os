@@ -27,7 +27,33 @@ export type SalesCommission = {
   note: string | null;
   created_at: string;
   paid_at: string | null;
+  payable_on: string | null; // expected pay date (YYYY-MM-DD)
 };
+
+const COMMISSION_COLUMNS = "id, rep_profile_id, org_id, kind, label, amount_cents, status, note, created_at, paid_at, payable_on";
+
+// How many days after a commission is recorded it becomes payable, per policy
+// (paid once the account clears its first paid month — roughly a month out).
+export const PAYABLE_AFTER_DAYS = 30;
+
+// A payable date `days` out from `fromMs`, as YYYY-MM-DD. Caller passes the base
+// time so this stays pure/testable (no clock read in here).
+export function payableDateFrom(fromMs: number, days = PAYABLE_AFTER_DAYS): string {
+  return new Date(fromMs + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+// A date-only string is "due" when it's today or earlier. `todayIso` is the
+// caller's YYYY-MM-DD so comparison is a plain string compare.
+export function isDue(payableOn: string | null, todayIso: string): boolean {
+  return !!payableOn && payableOn <= todayIso;
+}
+
+export function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  // Parse as a local date (avoid TZ shifting a date-only value back a day).
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 export type RepTotals = { owedCents: number; paidCents: number };
 
@@ -50,7 +76,7 @@ export function formatCents(cents: number): string {
 export async function commissionsForRep(admin: SupabaseClient, repProfileId: string): Promise<SalesCommission[]> {
   const { data } = await admin
     .from("sales_commissions")
-    .select("id, rep_profile_id, org_id, kind, label, amount_cents, status, note, created_at, paid_at")
+    .select(COMMISSION_COLUMNS)
     .eq("rep_profile_id", repProfileId)
     .order("created_at", { ascending: false });
   return (data ?? []) as SalesCommission[];

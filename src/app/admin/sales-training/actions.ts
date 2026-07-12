@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { payableDateFrom } from "@/lib/sales-commissions";
 
 // nonce increments on each successful claim so the form can remount + clear.
 export type ClaimState = { error: string | null; ok: boolean; nonce: number };
@@ -40,6 +41,7 @@ export async function claimCommission(prev: ClaimState, formData: FormData): Pro
     amount_cents,
     status: "pending", // awaits owner approval
     note,
+    payable_on: payableDateFrom(Date.now()), // policy default; owner can adjust
     created_by: actor.userId,
   });
   if (error) return fail(error.message);
