@@ -32,6 +32,7 @@ const SOURCE_LABELS: Record<string, string> = {
   "book-a-demo": "Booked call",
   signup: "Signup onboarding",
   "demo-no-show": "Demo no-show",
+  referral: "Referral ask (day 30)",
 };
 
 export function sourceLabel(source: string | null | undefined): string {

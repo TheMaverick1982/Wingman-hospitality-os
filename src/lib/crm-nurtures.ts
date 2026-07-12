@@ -287,6 +287,20 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
       },
     ],
   },
+  {
+    source: "referral",
+    name: "Customer Referral Ask (day 30)",
+    steps: [
+      {
+        step_order: 1,
+        delay_days: 30,
+        subject: "A favor — know another operator we could help?",
+        body: "{{contact.first_name}} — you're about a month into Wingman now, so I wanted to ask you something directly.\n\nDo you know another restaurant operator fighting the same battle — pouring money into winning guests, then watching too many never come back?\n\nIf someone comes to mind, I'd genuinely love an introduction. Not for a hard sell — I'd rather just help them the way I hope we've helped you. The best operators I know all lift each other up, and honestly that's how Wingman grows too: one operator telling another. We all do better when we help each other grow.\n\nAn intro can be as simple as forwarding this email, or a quick note like:\n\n\"Hey [name] — you've heard me complain about getting more regulars back in the door. I've been using Wingman for exactly that. Might be worth a look: https://www.joinwingman.app/demo — happy to intro you to Brian, the founder, if you want.\"\n\nThat's it. Just reply with a name (or cc us) and I'll take it from there — and I'll make sure they're taken care of.\n\nEither way, thank you for being one of the early ones. It genuinely means a lot.\n\nBrian\nFounder, Wingman\n\nP.S. If you'd rather make it official, we have a simple referral program too: https://www.joinwingman.app/affiliates",
+        transactional: false,
+        send_condition: "always",
+      },
+    ],
+  },
 ];
 
 // Legacy source whose sequence is retired by the spec (folded into the demo funnel).
