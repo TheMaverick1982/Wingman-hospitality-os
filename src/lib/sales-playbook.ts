@@ -223,6 +223,29 @@ export const MOVEMENTS: Movement[] = [
   },
 ];
 
+// After-the-call pipeline hygiene. Some of this is automatic; the rest is on
+// the rep. An honest pipeline is the only one worth reporting on.
+export type ProcessStep = { title: string; detail: string };
+
+export const PIPELINE_PROCESS: ProcessStep[] = [
+  {
+    title: "Assign yourself to the lead",
+    detail: "Set the \"Sales rep\" on every contact you're working (on the contact in CRM). That's what makes it show up in your Sales Dashboard — leads, demos, won, lost — and keeps your numbers yours.",
+  },
+  {
+    title: "After the call, move the stage to the truth",
+    detail: "If they didn't buy on the spot, update the pipeline stage to what's actually true now: Demo Completed (they saw it, they're deciding), Nurturing (interested, not ready yet), or Lost / Dormant (not a fit, or gone quiet). Do it while the call is fresh — a pipeline you can trust is the whole point.",
+  },
+  {
+    title: "You never move \"Won\" by hand",
+    detail: "When a prospect actually pays, Wingman moves their contact to Signed Up automatically. So \"Won\" on your dashboard means real, paying customers — not hopeful ones. Don't pre-celebrate by dragging cards.",
+  },
+  {
+    title: "Cancellations become Past Clients — don't write them off",
+    detail: "If a customer ever cancels, their contact moves to Past Clients automatically and a gentle Reactivation sequence starts (one value-first email a month). That's your warm list. A quick personal note from you often reopens the door faster than the automation.",
+  },
+];
+
 export type QuestionGroup = { theme: string; questions: string[] };
 
 export const QUESTION_BANK: QuestionGroup[] = [
