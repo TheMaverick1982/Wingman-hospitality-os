@@ -11,12 +11,12 @@ export default async function AdminTeamPage() {
   const admin = createAdminClient();
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, full_name, platform_access")
+    .select("id, full_name, platform_access, w9_status, w9_file_path")
     .eq("is_platform_admin", true)
     .order("full_name");
 
   const staff: StaffRow[] = [];
-  for (const p of (profiles ?? []) as { id: string; full_name: string; platform_access: string[] | null }[]) {
+  for (const p of (profiles ?? []) as { id: string; full_name: string; platform_access: string[] | null; w9_status: string | null; w9_file_path: string | null }[]) {
     let email = "";
     let pending = false;
     try {
@@ -28,7 +28,15 @@ export default async function AdminTeamPage() {
     } catch {
       /* skip */
     }
-    staff.push({ id: p.id, fullName: p.full_name, email, access: p.platform_access ?? [], pending });
+    staff.push({
+      id: p.id,
+      fullName: p.full_name,
+      email,
+      access: p.platform_access ?? [],
+      pending,
+      w9Status: (p.w9_status as StaffRow["w9Status"]) ?? "none",
+      hasW9: !!p.w9_file_path,
+    });
   }
 
   return (

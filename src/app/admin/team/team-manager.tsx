@@ -12,10 +12,13 @@ import {
   removePlatformStaff,
   resendPlatformInvite,
   sendPlatformPasswordReset,
+  requestW9,
+  uploadW9,
   type TeamState,
 } from "./actions";
 
-export type StaffRow = { id: string; fullName: string; email: string; access: string[]; pending: boolean };
+export type W9Status = "none" | "requested" | "received";
+export type StaffRow = { id: string; fullName: string; email: string; access: string[]; pending: boolean; w9Status: W9Status; hasW9: boolean };
 type Section = { key: string; label: string; description: string };
 
 const initialState: TeamState = { error: null };
@@ -101,6 +104,10 @@ function AddModal({ sections, onClose }: { sections: Section[]; onClose: () => v
           ))}
         </div>
 
+        <p className="text-[12px] text-muted-2 mb-3">
+          Teammates given <span className="font-semibold">Sales Training</span> access are automatically emailed an IRS W-9 to complete before they can be paid. You can also send or resend it anytime from their card.
+        </p>
+
         {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
         <div className="flex justify-end gap-2">
           <Btn type="button" kind="ghost" onClick={onClose}>
@@ -176,6 +183,12 @@ function StaffCard({ staff, sections, isSelf }: { staff: StaffRow; sections: Sec
             {staff.pending && (
               <span className="text-[11px] font-semibold text-[#B45309] bg-[#FDF3E1] px-2 py-0.5 rounded-full">Pending</span>
             )}
+            {staff.w9Status === "requested" && (
+              <span className="text-[11px] font-semibold text-[#B45309] bg-[#FDF3E1] px-2 py-0.5 rounded-full">W-9 needed</span>
+            )}
+            {staff.w9Status === "received" && (
+              <span className="text-[11px] font-semibold text-olive bg-olive-tint px-2 py-0.5 rounded-full">W-9 on file</span>
+            )}
           </div>
           <div className="text-[13px] text-muted-2 truncate">{staff.email}</div>
         </div>
@@ -227,7 +240,62 @@ function StaffCard({ staff, sections, isSelf }: { staff: StaffRow; sections: Sec
           )}
         </div>
       )}
+
+      <W9Block staff={staff} />
+
       {error && <p className="text-sm text-danger mt-2">{error}</p>}
+    </div>
+  );
+}
+
+const w9Initial: TeamState = { error: null };
+
+// W-9 controls for one staff member: (re)send the request, upload the returned
+// form, and view what's on file.
+function W9Block({ staff }: { staff: StaffRow }) {
+  const [uploadState, uploadAction, uploading] = useActionState(
+    async (_prev: TeamState, fd: FormData) => uploadW9(staff.id, fd),
+    w9Initial
+  );
+  const [requesting, startRequest] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  function doRequest() {
+    setMsg(null);
+    setErr(null);
+    startRequest(async () => {
+      const res = await requestW9(staff.id);
+      if (res.error) setErr(res.error);
+      else setMsg(staff.w9Status === "none" ? "W-9 request sent" : "W-9 request resent");
+    });
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-[#F5F5F5] flex flex-wrap items-center gap-x-4 gap-y-2">
+      <span className="text-[11px] font-semibold text-muted-2 uppercase tracking-wide">W-9</span>
+      <button type="button" onClick={doRequest} disabled={requesting} className="text-[13px] font-semibold text-charcoal-2 hover:text-brick disabled:opacity-50">
+        {requesting ? "Sending…" : staff.w9Status === "none" ? "Send W-9 request" : "Resend W-9 request"}
+      </button>
+      {staff.hasW9 && (
+        <a href={`/admin/team/w9/${staff.id}`} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-olive hover:opacity-70">
+          View W-9
+        </a>
+      )}
+      <form action={uploadAction} className="flex items-center gap-2">
+        <input
+          type="file"
+          name="file"
+          accept="application/pdf,image/*"
+          required
+          className="text-[12px] text-charcoal-2 max-w-[190px] file:mr-2 file:rounded-full file:border-0 file:bg-paper file:px-3 file:py-1 file:text-[12px] file:font-semibold file:text-charcoal-2"
+        />
+        <button type="submit" disabled={uploading} className="text-[13px] font-semibold text-brick hover:opacity-70 disabled:opacity-50">
+          {uploading ? "Uploading…" : staff.hasW9 ? "Replace" : "Upload returned W-9"}
+        </button>
+      </form>
+      {msg && <span className="text-[12px] font-semibold text-olive">{msg}</span>}
+      {(err || uploadState.error) && <span className="text-[12px] text-danger">{err || uploadState.error}</span>}
     </div>
   );
 }
