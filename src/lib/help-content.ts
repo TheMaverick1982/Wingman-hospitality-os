@@ -381,6 +381,7 @@ export const ARTICLES: HelpArticle[] = [
         "The money layer — once your POS data is flowing, the latest week's net sales, average check, labor %, and comp % each show their week-over-week change.",
         "Training vs. retention — team training completion and repeat rate side by side, month by month, so you can see them move together: a team held to standard brings more guests back.",
         "Menu profitability — your menu items sorted into Stars, Plowhorses, Puzzles, and Dogs, with a one-line takeaway (e.g. how many Dogs are dragging your margin) pulled straight from Menu Engineering.",
+        "Staff scorecard & comps by server — each person's average spot-check score (lowest first, so coaching goes where it's needed) and who's giving away the most in comps, with outliers flagged.",
       ] },
       { kind: "h", text: "Scheduled email reports" },
       { kind: "p", text: "Owners can have a report emailed automatically on a schedule — weekly, biweekly, or monthly — to whoever needs it (you, an investor, a GM). Click \"Schedule report,\" pick the cadence, the sections to include, and the recipient emails. Each recipient gets a clean digest on cadence without anyone lifting a finger." },
