@@ -38,6 +38,8 @@ const PUBLIC_PREFIXES = [
   // Public lead-magnet tools.
   "/calculator",
   "/scorecard",
+  // Link-in-bio page for social profiles.
+  "/links",
 ];
 
 export async function updateSession(request: NextRequest) {
