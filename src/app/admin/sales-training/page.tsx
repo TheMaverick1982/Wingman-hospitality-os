@@ -13,6 +13,7 @@ import {
   VOSS_TACTICS,
   PREP,
   MOVEMENTS,
+  PIPELINE_PROCESS,
   QUESTION_BANK,
   REFRAMES,
   NEVER_DO,
@@ -279,6 +280,19 @@ export default async function SalesTrainingPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* After the call — pipeline hygiene */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="After the call" title="Keep the pipeline honest" sub="Some of this is automatic; the rest is on you. A pipeline you can trust is the whole point." />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {PIPELINE_PROCESS.map((p) => (
+            <div key={p.title} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[15px] font-semibold text-ink">{p.title}</div>
+              <div className="text-[13.5px] text-muted mt-1.5 leading-[1.5]">{p.detail}</div>
             </div>
           ))}
         </div>
