@@ -175,19 +175,25 @@ export default function ApiGuidePage() {
               ["name", "string", "✓", "Guest name"],
               ["phone", "string", "—", "Guest phone"],
               ["email", "string", "—", "Guest email"],
+              ["source", "string", "—", "Where they came from (defaults to \"api\"; e.g. \"pos\")"],
+              ["captured_by", "string", "—", "Who/what logged them (e.g. a POS or staff name)"],
+              ["referred_a_friend", "boolean", "—", "Whether this guest referred someone (feeds referral rate)"],
               ["visit", "object", "—", "Optional first visit (below)"],
             ]}
           />
           <p className="text-xs text-muted mb-1">
             <code>visit</code>: <code className="text-xs">visit_number</code> (1–4),{" "}
             <code className="text-xs">visit_date</code> (YYYY-MM-DD), <code className="text-xs">location_id</code>,{" "}
-            <code className="text-xs">incentive</code>, <code className="text-xs">notes</code>.
+            <code className="text-xs">incentive</code>, <code className="text-xs">notes</code>,{" "}
+            <code className="text-xs">reaction</code> (one of <code className="text-xs">wowed</code>,{" "}
+            <code className="text-xs">delighted</code>, <code className="text-xs">neutral</code>,{" "}
+            <code className="text-xs">let_down</code> — feeds the reaction ratio &amp; sentiment).
           </p>
           <Code>{`curl -X POST ${BASE_URL}/api/v1/guests \\
   -H "Authorization: Bearer $WINGMAN_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"name":"Jane Diner","email":"jane@example.com",
-       "visit":{"visit_number":1,"visit_date":"2026-07-06"}}'`}</Code>
+  -d '{"name":"Jane Diner","email":"jane@example.com","source":"pos",
+       "visit":{"visit_number":1,"visit_date":"2026-07-06","reaction":"delighted"}}'`}</Code>
         </Endpoint>
 
         <Endpoint method="POST" path="/api/v1/menu">

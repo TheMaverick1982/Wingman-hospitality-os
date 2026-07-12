@@ -469,10 +469,11 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "list", items: [
         "Business Health — push weekly sales, labor, comps, covers, and checks.",
         "Revenue Growth Planner — push customers, average sale, and repurchase frequency.",
-        "Guests — push guests and their visits.",
+        "Guests — push guests and their visits, including where they came from (source), whether they referred a friend, and how each visit felt (reaction: wowed / delighted / neutral / let down).",
         "Menu — sync menu items with price, cost, and units sold.",
       ] },
-      { kind: "tip", text: "The Developer Guide (a branded, printable PDF) has every endpoint, example, and setup step — hand it to your developer." },
+      { kind: "note", text: "The richer guest fields (source, referral, and per-visit reaction) feed the newer Reporting views — reaction ratio, referral rate, and what brings guests back. Pushing them from your POS makes those reports accurate automatically." },
+      { kind: "tip", text: "The Developer Guide has every endpoint, example, and setup step. Open it with the \"Open the Developer Guide\" link below (also under Settings → API access), then hit \"Save as PDF\" to hand a copy to your developer — it always reflects the current API." },
     ],
     links: [
       { label: "Open the Developer Guide", href: "/api-guide", external: true },

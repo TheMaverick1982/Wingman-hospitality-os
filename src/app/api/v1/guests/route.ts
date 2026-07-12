@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("guests")
-    .select("id, name, phone, email, created_at, guest_visits(visit_number, visit_date, location_id, incentive, notes)")
+    .select("id, name, phone, email, source, referred_a_friend, created_at, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction)")
     .eq("org_id", caller.orgId)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -22,8 +22,17 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ guests: data ?? [] });
 }
 
+const REACTIONS = ["wowed", "delighted", "neutral", "let_down"];
+
 // POST /api/v1/guests -> create a guest, optionally with a first visit.
-// Body: { name (required), phone?, email?, visit?: { visit_number(1-4), visit_date?, location_id?, incentive?, notes? } }
+// Body: {
+//   name (required), phone?, email?,
+//   source?           (e.g. "pos"; defaults to "api"),
+//   captured_by?      (who/what logged them, e.g. a POS name),
+//   referred_a_friend? (boolean),
+//   visit?: { visit_number(1-4), visit_date?, location_id?, incentive?, notes?,
+//             reaction?(wowed|delighted|neutral|let_down) }
+// }
 export async function POST(request: NextRequest) {
   const caller = await authenticateApiKey(request);
   if (!caller) return apiUnauthorized();
@@ -38,12 +47,17 @@ export async function POST(request: NextRequest) {
   if (!name) return apiError("name is required.");
   const phone = String(raw.phone ?? "").trim();
   const email = String(raw.email ?? "").trim();
+  // Where this guest came from (tags the retention/source reporting). Defaults
+  // to "api" so integration-created guests are distinguishable.
+  const source = raw.source != null && String(raw.source).trim() !== "" ? String(raw.source).trim().slice(0, 40) : "api";
+  const capturedBy = raw.captured_by != null && String(raw.captured_by).trim() !== "" ? String(raw.captured_by).trim().slice(0, 120) : null;
+  const referredAFriend = raw.referred_a_friend === true;
 
   const admin = createAdminClient();
 
   const { data: guest, error } = await admin
     .from("guests")
-    .insert({ org_id: caller.orgId, name, phone, email })
+    .insert({ org_id: caller.orgId, name, phone, email, source, captured_by: capturedBy, referred_a_friend: referredAFriend })
     .select("id")
     .single();
   if (error) return apiError(error.message, 500);
@@ -73,6 +87,14 @@ export async function POST(request: NextRequest) {
       return apiError("visit.visit_date must be in YYYY-MM-DD format.");
     }
 
+    let reaction: string | null = null;
+    if (visit.reaction != null && visit.reaction !== "") {
+      reaction = String(visit.reaction);
+      if (!REACTIONS.includes(reaction)) {
+        return apiError("visit.reaction must be one of: wowed, delighted, neutral, let_down.");
+      }
+    }
+
     const { error: visitError } = await admin.from("guest_visits").insert({
       guest_id: guest.id,
       org_id: caller.orgId,
@@ -81,6 +103,7 @@ export async function POST(request: NextRequest) {
       location_id: locationId,
       incentive: String(visit.incentive ?? ""),
       notes: String(visit.notes ?? ""),
+      reaction,
     });
     if (visitError) return apiError(visitError.message, 500);
   }
