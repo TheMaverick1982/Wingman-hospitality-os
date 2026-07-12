@@ -29,14 +29,16 @@ export function isLinkedInConnected(s: SocialSettings | null): boolean {
 }
 
 export function linkedinAuthUrl(state: string): string {
-  const p = new URLSearchParams({
-    response_type: "code",
-    client_id: process.env.LINKEDIN_CLIENT_ID ?? "",
-    redirect_uri: linkedinRedirectUri(),
-    state,
-    scope: LI_SCOPES,
-  });
-  return `https://www.linkedin.com/oauth/v2/authorization?${p.toString()}`;
+  // Build manually with encodeURIComponent so spaces in `scope` become %20, not
+  // "+". LinkedIn rejects "+"-joined scopes ("Bummer, something went wrong").
+  const params = [
+    "response_type=code",
+    `client_id=${encodeURIComponent(process.env.LINKEDIN_CLIENT_ID ?? "")}`,
+    `redirect_uri=${encodeURIComponent(linkedinRedirectUri())}`,
+    `state=${encodeURIComponent(state)}`,
+    `scope=${encodeURIComponent(LI_SCOPES)}`,
+  ];
+  return `https://www.linkedin.com/oauth/v2/authorization?${params.join("&")}`;
 }
 
 // Exchange the OAuth code for a token + the member's identity, then persist.
