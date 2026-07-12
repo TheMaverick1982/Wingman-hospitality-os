@@ -52,7 +52,7 @@ export async function recordCommission(prev: CommissionFormState, formData: Form
   return { error: null, ok: true, nonce: nonce + 1 };
 }
 
-async function setStatus(id: string, status: "owed" | "paid" | "void") {
+async function setStatus(id: string, status: "owed" | "paid" | "void" | "denied") {
   const admin = createAdminClient();
   await admin
     .from("sales_commissions")
@@ -60,6 +60,20 @@ async function setStatus(id: string, status: "owed" | "paid" | "void") {
     .eq("id", id);
   revalidatePath("/admin/sales-commissions");
   revalidatePath("/admin/sales-training");
+}
+
+// Approve a rep's pending claim -> it becomes an owed commission.
+export async function approveCommission(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const id = String(formData.get("id") || "");
+  if (id) await setStatus(id, "owed");
+}
+
+// Deny a rep's pending claim -> kept on record as denied, counts toward nothing.
+export async function denyCommission(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const id = String(formData.get("id") || "");
+  if (id) await setStatus(id, "denied");
 }
 
 export async function markPaid(formData: FormData): Promise<void> {

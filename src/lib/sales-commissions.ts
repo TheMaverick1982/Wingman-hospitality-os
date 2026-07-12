@@ -13,7 +13,8 @@ export const ACTIVATION_BONUS_CENTS = 12500; // $125 per location activated
 export const TAIL_PCT = 5; // 5% of monthly revenue for the recurring tail
 
 export type CommissionKind = "activation" | "tail" | "other";
-export type CommissionStatus = "owed" | "paid" | "void";
+// pending = a rep's claim awaiting owner approval; denied = owner rejected it.
+export type CommissionStatus = "pending" | "owed" | "paid" | "void" | "denied";
 
 export type SalesCommission = {
   id: string;

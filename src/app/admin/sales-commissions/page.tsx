@@ -3,16 +3,19 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCents, totalsFor, type SalesCommission } from "@/lib/sales-commissions";
 import { CommissionForm } from "./commission-form";
-import { markPaid, markOwed, voidCommission, deleteCommission, markAllPaidForRep } from "./actions";
+import { markPaid, markOwed, voidCommission, deleteCommission, markAllPaidForRep, approveCommission, denyCommission } from "./actions";
 
 export const metadata: Metadata = { title: "Sales Commissions · Admin" };
 
 const KIND_LABEL: Record<string, string> = { activation: "Activation", tail: "Tail", other: "Other" };
 const STATUS_STYLE: Record<string, string> = {
+  pending: "text-[#B45309] bg-gold-tint",
   owed: "text-[#B45309] bg-gold-tint",
   paid: "text-olive bg-olive-tint",
+  denied: "text-muted bg-paper",
   void: "text-muted bg-paper line-through",
 };
+const STATUS_LABEL: Record<string, string> = { pending: "Pending", owed: "Owed", paid: "Paid", denied: "Denied", void: "Void" };
 
 export default async function SalesCommissionsPage() {
   await requirePlatformSection("commissions");
@@ -33,9 +36,13 @@ export default async function SalesCommissionsPage() {
   const repName = new Map(reps.map((r) => [r.id, r.name]));
   const rows = (commissions ?? []) as SalesCommission[];
 
-  // Group rows by rep, keeping the newest-first order within each group.
+  // Rep-submitted claims awaiting the owner's approve/deny decision.
+  const pendingRows = rows.filter((r) => r.status === "pending");
+  const ledgerRows = rows.filter((r) => r.status !== "pending");
+
+  // Group the decided rows by rep, keeping the newest-first order within each.
   const byRep = new Map<string, SalesCommission[]>();
-  for (const row of rows) {
+  for (const row of ledgerRows) {
     const arr = byRep.get(row.rep_profile_id) ?? [];
     arr.push(row);
     byRep.set(row.rep_profile_id, arr);
@@ -63,6 +70,44 @@ export default async function SalesCommissionsPage() {
         <div className="bg-gold-tint border border-[#F0D9A8] rounded-2xl px-6 py-4">
           <span className="text-[13px] font-semibold text-[#B45309]">Total owed across all reps: </span>
           <span className="text-[15px] font-bold text-[#B45309] tabular-nums">{formatCents(grandOwed)}</span>
+        </div>
+      )}
+
+      {pendingRows.length > 0 && (
+        <div className="bg-white border-2 border-[#F0D9A8] rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-line bg-gold-tint">
+            <div className="text-[16px] font-bold text-[#B45309]">Pending approval · {pendingRows.length}</div>
+            <div className="text-[13px] text-[#B45309]/90 mt-0.5">Claims reps submitted for accounts they closed. Approve to make them owed, or deny.</div>
+          </div>
+          <table className="w-full text-sm">
+            <tbody>
+              {pendingRows.map((c) => (
+                <tr key={c.id} className="border-b border-line last:border-0">
+                  <td className="px-5 py-3.5">
+                    <div className="font-semibold text-ink">{repName.get(c.rep_profile_id) ?? "(unknown rep)"}</div>
+                    <div className="text-[13px] text-charcoal-2 mt-0.5">{c.label}</div>
+                    <div className="text-[12px] text-muted-2 mt-0.5">
+                      {KIND_LABEL[c.kind]}
+                      {c.org_id && orgName.get(c.org_id) ? ` · ${orgName.get(c.org_id)}` : ""}
+                      {" · "}{new Date(c.created_at).toLocaleDateString()}
+                      {c.note ? ` · ${c.note}` : ""}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums whitespace-nowrap">{formatCents(c.amount_cents)}</td>
+                  <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                    <form action={approveCommission} className="inline">
+                      <input type="hidden" name="id" value={c.id} />
+                      <button type="submit" className="text-[13px] font-semibold text-white bg-olive rounded-full px-4 py-1.5 hover:opacity-90 transition-opacity">Approve</button>
+                    </form>
+                    <form action={denyCommission} className="inline ml-2">
+                      <input type="hidden" name="id" value={c.id} />
+                      <button type="submit" className="text-[13px] font-semibold text-charcoal-2 hover:text-brick px-2">Deny</button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -112,11 +157,11 @@ export default async function SalesCommissionsPage() {
                         <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums whitespace-nowrap">{formatCents(c.amount_cents)}</td>
                         <td className="px-5 py-3.5">
                           <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[c.status]}`}>
-                            {c.status === "owed" ? "Owed" : c.status === "paid" ? "Paid" : "Void"}
+                            {STATUS_LABEL[c.status]}
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                          {c.status !== "paid" && c.status !== "void" && (
+                          {c.status === "owed" && (
                             <form action={markPaid} className="inline">
                               <input type="hidden" name="id" value={c.id} />
                               <button type="submit" className="text-[13px] font-semibold text-olive hover:opacity-80 px-2">Mark paid</button>
@@ -128,7 +173,13 @@ export default async function SalesCommissionsPage() {
                               <button type="submit" className="text-[13px] font-semibold text-charcoal-2 hover:text-brick px-2">Unmark</button>
                             </form>
                           )}
-                          {c.status !== "void" && (
+                          {c.status === "denied" && (
+                            <form action={approveCommission} className="inline">
+                              <input type="hidden" name="id" value={c.id} />
+                              <button type="submit" className="text-[13px] font-semibold text-olive hover:opacity-80 px-2">Approve</button>
+                            </form>
+                          )}
+                          {(c.status === "owed" || c.status === "paid") && (
                             <form action={voidCommission} className="inline">
                               <input type="hidden" name="id" value={c.id} />
                               <button type="submit" className="text-[13px] font-semibold text-muted-2 hover:text-brick px-2">Void</button>
