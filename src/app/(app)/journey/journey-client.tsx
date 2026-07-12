@@ -29,27 +29,39 @@ const STYLES = [
 function GenerateBar({ hasStages }: { hasStages: boolean }) {
   const [state, action, pending] = useActionState(generateJourney, initial);
   return (
-    <form action={action} className="bg-white border border-line rounded-2xl p-5 flex flex-col sm:flex-row sm:items-end gap-3">
-      <div className="flex-1">
-        <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Service style</label>
-        <select name="style" defaultValue="Full-service casual dining" className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] text-ink outline-none focus:border-brick">
-          {STYLES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-      <button
-        type="submit"
-        disabled={pending}
-        onClick={(e) => {
-          if (hasStages && !confirm("Regenerate the whole journey? This replaces your current stages.")) e.preventDefault();
-        }}
-        className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-50"
-      >
-        {pending ? "Generating…" : hasStages ? "Regenerate with AI" : "Generate my journey"}
-      </button>
-      {state.error && <span className="text-[13px] text-danger self-center">{state.error}</span>}
-    </form>
+    <div className="flex flex-col gap-3">
+      <form action={action} className="bg-white border border-line rounded-2xl p-5 flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1">
+          <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Service style</label>
+          <select name="style" defaultValue="Full-service casual dining" disabled={pending} className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] text-ink outline-none focus:border-brick disabled:opacity-60">
+            {STYLES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={pending}
+          onClick={(e) => {
+            if (hasStages && !confirm("Regenerate the whole journey? This replaces your current stages.")) e.preventDefault();
+          }}
+          className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-60"
+        >
+          {pending ? "Building…" : hasStages ? "Regenerate with AI" : "Generate my journey"}
+        </button>
+        {state.error && <span className="text-[13px] text-danger self-center">{state.error}</span>}
+      </form>
+
+      {pending && (
+        <div className="bg-brick-tint/50 border border-brick/20 rounded-2xl p-5 flex items-center gap-3.5">
+          <span className="w-5 h-5 rounded-full border-2 border-brick border-t-transparent animate-spin shrink-0" />
+          <div>
+            <div className="text-[15px] font-semibold text-ink">Mapping your guest experience, moment by moment…</div>
+            <div className="text-[13px] text-muted mt-0.5">Hang tight — this takes up to a minute. We&rsquo;re crafting the standards your team will run on every shift.</div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

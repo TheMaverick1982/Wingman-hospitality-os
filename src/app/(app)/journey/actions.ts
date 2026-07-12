@@ -65,7 +65,7 @@ Make every line concrete and immediately usable by a real operator. No generic f
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 3000,
+        max_tokens: 8000,
         system: `You are an elite hospitality systems consultant who designs guest-experience journeys for restaurants. You write ORIGINAL standards and scripts in the operator's own voice — never copied from any published workbook or training program.
 
 ${HOSPITALITY_DOCTRINE}
@@ -84,7 +84,21 @@ You output only valid JSON matching the requested schema exactly. Never include 
     const first = cleaned.indexOf("{");
     const last = cleaned.lastIndexOf("}");
     if (first !== -1 && last !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
-    const parsed = JSON.parse(cleaned) as { stages?: GeneratedStage[] };
+
+    let parsed: { stages?: GeneratedStage[] };
+    try {
+      parsed = JSON.parse(cleaned) as { stages?: GeneratedStage[] };
+    } catch {
+      // Salvage a truncated response: keep everything up to the last complete
+      // stage object and close the array/root.
+      const lastObj = cleaned.lastIndexOf("}");
+      const arrStart = cleaned.indexOf("[");
+      if (lastObj > arrStart && arrStart !== -1) {
+        parsed = JSON.parse(cleaned.slice(0, lastObj + 1) + "]}") as { stages?: GeneratedStage[] };
+      } else {
+        throw new Error("The journey was cut short while generating. Please try again.");
+      }
+    }
     stages = (parsed.stages ?? []).filter((s) => s && s.name);
     if (stages.length === 0) throw new Error("The generator returned no stages. Try again.");
   } catch (err) {
