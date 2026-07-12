@@ -105,6 +105,9 @@ function SignupForm() {
                   className={inputClass}
                 />
               </Field>
+              <Field label="Promo code (optional)">
+                <input name="promoCode" placeholder="Have a code? Enter it here" className={`${inputClass} uppercase`} />
+              </Field>
               <div className="mt-1">
                 <TurnstileWidget />
               </div>

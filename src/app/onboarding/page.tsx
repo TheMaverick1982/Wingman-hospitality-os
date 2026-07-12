@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import { markCustomerByEmail } from "@/lib/crm-sequences";
+import { redeemCouponForOrg } from "@/lib/coupons";
 import OnboardingForm from "./form";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default async function OnboardingPage() {
   const pendingOrgName = user.user_metadata?.pending_org_name as string | undefined;
   const pendingLocationName = user.user_metadata?.pending_location_name as string | undefined;
   const pendingFullName = user.user_metadata?.pending_full_name as string | undefined;
+  const pendingCouponCode = user.user_metadata?.pending_coupon_code as string | undefined;
 
   if (pendingOrgName && pendingLocationName && pendingFullName) {
     const { error } = await supabase.rpc("create_organization", {
@@ -35,11 +37,9 @@ export default async function OnboardingPage() {
       await captureReferralForCurrentUser(supabase);
       if (user.email) {
         const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
-        await markCustomerByEmail(user.email, {
-          orgId: (prof as { org_id: string } | null)?.org_id,
-          workspaceName: pendingOrgName,
-          name: pendingFullName,
-        });
+        const orgId = (prof as { org_id: string } | null)?.org_id;
+        if (pendingCouponCode && orgId) await redeemCouponForOrg(pendingCouponCode, orgId, "signup");
+        await markCustomerByEmail(user.email, { orgId, workspaceName: pendingOrgName, name: pendingFullName });
       }
       redirect("/dashboard");
     }
