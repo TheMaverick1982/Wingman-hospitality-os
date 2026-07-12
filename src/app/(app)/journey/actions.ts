@@ -129,6 +129,91 @@ async function canEdit() {
   return p && (p.accessRole === "super_admin" || p.accessRole === "manager");
 }
 
+export type RefineState = { error: string | null; ok: boolean };
+
+// Refine a single stage with plain-English feedback ("make it warmer", "add an
+// upsell", "shorten the script"). The AI rewrites that one stage, keeping the
+// same fields, in the restaurant's voice. Managers/owners only.
+export async function refineStage(_prev: RefineState, formData: FormData): Promise<RefineState> {
+  const profile = await getCurrentProfile();
+  if (!profile || (profile.accessRole !== "super_admin" && profile.accessRole !== "manager")) {
+    return { error: "Not authorized.", ok: false };
+  }
+  const id = String(formData.get("id") || "");
+  const feedback = String(formData.get("feedback") || "").trim();
+  if (!id) return { error: "Missing stage.", ok: false };
+  if (!feedback) return { error: "Tell the AI what to change.", ok: false };
+  if (!(await consumeAiLimit(profile))) {
+    return { error: "You've reached the hourly limit for AI. Please try again a bit later.", ok: false };
+  }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet.", ok: false };
+
+  const supabase = await createClient();
+  const [{ data: stage }, { data: org }] = await Promise.all([
+    supabase.from("journey_stages").select("id, name, purpose, avoid, standard, script, inspect, timing").eq("id", id).maybeSingle(),
+    supabase.from("organizations").select("name, philosophy").single(),
+  ]);
+  if (!stage) return { error: "Stage not found.", ok: false };
+  const s = stage as GeneratedStage & { id: string };
+
+  const current = JSON.stringify({ name: s.name, purpose: s.purpose, avoid: s.avoid, standard: s.standard, script: s.script, inspect: s.inspect, timing: s.timing });
+  const prompt = `Restaurant: ${(org as { name: string } | null)?.name ?? ""}
+Culture / voice: ${(org as { philosophy: string | null } | null)?.philosophy || "infer from the content"}
+
+This is one stage of the guest journey, as JSON:
+${current}
+
+The operator's feedback / requested change:
+"${feedback}"
+
+Rewrite THIS stage applying the feedback. Keep every field, keep it concrete and observable, and write any script ORIGINALLY in the restaurant's voice (never copied from published material). Respond with ONLY valid JSON, no markdown fences, matching exactly:
+{"name": string, "purpose": string, "avoid": string, "standard": string, "script": string, "inspect": string, "timing": string}`;
+
+  let out: GeneratedStage;
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-5",
+        max_tokens: 1200,
+        system: `You refine one guest-journey stage for a restaurant based on the operator's feedback. You write ORIGINAL standards and scripts in the operator's voice, never copied from any published workbook. Output only valid JSON matching the requested schema — no markdown fences, no commentary.
+
+${HOSPITALITY_DOCTRINE}`,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!response.ok) throw new Error(`Anthropic API returned ${response.status}`);
+    const data = await response.json();
+    const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
+    let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last !== -1) cleaned = cleaned.slice(first, last + 1);
+    out = JSON.parse(cleaned) as GeneratedStage;
+    if (!out.name) throw new Error("The AI returned an incomplete stage. Try again.");
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Refine failed. Try again.", ok: false };
+  }
+
+  await supabase
+    .from("journey_stages")
+    .update({
+      name: String(out.name).slice(0, 60),
+      purpose: String(out.purpose ?? "").slice(0, 300),
+      avoid: String(out.avoid ?? "").slice(0, 300),
+      standard: String(out.standard ?? "").slice(0, 400),
+      script: String(out.script ?? "").slice(0, 600),
+      inspect: String(out.inspect ?? "").slice(0, 300),
+      timing: String(out.timing ?? "").slice(0, 120),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidatePath("/journey");
+  return { error: null, ok: true };
+}
+
 export async function updateStage(formData: FormData): Promise<void> {
   if (!(await canEdit())) return;
   const id = String(formData.get("id") || "");
