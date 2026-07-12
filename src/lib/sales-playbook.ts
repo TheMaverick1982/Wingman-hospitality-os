@@ -267,6 +267,7 @@ export const COMP_PLAN: CompComponent[] = [
 
 export const COMP_RULES: string[] = [
   "You're paid on cleared payment — never on a demo, a verbal yes, or a signature alone.",
+  "The recurring tail is paid only while you're actively employed here — it ends when your employment ends, for any reason. Activation bonuses that have already vested (the account cleared its first paid month) are still paid out.",
   "Clawback: if an account cancels within 90 days, the activation bonus for that account is reversed.",
   "Affiliate overlap: when an affiliate referred the account, they keep their full commission and you still earn your activation bonus — but the 6-month recurring tail is waived on that one account.",
   "Your current balance — what's owed, what's been paid, and the expected pay date for each line — is always visible to you and the owner in the commission ledger.",
