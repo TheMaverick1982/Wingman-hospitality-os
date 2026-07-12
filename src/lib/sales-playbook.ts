@@ -44,6 +44,61 @@ export const GOLDEN_RULES: string[] = [
   "Never be salesy. No fake urgency, no pressure, no overpromising. If it's not a fit, say so — trust earns the next referral.",
 ];
 
+// Rapport first — the demo only works if it feels like two restaurant people
+// talking, not a pitch.
+export const RAPPORT: string[] = [
+  "Open like a human, not a rep. A little genuine small talk — their concept, how long they've been open, what they're proud of — earns you the right to ask the harder questions later.",
+  "Match their energy and pace. Fast and casual? Be fast and casual. Measured and quiet? Slow down. People trust people who feel like them.",
+  "Find the real thread. Most operators light up about one thing — a signature dish, a regular, why they opened the place. Follow it. That thread is where trust, and the truth about their problems, lives.",
+  "Slow down and lower your voice. A calm, unhurried tone signals you're not here to pressure them — which is exactly what makes them open up.",
+  "Use their name naturally, not as a sales tic.",
+  "You're having a conversation, not running a script. The moment it stops feeling like a chat, stop and get it back there.",
+];
+
+// Conversation & tactical-empathy techniques adapted from Chris Voss's
+// negotiation method ("Never Split the Difference"). Paraphrased in our own words
+// with restaurant-demo examples — the point is a genuine, trust-first
+// conversation, never manipulation.
+export type VossTactic = { name: string; what: string; example: string };
+
+export const VOSS_TACTICS: VossTactic[] = [
+  {
+    name: "Label what you hear",
+    what: "Name the emotion or situation out loud so they feel understood — \"It sounds like…\", \"It seems like…\", \"Looks like…\". A good label gets them to elaborate instead of getting defensive.",
+    example: "\"It sounds like the part that really wears on you is training a new server every few weeks and just hoping it sticks.\"",
+  },
+  {
+    name: "Mirror to keep them talking",
+    what: "Repeat their last few words back as a gentle question. It costs nothing and gets them to keep going — the second half is usually the real story.",
+    example: "Them: \"…and honestly the follow-up just never happens.\" You: \"The follow-up never happens?\"",
+  },
+  {
+    name: "Ask calibrated \"How\" and \"What\" questions",
+    what: "Open questions that start with How or What hand them the wheel and get them solving the problem out loud. Skip \"why\" (feels like an accusation) and yes/no questions.",
+    example: "\"What would have to be true for your team to actually run this every shift?\" / \"How are you catching first-timers today?\"",
+  },
+  {
+    name: "Aim for \"that's right,\" not \"you're right\"",
+    what: "Summarize their world back so accurately they say \"that's right\" — the moment they feel truly understood. (\"You're right\" usually just means they want you to stop talking.)",
+    example: "\"So — great food, solid regulars, but nothing's catching the first-timers before they vanish, and no time to build a system for it.\" → \"That's right.\"",
+  },
+  {
+    name: "Run an accusation audit",
+    what: "Say the negative thing they're privately thinking before they do. Naming it out loud defuses it and builds trust.",
+    example: "\"You're probably thinking this is just one more app your team won't use — honestly, that'd be my worry too. Let me show you why it's different.\"",
+  },
+  {
+    name: "Use \"no\"-oriented questions",
+    what: "People feel safe and in control when they can say no. Frame it so a \"no\" still moves you forward — far less pressure than chasing a \"yes.\"",
+    example: "\"Would it be crazy to set up your first location so you can see it with your own guests?\" / \"Are you against getting your managers some time back?\"",
+  },
+  {
+    name: "Let silence do the work",
+    what: "After you label or ask, stop talking. The quiet pulls the truth out. Don't rescue the moment — count to five.",
+    example: "Ask \"What's the one thing that, if it got better, would change your month?\" — then say nothing until they answer.",
+  },
+];
+
 export type PrepItem = { label: string; detail: string };
 
 export const PREP: PrepItem[] = [
