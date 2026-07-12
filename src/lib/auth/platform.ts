@@ -5,8 +5,9 @@
 export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "social" | "coupons" | "sales_training" | "commissions" | "team";
 
 // A grantable permission is either a page section or a capability toggle that
-// isn't its own page (e.g. client_login gates "Log in as client").
-export type PlatformPermission = PlatformSection | "client_login";
+// isn't its own page (e.g. client_login gates "Log in as client", crm_delete
+// gates deleting CRM contacts).
+export type PlatformPermission = PlatformSection | "client_login" | "crm_delete";
 
 export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; description: string; href: string }[] = [
   { key: "organizations", label: "Organizations", description: "Customer organizations — view and create.", href: "/admin/organizations" },
@@ -32,6 +33,11 @@ export const PLATFORM_ACCESS_OPTIONS: { key: PlatformPermission; label: string; 
     key: "client_login",
     label: "Log in as client",
     description: "Open a customer's account with “Log in as client” to see exactly what they see. Grant only to people who need to troubleshoot inside a customer's account.",
+  },
+  {
+    key: "crm_delete",
+    label: "Delete CRM contacts",
+    description: "Permanently delete a contact from the CRM. Without this, a teammate can still view, add, and edit contacts — just not delete them. Leave off for sales agents.",
   },
 ];
 

@@ -98,9 +98,10 @@ export async function unsubscribeContact(contactId: string): Promise<CrmActionSt
 }
 
 // Permanently delete a contact and everything attached (activities +
-// enrollments cascade via FK). Redirects back to the pipeline.
+// enrollments cascade via FK). Requires the crm_delete capability — sales agents
+// have CRM access to view/add/edit but not delete. Redirects back to the pipeline.
 export async function deleteContact(contactId: string): Promise<void> {
-  const me = await platformSectionActor("crm");
+  const me = await platformSectionActor("crm_delete");
   if (!me) return;
   const admin = createAdminClient();
   await admin.from("crm_contacts").delete().eq("id", contactId);

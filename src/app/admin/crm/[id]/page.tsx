@@ -3,13 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactPanel, type ContactRecord, type ActivityRecord, type EnrollmentRecord } from "./contact-panel";
 
 export const metadata: Metadata = { title: "Contact · CRM" };
 
 export default async function CrmContactPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePlatformSection("crm");
+  const me = await requirePlatformSection("crm");
+  const canDelete = canAccessPlatformSection(me.platformAccess, "crm_delete");
   const { id } = await params;
   const admin = createAdminClient();
 
@@ -43,6 +45,7 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
         contact={contact as ContactRecord}
         activities={(activities ?? []) as ActivityRecord[]}
         enrollments={(enrollments ?? []) as unknown as EnrollmentRecord[]}
+        canDelete={canDelete}
       />
     </div>
   );
