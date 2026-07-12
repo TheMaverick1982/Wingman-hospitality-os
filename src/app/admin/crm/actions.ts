@@ -44,6 +44,29 @@ export async function moveContactStage(contactId: string, stage: string): Promis
   return { error: null, ok: true };
 }
 
+// Assign (or unassign) a contact to a sales rep. Drives the per-rep Sales
+// Dashboard metrics. Empty repId clears the assignment.
+export async function assignContact(contactId: string, repId: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!contactId) return { error: "Missing contact.", ok: false };
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("crm_contacts")
+    .update({ assigned_rep_id: repId || null, updated_at: new Date().toISOString() })
+    .eq("id", contactId);
+  if (error) return { error: error.message, ok: false };
+  await admin.from("crm_activities").insert({
+    contact_id: contactId,
+    kind: "system",
+    body: repId ? "Assigned to a sales rep" : "Unassigned from sales rep",
+    created_by: me.userId,
+  });
+  revalidatePath(`/admin/crm/${contactId}`);
+  revalidatePath("/admin/sales-dashboard");
+  return { error: null, ok: true };
+}
+
 // Edit a contact's details (name, phone, freeform notes).
 export async function updateContactDetails(_prev: CrmActionState, formData: FormData): Promise<CrmActionState> {
   const me = await platformSectionActor("crm");

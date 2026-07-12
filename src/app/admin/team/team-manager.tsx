@@ -84,7 +84,7 @@ function AddModal({ sections, onClose }: { sections: Section[]; onClose: () => v
             <Sparkles size={12} /> Support agent
           </button>
           <span className="text-muted-2 text-xs">·</span>
-          <button type="button" onClick={() => preset(["crm", "sales_training"])} className="text-xs font-semibold text-brick hover:opacity-70 inline-flex items-center gap-1">
+          <button type="button" onClick={() => preset(["crm", "sales_dashboard", "sales_training"])} className="text-xs font-semibold text-brick hover:opacity-70 inline-flex items-center gap-1">
             <Sparkles size={12} /> Sales agent
           </button>
           <span className="text-muted-2 text-xs">·</span>
