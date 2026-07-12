@@ -4,7 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
-import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
+import { stageOf, computeSpotCheckAverages, type GuestWithVisits, type SpotCheck } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
 import { monthlyRepeatCohorts, monthlyTrainingCompletion, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
 import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
@@ -58,8 +58,8 @@ export default async function ReportingPage({
     { data: menuItems },
     locations,
   ] = await Promise.all([
-    supabase.from("discounts").select("amount, location_id").gte("occurred_on", cutoff),
-    supabase.from("spot_checks").select("scores, location_id").gte("occurred_on", cutoff),
+    supabase.from("discounts").select("amount, location_id, server_name").gte("occurred_on", cutoff),
+    supabase.from("spot_checks").select("id, scores, location_id, staff_name, department").gte("occurred_on", cutoff),
     supabase.from("training_signoffs").select("id").gte("occurred_on", cutoff),
     supabase.from("culture_moments").select("id").gte("occurred_on", cutoff),
     supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff),
@@ -133,6 +133,22 @@ export default async function ReportingPage({
       : menu.counts.star > 0
         ? `${menu.counts.star} Star${menu.counts.star === 1 ? "" : "s"} to protect and feature — box them and put them in the sweet spots.`
         : "Add prices and popularity in Menu Engineering to see where your profit is.";
+
+  // Per-staff spot-check scorecard (lowest average first = coaching priority).
+  const staffScores = computeSpotCheckAverages((spotChecks ?? []) as SpotCheck[])
+    .sort((a, b) => a.avg - b.avg)
+    .slice(0, 8);
+
+  // Comp $ by server, with a simple outlier flag (well above the server average).
+  const compByServerMap = new Map<string, number>();
+  for (const d of (discounts ?? []) as { amount: number; server_name?: string | null }[]) {
+    const name = (d.server_name || "").trim();
+    if (!name) continue;
+    compByServerMap.set(name, (compByServerMap.get(name) ?? 0) + Number(d.amount));
+  }
+  const compByServer = [...compByServerMap.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+  const avgComp = compByServer.length > 0 ? compByServer.reduce((s, c) => s + c.total, 0) / compByServer.length : 0;
+  const compOutlierFloor = Math.max(avgComp * 1.5, 1); // flag well-above-average compers
   const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
   const bizMetrics =
     bizPoints.length >= 2
@@ -385,6 +401,60 @@ export default async function ReportingPage({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {(staffScores.length > 0 || compByServer.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {staffScores.length > 0 && (
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Staff scorecard</span>
+                <span className="text-[13px] text-muted">{activeRange.rangeLabel}</span>
+              </div>
+              <p className="text-[13px] text-muted mb-4">Average spot-check score per person — lowest first, so coaching goes where it&rsquo;s needed.</p>
+              <div className="flex flex-col gap-2.5">
+                {staffScores.map((s) => {
+                  const pct = Math.round((s.avg / 5) * 100);
+                  const tone = s.avg >= 4 ? "bg-olive" : s.avg >= 3 ? "bg-[#D97706]" : "bg-brick";
+                  return (
+                    <div key={s.name} className="flex items-center gap-3">
+                      <span className="w-28 shrink-0 text-[13.5px] text-ink truncate">{s.name}</span>
+                      <span className="flex-1 h-2 rounded-full bg-paper overflow-hidden">
+                        <span className={`block h-full ${tone}`} style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-charcoal-2">{s.avg.toFixed(1)}/5</span>
+                      <span className="w-14 shrink-0 text-right text-[12px] tabular-nums text-muted-2">{s.count} chk</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {compByServer.length > 0 && (
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Comps by server</span>
+                <span className="text-[13px] text-muted">{activeRange.rangeLabel}</span>
+              </div>
+              <p className="text-[13px] text-muted mb-4">Who&rsquo;s giving away the most — outliers (well above average) are flagged for a conversation.</p>
+              <div className="flex flex-col gap-2">
+                {compByServer.slice(0, 8).map((c) => {
+                  const outlier = compByServer.length > 1 && c.total >= compOutlierFloor;
+                  return (
+                    <div key={c.name} className="flex items-center justify-between gap-3 text-[13.5px]">
+                      <span className="text-ink truncate flex items-center gap-2">
+                        {c.name}
+                        {outlier && <span className="text-[11px] font-semibold text-brick bg-brick-tint px-2 py-0.5 rounded-full">high</span>}
+                      </span>
+                      <span className="font-semibold tabular-nums text-ink">${c.total.toFixed(0)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
