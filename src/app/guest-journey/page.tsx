@@ -39,6 +39,63 @@ const PARTS = [
   { t: "What to inspect", d: "The one yes/no thing a manager watches for, so the standard actually gets held — shift to shift." },
 ];
 
+// Original "journey line" graphic: six stages connected along a path, ending in
+// the brand paper-airplane. Pure inline SVG (self-contained, no external assets).
+const GRAPHIC_STAGES = ["Arrival", "The Greet", "Recommend", "Check-back", "Goodbye", "The Ask"];
+
+function JourneyGraphic() {
+  const n = GRAPHIC_STAGES.length;
+  const x0 = 70;
+  const x1 = 890;
+  const step = (x1 - x0) / (n - 1);
+  const y = 78;
+  const xs = GRAPHIC_STAGES.map((_, i) => x0 + i * step);
+  // A gentle wave through the node centers.
+  const path = xs
+    .map((x, i) => {
+      const yy = y + (i % 2 === 0 ? -14 : 14);
+      if (i === 0) return `M ${x} ${yy}`;
+      const px = xs[i - 1];
+      const py = y + ((i - 1) % 2 === 0 ? -14 : 14);
+      const cx = (px + x) / 2;
+      return `C ${cx} ${py}, ${cx} ${yy}, ${x} ${yy}`;
+    })
+    .join(" ");
+
+  return (
+    <svg viewBox="0 0 960 170" className="w-full h-auto" role="img" aria-label="A six-stage guest journey from Arrival to The Ask">
+      <defs>
+        <linearGradient id="gj-line" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#e9b7b0" />
+          <stop offset="1" stopColor="#c0392b" />
+        </linearGradient>
+      </defs>
+      <path d={path} fill="none" stroke="url(#gj-line)" strokeWidth="3" strokeLinecap="round" strokeDasharray="1 10" opacity="0.6" />
+      {GRAPHIC_STAGES.map((label, i) => {
+        const x = xs[i];
+        const yy = y + (i % 2 === 0 ? -14 : 14);
+        const last = i === n - 1;
+        return (
+          <g key={label}>
+            <circle cx={x} cy={yy} r="20" fill={last ? "#c0392b" : "#ffffff"} stroke="#c0392b" strokeWidth="2.5" />
+            <text x={x} y={yy + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={last ? "#ffffff" : "#c0392b"}>
+              {i + 1}
+            </text>
+            <text x={x} y={yy > y ? yy + 40 : yy - 30} textAnchor="middle" fontSize="13.5" fontWeight="600" fill="#1a1a1a">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      {/* Paper-airplane at the finish */}
+      <g transform={`translate(${x1 + 26}, ${y + 14})`} fill="#0a6cff">
+        <path d="M0 8 L34 -6 L20 26 L14 14 Z" />
+        <path d="M14 14 L20 26 L8 20 Z" opacity="0.7" />
+      </g>
+    </svg>
+  );
+}
+
 export default function GuestJourneyPage() {
   return (
     <div className="flex-1 flex flex-col force-light bg-panel">
@@ -63,6 +120,13 @@ export default function GuestJourneyPage() {
           <Link href="/signup" className="text-[16px] font-semibold text-ink bg-white border border-line rounded-full px-7 py-3.5 hover:border-brick transition-colors">
             Get Started
           </Link>
+        </div>
+      </section>
+
+      {/* Journey line graphic */}
+      <section className="max-w-[1080px] mx-auto px-6 sm:px-10 w-full pb-6 sm:pb-10">
+        <div className="bg-white border border-line rounded-[28px] px-6 sm:px-12 py-10 sm:py-14 shadow-sm overflow-x-auto">
+          <JourneyGraphic />
         </div>
       </section>
 
