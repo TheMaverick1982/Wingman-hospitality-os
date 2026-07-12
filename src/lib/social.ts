@@ -6,7 +6,8 @@ export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB
 export const MAX_IMAGES_PER_POST = 10;
 // Delete post images from storage this many days after they're posted (they're
 // already live on the platform by then; keeps the record, frees the bytes).
-export const IMAGE_RETENTION_DAYS = 14;
+// A post that failed to publish is never purged, so a Retry still has its image.
+export const IMAGE_RETENTION_DAYS = 3;
 
 export const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram" },
