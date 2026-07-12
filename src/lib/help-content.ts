@@ -382,6 +382,8 @@ export const ARTICLES: HelpArticle[] = [
         "Training vs. retention — team training completion and repeat rate side by side, month by month, so you can see them move together: a team held to standard brings more guests back.",
         "Menu profitability — your menu items sorted into Stars, Plowhorses, Puzzles, and Dogs, with a one-line takeaway (e.g. how many Dogs are dragging your margin) pulled straight from Menu Engineering.",
         "Staff scorecard & comps by server — each person's average spot-check score (lowest first, so coaching goes where it's needed) and who's giving away the most in comps, with outliers flagged.",
+        "What brings them back — first-timer return rate grouped by the visit-1 incentive they were given, so you spend on the offers that actually earn a second visit.",
+        "Health score over time — your Standout Audit score audit-to-audit, plus checklist-compliance by month, so you can see whether the operation is genuinely getting stronger.",
       ] },
       { kind: "h", text: "AI briefing" },
       { kind: "p", text: "Tap \"Summarize this report\" for a 15-second read written from your live numbers — what's moving the right way, what's slipping, and the one highest-leverage thing to do this week. It's generated on demand, so it only runs when you ask." },

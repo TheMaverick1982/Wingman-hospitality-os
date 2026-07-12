@@ -6,7 +6,7 @@ import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, computeSpotCheckAverages, type GuestWithVisits, type SpotCheck } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
-import { monthlyRepeatCohorts, monthlyTrainingCompletion, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
+import { monthlyRepeatCohorts, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness, bizHealthTrend, type BizHealthRow, type ChecklistLite, type IncentiveGuest } from "@/lib/reporting-trends";
 import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
@@ -61,6 +61,8 @@ export default async function ReportingPage({
     { data: bizHealth },
     { data: signoffTrend },
     { data: menuItems },
+    { data: audits },
+    { data: checklistRows },
     locations,
   ] = await Promise.all([
     supabase.from("discounts").select("amount, location_id, server_name").gte("occurred_on", cutoff),
@@ -68,7 +70,7 @@ export default async function ReportingPage({
     supabase.from("training_signoffs").select("id").gte("occurred_on", cutoff),
     supabase.from("culture_moments").select("id").gte("occurred_on", cutoff),
     supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff),
-    supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction)"),
+    supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction, incentive)"),
     supabase.from("report_schedules").select("*").order("created_at", { ascending: false }),
     supabase
       .from("growth_plans")
@@ -82,6 +84,8 @@ export default async function ReportingPage({
       .limit(12),
     supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190)),
     supabase.from("menu_engineering_items").select("id, name, price, food_cost, popularity"),
+    supabase.from("audits").select("occurred_on, health_score").order("occurred_on", { ascending: false }).limit(8),
+    supabase.from("shift_checklist_completions").select("occurred_on, item_count, completed_count").gte("occurred_on", cutoffDate(190)),
     getOrgLocations(),
   ]);
 
@@ -155,6 +159,17 @@ export default async function ReportingPage({
   const avgComp = compByServer.length > 0 ? compByServer.reduce((s, c) => s + c.total, 0) / compByServer.length : 0;
   const compOutlierFloor = Math.max(avgComp * 1.5, 1); // flag well-above-average compers
 
+  // Audit health-score over time (oldest → newest for the trend).
+  const auditTrend = [...((audits ?? []) as { occurred_on: string; health_score: number }[])].reverse();
+  const maxHealth = 100;
+
+  // Checklist compliance by month.
+  const checklistMonths = monthlyChecklistCompliance((checklistRows ?? []) as ChecklistLite[], now, 6);
+  const hasChecklistHistory = checklistMonths.some((m) => m.logs > 0);
+
+  // Which visit-1 incentive best drives a return visit.
+  const incentives = incentiveEffectiveness(allGuests as unknown as IncentiveGuest[]).slice(0, 6);
+
   // Compact snapshot for the AI briefing — just the numbers, no re-querying.
   const reportSnapshot = JSON.stringify({
     range: activeRange.rangeLabel,
@@ -167,6 +182,9 @@ export default async function ReportingPage({
     menu: menuRows.length > 0 ? menu.counts : undefined,
     lowestStaffScores: staffScores.slice(0, 3).map((s) => ({ name: s.name, avgOutOf5: Number(s.avg.toFixed(1)) })),
     topCompServers: compByServer.slice(0, 3).map((c) => ({ name: c.name, comps: Math.round(c.total) })),
+    auditHealthTrend: auditTrend.length >= 2 ? auditTrend.map((a) => a.health_score) : undefined,
+    checklistComplianceByMonth: hasChecklistHistory ? checklistMonths.map((m) => ({ month: m.label, pct: m.pct })) : undefined,
+    bestIncentive: incentives[0] ? { offer: incentives[0].incentive, returnPct: incentives[0].returnPct, newGuests: incentives[0].newGuests } : undefined,
   });
   const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
   const bizMetrics =
@@ -356,6 +374,28 @@ export default async function ReportingPage({
         </div>
       </div>
 
+      {incentives.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">What brings them back</span>
+            <span className="text-[13px] text-muted">by visit-1 offer</span>
+          </div>
+          <p className="text-[13px] text-muted mb-4">The return rate of first-timers grouped by the incentive they were given — so you spend on the offers that actually earn a second visit, not the ones that just cost you.</p>
+          <div className="flex flex-col gap-2.5">
+            {incentives.map((inc) => (
+              <div key={inc.incentive} className="flex items-center gap-3 text-[13.5px]">
+                <span className="w-40 shrink-0 text-ink truncate">{inc.incentive}</span>
+                <span className="flex-1 h-2 rounded-full bg-paper overflow-hidden">
+                  <span className={`block h-full ${inc.returnPct >= 50 ? "bg-olive" : inc.returnPct >= 30 ? "bg-brick" : "bg-brick/50"}`} style={{ width: `${inc.returnPct}%` }} />
+                </span>
+                <span className="w-12 shrink-0 text-right tabular-nums font-semibold text-ink">{inc.returnPct}%</span>
+                <span className="w-16 shrink-0 text-right tabular-nums text-muted-2">{inc.newGuests} used</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {hasTrainingHistory && (
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -422,6 +462,52 @@ export default async function ReportingPage({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {(auditTrend.length >= 2 || hasChecklistHistory) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {auditTrend.length >= 2 && (
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Health score over time</span>
+                <span className="text-[13px] text-muted">last {auditTrend.length} audits</span>
+              </div>
+              <p className="text-[13px] text-muted mb-5">Your Standout Audit score, audit to audit — is the operation actually getting stronger?</p>
+              <div className="flex items-end gap-3 h-32">
+                {auditTrend.map((a, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                    <div className="text-[12px] font-semibold text-ink tabular-nums">{a.health_score}</div>
+                    <div className="w-full max-w-[48px] bg-paper rounded-t-md flex items-end" style={{ height: "100%" }}>
+                      <div className={`w-full rounded-t-md ${a.health_score >= 70 ? "bg-olive" : a.health_score >= 45 ? "bg-brick" : "bg-brick/50"}`} style={{ height: `${Math.max(4, Math.round((a.health_score / maxHealth) * 100))}%` }} />
+                    </div>
+                    <div className="text-[10.5px] text-muted-2">{new Date(a.occurred_on).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasChecklistHistory && (
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Checklist compliance</span>
+                <span className="text-[13px] text-muted">last 6 months</span>
+              </div>
+              <p className="text-[13px] text-muted mb-5">Share of shift-checklist items actually completed — is the team running the checks, or just clocking in?</p>
+              <div className="flex items-end gap-3 h-32">
+                {checklistMonths.map((m) => (
+                  <div key={m.key} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                    <div className="text-[12px] font-semibold text-ink tabular-nums">{m.logs > 0 ? `${m.pct}%` : "—"}</div>
+                    <div className="w-full max-w-[48px] bg-paper rounded-t-md flex items-end" style={{ height: "100%" }}>
+                      <div className={`w-full rounded-t-md ${m.pct >= 80 ? "bg-olive" : m.pct >= 50 ? "bg-brick" : "bg-brick/50"}`} style={{ height: `${m.logs > 0 ? Math.max(4, m.pct) : 0}%` }} />
+                    </div>
+                    <div className="text-[11.5px] font-medium text-charcoal-2">{m.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

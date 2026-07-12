@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { monthlyRepeatCohorts, bizHealthTrend, monthlyTrainingCompletion } from "@/lib/reporting-trends";
+import { monthlyRepeatCohorts, bizHealthTrend, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness } from "@/lib/reporting-trends";
 
 describe("monthlyRepeatCohorts", () => {
   const now = new Date(2026, 5, 15); // Jun 15 2026
@@ -52,6 +52,39 @@ describe("monthlyTrainingCompletion", () => {
     expect(may.count).toBe(2);
     const jan = out.find((m) => m.label === "Jan")!;
     expect(jan).toMatchObject({ avgCompletion: 0, count: 0 });
+  });
+});
+
+describe("monthlyChecklistCompliance", () => {
+  const now = new Date(2026, 5, 15);
+  it("computes completed/total as a monthly percentage", () => {
+    const out = monthlyChecklistCompliance(
+      [
+        { occurred_on: "2026-05-01", item_count: 10, completed_count: 8 },
+        { occurred_on: "2026-05-02", item_count: 10, completed_count: 10 },
+      ],
+      now,
+      6
+    );
+    const may = out.find((m) => m.label === "May")!;
+    expect(may.pct).toBe(90); // 18 / 20
+    expect(may.logs).toBe(2);
+  });
+});
+
+describe("incentiveEffectiveness", () => {
+  it("groups first-timers by their visit-1 incentive and measures return", () => {
+    const guests = [
+      { guest_visits: [{ visit_number: 1, visit_date: "2026-05-01", incentive: "Free dessert" }, { visit_number: 2, visit_date: "2026-05-20" }] },
+      { guest_visits: [{ visit_number: 1, visit_date: "2026-05-02", incentive: "Free dessert" }] },
+      { guest_visits: [{ visit_number: 1, visit_date: "2026-05-03", incentive: "10% off" }, { visit_number: 2, visit_date: "2026-06-01" }] },
+      { guest_visits: [{ visit_number: 1, visit_date: "2026-05-04", incentive: "" }] }, // no incentive → ignored
+    ];
+    const out = incentiveEffectiveness(guests);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ incentive: "10% off", newGuests: 1, returned: 1, returnPct: 100 });
+    const dessert = out.find((o) => o.incentive === "Free dessert")!;
+    expect(dessert).toMatchObject({ newGuests: 2, returned: 1, returnPct: 50 });
   });
 });
 

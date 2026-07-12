@@ -81,6 +81,59 @@ export function monthlyTrainingCompletion(signoffs: SignoffLite[], now: Date, mo
   });
 }
 
+// --- Checklist compliance by month -------------------------------------------
+
+export type ChecklistLite = { occurred_on: string | null; item_count: number; completed_count: number };
+export type ComplianceMonth = { key: string; label: string; pct: number; logs: number };
+
+// Share of checklist items actually completed, per month — a read on whether the
+// team is running their shift checklists or just clocking in.
+export function monthlyChecklistCompliance(rows: ChecklistLite[], now: Date, monthsBack = 6): ComplianceMonth[] {
+  const buckets = new Map<string, { done: number; total: number; logs: number; label: string }>();
+  const order: string[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = monthKey(d.getFullYear(), d.getMonth());
+    buckets.set(key, { done: 0, total: 0, logs: 0, label: MONTH_LABELS[d.getMonth()] });
+    order.push(key);
+  }
+  for (const r of rows) {
+    if (!r.occurred_on) continue;
+    const b = buckets.get(r.occurred_on.slice(0, 7));
+    if (!b) continue;
+    b.done += Number(r.completed_count) || 0;
+    b.total += Number(r.item_count) || 0;
+    b.logs += 1;
+  }
+  return order.map((k) => {
+    const b = buckets.get(k)!;
+    return { key: k, label: b.label, logs: b.logs, pct: b.total > 0 ? Math.round((b.done / b.total) * 100) : 0 };
+  });
+}
+
+// --- Incentive effectiveness -------------------------------------------------
+
+export type IncentiveGuest = { guest_visits: { visit_number: number; visit_date: string | null; incentive?: string | null }[] };
+export type IncentiveStat = { incentive: string; newGuests: number; returned: number; returnPct: number };
+
+// Which visit-1 offer best turns a first-timer into a second visit. Groups
+// first-timers by the incentive they were given, and measures how many came back.
+export function incentiveEffectiveness(guests: IncentiveGuest[]): IncentiveStat[] {
+  const map = new Map<string, { newGuests: number; returned: number }>();
+  for (const g of guests) {
+    const first = g.guest_visits.find((v) => v.visit_number === 1);
+    const incentive = (first?.incentive || "").trim();
+    if (!incentive) continue; // only measure guests who actually got an offer
+    const entry = map.get(incentive) ?? { newGuests: 0, returned: 0 };
+    entry.newGuests += 1;
+    if (g.guest_visits.some((v) => v.visit_number >= 2 && v.visit_date)) entry.returned += 1;
+    map.set(incentive, entry);
+  }
+  return [...map.entries()]
+    .map(([incentive, v]) => ({ incentive, newGuests: v.newGuests, returned: v.returned, returnPct: v.newGuests > 0 ? Math.round((v.returned / v.newGuests) * 100) : 0 }))
+    .sort((a, b) => b.returnPct - a.returnPct || b.newGuests - a.newGuests);
+}
+
 // --- Business-health (POS) weekly trend --------------------------------------
 
 export type BizHealthRow = {
