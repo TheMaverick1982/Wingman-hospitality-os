@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { getOrgOwnerEmails } from "@/lib/billing";
+import { redeemCouponForOrg } from "@/lib/coupons";
 import { sendEmail } from "@/lib/email";
 
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
@@ -44,6 +45,30 @@ export async function updateOrgPricing(orgId: string, formData: FormData): Promi
     .eq("id", orgId);
   if (error) return { error: error.message, ok: false };
 
+  revalidatePath(`/admin/organizations/${orgId}`);
+  return { error: null, ok: true };
+}
+
+// Apply a coupon code to an organization (admin-applied redemption).
+export async function applyCouponToOrg(orgId: string, formData: FormData): Promise<PricingState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!orgId) return { error: "Missing organization.", ok: false };
+  const code = String(formData.get("code") || "");
+  const result = await redeemCouponForOrg(code, orgId, "admin");
+  if (!result.ok) return { error: result.error ?? "Couldn't apply that code.", ok: false };
+  revalidatePath(`/admin/organizations/${orgId}`);
+  return { error: null, ok: true };
+}
+
+// Remove an org's coupon (clears the redemption + the org stamp + trial).
+export async function removeOrgCoupon(orgId: string): Promise<PricingState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!orgId) return { error: "Missing organization.", ok: false };
+  const admin = createAdminClient();
+  await admin.from("coupon_redemptions").delete().eq("org_id", orgId);
+  await admin.from("organizations").update({ coupon_code: null, trial_ends_at: null }).eq("id", orgId);
   revalidatePath(`/admin/organizations/${orgId}`);
   return { error: null, ok: true };
 }

@@ -7,6 +7,7 @@ import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import { markCustomerByEmail } from "@/lib/crm-sequences";
 import { formTrippedHoneypot } from "@/lib/honeypot";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { normalizeCode, validateCoupon, redeemCouponForOrg } from "@/lib/coupons";
 
 export type SignupState = { error: string | null; checkEmail: boolean };
 
@@ -33,6 +34,14 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     return { error: "Password must be at least 8 characters.", checkEmail: false };
   }
 
+  // Validate a promo code up front (if given) so a bad one is caught before we
+  // create the account. Carried in metadata + applied once the org exists.
+  const promoCode = normalizeCode(String(formData.get("promoCode") || ""));
+  if (promoCode) {
+    const { error: couponErr } = await validateCoupon(promoCode);
+    if (couponErr) return { error: couponErr, checkEmail: false };
+  }
+
   const supabase = await createClient();
   const headersList = await headers();
   // Prefer the trusted, server-configured site URL so the confirmation link
@@ -49,6 +58,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
         pending_org_name: orgName,
         pending_location_name: locationName,
         pending_full_name: fullName,
+        pending_coupon_code: promoCode || undefined,
       },
     },
   });
@@ -76,8 +86,10 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   await captureReferralForCurrentUser(supabase);
   // Convert their CRM contact, stop nurtures, start onboarding.
   const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", data.user?.id ?? "").maybeSingle();
+  const newOrgId = (prof as { org_id: string } | null)?.org_id;
+  if (promoCode && newOrgId) await redeemCouponForOrg(promoCode, newOrgId, "signup");
   await markCustomerByEmail(email, {
-    orgId: (prof as { org_id: string } | null)?.org_id,
+    orgId: newOrgId,
     workspaceName: orgName,
     name: fullName,
   });

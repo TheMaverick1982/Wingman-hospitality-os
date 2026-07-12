@@ -8,6 +8,7 @@ import { effectiveMonthlyCents, pricingLabel, BASE_CENTS, ADDL_CENTS } from "@/l
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
 import { BillingCard } from "./billing-card";
+import { CouponCard } from "./coupon-card";
 import { billingBadge, BILLING_TONE_CLASSES } from "@/lib/billing-label";
 
 export default async function AdminOrganizationDetailPage({
@@ -22,11 +23,17 @@ export default async function AdminOrganizationDetailPage({
 
   const { data: org } = await admin
     .from("organizations")
-    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4")
+    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4, coupon_code, trial_ends_at")
     .eq("id", orgId)
     .eq("is_platform", false)
     .maybeSingle();
   if (!org) notFound();
+
+  const { data: redemption } = await admin
+    .from("coupon_redemptions")
+    .select("code, kind, percent_off, amount_off_cents, duration_months, trial_days, source, redeemed_at")
+    .eq("org_id", orgId)
+    .maybeSingle();
 
   const [{ data: locations }, { data: profiles }] = await Promise.all([
     admin.from("locations").select("id, name, created_at").eq("org_id", orgId).order("created_at"),
@@ -146,6 +153,12 @@ export default async function AdminOrganizationDetailPage({
           effectiveLabel={effectiveLabel}
         />
       </div>
+
+      <CouponCard
+        orgId={org.id}
+        redemption={(redemption as never) ?? null}
+        trialEndsAt={(org as unknown as { trial_ends_at: string | null }).trial_ends_at}
+      />
     </div>
   );
 }

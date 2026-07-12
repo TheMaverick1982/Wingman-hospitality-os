@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import { markCustomerByEmail } from "@/lib/crm-sequences";
+import { redeemCouponForOrg } from "@/lib/coupons";
 
 export type OnboardingState = { error: string | null };
 
@@ -34,11 +35,10 @@ export async function completeOnboarding(
   await captureReferralForCurrentUser(supabase);
   if (user?.email) {
     const { data: prof } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
-    await markCustomerByEmail(user.email, {
-      orgId: (prof as { org_id: string } | null)?.org_id,
-      workspaceName: orgName,
-      name: fullName,
-    });
+    const orgId = (prof as { org_id: string } | null)?.org_id;
+    const pendingCoupon = user.user_metadata?.pending_coupon_code as string | undefined;
+    if (pendingCoupon && orgId) await redeemCouponForOrg(pendingCoupon, orgId, "signup");
+    await markCustomerByEmail(user.email, { orgId, workspaceName: orgName, name: fullName });
   }
   redirect("/start-here");
 }
