@@ -12,7 +12,12 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
 import { ScheduleReportModalButton } from "./schedule-report-modal";
+import { ReportNarrative } from "./report-narrative";
 import { deleteReportSchedule } from "./actions";
+
+// The AI briefing runs a server action from this route — give it room past the
+// short default function timeout.
+export const maxDuration = 60;
 
 const RANGES = [
   { key: "7d", label: "7D", days: 7, rangeLabel: "last 7 days" },
@@ -149,6 +154,20 @@ export default async function ReportingPage({
   const compByServer = [...compByServerMap.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
   const avgComp = compByServer.length > 0 ? compByServer.reduce((s, c) => s + c.total, 0) / compByServer.length : 0;
   const compOutlierFloor = Math.max(avgComp * 1.5, 1); // flag well-above-average compers
+
+  // Compact snapshot for the AI briefing — just the numbers, no re-querying.
+  const reportSnapshot = JSON.stringify({
+    range: activeRange.rangeLabel,
+    repeatRatePct: retentionPct,
+    reactionRatio: reactionRatioLabel,
+    recoverySpendUsd: Math.round(discountTotal),
+    referralRatePct: referralRate,
+    repeatRateByMonth: cohorts.map((c) => ({ month: c.label, repeatPct: c.repeatPct, newGuests: c.newGuests })),
+    trainingByMonth: hasTrainingHistory ? trainingMonths.map((m) => ({ month: m.label, completionPct: m.avgCompletion })) : undefined,
+    menu: menuRows.length > 0 ? menu.counts : undefined,
+    lowestStaffScores: staffScores.slice(0, 3).map((s) => ({ name: s.name, avgOutOf5: Number(s.avg.toFixed(1)) })),
+    topCompServers: compByServer.slice(0, 3).map((c) => ({ name: c.name, comps: Math.round(c.total) })),
+  });
   const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
   const bizMetrics =
     bizPoints.length >= 2
@@ -310,6 +329,8 @@ export default async function ReportingPage({
         <StatTile label="Recovery spend" value={`$${discountTotal.toFixed(0)}`} sub="all reasons tagged" />
         <StatTile label="Referral rate" value={`${referralRate}%`} sub="raving-fan index" />
       </div>
+
+      <ReportNarrative snapshot={reportSnapshot} />
 
       {/* Trends — the story over time, not just a single window. */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
