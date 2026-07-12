@@ -7,9 +7,9 @@ import type { SocialSettings } from "@/lib/social-meta";
 // permission. Token + member URN live in social_settings (deny-all RLS).
 
 const REST = "https://api.linkedin.com/rest";
-// LinkedIn versions its API monthly (YYYYMM) and deprecates old ones; override
-// via env if LinkedIn bumps the required version.
-const LI_VERSION = process.env.LINKEDIN_API_VERSION ?? "202501";
+// LinkedIn versions its API monthly (YYYYMM) and only keeps each active for ~12
+// months. Keep this within the last year; override via env when it ages out.
+const LI_VERSION = process.env.LINKEDIN_API_VERSION ?? "202506";
 const VIDEO_EXT = /\.(mp4|mov|m4v)$/i;
 export const LI_SCOPES = "openid profile w_member_social";
 
