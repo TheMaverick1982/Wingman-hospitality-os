@@ -7,6 +7,7 @@ import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
 import { monthlyRepeatCohorts, monthlyTrainingCompletion, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
+import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
@@ -54,6 +55,7 @@ export default async function ReportingPage({
     { data: growthPlan },
     { data: bizHealth },
     { data: signoffTrend },
+    { data: menuItems },
     locations,
   ] = await Promise.all([
     supabase.from("discounts").select("amount, location_id").gte("occurred_on", cutoff),
@@ -74,6 +76,7 @@ export default async function ReportingPage({
       .order("period_date", { ascending: false })
       .limit(12),
     supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190)),
+    supabase.from("menu_engineering_items").select("id, name, price, food_cost, popularity"),
     getOrgLocations(),
   ]);
 
@@ -113,6 +116,23 @@ export default async function ReportingPage({
     newGuests: c.newGuests,
   }));
   const hasTrainingHistory = trainingMonths.some((m) => m.count > 0);
+
+  // Menu profitability — classify each item into Star / Plowhorse / Puzzle / Dog.
+  const menuRows: MenuItemRow[] = ((menuItems ?? []) as { id: string; name: string; price: number; food_cost: number; popularity: number }[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    price: Number(r.price),
+    food_cost: Number(r.food_cost),
+    popularity: r.popularity,
+  }));
+  const menu = classifyMenu(menuRows);
+  const menuOrder: Quadrant[] = ["star", "plowhorse", "puzzle", "dog"];
+  const menuTakeaway =
+    menu.counts.dog > 0
+      ? `${menu.counts.dog} Dog${menu.counts.dog === 1 ? "" : "s"} dragging your margin — rework, re-cost, or cut.`
+      : menu.counts.star > 0
+        ? `${menu.counts.star} Star${menu.counts.star === 1 ? "" : "s"} to protect and feature — box them and put them in the sweet spots.`
+        : "Add prices and popularity in Menu Engineering to see where your profit is.";
   const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
   const bizMetrics =
     bizPoints.length >= 2
@@ -366,6 +386,29 @@ export default async function ReportingPage({
             })}
           </div>
         </div>
+      )}
+
+      {menuRows.length > 0 && (
+        <Link href="/menu-engineering">
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-baseline justify-between gap-3 mb-4">
+              <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Menu profitability</span>
+              <span className="text-[13px] text-muted">{menuRows.length} items</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {menuOrder.map((q) => (
+                <div key={q} className="rounded-xl border border-[#F1F1F1] p-3.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${QUADRANT_META[q].dot}`} />
+                    <span className="text-[12px] font-semibold text-muted uppercase tracking-wide">{QUADRANT_META[q].label}s</span>
+                  </div>
+                  <div className="text-[24px] font-bold tabular-nums text-ink">{menu.counts[q]}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[13.5px] text-charcoal-2">{menuTakeaway}</p>
+          </div>
+        </Link>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
