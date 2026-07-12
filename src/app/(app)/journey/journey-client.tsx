@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { generateJourney, refineStage, captureFirstTimer, updateStage, addStage, deleteStage, type JourneyState, type RefineState, type CaptureState } from "./actions";
+import { generateJourney, refineStage, captureFirstTimer, logInspection, updateStage, addStage, deleteStage, type JourneyState, type RefineState, type CaptureState } from "./actions";
+
+export type InspectionStat = { count: number; passed: number };
 
 export type Stage = {
   id: string;
@@ -150,7 +152,42 @@ function RefineBox({ stageId, onClose }: { stageId: string; onClose: () => void 
   );
 }
 
-function StageCard({ stage, index, canEdit, showCapture }: { stage: Stage; index: number; canEdit: boolean; showCapture: boolean }) {
+// Shows how often this stage's inspect standard was met over the last 30 days,
+// and (for managers) a one-tap Met / Missed logger — turning the inspect line
+// from decorative prose into a live pass-rate metric.
+function InspectionRow({ stageId, stat, canEdit }: { stageId: string; stat: InspectionStat | undefined; canEdit: boolean }) {
+  const count = stat?.count ?? 0;
+  const pct = count > 0 ? Math.round(((stat?.passed ?? 0) / count) * 100) : 0;
+  const tone = pct >= 80 ? "text-olive" : pct >= 50 ? "text-[#B45309]" : "text-brick";
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+      {count > 0 ? (
+        <span className="text-[12px] text-muted-2">
+          Inspected {count}× (30d) · <span className={`font-semibold ${tone}`}>{pct}% met</span>
+        </span>
+      ) : (
+        <span className="text-[12px] text-muted-2">Not inspected yet</span>
+      )}
+      {canEdit && (
+        <span className="flex items-center gap-1.5">
+          <form action={logInspection}>
+            <input type="hidden" name="stageId" value={stageId} />
+            <input type="hidden" name="passed" value="true" />
+            <button type="submit" className="text-[12px] font-semibold text-olive border border-olive/30 rounded-full px-2.5 py-0.5 hover:bg-olive-tint transition-colors">✓ Met</button>
+          </form>
+          <form action={logInspection}>
+            <input type="hidden" name="stageId" value={stageId} />
+            <input type="hidden" name="passed" value="false" />
+            <button type="submit" className="text-[12px] font-semibold text-brick border border-brick/30 rounded-full px-2.5 py-0.5 hover:bg-brick-tint transition-colors">✗ Missed</button>
+          </form>
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StageCard({ stage, index, canEdit, showCapture, stat }: { stage: Stage; index: number; canEdit: boolean; showCapture: boolean; stat: InspectionStat | undefined }) {
   const [editing, setEditing] = useState(false);
   const [refining, setRefining] = useState(false);
   const field = "w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick";
@@ -217,6 +254,7 @@ function StageCard({ stage, index, canEdit, showCapture }: { stage: Stage; index
             <div className="flex-1 min-w-[220px]">
               <div className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-2 mb-0.5">Manager inspects</div>
               <div className="text-[13.5px] text-muted">{stage.inspect}</div>
+              <InspectionRow stageId={stage.id} stat={stat} canEdit={canEdit} />
             </div>
           )}
         </div>
@@ -239,7 +277,7 @@ function StageCard({ stage, index, canEdit, showCapture }: { stage: Stage; index
   );
 }
 
-export function JourneyClient({ stages, canEdit, canCapture }: { stages: Stage[]; canEdit: boolean; canCapture: boolean }) {
+export function JourneyClient({ stages, canEdit, canCapture, inspections }: { stages: Stage[]; canEdit: boolean; canCapture: boolean; inspections: Record<string, InspectionStat> }) {
   return (
     <div className="flex flex-col gap-5">
       {canEdit && <GenerateBar hasStages={stages.length > 0} />}
@@ -251,7 +289,7 @@ export function JourneyClient({ stages, canEdit, canCapture }: { stages: Stage[]
       ) : (
         <div className="flex flex-col gap-4">
           {stages.map((s, i) => (
-            <StageCard key={s.id} stage={s} index={i} canEdit={canEdit} showCapture={canCapture && i === 0} />
+            <StageCard key={s.id} stage={s} index={i} canEdit={canEdit} showCapture={canCapture && i === 0} stat={inspections[s.id]} />
           ))}
           {canEdit && (
             <form action={addStage}>
