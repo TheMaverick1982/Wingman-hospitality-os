@@ -96,7 +96,7 @@ export default async function DashboardPage({
     supabase.from("culture_moments").select("id, author, about, created_at").order("created_at", { ascending: false }).limit(4),
     scoped(supabase.from("coaching_logs").select("id, flag_text, created_at").order("created_at", { ascending: false }).limit(4), effectiveLocation),
     getOrgLocations(),
-    supabase.from("organizations").select("weekly_focus").single(),
+    supabase.from("organizations").select("weekly_focus, total_revenue").single(),
     scoped(
       supabase
         .from("audits")
@@ -199,7 +199,10 @@ export default async function DashboardPage({
 
   const discountTotal = discounts.reduce((s, d) => s + Number(d.amount), 0);
   const byCategory = aggregateBy(discounts, (d) => d.category, (d) => Number(d.amount));
-  const discountPct = discounts.length > 0 && discountTotal > 0 ? "4.0" : "0.0";
+  // Real comp rate as a % of revenue (matches the Accountability page), so the
+  // "discounts drifting high" coaching flag can actually fire here.
+  const orgRevenue = Number((org as { total_revenue?: number } | null)?.total_revenue ?? 0);
+  const discountPct = orgRevenue > 0 ? ((discountTotal / orgRevenue) * 100).toFixed(1) : "0.0";
   const staffAverages = computeSpotCheckAverages(spotChecks);
 
   const flags = computeCoachingFlags({
