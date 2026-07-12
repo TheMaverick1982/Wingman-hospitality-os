@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { monthlyRepeatCohorts, bizHealthTrend } from "@/lib/reporting-trends";
+import { monthlyRepeatCohorts, bizHealthTrend, monthlyTrainingCompletion } from "@/lib/reporting-trends";
 
 describe("monthlyRepeatCohorts", () => {
   const now = new Date(2026, 5, 15); // Jun 15 2026
@@ -32,6 +32,26 @@ describe("monthlyRepeatCohorts", () => {
     const guests = [{ guest_visits: [{ visit_number: 1, visit_date: "2025-01-01" }] }];
     const out = monthlyRepeatCohorts(guests, now, 6);
     expect(out.reduce((s, c) => s + c.newGuests, 0)).toBe(0);
+  });
+});
+
+describe("monthlyTrainingCompletion", () => {
+  const now = new Date(2026, 5, 15);
+  it("averages completion per month and seeds empty months", () => {
+    const out = monthlyTrainingCompletion(
+      [
+        { completion_pct: 80, occurred_on: "2026-05-02" },
+        { completion_pct: 100, occurred_on: "2026-05-20" },
+      ],
+      now,
+      6
+    );
+    expect(out).toHaveLength(6);
+    const may = out.find((m) => m.label === "May")!;
+    expect(may.avgCompletion).toBe(90);
+    expect(may.count).toBe(2);
+    const jan = out.find((m) => m.label === "Jan")!;
+    expect(jan).toMatchObject({ avgCompletion: 0, count: 0 });
   });
 });
 
