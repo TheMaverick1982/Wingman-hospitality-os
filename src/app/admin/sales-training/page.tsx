@@ -1,0 +1,231 @@
+import type { Metadata } from "next";
+import { requirePlatformSection } from "@/lib/auth/require-platform";
+import {
+  PRODUCT_ONE_LINER,
+  WHY_IT_MATTERS,
+  PRODUCT_TOUR,
+  GOLDEN_RULES,
+  PREP,
+  MOVEMENTS,
+  QUESTION_BANK,
+  REFRAMES,
+  NEVER_DO,
+  CLOSE_CHECKLIST,
+} from "@/lib/sales-playbook";
+
+export const metadata: Metadata = { title: "Sales Training · Admin" };
+
+function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold tracking-[0.08em] uppercase text-brick mb-1.5">{eyebrow}</div>
+      <h2 className="text-[22px] font-bold tracking-[-0.01em] text-ink">{title}</h2>
+      {sub && <p className="text-sm text-muted mt-1 max-w-2xl">{sub}</p>}
+    </div>
+  );
+}
+
+export default async function SalesTrainingPage() {
+  await requirePlatformSection("sales_training");
+
+  return (
+    <div className="flex flex-col gap-10 pb-10">
+      {/* Hero */}
+      <div>
+        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Training</h1>
+        <p className="text-base text-muted mt-1 max-w-2xl">
+          How we run a demo — and what you&rsquo;re selling. Learn the product first, then use the demo playbook to guide
+          real conversations with operators.
+        </p>
+      </div>
+
+      {/* The one rule banner */}
+      <div className="bg-[#0A0A0A] rounded-[20px] p-8 text-white">
+        <div className="text-xs font-semibold tracking-[0.08em] uppercase text-[#4D97FF] mb-3">Read this first</div>
+        <p className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.01em] leading-[1.35] max-w-[760px]">
+          You&rsquo;re a guide, not a closer. Everything here is a loose script — a guardrail, never something to read
+          word-for-word. Ask where it hurts, show only what solves it, and if it&rsquo;s not a fit, say so.
+        </p>
+      </div>
+
+      {/* Product primer */}
+      <section className="flex flex-col gap-5">
+        <SectionHeading eyebrow="Start here — know the product" title="What you're selling" sub="Before you demo anything, you should be able to explain Wingman in a sentence and know why an operator should care." />
+        <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-6">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">In one line</div>
+          <p className="text-[18px] font-semibold text-ink leading-[1.4]">{PRODUCT_ONE_LINER}</p>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6">
+          <div className="text-[15px] font-semibold text-ink mb-3">Why it matters</div>
+          <ul className="flex flex-col gap-2.5">
+            {WHY_IT_MATTERS.map((w, i) => (
+              <li key={i} className="flex gap-3 text-[14px] text-charcoal-2 leading-[1.5]">
+                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brick shrink-0" />
+                <span>{w}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <div className="text-[15px] font-semibold text-ink mb-3">What each part does (and the problem it solves)</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {PRODUCT_TOUR.map((a) => (
+              <div key={a.name} className="bg-white border border-line rounded-2xl p-5">
+                <div className="text-[15px] font-semibold text-ink">{a.name}</div>
+                <div className="text-[13.5px] text-charcoal-2 mt-1.5">{a.what}</div>
+                <div className="text-[13px] text-muted mt-2 border-t border-[#F5F5F5] pt-2">
+                  <span className="font-semibold text-brick">Solves: </span>{a.problem}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Golden rules */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="The mindset" title="Five rules for every demo" />
+        <div className="grid grid-cols-1 gap-3">
+          {GOLDEN_RULES.map((r, i) => (
+            <div key={i} className="flex gap-4 bg-white border border-line rounded-2xl p-5">
+              <span className="shrink-0 w-8 h-8 rounded-full bg-brick text-white flex items-center justify-center text-[14px] font-bold">
+                {i + 1}
+              </span>
+              <p className="text-[14.5px] text-charcoal-2 leading-[1.5] self-center">{r}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Prep */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Before the call" title="Two minutes of prep" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {PREP.map((p) => (
+            <div key={p.label} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[15px] font-semibold text-ink">{p.label}</div>
+              <div className="text-[13.5px] text-muted mt-1.5 leading-[1.5]">{p.detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* The demo flow */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="The demo, step by step" title="Five movements" sub="A rough shape for a ~30-minute demo. Adapt freely — the order matters more than the timing." />
+        <div className="flex flex-col gap-4">
+          {MOVEMENTS.map((m) => (
+            <div key={m.n} className="bg-white border border-line rounded-2xl p-6">
+              <div className="flex items-start gap-4">
+                <span className="shrink-0 w-9 h-9 rounded-full bg-brick-tint text-brick flex items-center justify-center text-[15px] font-bold">
+                  {m.n}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h3 className="text-[18px] font-semibold text-ink">{m.title}</h3>
+                    <span className="text-[12px] font-semibold text-charcoal-2 bg-paper rounded-full px-2.5 py-0.5">{m.minutes}</span>
+                  </div>
+                  <p className="text-[14px] text-muted mt-1.5 leading-[1.5]">{m.intent}</p>
+
+                  <div className="mt-4 bg-paper rounded-xl p-4">
+                    <div className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-2 mb-2">Loose script — say it your way</div>
+                    <div className="flex flex-col gap-2.5">
+                      {m.script.map((line, i) => (
+                        <p key={i} className="text-[14px] text-ink italic leading-[1.5]">{line}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive mb-1.5">Do this</div>
+                      <ul className="flex flex-col gap-1.5">
+                        {m.doThis.map((d, i) => (
+                          <li key={i} className="text-[13.5px] text-charcoal-2 flex gap-2 leading-[1.45]">
+                            <span className="text-olive font-bold shrink-0">✓</span><span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">Don&rsquo;t</div>
+                      <ul className="flex flex-col gap-1.5">
+                        {m.dont.map((d, i) => (
+                          <li key={i} className="text-[13.5px] text-muted flex gap-2 leading-[1.45]">
+                            <span className="text-brick font-bold shrink-0">✕</span><span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Question bank */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Discovery" title="Question bank" sub="Keep these in your back pocket. Ask, then listen — the goal is to hear their problem in their words." />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {QUESTION_BANK.map((g) => (
+            <div key={g.theme} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[14px] font-semibold text-ink mb-2.5">{g.theme}</div>
+              <ul className="flex flex-col gap-2">
+                {g.questions.map((q, i) => (
+                  <li key={i} className="text-[13.5px] text-charcoal-2 flex gap-2 leading-[1.45]">
+                    <span className="text-muted-2 shrink-0">→</span><span>{q}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Reframes */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="When they hesitate" title="Reframes, not rebuttals" sub="Never argue. Acknowledge the concern, then help them see it a different way." />
+        <div className="flex flex-col gap-3">
+          {REFRAMES.map((r, i) => (
+            <div key={i} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[14.5px] font-semibold text-ink">{r.objection}</div>
+              <div className="text-[13.5px] text-charcoal-2 mt-1.5 leading-[1.5] border-l-2 border-brick/30 pl-3">{r.reframe}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Never do + close checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <section className="bg-white border border-line rounded-2xl p-6">
+          <div className="text-[11px] font-semibold tracking-[0.08em] uppercase text-brick mb-3">The salesy tells</div>
+          <h2 className="text-[18px] font-bold text-ink mb-4">Never do this</h2>
+          <ul className="flex flex-col gap-2.5">
+            {NEVER_DO.map((n, i) => (
+              <li key={i} className="text-[13.5px] text-charcoal-2 flex gap-2.5 leading-[1.45]">
+                <span className="text-brick font-bold shrink-0">✕</span><span>{n}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="bg-olive-tint/60 border border-olive/20 rounded-2xl p-6">
+          <div className="text-[11px] font-semibold tracking-[0.08em] uppercase text-olive mb-3">Before you hang up</div>
+          <h2 className="text-[18px] font-bold text-ink mb-4">A good demo checklist</h2>
+          <ul className="flex flex-col gap-3">
+            {CLOSE_CHECKLIST.map((c, i) => (
+              <li key={i} className="text-[14px] text-charcoal-2 flex gap-2.5 leading-[1.45]">
+                <span className="mt-0.5 inline-block w-4 h-4 border-2 border-olive/50 rounded-[4px] shrink-0" />
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}

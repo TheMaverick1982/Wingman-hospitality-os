@@ -18,3 +18,18 @@ The in-app Help Center content lives in `src/lib/help-content.ts` (rendered unde
 Product Help is shared across all customers and is maintained in code (not
 per-org). The per-organization "Team playbook" (`playbook_articles`) is separate
 and user-authored — don't put product docs there.
+
+# Keep the sales playbook current
+
+When you ship a new user-facing feature (a new section, a meaningful capability),
+also update the **Sales Training** playbook in `src/lib/sales-playbook.ts`
+(rendered at `/admin/sales-training`) in the same change — at minimum add the
+feature to `PRODUCT_TOUR` (what it does + the problem it solves), and update the
+demo movements, question bank, or reframes if the feature changes how a demo
+should be run. This keeps the demo staff's playbook in lockstep with the product.
+
+So, for every user-facing feature, keep these three in sync in the same change:
+1. **Help Center** — `src/lib/help-content.ts` (customer-facing docs).
+2. **AI doctrine** — `src/lib/ai-doctrine.ts` (the `HOSPITALITY_DOCTRINE` grounding
+   the AI), when the feature adds product knowledge the AI should reason from.
+3. **Sales playbook** — `src/lib/sales-playbook.ts` (internal demo enablement).
