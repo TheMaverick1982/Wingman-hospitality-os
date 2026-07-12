@@ -114,7 +114,7 @@ function ImportPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function SocialToolbar() {
+export function SocialToolbar({ connected }: { connected: boolean }) {
   const [open, setOpen] = useState<"none" | "new" | "import">("none");
 
   return (
@@ -138,7 +138,7 @@ export function SocialToolbar() {
 
       {open === "new" && (
         <div className="bg-white border border-line rounded-2xl p-5 shadow-sm">
-          <Composer onDone={() => setOpen("none")} />
+          <Composer onDone={() => setOpen("none")} connected={connected} />
         </div>
       )}
       {open === "import" && (

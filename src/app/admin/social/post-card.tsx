@@ -48,7 +48,7 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
   if (editing) {
     return (
       <div className="bg-white border border-brick/40 rounded-2xl p-5 shadow-sm">
-        <Composer post={post} images={post.imageUrls} onDone={() => setEditing(false)} />
+        <Composer post={post} images={post.imageUrls} onDone={() => setEditing(false)} connected={connected} />
       </div>
     );
   }

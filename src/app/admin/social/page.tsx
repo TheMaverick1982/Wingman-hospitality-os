@@ -107,7 +107,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
         flash={flash}
       />
 
-      <SocialToolbar />
+      <SocialToolbar connected={connected} />
 
       {posts.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-10 text-center text-muted">
