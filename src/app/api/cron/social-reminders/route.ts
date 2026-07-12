@@ -100,6 +100,51 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // 1b. Content runway: warn the owner once when their furthest-out scheduled
+  // post is inside the runway window (or they've run out), so they schedule more
+  // before the queue goes dry. Cleared automatically once the runway is healthy
+  // again, and re-armed at most weekly while it stays low.
+  const RUNWAY_DAYS = 14;
+  let runwayAlerted = false;
+  try {
+    const { count: totalPosts } = await admin.from("social_posts").select("id", { count: "exact", head: true });
+    if (settings && (totalPosts ?? 0) > 0) {
+      const [{ data: furthestRows }, { count: upcomingCount }] = await Promise.all([
+        admin.from("social_posts").select("scheduled_at").eq("status", "scheduled").gte("scheduled_at", nowIso).order("scheduled_at", { ascending: false }).limit(1),
+        admin.from("social_posts").select("id", { count: "exact", head: true }).eq("status", "scheduled").gte("scheduled_at", nowIso),
+      ]);
+      const furthest = (furthestRows?.[0] as { scheduled_at: string } | undefined)?.scheduled_at ?? null;
+      const daysLeft = furthest ? Math.ceil((new Date(furthest).getTime() - Date.now()) / 86400000) : -1;
+      const low = !furthest || daysLeft <= RUNWAY_DAYS;
+      const lastAlert = settings.content_runway_alert_at ? new Date(settings.content_runway_alert_at).getTime() : 0;
+
+      if (low) {
+        if (Date.now() - lastAlert >= 7 * 86400000) {
+          const line = furthest
+            ? `Your last scheduled post goes out ${esc(new Date(furthest).toLocaleDateString())} — about ${daysLeft} day${daysLeft === 1 ? "" : "s"} out. You have ${upcomingCount ?? 0} post${(upcomingCount ?? 0) === 1 ? "" : "s"} left in the queue.`
+            : `You have no upcoming posts scheduled.`;
+          const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
+            <p style="font-size:16px;font-weight:600;">Time to plan more posts 🗓️</p>
+            <p style="font-size:14px;color:#525252;">${line} Keep the runway ahead of you so nothing goes quiet.</p>
+            <p style="font-size:14px;"><a href="${SITE}/admin/social" style="color:#0a6cff;font-weight:600;">Open the planner</a> to schedule the next batch.</p>
+          </div>`;
+          try {
+            await sendEmail({ to: [BILLING_OWNER_EMAIL], subject: "Your scheduled social posts are running low", html });
+            await admin.from("social_settings").update({ content_runway_alert_at: nowIso }).eq("id", 1);
+            runwayAlerted = true;
+          } catch (e) {
+            console.error("[social] runway alert failed", e);
+          }
+        }
+      } else if (lastAlert) {
+        // Runway healthy again — clear so it can fire fresh next time it dips.
+        await admin.from("social_settings").update({ content_runway_alert_at: null }).eq("id", 1);
+      }
+    }
+  } catch (e) {
+    console.error("[social] runway check failed", e);
+  }
+
   // 2. Purge old posted images (but never a post that failed to publish — its
   // image is kept so a Retry still works).
   const cutoff = new Date(Date.now() - IMAGE_RETENTION_DAYS * 86400000).toISOString();
@@ -122,5 +167,5 @@ export async function GET(request: NextRequest) {
     purged++;
   }
 
-  return NextResponse.json({ ok: true, published, reminded, purged });
+  return NextResponse.json({ ok: true, published, reminded, purged, runwayAlerted });
 }
