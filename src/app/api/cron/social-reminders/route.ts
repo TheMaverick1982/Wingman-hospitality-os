@@ -92,13 +92,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. Purge old posted images.
+  // 2. Purge old posted images (but never a post that failed to publish — its
+  // image is kept so a Retry still works).
   const cutoff = new Date(Date.now() - IMAGE_RETENTION_DAYS * 86400000).toISOString();
   const { data: stale } = await admin
     .from("social_posts")
     .select("id, image_paths")
     .eq("status", "posted")
     .is("images_purged_at", null)
+    .is("publish_error", null)
     .lt("posted_at", cutoff)
     .limit(100);
 
