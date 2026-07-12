@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { savePost, type SocialFormState } from "./actions";
-import { SOCIAL_PLATFORMS, type SocialPost } from "@/lib/social";
+import { SOCIAL_PLATFORMS, SOCIAL_FORMATS, type SocialPost } from "@/lib/social";
 
 const initial: SocialFormState = { error: null, ok: false };
 
@@ -28,7 +28,10 @@ export function Composer({
 }) {
   const [state, action, pending] = useActionState(savePost, initial);
   const [keep, setKeep] = useState<string[]>((images ?? []).map((i) => i.path));
+  const [format, setFormat] = useState<string>(post?.format ?? "feed");
   const formRef = useRef<HTMLFormElement>(null);
+  const isStory = format === "story";
+  const isReel = format === "reel";
 
   useEffect(() => {
     if (state.ok) {
@@ -42,6 +45,30 @@ export function Composer({
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-4">
       {post && <input type="hidden" name="id" value={post.id} />}
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[13px] font-semibold text-charcoal-2 mr-1">Format</span>
+        {SOCIAL_FORMATS.map((f) => (
+          <label
+            key={f.key}
+            className={`text-[13px] font-semibold rounded-full px-3.5 py-1.5 border cursor-pointer transition-colors ${
+              format === f.key ? "bg-ink text-white border-ink" : "text-charcoal-2 border-line hover:border-brick"
+            }`}
+          >
+            <input type="radio" name="format" value={f.key} checked={format === f.key} onChange={() => setFormat(f.key)} className="sr-only" />
+            {f.label}
+          </label>
+        ))}
+      </div>
+      {isStory && (
+        <p className="text-[12px] text-[#b4884a] bg-gold-tint rounded-lg px-3 py-2">
+          Stories are posted by hand — at its scheduled time you&rsquo;ll get a reminder with the graphic so you can add the link
+          sticker in the Instagram app (the API can&rsquo;t). Instagram only.
+        </p>
+      )}
+      {isReel && (
+        <p className="text-[12px] text-muted bg-paper rounded-lg px-3 py-2">Attach a vertical (9:16) MP4. It auto-publishes as a Reel.</p>
+      )}
 
       <div>
         <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Caption</label>
@@ -134,7 +161,7 @@ export function Composer({
       </div>
 
       <div className="flex items-center gap-3 pt-1 flex-wrap">
-        {connected && (
+        {connected && !isStory && (
           <button
             type="submit"
             name="intent"
