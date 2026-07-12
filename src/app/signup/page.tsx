@@ -23,7 +23,11 @@ function SignupForm() {
   const [state, formAction, pending] = useActionState(signup, initialState);
   // Carried over from the demo's "Create your account" nudge so a converting
   // visitor doesn't retype the email they already gave.
-  const prefillEmail = useSearchParams().get("email") ?? "";
+  const params = useSearchParams();
+  const prefillEmail = params.get("email") ?? "";
+  // A promo code passed in the link (e.g. from the /launch funnel) pre-fills the
+  // field; it's still validated at signup.
+  const prefillCode = (params.get("code") ?? "").toUpperCase().replace(/[^A-Z0-9_-]/g, "");
 
   return (
     <div className="min-h-full flex flex-col force-light bg-panel">
@@ -106,7 +110,8 @@ function SignupForm() {
                 />
               </Field>
               <Field label="Promo code (optional)">
-                <input name="promoCode" placeholder="Have a code? Enter it here" className={`${inputClass} uppercase`} />
+                <input name="promoCode" defaultValue={prefillCode} placeholder="Have a code? Enter it here" className={`${inputClass} uppercase`} />
+                {prefillCode && <p className="text-[12px] text-olive font-medium mt-1">Code {prefillCode} will be applied at signup.</p>}
               </Field>
               <div className="mt-1">
                 <TurnstileWidget />

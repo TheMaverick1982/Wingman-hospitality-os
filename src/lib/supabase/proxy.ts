@@ -40,6 +40,8 @@ const PUBLIC_PREFIXES = [
   "/scorecard",
   // Link-in-bio page for social profiles.
   "/links",
+  // Launch-special funnel (unlinked landing page).
+  "/launch",
 ];
 
 export async function updateSession(request: NextRequest) {
