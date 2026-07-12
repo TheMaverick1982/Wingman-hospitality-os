@@ -247,6 +247,7 @@ export const ARTICLES: HelpArticle[] = [
         "Click \"Apply with AI\". The stage rewrites in place and the card updates with the new copy.",
       ] },
       { kind: "tip", text: "The \"Manager inspects\" line on each stage is written as a yes/no observable — use it as your spot-check list on the floor so the standard actually gets held, shift to shift." },
+      { kind: "note", text: "The first stage always includes asking whether it's the guest's first visit (e.g. \"Is this your first time with us?\"). Spotting first-timers at the door feeds Guest Bounce Back — the program that turns first-timers into regulars — so it's built into stage one by design." },
       { kind: "note", text: "\"Refine with AI\" changes only the one stage. \"Regenerate\" (at the top) replaces the whole journey — so refine or edit in place once it's close. Managers and owners can generate, refine, and edit; staff can view." },
       { kind: "p", text: "Use \"Print / PDF\" in the top corner to print the full journey or save it as a PDF — handy for a training binder or a pre-shift huddle." },
     ],
