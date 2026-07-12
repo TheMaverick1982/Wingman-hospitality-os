@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { generateJourney, refineStage, updateStage, addStage, deleteStage, type JourneyState, type RefineState } from "./actions";
+import { generateJourney, refineStage, captureFirstTimer, updateStage, addStage, deleteStage, type JourneyState, type RefineState, type CaptureState } from "./actions";
 
 export type Stage = {
   id: string;
@@ -17,6 +17,37 @@ export type Stage = {
 
 const initial: JourneyState = { error: null };
 const refineInitial: RefineState = { error: null, ok: false };
+const captureInitial: CaptureState = { error: null, ok: false, capturedName: null, nonce: 0 };
+
+// Log a first-time guest straight into Bounce Back from the arrival stage. This
+// is the door-side capture the journey's stage 1 calls for — a real write, not
+// just a printed standard.
+function FirstTimerCapture() {
+  const [state, action, pending] = useActionState(captureFirstTimer, captureInitial);
+
+  return (
+    <div className="mt-3 rounded-xl border border-brick/30 bg-brick-tint/40 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[15px]">🛬</span>
+        <span className="text-[13.5px] font-semibold text-ink">Log a first-timer</span>
+        <span className="text-[12px] text-muted">— catches them into Guest Bounce Back right now</span>
+      </div>
+      {/* nonce bumps on each success, remounting the inputs so they clear. */}
+      <form key={state.nonce} action={action} className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <input name="name" required placeholder="Guest name" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick" />
+        <input name="phone" placeholder="Phone (optional)" className="sm:w-[150px] rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick" />
+        <input name="email" type="email" placeholder="Email (optional)" className="sm:w-[180px] rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick" />
+        <button type="submit" disabled={pending} className="shrink-0 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2 hover:bg-brick-dark transition-colors disabled:opacity-60">
+          {pending ? "Logging…" : "Log"}
+        </button>
+      </form>
+      {state.error && <div className="text-[13px] text-danger mt-2">{state.error}</div>}
+      {state.ok && state.capturedName && (
+        <div className="text-[13px] text-olive font-semibold mt-2">Logged {state.capturedName} — they&rsquo;re in Bounce Back for visit-2 follow-up.</div>
+      )}
+    </div>
+  );
+}
 
 const STYLES = [
   "Fine dining",
@@ -119,7 +150,7 @@ function RefineBox({ stageId, onClose }: { stageId: string; onClose: () => void 
   );
 }
 
-function StageCard({ stage, index, canEdit }: { stage: Stage; index: number; canEdit: boolean }) {
+function StageCard({ stage, index, canEdit, showCapture }: { stage: Stage; index: number; canEdit: boolean; showCapture: boolean }) {
   const [editing, setEditing] = useState(false);
   const [refining, setRefining] = useState(false);
   const field = "w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick";
@@ -202,11 +233,13 @@ function StageCard({ stage, index, canEdit }: { stage: Stage; index: number; can
         </div>
       )}
       {canEdit && refining && <RefineBox stageId={stage.id} onClose={() => setRefining(false)} />}
+
+      {showCapture && <FirstTimerCapture />}
     </div>
   );
 }
 
-export function JourneyClient({ stages, canEdit }: { stages: Stage[]; canEdit: boolean }) {
+export function JourneyClient({ stages, canEdit, canCapture }: { stages: Stage[]; canEdit: boolean; canCapture: boolean }) {
   return (
     <div className="flex flex-col gap-5">
       {canEdit && <GenerateBar hasStages={stages.length > 0} />}
@@ -218,7 +251,7 @@ export function JourneyClient({ stages, canEdit }: { stages: Stage[]; canEdit: b
       ) : (
         <div className="flex flex-col gap-4">
           {stages.map((s, i) => (
-            <StageCard key={s.id} stage={s} index={i} canEdit={canEdit} />
+            <StageCard key={s.id} stage={s} index={i} canEdit={canEdit} showCapture={canCapture && i === 0} />
           ))}
           {canEdit && (
             <form action={addStage}>

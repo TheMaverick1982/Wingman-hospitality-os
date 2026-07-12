@@ -3,10 +3,60 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { canEditSection } from "@/lib/auth/permissions";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { consumeAiLimit } from "@/lib/rate-limit";
 
 export type JourneyState = { error: string | null };
+
+// nonce increments per successful capture so the form remounts + clears.
+export type CaptureState = { error: string | null; ok: boolean; capturedName: string | null; nonce: number };
+
+// Log a first-time guest straight from the journey's arrival stage. Writes a
+// real guests row (source='journey', captured_by=staff) plus visit 1 today, so
+// the door-side "flag a first-timer" standard actually feeds Bounce Back instead
+// of relying on someone re-entering them later. Anyone who can add to Bounce Back
+// may capture.
+export async function captureFirstTimer(prev: CaptureState, formData: FormData): Promise<CaptureState> {
+  const nonce = prev.nonce ?? 0;
+  const fail = (error: string): CaptureState => ({ error, ok: false, capturedName: null, nonce });
+
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("You're not signed in.");
+  if (!canEditSection(profile.accessRole, "bounceback", profile.permissionOverrides)) {
+    return fail("You don't have access to log guests.");
+  }
+
+  const name = String(formData.get("name") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+  if (!name) return fail("Enter the guest's name.");
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return fail("Organization not found.");
+
+  const { data: guest, error } = await supabase
+    .from("guests")
+    .insert({ org_id: org.id, name, phone, email, source: "journey", captured_by: profile.fullName })
+    .select("id")
+    .single();
+  if (error) return fail(error.message);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { error: vErr } = await supabase.from("guest_visits").insert({
+    guest_id: guest.id,
+    org_id: org.id,
+    visit_number: 1,
+    visit_date: today,
+    location_id: profile.locationId,
+  });
+  if (vErr) return fail(vErr.message);
+
+  revalidatePath("/bounceback");
+  revalidatePath("/dashboard");
+  return { error: null, ok: true, capturedName: name, nonce: nonce + 1 };
+}
 
 type GeneratedStage = {
   name: string;
