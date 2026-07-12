@@ -1,9 +1,52 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { payableDateFrom } from "@/lib/sales-commissions";
+import { ensureDemoUser, reseedDemoOrg } from "@/lib/demo/reseed";
+import { DEMO_EMAIL } from "@/lib/demo/constants";
+
+// Must match the impersonation cookie used by the shared exit action + banner
+// (src/app/admin/organizations/actions.ts) — that's how a sales agent returns
+// to their platform account after running a demo.
+const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
+
+// Let a platform sales agent step into the shared demo account to run a live
+// demo for a prospect, then step back to their own account via the existing
+// impersonation banner. Reseeds the demo first so it's clean.
+export async function enterDemoAsStaff() {
+  const actor = await platformSectionActor("sales_training");
+  if (!actor) throw new Error("You don't have sales access.");
+
+  await ensureDemoUser();
+
+  const supabase = await createClient();
+  const {
+    data: { session: mySession },
+  } = await supabase.auth.getSession();
+
+  const admin = createAdminClient();
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
+  if (linkError || !linkData) throw new Error("Couldn't open the demo. Try again.");
+
+  const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: linkData.properties.hashed_token, type: "magiclink" });
+  if (verifyError) throw new Error("Couldn't start the demo session.");
+
+  // Stash the agent's own session so the "exit" banner returns them here.
+  const cookieStore = await cookies();
+  if (mySession?.refresh_token) {
+    cookieStore.set(IMPERSONATOR_COOKIE, mySession.refresh_token, { httpOnly: true, secure: true, sameSite: "lax", path: "/" });
+  }
+
+  // Magic-link entry bypasses the login reseed hook, so reseed here for a clean demo.
+  await reseedDemoOrg();
+
+  redirect("/dashboard");
+}
 
 // nonce increments on each successful claim so the form can remount + clear.
 export type ClaimState = { error: string | null; ok: boolean; nonce: number };

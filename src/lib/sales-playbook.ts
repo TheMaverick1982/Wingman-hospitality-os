@@ -105,7 +105,7 @@ export const PREP: PrepItem[] = [
   { label: "Look them up first", detail: "Concept, number of locations, a glance at their recent reviews and website. Two minutes of homework makes the whole call land." },
   { label: "Have one hypothesis", detail: "Based on what you saw, guess their biggest retention gap (e.g. \"great food, but no reason for first-timers to come back\"). You'll test it, not assert it." },
   { label: "Know roughly what they'd pay", detail: "Standard pricing is $199/mo for the first location + $100/mo per additional location. Don't lead with price — but never be caught off guard by it." },
-  { label: "Have the demo account ready", detail: "Be logged in and warmed up before the call so you're never fumbling for a screen while they wait." },
+  { label: "Have the demo ready", detail: "Hit \"Run a live demo\" (top of your Sales Dashboard or Sales Training) to jump into a fresh, fully-loaded demo account — it resets clean each time. Use \"Exit\" in the banner to return to your account when you're done." },
 ];
 
 export type Movement = {

@@ -3,6 +3,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { commissionsForRep, formatCents, formatDate, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
 import { ClaimForm } from "./claim-form";
+import { enterDemoAsStaff } from "./actions";
 import {
   PRODUCT_ONE_LINER,
   WHY_IT_MATTERS,
@@ -22,6 +23,8 @@ import {
 } from "@/lib/sales-playbook";
 
 export const metadata: Metadata = { title: "Sales Training · Admin" };
+// The "Run a live demo" action reseeds the demo org — give it room.
+export const maxDuration = 60;
 
 const STATUS_BADGE: Record<CommissionStatus, { label: string; className: string }> = {
   pending: { label: "Pending approval", className: "text-[#B45309] bg-gold-tint" },
@@ -58,12 +61,19 @@ export default async function SalesTrainingPage() {
   return (
     <div className="flex flex-col gap-10 pb-10">
       {/* Hero */}
-      <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Training</h1>
-        <p className="text-base text-muted mt-1 max-w-2xl">
-          How we run a demo — and what you&rsquo;re selling. Learn the product first, then use the demo playbook to guide
-          real conversations with operators.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Training</h1>
+          <p className="text-base text-muted mt-1 max-w-2xl">
+            How we run a demo — and what you&rsquo;re selling. Learn the product first, then use the demo playbook to guide
+            real conversations with operators.
+          </p>
+        </div>
+        <form action={enterDemoAsStaff} className="shrink-0">
+          <button type="submit" className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors">
+            ▶ Run a live demo
+          </button>
+        </form>
       </div>
 
       {/* Your commissions — balance, claim button, and your claim history */}
