@@ -50,6 +50,37 @@ export function monthlyRepeatCohorts(guests: GuestLite[], now: Date, monthsBack 
   return order.map((k) => buckets.get(k)!);
 }
 
+// --- Training completion by month --------------------------------------------
+
+export type SignoffLite = { completion_pct: number; occurred_on: string | null };
+export type TrainingMonth = { key: string; label: string; avgCompletion: number; count: number };
+
+// Average sign-off completion per month over the last `monthsBack` months — a
+// proxy for how close the team was held to standard. Pairs with the repeat-rate
+// cohorts so an operator can see the two move together.
+export function monthlyTrainingCompletion(signoffs: SignoffLite[], now: Date, monthsBack = 6): TrainingMonth[] {
+  const buckets = new Map<string, { sum: number; count: number; label: string }>();
+  const order: string[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = monthKey(d.getFullYear(), d.getMonth());
+    buckets.set(key, { sum: 0, count: 0, label: MONTH_LABELS[d.getMonth()] });
+    order.push(key);
+  }
+  for (const s of signoffs) {
+    if (!s.occurred_on) continue;
+    const key = s.occurred_on.slice(0, 7);
+    const b = buckets.get(key);
+    if (!b) continue;
+    b.sum += Number(s.completion_pct) || 0;
+    b.count += 1;
+  }
+  return order.map((k) => {
+    const b = buckets.get(k)!;
+    return { key: k, label: b.label, count: b.count, avgCompletion: b.count > 0 ? Math.round(b.sum / b.count) : 0 };
+  });
+}
+
 // --- Business-health (POS) weekly trend --------------------------------------
 
 export type BizHealthRow = {

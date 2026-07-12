@@ -6,7 +6,7 @@ import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
-import { monthlyRepeatCohorts, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
+import { monthlyRepeatCohorts, monthlyTrainingCompletion, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
@@ -53,6 +53,7 @@ export default async function ReportingPage({
     { data: schedules },
     { data: growthPlan },
     { data: bizHealth },
+    { data: signoffTrend },
     locations,
   ] = await Promise.all([
     supabase.from("discounts").select("amount, location_id").gte("occurred_on", cutoff),
@@ -72,6 +73,7 @@ export default async function ReportingPage({
       .select("period_date, net_sales, labor_cost, comp_cost, checks")
       .order("period_date", { ascending: false })
       .limit(12),
+    supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190)),
     getOrgLocations(),
   ]);
 
@@ -97,8 +99,20 @@ export default async function ReportingPage({
   const referralRate = allGuests.length > 0 ? Math.round((referredCount / allGuests.length) * 100) : 0;
 
   // Trends (period-over-period, independent of the range toggle above).
-  const cohorts = monthlyRepeatCohorts(allGuests, currentDate(), 6);
+  const now = currentDate();
+  const cohorts = monthlyRepeatCohorts(allGuests, now, 6);
   const maxCohortPct = Math.max(10, ...cohorts.map((c) => c.repeatPct));
+  const trainingMonths = monthlyTrainingCompletion((signoffTrend ?? []) as { completion_pct: number; occurred_on: string | null }[], now, 6);
+  // Pair training completion with the same months' repeat rate. Only worth
+  // showing once there's real sign-off history to relate to retention.
+  const trainingVsRetention = cohorts.map((c, i) => ({
+    label: c.label,
+    training: trainingMonths[i]?.avgCompletion ?? 0,
+    trainingCount: trainingMonths[i]?.count ?? 0,
+    repeat: c.repeatPct,
+    newGuests: c.newGuests,
+  }));
+  const hasTrainingHistory = trainingMonths.some((m) => m.count > 0);
   const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
   const bizMetrics =
     bizPoints.length >= 2
@@ -284,6 +298,50 @@ export default async function ReportingPage({
           ))}
         </div>
       </div>
+
+      {hasTrainingHistory && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Training vs. retention</span>
+            <span className="text-[13px] text-muted">last 6 months</span>
+          </div>
+          <p className="text-[13px] text-muted mb-4">A team held to standard brings more guests back. Watch these two move together — when training climbs, so should repeat rate.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[420px]">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-2 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em]">Month</th>
+                  <th className="pb-2 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em]">Team training</th>
+                  <th className="pb-2 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em]">Repeat rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trainingVsRetention.map((r) => (
+                  <tr key={r.label} className="border-t border-[#F5F5F5]">
+                    <td className="py-2.5 font-medium text-ink">{r.label}</td>
+                    <td className="py-2.5">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-24 h-1.5 rounded-full bg-paper overflow-hidden">
+                          <span className="block h-full bg-olive" style={{ width: `${r.training}%` }} />
+                        </span>
+                        <span className="text-charcoal-2 tabular-nums text-[13px]">{r.trainingCount > 0 ? `${r.training}%` : "—"}</span>
+                      </span>
+                    </td>
+                    <td className="py-2.5">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-24 h-1.5 rounded-full bg-paper overflow-hidden">
+                          <span className="block h-full bg-brick" style={{ width: `${r.repeat}%` }} />
+                        </span>
+                        <span className="text-charcoal-2 tabular-nums text-[13px]">{r.newGuests > 0 ? `${r.repeat}%` : "—"}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {bizMetrics && (
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
