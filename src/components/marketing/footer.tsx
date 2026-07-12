@@ -39,6 +39,9 @@ export function MarketingFooter() {
           <Link href="/how-it-works" className="text-[#525252]">
             How it works
           </Link>
+          <Link href="/guest-journey" className="text-[#525252]">
+            Guest Journey
+          </Link>
           <Link href="/pricing" className="text-[#525252]">
             Pricing
           </Link>
