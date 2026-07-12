@@ -383,6 +383,8 @@ export const ARTICLES: HelpArticle[] = [
         "Menu profitability — your menu items sorted into Stars, Plowhorses, Puzzles, and Dogs, with a one-line takeaway (e.g. how many Dogs are dragging your margin) pulled straight from Menu Engineering.",
         "Staff scorecard & comps by server — each person's average spot-check score (lowest first, so coaching goes where it's needed) and who's giving away the most in comps, with outliers flagged.",
       ] },
+      { kind: "h", text: "AI briefing" },
+      { kind: "p", text: "Tap \"Summarize this report\" for a 15-second read written from your live numbers — what's moving the right way, what's slipping, and the one highest-leverage thing to do this week. It's generated on demand, so it only runs when you ask." },
       { kind: "h", text: "Scheduled email reports" },
       { kind: "p", text: "Owners can have a report emailed automatically on a schedule — weekly, biweekly, or monthly — to whoever needs it (you, an investor, a GM). Click \"Schedule report,\" pick the cadence, the sections to include, and the recipient emails. Each recipient gets a clean digest on cadence without anyone lifting a finger." },
       { kind: "note", text: "Reporting is available to owners and (view-only) managers." },
