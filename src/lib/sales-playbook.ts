@@ -26,13 +26,14 @@ export const WHY_IT_MATTERS: string[] = [
 export type ProductArea = { name: string; what: string; problem: string };
 
 export const PRODUCT_TOUR: ProductArea[] = [
-  { name: "Guest Bounce Back", what: "Logs guests and their return visits, and flags the ones slipping away.", problem: "Owners have no idea who came once and never returned — this makes the first-timer-to-regular journey visible and actionable." },
+  { name: "Guest Bounce Back", what: "Logs guests and their return visits, then hands you the action lists: a win-back list of guests who've gone quiet 30+ days, and a 'ready to refer' list of your happiest guests who haven't referred anyone yet.", problem: "Owners have no idea who came once and never returned — this makes the first-timer-to-regular journey visible and tells the team exactly who to call, win back, and ask for a referral." },
   { name: "Guest Journey", what: "Maps the whole guest experience into ordered moments, each with a standard, a script, and what a manager inspects — and lets the host log a first-timer at the door straight into Bounce Back.", problem: "The experience is left to chance and memory; this turns it into a designed, repeatable playbook, and makes sure no first-time guest slips away uncaptured." },
   { name: "Culture", what: "Captures the owner's standard, core values, and weekly focus in their own words.", problem: "Culture is felt but never written down, so it can't be trained or scaled to new hires and second locations." },
   { name: "Training & Standards", what: "Builds role-by-role training programs with a real sign-off log.", problem: "New hires 'pick it up as they go,' so the experience drifts. This makes training consistent and provable." },
   { name: "Accountability", what: "Spot-checks, daily and pre-shift checklists, and automatic coaching flags.", problem: "Standards slip the moment the owner isn't watching; this inspects what they expect, every shift." },
   { name: "Service Recovery", what: "Tracks comps and how guest issues were made right.", problem: "A bad moment quietly loses a guest forever; this makes recovery a habit, not an accident." },
   { name: "Hiring, Growth & Menu", what: "Interview criteria that screen for the person, plus revenue and menu-engineering tools.", problem: "Rounds out the system — better people, and the numbers to grow profitably." },
+  { name: "Reporting", what: "Rolls every section into one view, shows repeat rate by cohort over the last 6 months and week-over-week money trends, and can email a scheduled digest to the owner or an investor.", problem: "Operators fly blind on whether things are actually improving — this turns the whole system into a trend they (and their investors) can watch, hands-off." },
 ];
 
 export const GOLDEN_RULES: string[] = [
