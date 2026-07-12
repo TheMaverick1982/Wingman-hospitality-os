@@ -56,6 +56,8 @@ For each stage:
 - inspect: the single thing a manager watches for to know the standard was hit (a yes/no observable).
 - timing: a timing standard if the moment has one (e.g. "acknowledge within 10 seconds"), else "".
 
+IMPORTANT — first-time guest: In the FIRST stage (the arrival / greet), the standard AND the script must include a natural, warm way for the team to find out whether this is the guest's first visit — for example, working "Is this your first time with us?" into the welcome. Catching first-timers at the door feeds this restaurant's Guest Bounce Back program (turning first-timers into regulars), so make identifying the first-time guest a non-negotiable part of stage one, and note in that stage's "inspect" that the manager confirms first-timers are being spotted and captured.
+
 Make every line concrete and immediately usable by a real operator. No generic filler.`;
 
   let stages: GeneratedStage[];
