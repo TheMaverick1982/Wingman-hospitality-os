@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { generateJourney, updateStage, addStage, deleteStage, type JourneyState } from "./actions";
+import { useActionState, useEffect, useState } from "react";
+import { generateJourney, refineStage, updateStage, addStage, deleteStage, type JourneyState, type RefineState } from "./actions";
 
 export type Stage = {
   id: string;
@@ -16,6 +16,7 @@ export type Stage = {
 };
 
 const initial: JourneyState = { error: null };
+const refineInitial: RefineState = { error: null, ok: false };
 
 const STYLES = [
   "Fine dining",
@@ -65,8 +66,62 @@ function GenerateBar({ hasStages }: { hasStages: boolean }) {
   );
 }
 
+const REFINE_QUICK = ["Make it warmer", "Make it shorter", "More upscale tone", "Add an upsell", "Make it more specific"];
+
+function RefineBox({ stageId, onClose }: { stageId: string; onClose: () => void }) {
+  const [state, action, pending] = useActionState(refineStage, refineInitial);
+
+  // Close the box once the AI has applied the change; the revalidated stage
+  // renders with the new copy underneath.
+  useEffect(() => {
+    if (state.ok) onClose();
+  }, [state.ok, onClose]);
+
+  return (
+    <form action={action} className="pl-10 pt-1 border-t border-[#F5F5F5] mt-1 flex flex-col gap-2.5">
+      <input type="hidden" name="id" value={stageId} />
+      <label className="text-[11.5px] font-semibold uppercase tracking-wide text-brick block">Ask AI to revise this stage</label>
+      <textarea
+        name="feedback"
+        rows={2}
+        disabled={pending}
+        autoFocus
+        placeholder="e.g. Warmer and more personal, and mention our house margarita by name."
+        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick disabled:opacity-60"
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {REFINE_QUICK.map((q) => (
+          <button
+            key={q}
+            type="submit"
+            name="feedback"
+            value={q}
+            disabled={pending}
+            className="text-[12px] font-medium text-charcoal-2 bg-paper border border-line rounded-full px-3 py-1 hover:border-brick hover:text-brick transition-colors disabled:opacity-60"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2 hover:bg-brick-dark transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+        >
+          {pending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+          {pending ? "Revising…" : "Apply with AI"}
+        </button>
+        <button type="button" onClick={onClose} disabled={pending} className="text-[14px] text-muted-2 hover:text-ink disabled:opacity-60">Cancel</button>
+        {state.error && <span className="text-[13px] text-danger">{state.error}</span>}
+      </div>
+    </form>
+  );
+}
+
 function StageCard({ stage, index, canEdit }: { stage: Stage; index: number; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [refining, setRefining] = useState(false);
   const field = "w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick";
   const lbl = "text-[11.5px] font-semibold uppercase tracking-wide text-muted-2 block mb-1";
 
@@ -136,8 +191,9 @@ function StageCard({ stage, index, canEdit }: { stage: Stage; index: number; can
         </div>
       </div>
 
-      {canEdit && (
+      {canEdit && !refining && (
         <div className="flex items-center gap-3 pl-10 pt-1 border-t border-[#F5F5F5] mt-1">
+          <button type="button" onClick={() => setRefining(true)} className="text-[13px] font-semibold text-brick hover:text-brick-dark">✨ Refine with AI</button>
           <button type="button" onClick={() => setEditing(true)} className="text-[13px] font-semibold text-charcoal-2 hover:text-brick">Edit</button>
           <form action={deleteStage} onSubmit={(e) => { if (!confirm(`Delete "${stage.name}"?`)) e.preventDefault(); }}>
             <input type="hidden" name="id" value={stage.id} />
@@ -145,6 +201,7 @@ function StageCard({ stage, index, canEdit }: { stage: Stage; index: number; can
           </form>
         </div>
       )}
+      {canEdit && refining && <RefineBox stageId={stage.id} onClose={() => setRefining(false)} />}
     </div>
   );
 }
