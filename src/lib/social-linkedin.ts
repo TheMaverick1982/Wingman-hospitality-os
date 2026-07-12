@@ -117,9 +117,9 @@ export async function publishLinkedIn(post: SocialPost, s: SocialSettings): Prom
   const imageUrls = post.image_paths.map(publicImageUrl).filter((u) => !VIDEO_EXT.test(u));
   const imageUrns: string[] = [];
   for (const url of imageUrls.slice(0, 9)) {
-    const urn = await uploadLinkedInImage(url, author, token, headers);
-    if (!urn) return { error: "Image upload to LinkedIn failed." };
-    imageUrns.push(urn);
+    const r = await uploadLinkedInImage(url, author, token, headers);
+    if (r.error) return { error: `image upload failed — ${r.error}` };
+    if (r.urn) imageUrns.push(r.urn);
   }
 
   const commentary = escapeCommentary(post.caption + (post.link ? `\n\n${post.link}` : ""));
@@ -150,7 +150,7 @@ export async function publishLinkedIn(post: SocialPost, s: SocialSettings): Prom
   }
 }
 
-async function uploadLinkedInImage(publicUrl: string, author: string, token: string, headers: Record<string, string>): Promise<string | null> {
+async function uploadLinkedInImage(publicUrl: string, author: string, token: string, headers: Record<string, string>): Promise<{ urn?: string; error?: string }> {
   try {
     // 1. Register the upload.
     const init = await fetch(`${REST}/images?action=initializeUpload`, {
@@ -158,19 +158,31 @@ async function uploadLinkedInImage(publicUrl: string, author: string, token: str
       headers,
       body: JSON.stringify({ initializeUploadRequest: { owner: author } }),
     });
+    if (!init.ok) {
+      const body = await init.text();
+      return { error: `initialize ${init.status}: ${body.slice(0, 220)}` };
+    }
     const initJson = (await init.json()) as { value?: { uploadUrl?: string; image?: string } };
     const uploadUrl = initJson.value?.uploadUrl;
     const imageUrn = initJson.value?.image;
-    if (!uploadUrl || !imageUrn) return null;
+    if (!uploadUrl || !imageUrn) return { error: "no upload URL returned by LinkedIn" };
 
     // 2. Fetch our stored image, then PUT the bytes to LinkedIn.
     const src = await fetch(publicUrl);
-    if (!src.ok) return null;
+    if (!src.ok) return { error: `couldn't read the stored image (${src.status})` };
+    const contentType = src.headers.get("content-type") || "application/octet-stream";
     const buf = Buffer.from(await src.arrayBuffer());
-    const put = await fetch(uploadUrl, { method: "PUT", headers: { authorization: `Bearer ${token}` }, body: buf });
-    if (!put.ok) return null;
-    return imageUrn;
-  } catch {
-    return null;
+    const put = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${token}`, "content-type": contentType },
+      body: buf,
+    });
+    if (!put.ok) {
+      const body = await put.text();
+      return { error: `upload ${put.status}: ${body.slice(0, 220)}` };
+    }
+    return { urn: imageUrn };
+  } catch (e) {
+    return { error: (e as Error).message };
   }
 }
