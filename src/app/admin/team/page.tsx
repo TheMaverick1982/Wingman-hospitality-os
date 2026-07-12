@@ -9,14 +9,30 @@ export default async function AdminTeamPage() {
   const me = await requirePlatformSection("team");
 
   const admin = createAdminClient();
-  const { data: profiles } = await admin
+  type ProfileRow = { id: string; full_name: string; platform_access: string[] | null; w9_status: string | null; w9_file_path: string | null };
+  const full = await admin
     .from("profiles")
     .select("id, full_name, platform_access, w9_status, w9_file_path")
     .eq("is_platform_admin", true)
     .order("full_name");
 
+  // The W-9 columns only exist once migration 0061 has run. If it hasn't, don't
+  // let that blank the entire team — fall back to the core columns so staff
+  // still load (W-9 shows as "none" until the migration is applied).
+  let profiles: ProfileRow[];
+  if (full.error) {
+    const basic = await admin
+      .from("profiles")
+      .select("id, full_name, platform_access")
+      .eq("is_platform_admin", true)
+      .order("full_name");
+    profiles = ((basic.data ?? []) as Omit<ProfileRow, "w9_status" | "w9_file_path">[]).map((p) => ({ ...p, w9_status: null, w9_file_path: null }));
+  } else {
+    profiles = (full.data ?? []) as ProfileRow[];
+  }
+
   const staff: StaffRow[] = [];
-  for (const p of (profiles ?? []) as { id: string; full_name: string; platform_access: string[] | null; w9_status: string | null; w9_file_path: string | null }[]) {
+  for (const p of profiles) {
     let email = "";
     let pending = false;
     try {
