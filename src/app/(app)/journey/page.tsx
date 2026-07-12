@@ -23,13 +23,20 @@ export default async function JourneyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Guest Journey</h1>
-        <p className="text-base text-muted mt-1 max-w-[640px]">
-          Your guest experience, mapped moment by moment — from arrival to the ask. Each stage sets the standard, an example of
-          what to say or do, and the one thing a manager watches for. It&rsquo;s the backbone your team trains on and gets
-          spot-checked against.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Guest Journey</h1>
+          <p className="text-base text-muted mt-1 max-w-[640px]">
+            Your guest experience, mapped moment by moment — from arrival to the ask. Each stage sets the standard, an example of
+            what to say or do, and the one thing a manager watches for. It&rsquo;s the backbone your team trains on and gets
+            spot-checked against.
+          </p>
+        </div>
+        {stages.length > 0 && (
+          <a href="/print/journey" target="_blank" rel="noopener noreferrer" className="shrink-0 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+            Print / PDF
+          </a>
+        )}
       </div>
 
       <JourneyClient stages={stages} canEdit={canEdit} />
