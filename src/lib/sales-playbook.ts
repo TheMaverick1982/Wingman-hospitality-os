@@ -127,9 +127,11 @@ export const MOVEMENTS: Movement[] = [
     script: [
       "\"Thanks for making time. Before I show you anything, I'd love to just hear about your place — what's working, what's driving you a little crazy. Then I'll only show you the parts of Wingman that actually matter to you. Sound good?\"",
       "\"Fair warning: I'm not here to hard-sell you. If this isn't a fit, I'll tell you. Deal?\"",
+      "\"You've probably sat through a demo where someone talked at you for 30 minutes straight — I'm not going to do that. Tell me to stop anytime.\"",
     ],
     doThis: [
       "Set the expectation that you'll ask before you show.",
+      "Open with a light accusation audit — name the bad-demo fear out loud and disarm it before you start.",
       "Make it clear early that a \"no\" is a fine outcome — it relaxes them and they'll tell you the truth.",
     ],
     dont: [
@@ -149,6 +151,8 @@ export const MOVEMENTS: Movement[] = [
     ],
     doThis: [
       "Ask, then go quiet. Let the silence do the work — they'll fill it with gold.",
+      "Label what you hear back to them — \"It sounds like the follow-up is the piece that really slips.\" A label gets them to open up; a question can make them defend.",
+      "Keep every question open — \"How\" and \"What,\" never \"why\" (it sounds like an accusation). You're handing them the wheel.",
       "Follow the thread they get animated about. That's the real problem.",
       "Write down the exact words they use. You'll mirror them back later.",
     ],
@@ -167,6 +171,7 @@ export const MOVEMENTS: Movement[] = [
       "\"Remember what you said about new servers picking it up on their own? Here's how your standard becomes something they're actually trained and checked against.\" (Then show Training / Accountability.)",
     ],
     doThis: [
+      "Before you show anything, play their problem back until they say \"that's right.\" That's your green light — once you've got it, the demo lands. If you don't, keep listening.",
       "Mirror their words as you click: \"this is that first-timer problem you mentioned.\"",
       "Tie every screen back to a dollar or an hour saved, in their world.",
       "Stop and ask \"is that the kind of thing you meant?\" — keep them in it.",
@@ -184,9 +189,11 @@ export const MOVEMENTS: Movement[] = [
     script: [
       "\"Be straight with me — what's the part of this you're not sure about?\"",
       "\"If you didn't move forward, what would be the reason?\"",
+      "\"It seems like the real question is whether your team will actually use it — am I close?\"",
     ],
     doThis: [
       "Treat every hesitation as useful information, not a fight to win.",
+      "Label the hesitation instead of arguing it. Naming it (\"it seems like timing's the sticking point\") lets them confirm it and say more, instead of digging in.",
       "Reframe, don't rebut (see the reframes section).",
       "It's fine to say \"that's a fair concern\" and sit with it.",
     ],
@@ -202,6 +209,7 @@ export const MOVEMENTS: Movement[] = [
     intent: "End with a single, obvious next action — not a hard close. Make it easy to say yes to something small.",
     script: [
       "\"Here's what I'd suggest: let's get your first location set up so you can see it with your own guests. No pressure — if it's not helping in a couple weeks, walk away.\"",
+      "\"Would it be crazy to get your first location set up so you can watch it work with your own guests?\"",
       "\"How about I follow up Thursday after you've had a chance to sit with it? I'll put it on both our calendars now.\"",
     ],
     doThis: [
@@ -291,6 +299,7 @@ export const NEVER_DO: string[] = [
 
 export const CLOSE_CHECKLIST: string[] = [
   "Did they name their #1 problem in their own words?",
+  "Did they say \"that's right\" when you played their problem back? If not, you haven't nailed the real problem yet.",
   "Did they see how one specific part of Wingman touches that problem?",
   "Did you surface — and actually address — their real hesitation?",
   "Is there one clear next step with a date on the calendar?",
