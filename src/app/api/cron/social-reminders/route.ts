@@ -4,10 +4,12 @@ import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 import { publicImageUrl, IMAGE_RETENTION_DAYS, type SocialPost } from "@/lib/social";
 import { deleteSocialImages } from "@/lib/social-storage";
+import { getSocialSettings, isConnected, publishPost } from "@/lib/social-meta";
 
-// Assisted-post reminders + image cleanup. Runs hourly.
-//   1. Any scheduled post whose time has arrived → email the owner a reminder
-//      (caption + image links + a link to the planner) once.
+// Social planner cron. Runs hourly:
+//   1. Scheduled posts whose time has arrived: auto-PUBLISH via Meta if the
+//      account is connected and auto-publish is on; otherwise email the owner an
+//      assisted-post reminder (once).
 //   2. Posted images older than IMAGE_RETENTION_DAYS → delete from storage to
 //      save space (the post is already live on the platform by then).
 export const maxDuration = 60;
@@ -27,18 +29,48 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
   let reminded = 0;
+  let published = 0;
   let purged = 0;
 
-  // 1. Due reminders.
+  const settings = await getSocialSettings();
+  const autoPublish = Boolean(settings?.auto_publish) && isConnected(settings);
+
+  // 1. Due scheduled posts.
   const { data: due } = await admin
     .from("social_posts")
     .select("*")
     .eq("status", "scheduled")
-    .is("reminder_sent_at", null)
     .lte("scheduled_at", nowIso)
     .limit(50);
 
   for (const p of (due ?? []) as SocialPost[]) {
+    // Auto-publish path: publish via Meta, mark posted, store live URLs. On a
+    // failure, record the error and fall through to a reminder so it's not lost.
+    if (autoPublish && settings) {
+      const outcome = await publishPost(p, settings);
+      const anyLive = Boolean(outcome.facebook || outcome.instagram);
+      const publishedUrls = {
+        ...(p.published_urls ?? {}),
+        ...(outcome.facebook ? { facebook: outcome.facebook } : {}),
+        ...(outcome.instagram ? { instagram: outcome.instagram } : {}),
+      };
+      if (anyLive && !outcome.error) {
+        await admin
+          .from("social_posts")
+          .update({ status: "posted", posted_at: nowIso, published_urls: publishedUrls, publish_error: null, last_publish_at: nowIso, updated_at: nowIso })
+          .eq("id", p.id);
+        published++;
+        continue;
+      }
+      // Partial/failed → record error and let the reminder below fire once.
+      await admin
+        .from("social_posts")
+        .update({ published_urls: publishedUrls, publish_error: outcome.error ?? "Publish failed", last_publish_at: nowIso, updated_at: nowIso })
+        .eq("id", p.id);
+    }
+
+    // Reminder path (also the fallback when auto-publish failed). Once only.
+    if (p.reminder_sent_at) continue;
     const imgs = p.image_paths.map(publicImageUrl);
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
       <p style="font-size:16px;font-weight:600;">Time to post 🛬</p>
@@ -80,5 +112,5 @@ export async function GET(request: NextRequest) {
     purged++;
   }
 
-  return NextResponse.json({ ok: true, reminded, purged });
+  return NextResponse.json({ ok: true, published, reminded, purged });
 }

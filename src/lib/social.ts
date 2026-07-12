@@ -34,6 +34,9 @@ export type SocialPost = {
   posted_at: string | null;
   reminder_sent_at: string | null;
   images_purged_at: string | null;
+  published_urls: Record<string, string> | null;
+  publish_error: string | null;
+  last_publish_at: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
