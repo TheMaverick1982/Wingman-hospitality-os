@@ -6,6 +6,7 @@ import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
+import { monthlyRepeatCohorts, bizHealthTrend, type BizHealthRow } from "@/lib/reporting-trends";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
@@ -20,6 +21,11 @@ const RANGES = [
 
 function cutoffDate(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+}
+
+// Module-level so the render body stays pure (no direct new Date() in render).
+function currentDate(): Date {
+  return new Date();
 }
 
 export default async function ReportingPage({
@@ -46,6 +52,7 @@ export default async function ReportingPage({
     { data: guests },
     { data: schedules },
     { data: growthPlan },
+    { data: bizHealth },
     locations,
   ] = await Promise.all([
     supabase.from("discounts").select("amount, location_id").gte("occurred_on", cutoff),
@@ -60,6 +67,11 @@ export default async function ReportingPage({
       .select("current_customers, current_avg_sale, current_repurchase_frequency, target_customers_pct, target_avg_sale_pct, target_frequency_pct")
       .is("location_id", null)
       .maybeSingle(),
+    supabase
+      .from("business_health_metrics")
+      .select("period_date, net_sales, labor_cost, comp_cost, checks")
+      .order("period_date", { ascending: false })
+      .limit(12),
     getOrgLocations(),
   ]);
 
@@ -83,6 +95,25 @@ export default async function ReportingPage({
 
   const referredCount = allGuests.filter((g) => g.referred_a_friend).length;
   const referralRate = allGuests.length > 0 ? Math.round((referredCount / allGuests.length) * 100) : 0;
+
+  // Trends (period-over-period, independent of the range toggle above).
+  const cohorts = monthlyRepeatCohorts(allGuests, currentDate(), 6);
+  const maxCohortPct = Math.max(10, ...cohorts.map((c) => c.repeatPct));
+  const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
+  const bizMetrics =
+    bizPoints.length >= 2
+      ? (() => {
+          const last = bizPoints[bizPoints.length - 1];
+          const prev = bizPoints[bizPoints.length - 2];
+          const delta = (a: number, b: number) => (b === 0 ? null : Math.round(((a - b) / b) * 1000) / 10);
+          return [
+            { label: "Net sales", value: `$${Math.round(last.netSales).toLocaleString()}`, deltaPct: delta(last.netSales, prev.netSales), goodUp: true },
+            { label: "Avg check", value: `$${last.avgCheck.toFixed(2)}`, deltaPct: delta(last.avgCheck, prev.avgCheck), goodUp: true },
+            { label: "Labor %", value: `${last.laborPct}%`, deltaPct: delta(last.laborPct, prev.laborPct), goodUp: false },
+            { label: "Comp %", value: `${last.compPct}%`, deltaPct: delta(last.compPct, prev.compPct), goodUp: false },
+          ];
+        })()
+      : null;
 
   const growthTarget = growthPlan
     ? buildPhases(
@@ -229,6 +260,55 @@ export default async function ReportingPage({
         <StatTile label="Recovery spend" value={`$${discountTotal.toFixed(0)}`} sub="all reasons tagged" />
         <StatTile label="Referral rate" value={`${referralRate}%`} sub="raving-fan index" />
       </div>
+
+      {/* Trends — the story over time, not just a single window. */}
+      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+        <div className="flex items-baseline justify-between gap-3 mb-1">
+          <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Repeat rate by cohort</span>
+          <span className="text-[13px] text-muted">last 6 months</span>
+        </div>
+        <p className="text-[13px] text-muted mb-5">Of each month&rsquo;s first-timers, how many came back for a 2nd visit — the truest read on whether you&rsquo;re turning guests into regulars.</p>
+        <div className="flex items-end gap-3 sm:gap-5 h-44">
+          {cohorts.map((c) => (
+            <div key={c.key} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+              <div className="text-[12px] font-semibold text-ink tabular-nums">{c.newGuests > 0 ? `${c.repeatPct}%` : "—"}</div>
+              <div className="w-full max-w-[56px] bg-paper rounded-t-md flex items-end" style={{ height: "100%" }}>
+                <div
+                  className={`w-full rounded-t-md ${c.repeatPct >= 50 ? "bg-olive" : c.repeatPct >= 30 ? "bg-brick" : "bg-brick/50"}`}
+                  style={{ height: `${c.newGuests > 0 ? Math.max(4, Math.round((c.repeatPct / maxCohortPct) * 100)) : 0}%` }}
+                />
+              </div>
+              <div className="text-[11.5px] font-medium text-charcoal-2">{c.label}</div>
+              <div className="text-[10.5px] text-muted-2 tabular-nums">{c.newGuests} new</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {bizMetrics && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-3 mb-4">
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">The money layer</span>
+            <span className="text-[13px] text-muted">latest week vs. prior</span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {bizMetrics.map((m) => {
+              const up = m.deltaPct != null && m.deltaPct > 0;
+              const down = m.deltaPct != null && m.deltaPct < 0;
+              const good = m.deltaPct == null || m.deltaPct === 0 ? "text-muted-2" : (up === m.goodUp ? "text-olive" : "text-brick");
+              return (
+                <div key={m.label}>
+                  <div className="text-[13px] text-muted mb-1">{m.label}</div>
+                  <div className="text-[24px] font-bold tracking-[-0.01em] text-ink tabular-nums">{m.value}</div>
+                  <div className={`text-[12.5px] font-semibold ${good}`}>
+                    {m.deltaPct == null ? "—" : `${up ? "▲" : down ? "▼" : ""} ${Math.abs(m.deltaPct)}% wk/wk`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {sections.map((s) => (
