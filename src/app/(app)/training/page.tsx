@@ -81,6 +81,9 @@ export default async function TrainingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+            Print / PDF
+          </a>
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && <StartTrainingButton staff={staff} locations={locations} />}
         </div>

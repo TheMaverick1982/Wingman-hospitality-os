@@ -74,6 +74,9 @@ export default async function CulturePage() {
           <p className="text-base text-muted">The standard every hire is trained to and every shift is measured against.</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          <a href="/print/culture" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+            Print / PDF
+          </a>
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && <MomentModalButton staff={staff} />}
         </div>
