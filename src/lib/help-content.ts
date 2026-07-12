@@ -223,6 +223,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["guest journey", "journey", "stages", "guest experience", "arrival", "greet", "the ask", "touchpoints", "moments", "script", "standard", "map", "refine", "ai feedback", "tone", "revise", "print", "pdf"],
     body: [
       { kind: "p", text: "Guest Journey maps your guest experience as an ordered sequence of moments — from the moment someone arrives to the goodbye and the ask for a review. Each stage is a designed touchpoint, not an accident, and together they're the backbone your team trains on and gets spot-checked against." },
+      { kind: "image", src: "/help/guest-journey.png", alt: "The Guest Journey screen showing a stage card with its standard, example script, what to avoid, and what a manager inspects.", caption: "Each stage holds the standard, an example script, what to avoid, and what a manager inspects — with Refine with AI on every card." },
       { kind: "h", text: "What each stage holds" },
       { kind: "list", items: [
         "Why it matters — one line on the point of this moment.",
