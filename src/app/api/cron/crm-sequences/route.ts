@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // Customer-oriented sequences (signup onboarding, referral) are FOR customers,
     // so becoming a customer / booking a demo must NOT stop them — only unsubscribe
     // (or pausing the sequence) does. Nurtures still stop on booked/customer.
-    const customerSeq = seq.source === "signup" || seq.source === "referral";
+    const customerSeq = seq.source === "signup" || seq.source === "referral" || seq.source === "reactivation";
     const wonStop = !customerSeq && (contact.booked_at != null || contact.customer_at != null);
 
     // Hard stops.

@@ -25,7 +25,7 @@ const EXPECTED: Record<string, { days: number[]; conds: string[]; transFirst: bo
 describe("nurture sequence data integrity", () => {
   it("seeds exactly the expected sources", () => {
     expect(NURTURE_SEQUENCES.map((s) => s.source).sort()).toEqual(
-      ["calculator", "demo", "demo-no-show", "referral", "scorecard", "signup"]
+      ["calculator", "demo", "demo-no-show", "reactivation", "referral", "scorecard", "signup"]
     );
     expect(RETIRED_SOURCES).toContain("sales-chat");
   });

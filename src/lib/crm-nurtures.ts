@@ -301,6 +301,52 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
       },
     ],
   },
+  {
+    source: "reactivation",
+    name: "Reactivation (win-back after cancel)",
+    steps: [
+      {
+        step_order: 1,
+        delay_days: 30,
+        subject: "The door's still open, {{contact.first_name}}",
+        body: "{{contact.first_name}} — I noticed you're no longer on Wingman, and I didn't want that to pass without a note.\n\nNo pitch here. I just wanted you to know we've kept your setup exactly where you left it — your culture, your standards, your guest journey. If the timing was just off, it's all still here whenever you want it back.\n\nAnd if Wingman wasn't the right fit, I'd genuinely love to know why — a one-line reply helps us more than you'd think.\n\nEither way, I'm rooting for your restaurant.\n\nBrian\nFounder, Wingman",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 2,
+        delay_days: 60,
+        subject: "One idea you can use tonight (no strings)",
+        body: "{{contact.first_name}} — a quick one, whether or not you ever come back to Wingman.\n\nThe single cheapest way to grow a restaurant is bringing back the guests you already won. So here's a play you can run tonight: have your host quietly flag every first-timer, and make sure a manager does one specific thing before they leave — name a dish to come back for, or hand them a reason to return this week.\n\nThat one habit moves your repeat rate more than almost anything on the marketing side. It's the whole idea behind Wingman, but you don't need us to start doing it.\n\nHope it helps.\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 3,
+        delay_days: 90,
+        subject: "A few things have changed since you left",
+        body: "{{contact.first_name}} — thought you'd want to know we've shipped a lot since you were last in Wingman.\n\nA couple of the bigger ones: your Reporting now shows repeat rate as a real trend over time (so you can actually see if guests are coming back), and the Guest Journey maps every moment of the experience and lets you spot-check that it's happening on the floor.\n\nNo ask — just didn't want you judging us on the old version. If you're ever curious, your account's a click away.\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 4,
+        delay_days: 120,
+        subject: "Your Wingman setup is still saved",
+        body: "{{contact.first_name}} — a small heads-up: everything you built in Wingman is still saved on your account. You wouldn't be starting over — you'd be switching it back on.\n\nIf getting more of your guests to come back is on your list for this season, I'd be glad to hop on a quick call and help you pick it back up where it makes the most sense. Just reply and we'll find a time — no pressure if now's not it.\n\nBrian\nFounder, Wingman",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 5,
+        delay_days: 150,
+        subject: "Last note from me, {{contact.first_name}}",
+        body: "{{contact.first_name}} — I won't keep filling your inbox, so this is my last note.\n\nThe door stays open. If the day comes when you want a simple system for turning first-timers into regulars, your account and everything in it will be right here waiting.\n\nUntil then, I'm cheering for you and your team. Thanks for giving us a shot the first time around.\n\nBrian\nFounder, Wingman",
+        transactional: false,
+        send_condition: "always",
+      },
+    ],
+  },
 ];
 
 // Legacy source whose sequence is retired by the spec (folded into the demo funnel).
