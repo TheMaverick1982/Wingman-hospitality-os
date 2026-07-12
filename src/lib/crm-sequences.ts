@@ -90,14 +90,17 @@ export async function enrollContactInSource(
     if (isCustomer || isBooked) return; // won leads never re-enter nurture
   }
 
-  // One nurture at a time: skip if any active enrollment already exists.
-  const { data: active } = await admin
-    .from("crm_enrollments")
-    .select("id")
-    .eq("contact_id", contactId)
-    .eq("status", "active")
-    .limit(1);
-  if ((active ?? []).length) return;
+  // One nurture at a time: skip if any active enrollment already exists. Doesn't
+  // apply to customer sequences (signup onboarding + referral run concurrently).
+  if (!opts?.ignoreWonGuards) {
+    const { data: active } = await admin
+      .from("crm_enrollments")
+      .select("id")
+      .eq("contact_id", contactId)
+      .eq("status", "active")
+      .limit(1);
+    if ((active ?? []).length) return;
+  }
 
   const { data: seq } = await admin.from("crm_sequences").select("id, active, published").eq("source", source).maybeSingle();
   const s = seq as { id: string; active: boolean; published: boolean } | null;
@@ -251,8 +254,10 @@ export async function markCustomerByEmail(
       // Kill switch: stop any running nurture before starting onboarding.
       await stopEnrollments(contactId, "customer", admin);
       await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Became a customer — nurture stopped, onboarding started" });
-      // Enroll in the signup onboarding sequence (won-guards don't apply here).
+      // Enroll in the signup onboarding sequence + the day-30 referral ask
+      // (both are customer sequences — won-guards + one-at-a-time don't apply).
       await enrollContactInSource(contactId, lower, "signup", admin, { ignoreWonGuards: true });
+      await enrollContactInSource(contactId, lower, "referral", admin, { ignoreWonGuards: true });
     }
   } catch (e) {
     console.error("[crm] markCustomerByEmail failed", e);

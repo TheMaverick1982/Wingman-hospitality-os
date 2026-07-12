@@ -19,12 +19,13 @@ const EXPECTED: Record<string, { days: number[]; conds: string[]; transFirst: bo
     transFirst: true,
   },
   "demo-no-show": { days: [0, 2], conds: ["always", "always"], transFirst: false },
+  referral: { days: [30], conds: ["always"], transFirst: false },
 };
 
 describe("nurture sequence data integrity", () => {
   it("seeds exactly the expected sources", () => {
     expect(NURTURE_SEQUENCES.map((s) => s.source).sort()).toEqual(
-      ["calculator", "demo", "demo-no-show", "scorecard", "signup"]
+      ["calculator", "demo", "demo-no-show", "referral", "scorecard", "signup"]
     );
     expect(RETIRED_SOURCES).toContain("sales-chat");
   });

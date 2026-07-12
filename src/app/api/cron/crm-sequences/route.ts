@@ -80,8 +80,14 @@ export async function GET(request: NextRequest) {
     // Draft/unpublished → hold (don't send, don't advance); re-checked next run.
     if (!seq.published) continue;
 
+    // Customer-oriented sequences (signup onboarding, referral) are FOR customers,
+    // so becoming a customer / booking a demo must NOT stop them — only unsubscribe
+    // (or pausing the sequence) does. Nurtures still stop on booked/customer.
+    const customerSeq = seq.source === "signup" || seq.source === "referral";
+    const wonStop = !customerSeq && (contact.booked_at != null || contact.customer_at != null);
+
     // Hard stops.
-    if (contact.unsubscribed || contact.booked_at || contact.customer_at || !seq.active) {
+    if (contact.unsubscribed || wonStop || !seq.active) {
       const reason = contact.unsubscribed ? "unsubscribed" : contact.booked_at ? "booked" : contact.customer_at ? "customer" : "paused";
       await admin.from("crm_enrollments").update({ status: "stopped", stopped_reason: reason, updated_at: nowIso }).eq("id", e.id);
       stopped++;
