@@ -10,6 +10,7 @@ const PUBLIC_PREFIXES = [
   // /login and the link looks dead).
   "/forgot-password",
   "/how-it-works",
+  "/guest-journey",
   "/pricing",
   "/book-a-demo",
   // Self-serve "Try the live demo" — provisions a throwaway sandbox for a

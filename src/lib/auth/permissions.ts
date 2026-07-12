@@ -7,6 +7,7 @@ export type Section =
   | "bounceback"
   | "recovery"
   | "training"
+  | "journey"
   | "accountability"
   | "hiring"
   | "staff"
@@ -26,6 +27,7 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   bounceback: { super_admin: "full", manager: "full", staff: "none" },
   recovery: { super_admin: "full", manager: "full", staff: "view" },
   training: { super_admin: "full", manager: "full", staff: "view" },
+  journey: { super_admin: "full", manager: "full", staff: "view" },
   accountability: { super_admin: "full", manager: "full", staff: "view" },
   hiring: { super_admin: "full", manager: "full", staff: "none" },
   staff: { super_admin: "full", manager: "full", staff: "none" },
@@ -46,6 +48,7 @@ export const EDITABLE_SECTIONS: Section[] = [
   "bounceback",
   "recovery",
   "training",
+  "journey",
   "accountability",
   "hiring",
   "staff",

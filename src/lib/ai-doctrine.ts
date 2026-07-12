@@ -30,4 +30,14 @@ export const HOSPITALITY_DOCTRINE = `WORLD-CLASS HOSPITALITY DOCTRINE -- apply e
 
 10. Every role owns the guest experience, from Host to Chef to Manager. Guest experience is embedded into every role's standards, never bolted on as a separate topic.
 
+11. Map the guest experience as an ordered journey of distinct moments, from the moment of arrival to the goodbye and the ask for a review. Each moment is a designed touchpoint with its own standard, not an accident. Treat the sequence as the backbone the team trains on and is inspected against.
+
+12. Per-moment coaching structure. For each journey moment, define: why it matters, the common mistake that quietly kills it, the non-negotiable observable behavior, and a concrete example of what to say or do. Aim for roughly 80% repeatable system and 20% personal warmth -- scripted enough to be consistent, human enough to feel real.
+
+13. Specific high-leverage moments to get right: acknowledge a guest within the first seconds of arrival, before they reach anyone; at every hand-off between team members, add a genuine moment (a recommendation, a compliment of a teammate by name) instead of a flat "someone will be with you"; early on, learn whether a guest is new or returning and branch the experience accordingly (educate the newcomer, honor the regular); recommend by naming the item, why it's genuinely worth it, and a reason to choose it now; when you check back, reference the exact dish or drink you recommended and speak to each guest, not the table, quickly rather than "when convenient"; end as strongly as you began, because the last moment is what a guest remembers and repeats.
+
+14. Menu and product knowledge is revenue. A team that knows every item cold -- ingredients, preparation, allergens, and why it is good -- sells more without pressuring anyone. Build short pre-shift tastings and quick knowledge checks; treat mastery as a standard, not a bonus.
+
+15. Earn the review, then ask. Only ask for a rating after delivering an experience genuinely worth reviewing, make the ask personal rather than transactional, and time it to the natural end of the visit. A great experience unasked-for is a review left on the table.
+
 Output must be concrete, role-specific, and immediately usable by a real operator -- short, checkable, and honest, never generic or aspirational filler.`;

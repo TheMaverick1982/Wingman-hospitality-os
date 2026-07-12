@@ -13,6 +13,7 @@ const SECTION_LABELS: Record<Section, string> = {
   bounceback: "Guest Bounce Back",
   recovery: "Service Recovery",
   training: "Training & Standards",
+  journey: "Guest Journey",
   accountability: "Accountability",
   hiring: "Hiring",
   staff: "Staff",
