@@ -5,8 +5,11 @@ import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listSalesReps } from "@/lib/sales-reps";
 import { StatTile } from "@/components/ui/stat-tile";
+import { enterDemoAsStaff } from "../sales-training/actions";
 
 export const metadata: Metadata = { title: "Sales Dashboard · Admin" };
+// The "Run a live demo" action reseeds the demo org — give it room.
+export const maxDuration = 60;
 
 type ContactRow = { stage: string; assigned_rep_id: string | null };
 type Tally = { total: number; newLeads: number; demos: number; won: number; lost: number; past: number };
@@ -60,11 +63,18 @@ export default async function SalesDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Dashboard</h1>
-        <p className="text-sm text-muted mt-1 max-w-2xl">
-          Your pipeline at a glance — the leads assigned to you and how they&rsquo;re moving. {canSeeAll ? "As an owner you also see every rep below." : "Only you and the owner can see your numbers."}
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Dashboard</h1>
+          <p className="text-sm text-muted mt-1 max-w-2xl">
+            Your pipeline at a glance — the leads assigned to you and how they&rsquo;re moving. {canSeeAll ? "As an owner you also see every rep below." : "Only you and the owner can see your numbers."}
+          </p>
+        </div>
+        <form action={enterDemoAsStaff} className="shrink-0">
+          <button type="submit" className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors">
+            ▶ Run a live demo
+          </button>
+        </form>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
