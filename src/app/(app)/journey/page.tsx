@@ -9,6 +9,11 @@ export const metadata: Metadata = { title: "Guest Journey" };
 // AI generation runs from this route — give it room past the default timeout.
 export const maxDuration = 60;
 
+// Module-level so the render body stays pure (no direct Date.now in render).
+function daysAgoIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 export default async function JourneyPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -17,11 +22,27 @@ export default async function JourneyPage() {
   const canCapture = canEditSection(profile.accessRole, "bounceback", profile.permissionOverrides);
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("journey_stages")
-    .select("id, sort_order, name, purpose, avoid, standard, script, inspect, timing")
-    .order("sort_order", { ascending: true });
+  const thirtyDaysAgo = daysAgoIso(30);
+  const [{ data }, { data: inspectionRows }] = await Promise.all([
+    supabase
+      .from("journey_stages")
+      .select("id, sort_order, name, purpose, avoid, standard, script, inspect, timing")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("journey_inspections")
+      .select("stage_id, passed")
+      .gte("created_at", thirtyDaysAgo),
+  ]);
   const stages = (data ?? []) as Stage[];
+
+  // Per-stage inspection stats over the last 30 days: how often it was checked
+  // and how often the standard was met.
+  const inspections: Record<string, { count: number; passed: number }> = {};
+  for (const r of (inspectionRows ?? []) as { stage_id: string; passed: boolean }[]) {
+    const s = (inspections[r.stage_id] ??= { count: 0, passed: 0 });
+    s.count += 1;
+    if (r.passed) s.passed += 1;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +62,7 @@ export default async function JourneyPage() {
         )}
       </div>
 
-      <JourneyClient stages={stages} canEdit={canEdit} canCapture={canCapture} />
+      <JourneyClient stages={stages} canEdit={canEdit} canCapture={canCapture} inspections={inspections} />
     </div>
   );
 }

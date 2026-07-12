@@ -181,6 +181,29 @@ async function canEdit() {
   return p && (p.accessRole === "super_admin" || p.accessRole === "manager");
 }
 
+// Log whether a stage's "manager inspects" standard was met on a spot-check.
+// This is the write that makes the journey's inspect field a live metric.
+// Managers/owners only.
+export async function logInspection(formData: FormData): Promise<void> {
+  const profile = await getCurrentProfile();
+  if (!profile || (profile.accessRole !== "super_admin" && profile.accessRole !== "manager")) return;
+  const stageId = String(formData.get("stageId") || "");
+  const passed = String(formData.get("passed") || "") === "true";
+  if (!stageId) return;
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return;
+  await supabase.from("journey_inspections").insert({
+    org_id: org.id,
+    stage_id: stageId,
+    location_id: profile.locationId,
+    passed,
+    checked_by: profile.fullName,
+  });
+  revalidatePath("/journey");
+}
+
 export type RefineState = { error: string | null; ok: boolean };
 
 // Refine a single stage with plain-English feedback ("make it warmer", "add an
