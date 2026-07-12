@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatCents, totalsFor, type SalesCommission } from "@/lib/sales-commissions";
+import { formatCents, formatDate, isDue, totalsFor, type SalesCommission } from "@/lib/sales-commissions";
 import { CommissionForm } from "./commission-form";
+import { PayableDate } from "./payable-date";
 import { markPaid, markOwed, voidCommission, deleteCommission, markAllPaidForRep, approveCommission, denyCommission } from "./actions";
 
 export const metadata: Metadata = { title: "Sales Commissions · Admin" };
@@ -26,9 +27,11 @@ export default async function SalesCommissionsPage() {
     admin.from("organizations").select("id, name").order("name"),
     admin
       .from("sales_commissions")
-      .select("id, rep_profile_id, org_id, kind, label, amount_cents, status, note, created_at, paid_at")
+      .select("id, rep_profile_id, org_id, kind, label, amount_cents, status, note, created_at, paid_at, payable_on")
       .order("created_at", { ascending: false }),
   ]);
+
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const reps = ((staff ?? []) as { id: string; full_name: string | null }[]).map((r) => ({ id: r.id, name: r.full_name || "(unnamed)" }));
   const orgList = ((orgs ?? []) as { id: string; name: string }[]);
@@ -56,6 +59,10 @@ export default async function SalesCommissionsPage() {
 
   const grandOwed = totalsFor(rows).owedCents;
 
+  // "Due now" = approved (owed) commissions whose expected pay date has arrived.
+  const dueRows = ledgerRows.filter((r) => r.status === "owed" && isDue(r.payable_on, todayIso));
+  const dueTotal = dueRows.reduce((t, r) => t + r.amount_cents, 0);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -70,6 +77,34 @@ export default async function SalesCommissionsPage() {
         <div className="bg-gold-tint border border-[#F0D9A8] rounded-2xl px-6 py-4">
           <span className="text-[13px] font-semibold text-[#B45309]">Total owed across all reps: </span>
           <span className="text-[15px] font-bold text-[#B45309] tabular-nums">{formatCents(grandOwed)}</span>
+        </div>
+      )}
+
+      {dueRows.length > 0 && (
+        <div className="bg-olive-tint border-2 border-olive/30 rounded-2xl overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <div>
+              <div className="text-[16px] font-bold text-olive">Due to pay now · {formatCents(dueTotal)}</div>
+              <div className="text-[13px] text-[#166534] mt-0.5">{dueRows.length} commission{dueRows.length === 1 ? "" : "s"} past their expected pay date and still owed.</div>
+            </div>
+          </div>
+          <div className="bg-white/60 border-t border-olive/20">
+            {dueRows.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-olive/10 last:border-0 text-[13.5px]">
+                <span className="text-charcoal-2 truncate">
+                  <span className="font-semibold text-ink">{repName.get(c.rep_profile_id) ?? "?"}</span> · {c.label}
+                  <span className="text-muted-2"> · was due {formatDate(c.payable_on)}</span>
+                </span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
+                  <form action={markPaid}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <button type="submit" className="text-[12.5px] font-semibold text-white bg-olive rounded-full px-3.5 py-1 hover:opacity-90 transition-opacity">Mark paid</button>
+                  </form>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -153,6 +188,13 @@ export default async function SalesCommissionsPage() {
                             {" · "}{new Date(c.created_at).toLocaleDateString()}
                             {c.note ? ` · ${c.note}` : ""}
                           </div>
+                          {c.status === "owed" ? (
+                            <div className="mt-1.5">
+                              <PayableDate id={c.id} value={c.payable_on} due={isDue(c.payable_on, todayIso)} />
+                            </div>
+                          ) : c.status === "paid" && c.paid_at ? (
+                            <div className="text-[12px] text-olive mt-1">Paid {new Date(c.paid_at).toLocaleDateString()}</div>
+                          ) : null}
                         </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums whitespace-nowrap">{formatCents(c.amount_cents)}</td>
                         <td className="px-5 py-3.5">
