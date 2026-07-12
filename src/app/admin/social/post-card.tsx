@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { markPosted, setStatus, deletePost, publishNow } from "./actions";
 import { Composer } from "./composer";
-import { SOCIAL_PLATFORMS, type SocialPost } from "@/lib/social";
+import { SOCIAL_PLATFORMS, isAssistedOnly, type SocialPost } from "@/lib/social";
 
 type CardPost = SocialPost & { imageUrls: { path: string; url: string }[] };
 
@@ -58,6 +58,9 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[post.status]}`}>{post.status}</span>
+          {post.format !== "feed" && (
+            <span className="text-[11.5px] font-semibold px-2 py-0.5 rounded-full text-charcoal-2 bg-paper capitalize">{post.format}</span>
+          )}
           <span className="text-[13px] text-muted">{platformLabels || "No platform"}</span>
         </div>
         <span className="text-[13px] font-semibold text-charcoal-2 shrink-0">{whenLabel(post.scheduled_at)}</span>
@@ -107,13 +110,16 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
 
         <div className="flex-1" />
 
-        {connected && post.status !== "posted" && (
+        {connected && post.status !== "posted" && !isAssistedOnly(post.format) && (
           <form action={publishNow}>
             <input type="hidden" name="id" value={post.id} />
             <button type="submit" className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
               {post.publish_error ? "Retry publish" : "Publish now"}
             </button>
           </form>
+        )}
+        {isAssistedOnly(post.format) && post.status !== "posted" && (
+          <span className="text-[12px] text-[#b4884a] font-medium">Post in the IG app (add link sticker)</span>
         )}
         {post.status !== "posted" && (
           <form action={markPosted}>

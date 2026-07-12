@@ -174,6 +174,15 @@ async function publishFacebook(post: SocialPost, imageUrls: string[], pageId: st
   const photos = imageUrls.filter((u) => !VIDEO_EXT.test(u));
   const caption = post.caption + (post.link ? `\n\n${post.link}` : "");
 
+  // Reel/video → post as a Page video.
+  if (post.format === "reel") {
+    const video = imageUrls.find((u) => VIDEO_EXT.test(u));
+    if (!video) return { error: "A reel needs a video (MP4)." };
+    const r = await graph(`${pageId}/videos`, { file_url: video, description: caption, access_token: token }, "POST");
+    if (!r.ok) return { error: r.error };
+    return { url: postUrl(String(r.data.id ?? "")) };
+  }
+
   // No image → plain feed post (optionally with a link preview).
   if (photos.length === 0) {
     const params: Record<string, string> = { message: post.caption, access_token: token };
@@ -208,8 +217,20 @@ async function publishFacebook(post: SocialPost, imageUrls: string[], pageId: st
 }
 
 async function publishInstagram(post: SocialPost, imageUrls: string[], igUserId: string, token: string): Promise<{ url?: string; error?: string }> {
+  // Reel: a video container that must finish processing before publishing.
+  if (post.format === "reel") {
+    const video = imageUrls.find((u) => VIDEO_EXT.test(u));
+    if (!video) return { error: "A reel needs a video (MP4)." };
+    const c = await graph(`${igUserId}/media`, { media_type: "REELS", video_url: video, caption: post.caption, access_token: token }, "POST");
+    if (!c.ok) return { error: c.error };
+    const creationId = String(c.data.id ?? "");
+    const ready = await waitForContainer(creationId, token);
+    if (ready.error) return { error: ready.error };
+    return finishInstagram(igUserId, creationId, post.first_comment, token);
+  }
+
   const images = imageUrls.filter((u) => !VIDEO_EXT.test(u));
-  if (images.length === 0) return { error: "Instagram needs an image (video auto-publish isn't supported yet)." };
+  if (images.length === 0) return { error: "Instagram needs an image." };
 
   let creationId = "";
   if (images.length === 1) {
@@ -229,15 +250,32 @@ async function publishInstagram(post: SocialPost, imageUrls: string[], igUserId:
     creationId = String(container.data.id ?? "");
   }
 
+  return finishInstagram(igUserId, creationId, post.first_comment, token);
+}
+
+// Publish a ready container + first comment + permalink.
+async function finishInstagram(igUserId: string, creationId: string, firstComment: string | null, token: string): Promise<{ url?: string; error?: string }> {
   const pub = await graph(`${igUserId}/media_publish`, { creation_id: creationId, access_token: token }, "POST");
   if (!pub.ok) return { error: pub.error };
   const mediaId = String(pub.data.id ?? "");
-  await maybeFirstComment(mediaId, post.first_comment, token);
-
-  // Fetch the permalink (best-effort).
+  await maybeFirstComment(mediaId, firstComment, token);
   const perma = await graph(mediaId, { fields: "permalink", access_token: token });
   const url = perma.ok ? String(perma.data.permalink ?? "") : "";
   return { url: url || undefined };
+}
+
+// Poll a video/reel container until IG finishes processing it (bounded so the
+// serverless function doesn't run over — long videos may need a retry).
+async function waitForContainer(creationId: string, token: string): Promise<{ error?: string }> {
+  for (let i = 0; i < 11; i++) {
+    const st = await graph(creationId, { fields: "status_code", access_token: token });
+    if (!st.ok) return { error: st.error };
+    const code = String(st.data.status_code ?? "");
+    if (code === "FINISHED") return {};
+    if (code === "ERROR" || code === "EXPIRED") return { error: `video processing ${code.toLowerCase()}` };
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  return { error: "video still processing — hit Retry publish in a moment" };
 }
 
 async function maybeFirstComment(objectId: string, comment: string | null, token: string): Promise<void> {

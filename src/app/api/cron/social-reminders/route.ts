@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
-import { publicImageUrl, IMAGE_RETENTION_DAYS, type SocialPost } from "@/lib/social";
+import { publicImageUrl, IMAGE_RETENTION_DAYS, isAssistedOnly, type SocialPost } from "@/lib/social";
 import { deleteSocialImages } from "@/lib/social-storage";
 import { getSocialSettings } from "@/lib/social-meta";
 import { publishAll, anyConnected } from "@/lib/social-publish";
@@ -47,7 +47,9 @@ export async function GET(request: NextRequest) {
   for (const p of (due ?? []) as SocialPost[]) {
     // Auto-publish path: publish via Meta, mark posted, store live URLs. On a
     // failure, record the error and fall through to a reminder so it's not lost.
-    if (autoPublish && settings) {
+    // Stories are never auto-published (the API can't add a link sticker) — they
+    // always fall through to the reminder to post by hand.
+    if (autoPublish && settings && !isAssistedOnly(p.format)) {
       const outcome = await publishAll(p, settings);
       const anyLive = Boolean(outcome.facebook || outcome.instagram || outcome.linkedin);
       const publishedUrls = {
@@ -74,9 +76,13 @@ export async function GET(request: NextRequest) {
     // Reminder path (also the fallback when auto-publish failed). Once only.
     if (p.reminder_sent_at) continue;
     const imgs = p.image_paths.map(publicImageUrl);
+    const storyNote = p.format === "story"
+      ? `<p style="font-size:13px;color:#b4884a;">Story — post it in the Instagram app so you can add the link sticker (the API can't).</p>`
+      : "";
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
       <p style="font-size:16px;font-weight:600;">Time to post 🛬</p>
-      <p style="font-size:14px;color:#525252;">Scheduled for ${esc(new Date(p.scheduled_at ?? nowIso).toLocaleString())} · ${esc(p.platforms.join(", "))}</p>
+      <p style="font-size:14px;color:#525252;">Scheduled for ${esc(new Date(p.scheduled_at ?? nowIso).toLocaleString())} · ${esc(p.platforms.join(", "))} · ${esc(p.format)}</p>
+      ${storyNote}
       <div style="border:1px solid #eee;border-radius:12px;padding:16px;margin:12px 0;">
         <p style="font-size:15px;white-space:pre-wrap;">${esc(p.caption)}</p>
         ${p.link ? `<p style="font-size:14px;"><a href="${esc(p.link)}" style="color:#c0392b;">${esc(p.link)}</a></p>` : ""}

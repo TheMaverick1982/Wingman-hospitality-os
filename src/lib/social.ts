@@ -2,7 +2,7 @@
 // server-only imports); storage helpers live in social-storage.ts.
 
 export const SOCIAL_BUCKET = "social-media";
-export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB
+export const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50MB (covers short reel videos)
 export const MAX_IMAGES_PER_POST = 10;
 // Delete post images from storage this many days after they're posted (they're
 // already live on the platform by then; keeps the record, frees the bytes).
@@ -24,8 +24,27 @@ export const SOCIAL_STATUSES = [
 ] as const;
 export type SocialStatus = (typeof SOCIAL_STATUSES)[number]["key"];
 
+export const SOCIAL_FORMATS = [
+  { key: "feed", label: "Feed post" },
+  { key: "reel", label: "Reel (video)" },
+  { key: "story", label: "Story" },
+] as const;
+export type SocialFormat = (typeof SOCIAL_FORMATS)[number]["key"];
+
+// Stories can't be auto-published (the API can't add a link sticker), so they're
+// always posted by hand from a reminder.
+export function isAssistedOnly(format: string): boolean {
+  return format === "story";
+}
+
+export const VIDEO_EXT = /\.(mp4|mov|m4v)$/i;
+export function isVideoPath(p: string): boolean {
+  return VIDEO_EXT.test(p);
+}
+
 export type SocialPost = {
   id: string;
+  format: SocialFormat;
   platforms: string[];
   caption: string;
   link: string | null;

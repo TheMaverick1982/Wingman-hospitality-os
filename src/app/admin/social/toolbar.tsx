@@ -39,7 +39,7 @@ function ImportPanel({ onDone }: { onDone: () => void }) {
       if (files.length) {
         const tooBig = files.find((f) => f.size > MAX_IMAGE_BYTES);
         if (tooBig) {
-          setResult({ ok: false, error: `"${tooBig.name}" is over 15MB — compress it and try again.` });
+          setResult({ ok: false, error: `"${tooBig.name}" is over 50MB — compress it and try again.` });
           return;
         }
         // Upload each file straight to storage from the browser (no server body

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SOCIAL_PLATFORMS, type SocialPlatform, type SocialPost } from "@/lib/social";
+import { SOCIAL_PLATFORMS, SOCIAL_FORMATS, isAssistedOnly, type SocialPlatform, type SocialFormat, type SocialPost } from "@/lib/social";
 import { uploadSocialImages, deleteSocialImages, createSocialUploadTargets } from "@/lib/social-storage";
 import { getSocialSettings } from "@/lib/social-meta";
 import { publishAll, anyConnected } from "@/lib/social-publish";
@@ -72,6 +72,7 @@ export async function publishNow(formData: FormData): Promise<void> {
   const { data } = await admin.from("social_posts").select("*").eq("id", id).maybeSingle();
   const post = data as SocialPost | null;
   if (!post) return;
+  if (isAssistedOnly(post.format)) return; // stories are posted by hand
 
   const now = new Date().toISOString();
   const outcome = await publishAll(post, settings);
@@ -98,6 +99,12 @@ export async function publishNow(formData: FormData): Promise<void> {
 }
 
 const VALID_PLATFORMS = new Set(SOCIAL_PLATFORMS.map((p) => p.key));
+const VALID_FORMATS = new Set(SOCIAL_FORMATS.map((f) => f.key));
+
+function parseFormat(formData: FormData): SocialFormat {
+  const f = String(formData.get("format") || "feed");
+  return (VALID_FORMATS.has(f as SocialFormat) ? f : "feed") as SocialFormat;
+}
 
 export type SocialFormState = { error: string | null; ok: boolean };
 
@@ -120,10 +127,12 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
   const link = String(formData.get("link") || "").trim() || null;
   const firstComment = String(formData.get("first_comment") || "").trim() || null;
   const platforms = parsePlatforms(formData);
+  const format = parseFormat(formData);
   const scheduledAt = parseScheduledAt(String(formData.get("scheduled_at") || ""));
   const intent = String(formData.get("intent") || "");
   const schedule = intent === "schedule";
-  const publishNow = intent === "publish";
+  // Stories can't be auto-published, so "Post now" on a story just saves it.
+  const publishNow = intent === "publish" && !isAssistedOnly(format);
 
   if (!caption && !formData.getAll("images").some((f) => f instanceof File && f.size > 0)) {
     return { error: "Add a caption or an image.", ok: false };
@@ -159,13 +168,13 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
     image_paths = [...prevPaths.filter((p) => kept.includes(p)), ...newPaths];
     const { error } = await admin
       .from("social_posts")
-      .update({ caption, link, first_comment: firstComment, platforms, scheduled_at: scheduledAt, status, image_paths, updated_at: nowIso })
+      .update({ caption, link, first_comment: firstComment, platforms, format, scheduled_at: scheduledAt, status, image_paths, updated_at: nowIso })
       .eq("id", id);
     if (error) return { error: error.message, ok: false };
   } else {
     const { data: created, error } = await admin
       .from("social_posts")
-      .insert({ caption, link, first_comment: firstComment, platforms, scheduled_at: scheduledAt, status, image_paths: newPaths })
+      .insert({ caption, link, first_comment: firstComment, platforms, format, scheduled_at: scheduledAt, status, image_paths: newPaths })
       .select("id")
       .single();
     if (error) return { error: error.message, ok: false };
@@ -176,6 +185,7 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
   if (publishNow && settings && savedId) {
     const post = {
       id: savedId,
+      format,
       platforms,
       caption,
       link,
@@ -247,8 +257,9 @@ type ImportedPost = {
   link?: string;
   first_comment?: string;
   platforms?: string[];
+  format?: string; // feed | reel | story
   scheduled_at?: string;
-  image?: string; // single image filename
+  image?: string; // single image/video filename
   images?: string[]; // or several (carousel), in order
 };
 
@@ -288,6 +299,7 @@ export async function importPosts(json: string, pathsJson: string): Promise<Soci
 
   const rows: Record<string, unknown>[] = items.slice(0, 200).map((p) => {
     const platforms = Array.isArray(p.platforms) ? p.platforms.filter((x) => VALID_PLATFORMS.has(x as SocialPlatform)) : [];
+    const format = p.format && VALID_FORMATS.has(p.format as SocialFormat) ? p.format : "feed";
     const scheduled_at = p.scheduled_at ? parseScheduledAt(String(p.scheduled_at)) : null;
 
     // Resolve referenced filenames → uploaded storage paths (preserving order).
@@ -306,6 +318,7 @@ export async function importPosts(json: string, pathsJson: string): Promise<Soci
       link: p.link ? String(p.link).trim() : null,
       first_comment: p.first_comment ? String(p.first_comment).trim() : null,
       platforms: platforms.length ? platforms : SOCIAL_PLATFORMS.map((x) => x.key),
+      format,
       scheduled_at,
       image_paths,
       // Imported with a time → scheduled; without → draft to fill in.

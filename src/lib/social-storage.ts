@@ -17,7 +17,7 @@ export async function uploadSocialImages(files: File[]): Promise<{ paths: string
   const admin = createAdminClient();
   const paths: string[] = [];
   for (const file of real) {
-    if (file.size > MAX_IMAGE_BYTES) return { paths, error: `"${file.name}" is too large — 15MB max.` };
+    if (file.size > MAX_IMAGE_BYTES) return { paths, error: `"${file.name}" is too large — 50MB max.` };
     if (!ALLOWED_TYPES.has(file.type)) return { paths, error: `"${file.name}": images or MP4 only.` };
     const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "file";
     const path = `${randomUUID()}-${safe}`;
