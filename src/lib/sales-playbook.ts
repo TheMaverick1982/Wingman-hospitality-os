@@ -27,7 +27,7 @@ export type ProductArea = { name: string; what: string; problem: string };
 
 export const PRODUCT_TOUR: ProductArea[] = [
   { name: "Guest Bounce Back", what: "Logs guests and their return visits, and flags the ones slipping away.", problem: "Owners have no idea who came once and never returned — this makes the first-timer-to-regular journey visible and actionable." },
-  { name: "Guest Journey", what: "Maps the whole guest experience into ordered moments, each with a standard, a script, and what a manager inspects.", problem: "The experience is left to chance and memory; this turns it into a designed, repeatable playbook." },
+  { name: "Guest Journey", what: "Maps the whole guest experience into ordered moments, each with a standard, a script, and what a manager inspects — and lets the host log a first-timer at the door straight into Bounce Back.", problem: "The experience is left to chance and memory; this turns it into a designed, repeatable playbook, and makes sure no first-time guest slips away uncaptured." },
   { name: "Culture", what: "Captures the owner's standard, core values, and weekly focus in their own words.", problem: "Culture is felt but never written down, so it can't be trained or scaled to new hires and second locations." },
   { name: "Training & Standards", what: "Builds role-by-role training programs with a real sign-off log.", problem: "New hires 'pick it up as they go,' so the experience drifts. This makes training consistent and provable." },
   { name: "Accountability", what: "Spot-checks, daily and pre-shift checklists, and automatic coaching flags.", problem: "Standards slip the moment the owner isn't watching; this inspects what they expect, every shift." },

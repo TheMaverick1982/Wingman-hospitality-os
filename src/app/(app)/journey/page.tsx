@@ -13,6 +13,8 @@ export default async function JourneyPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const canEdit = canEditSection(profile.accessRole, "journey", profile.permissionOverrides);
+  // Whether this person can log a first-timer straight into Bounce Back.
+  const canCapture = canEditSection(profile.accessRole, "bounceback", profile.permissionOverrides);
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -39,7 +41,7 @@ export default async function JourneyPage() {
         )}
       </div>
 
-      <JourneyClient stages={stages} canEdit={canEdit} />
+      <JourneyClient stages={stages} canEdit={canEdit} canCapture={canCapture} />
     </div>
   );
 }

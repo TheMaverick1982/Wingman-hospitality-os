@@ -249,6 +249,8 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "tip", text: "The \"Manager inspects\" line on each stage is written as a yes/no observable — use it as your spot-check list on the floor so the standard actually gets held, shift to shift." },
       { kind: "note", text: "The first stage always includes asking whether it's the guest's first visit (e.g. \"Is this your first time with us?\"). Spotting first-timers at the door feeds Guest Bounce Back — the program that turns first-timers into regulars — so it's built into stage one by design." },
+      { kind: "h", text: "Log a first-timer on the spot" },
+      { kind: "p", text: "The first stage has a \"Log a first-timer\" box — enter the guest's name (phone or email optional) and they're added to Guest Bounce Back immediately as a visit-1 guest, ready for visit-2 follow-up. No need to re-enter them later. Anyone who can add to Bounce Back can log one." },
       { kind: "note", text: "\"Refine with AI\" changes only the one stage. \"Regenerate\" (at the top) replaces the whole journey — so refine or edit in place once it's close. Managers and owners can generate, refine, and edit; staff can view." },
       { kind: "p", text: "Use \"Print / PDF\" in the top corner to print the full journey or save it as a PDF — handy for a training binder or a pre-shift huddle." },
     ],
