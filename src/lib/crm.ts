@@ -1,16 +1,18 @@
 // Shared CRM constants and types. Pure (no server-only imports) so both the
 // admin server pages and the client board/panel can use it.
 
-export type CrmStage = "new" | "engaged" | "demoed" | "demo_completed" | "signed_up" | "lost";
+export type CrmStage = "new" | "engaged" | "demoed" | "demo_completed" | "signed_up" | "past_client" | "lost";
 
 // Labels track the automation spec's "Wingman Sales" pipeline. Keys are stable
-// (existing cards don't move); "demo_completed" is the one new stage.
+// (existing cards don't move). "past_client" holds churned customers so we can
+// win them back with the Reactivation sequence.
 export const CRM_STAGES: { key: CrmStage; label: string }[] = [
   { key: "new", label: "New Lead" },
   { key: "engaged", label: "Nurturing" },
   { key: "demoed", label: "Demo Booked" },
   { key: "demo_completed", label: "Demo Completed" },
   { key: "signed_up", label: "Signed Up" },
+  { key: "past_client", label: "Past Clients" },
   { key: "lost", label: "Lost / Dormant" },
 ];
 

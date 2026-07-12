@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { markOrgChurned, markOrgPaid } from "@/lib/crm-sequences";
 
 // Operator alerts (payment failures, closures) go here.
 export const BILLING_OWNER_EMAIL = "brian@brianhardy.com";
@@ -126,10 +127,16 @@ export async function markActive(
       ...(card?.periodEnd ? { current_period_end: card.periodEnd } : {}),
     })
     .eq("id", orgId);
+  // A cleared payment moves the linked CRM contact back to Signed Up and stops
+  // any running Reactivation win-back.
+  await markOrgPaid(admin, orgId);
 }
 
 export async function markCanceled(admin: SupabaseClient, orgId: string): Promise<void> {
   await admin.from("organizations").update({ billing_status: "canceled" }).eq("id", orgId);
+  // Move the linked CRM contact to Past Clients and start the Reactivation
+  // sequence so we can win them back.
+  await markOrgChurned(admin, orgId);
 }
 
 // ---------------------------------------------------------------------------

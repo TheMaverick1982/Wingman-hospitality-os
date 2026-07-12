@@ -150,6 +150,51 @@ export async function stopEnrollments(contactId: string, reason: string, adminAr
     .eq("status", "active");
 }
 
+// The CRM contact linked to a customer org (org_id is set when they converted).
+async function contactForOrg(admin: Admin, orgId: string): Promise<{ id: string; email: string; stage: string } | null> {
+  const { data } = await admin
+    .from("crm_contacts")
+    .select("id, email, stage")
+    .eq("org_id", orgId)
+    .order("customer_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { id: string; email: string; stage: string } | null) ?? null;
+}
+
+// On cancellation: move the linked contact to Past Clients and enroll the
+// Reactivation win-back sequence (first email fires 30 days out). Best-effort —
+// a no-op if the org has no linked CRM contact, and never throws into billing.
+export async function markOrgChurned(admin: Admin, orgId: string): Promise<void> {
+  try {
+    const c = await contactForOrg(admin, orgId);
+    if (!c) return;
+    const now = new Date().toISOString();
+    if (c.stage !== "past_client") {
+      await admin.from("crm_contacts").update({ stage: "past_client", last_activity_at: now, updated_at: now }).eq("id", c.id);
+      await admin.from("crm_activities").insert({ contact_id: c.id, kind: "system", body: "Subscription canceled — moved to Past Clients" });
+    }
+    await enrollContactInSource(c.id, c.email, "reactivation", admin, { ignoreWonGuards: true });
+  } catch (err) {
+    console.error("[crm] markOrgChurned failed", err);
+  }
+}
+
+// On a successful payment: ensure the linked contact is in Signed Up and stop
+// any running Reactivation sequence (they're back). Best-effort.
+export async function markOrgPaid(admin: Admin, orgId: string): Promise<void> {
+  try {
+    const c = await contactForOrg(admin, orgId);
+    if (!c || c.stage === "signed_up") return;
+    const now = new Date().toISOString();
+    await admin.from("crm_contacts").update({ stage: "signed_up", customer_at: now, last_activity_at: now, updated_at: now }).eq("id", c.id);
+    await admin.from("crm_activities").insert({ contact_id: c.id, kind: "system", body: "Payment received — moved to Signed Up" });
+    await stopEnrollments(c.id, "customer", admin);
+  } catch (err) {
+    console.error("[crm] markOrgPaid failed", err);
+  }
+}
+
 // Mark a contact as having booked a call — stops all their sequences.
 export async function markBookedByEmail(email: string, adminArg?: Admin): Promise<boolean> {
   const admin = adminArg ?? createAdminClient();

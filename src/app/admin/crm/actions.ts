@@ -6,7 +6,7 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isCrmStage, stageLabel } from "@/lib/crm";
-import { stopEnrollments, suppressEmail } from "@/lib/crm-sequences";
+import { stopEnrollments, suppressEmail, buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { personalize } from "@/lib/name-safety";
 
 export type CrmActionState = { error: string | null; ok: boolean };
@@ -144,10 +144,9 @@ export async function sendContactEmail(_prev: CrmActionState, formData: FormData
   const finalSubject = personalize(subject, c.name);
   const finalBody = personalize(body, c.name);
 
-  // Minimal branded HTML wrapper around the typed message (newlines → <br>).
-  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:560px;">${finalBody
-    .replace(/[<>&]/g, (ch) => (ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : "&amp;"))
-    .replace(/\n/g, "<br>")}</div>`;
+  // Use the shared sequence wrapper so even one-off emails carry the CAN-SPAM
+  // unsubscribe footer + postal address.
+  const html = buildSequenceEmailHtml(finalBody, c.email);
 
   try {
     await sendEmail({ to: [c.email], subject: finalSubject, html, replyTo: me.email });
