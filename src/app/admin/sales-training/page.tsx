@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { commissionsForRep, formatCents, totalsFor } from "@/lib/sales-commissions";
+import { commissionsForRep, formatCents, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
+import { ClaimForm } from "./claim-form";
 import {
   PRODUCT_ONE_LINER,
   WHY_IT_MATTERS,
@@ -20,6 +21,14 @@ import {
 
 export const metadata: Metadata = { title: "Sales Training · Admin" };
 
+const STATUS_BADGE: Record<CommissionStatus, { label: string; className: string }> = {
+  pending: { label: "Pending approval", className: "text-[#B45309] bg-gold-tint" },
+  owed: { label: "Owed", className: "text-[#B45309] bg-gold-tint" },
+  paid: { label: "Paid", className: "text-olive bg-olive-tint" },
+  denied: { label: "Denied", className: "text-muted bg-paper" },
+  void: { label: "Void", className: "text-muted bg-paper" },
+};
+
 function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
   return (
     <div>
@@ -34,9 +43,15 @@ export default async function SalesTrainingPage() {
   const profile = await requirePlatformSection("sales_training");
 
   const admin = createAdminClient();
-  const myCommissions = await commissionsForRep(admin, profile.userId);
+  const [myCommissions, { data: orgRows }] = await Promise.all([
+    commissionsForRep(admin, profile.userId),
+    admin.from("organizations").select("id, name").order("name"),
+  ]);
+  const orgs = (orgRows ?? []) as { id: string; name: string }[];
   const myTotals = totalsFor(myCommissions);
-  const recent = myCommissions.filter((c) => c.status !== "void").slice(0, 5);
+  const pendingCount = myCommissions.filter((c) => c.status === "pending").length;
+  const recent = myCommissions.filter((c) => c.status !== "void").slice(0, 6);
+  const hasActivity = myCommissions.some((c) => c.status !== "void");
 
   return (
     <div className="flex flex-col gap-10 pb-10">
@@ -49,40 +64,49 @@ export default async function SalesTrainingPage() {
         </p>
       </div>
 
-      {/* Your earnings — only shown once a rep has commission activity */}
-      {(myTotals.owedCents > 0 || myTotals.paidCents > 0) && (
-        <div className="bg-white border border-line rounded-2xl p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Your commissions — balance, claim button, and your claim history */}
+      <div className="bg-white border border-line rounded-2xl p-6 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
             <div className="text-[15px] font-semibold text-ink">Your commissions</div>
-            <div className="flex gap-6">
-              <div>
-                <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#B45309]">Owed to you</div>
-                <div className="text-[22px] font-bold text-[#B45309] tabular-nums">{formatCents(myTotals.owedCents)}</div>
-              </div>
-              <div>
-                <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive">Paid to date</div>
-                <div className="text-[22px] font-bold text-olive tabular-nums">{formatCents(myTotals.paidCents)}</div>
-              </div>
+            {pendingCount > 0 && (
+              <div className="text-[12.5px] text-[#B45309] mt-0.5">{pendingCount} claim{pendingCount === 1 ? "" : "s"} awaiting the owner&rsquo;s approval</div>
+            )}
+          </div>
+          <div className="flex gap-6">
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#B45309]">Owed to you</div>
+              <div className="text-[22px] font-bold text-[#B45309] tabular-nums">{formatCents(myTotals.owedCents)}</div>
+            </div>
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive">Paid to date</div>
+              <div className="text-[22px] font-bold text-olive tabular-nums">{formatCents(myTotals.paidCents)}</div>
             </div>
           </div>
-          {recent.length > 0 && (
-            <div className="mt-4 border-t border-[#F5F5F5] pt-3 flex flex-col gap-2">
-              {recent.map((c) => (
+        </div>
+
+        <ClaimForm orgs={orgs} />
+
+        {hasActivity && (
+          <div className="border-t border-[#F5F5F5] pt-3 flex flex-col gap-2">
+            {recent.map((c) => {
+              const badge = STATUS_BADGE[c.status];
+              return (
                 <div key={c.id} className="flex items-center justify-between gap-3 text-[13.5px]">
                   <span className="text-charcoal-2 truncate">{c.label}</span>
                   <span className="flex items-center gap-3 shrink-0">
                     <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
-                    <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${c.status === "paid" ? "text-olive bg-olive-tint" : "text-[#B45309] bg-gold-tint"}`}>
-                      {c.status === "paid" ? "Paid" : "Owed"}
-                    </span>
+                    <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${badge.className}`}>{badge.label}</span>
                   </span>
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="text-[12px] text-muted-2 mt-3">These are the same numbers the owner sees. Questions on a line item? Ask them directly.</div>
+              );
+            })}
+          </div>
+        )}
+        <div className="text-[12px] text-muted-2">
+          Only the owner can approve a claim, mark it paid, or change an amount — so these always match what they see. Questions on a line item? Ask them directly.
         </div>
-      )}
+      </div>
 
       {/* The one rule banner */}
       <div className="bg-[#0A0A0A] rounded-[20px] p-8 text-white">
