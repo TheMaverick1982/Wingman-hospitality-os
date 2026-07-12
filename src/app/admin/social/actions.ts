@@ -121,7 +121,9 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
   const firstComment = String(formData.get("first_comment") || "").trim() || null;
   const platforms = parsePlatforms(formData);
   const scheduledAt = parseScheduledAt(String(formData.get("scheduled_at") || ""));
-  const schedule = String(formData.get("intent") || "") === "schedule";
+  const intent = String(formData.get("intent") || "");
+  const schedule = intent === "schedule";
+  const publishNow = intent === "publish";
 
   if (!caption && !formData.getAll("images").some((f) => f instanceof File && f.size > 0)) {
     return { error: "Add a caption or an image.", ok: false };
@@ -131,6 +133,12 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
 
   const admin = createAdminClient();
 
+  // "Post now" needs a connected platform up front.
+  const settings = publishNow ? await getSocialSettings() : null;
+  if (publishNow && (!settings || !anyConnected(settings))) {
+    return { error: "Connect a platform before posting now.", ok: false };
+  }
+
   // Upload any newly attached images and append to the existing ones.
   const files = formData.getAll("images").filter((f): f is File => f instanceof File);
   const { paths: newPaths, error: upErr } = await uploadSocialImages(files);
@@ -138,6 +146,8 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
 
   const status = schedule ? "scheduled" : "draft";
   const nowIso = new Date().toISOString();
+  let savedId = id;
+  let image_paths = newPaths;
 
   if (id) {
     const { data: existing } = await admin.from("social_posts").select("image_paths").eq("id", id).maybeSingle();
@@ -146,17 +156,54 @@ export async function savePost(_prev: SocialFormState, formData: FormData): Prom
     const kept = formData.getAll("kept_image").map(String);
     const removed = prevPaths.filter((p) => !kept.includes(p));
     if (removed.length) await deleteSocialImages(removed);
-    const image_paths = [...prevPaths.filter((p) => kept.includes(p)), ...newPaths];
+    image_paths = [...prevPaths.filter((p) => kept.includes(p)), ...newPaths];
     const { error } = await admin
       .from("social_posts")
       .update({ caption, link, first_comment: firstComment, platforms, scheduled_at: scheduledAt, status, image_paths, updated_at: nowIso })
       .eq("id", id);
     if (error) return { error: error.message, ok: false };
   } else {
-    const { error } = await admin
+    const { data: created, error } = await admin
       .from("social_posts")
-      .insert({ caption, link, first_comment: firstComment, platforms, scheduled_at: scheduledAt, status, image_paths: newPaths });
+      .insert({ caption, link, first_comment: firstComment, platforms, scheduled_at: scheduledAt, status, image_paths: newPaths })
+      .select("id")
+      .single();
     if (error) return { error: error.message, ok: false };
+    savedId = (created as { id: string } | null)?.id ?? "";
+  }
+
+  // Publish immediately if requested.
+  if (publishNow && settings && savedId) {
+    const post = {
+      id: savedId,
+      platforms,
+      caption,
+      link,
+      first_comment: firstComment,
+      image_paths,
+      published_urls: {},
+    } as unknown as SocialPost;
+    const outcome = await publishAll(post, settings);
+    const anyLive = Boolean(outcome.facebook || outcome.instagram || outcome.linkedin);
+    const publishedUrls = {
+      ...(outcome.facebook ? { facebook: outcome.facebook } : {}),
+      ...(outcome.instagram ? { instagram: outcome.instagram } : {}),
+      ...(outcome.linkedin ? { linkedin: outcome.linkedin } : {}),
+    };
+    await admin
+      .from("social_posts")
+      .update({
+        status: anyLive && !outcome.error ? "posted" : status,
+        posted_at: anyLive && !outcome.error ? nowIso : null,
+        published_urls: publishedUrls,
+        publish_error: outcome.error ?? null,
+        last_publish_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("id", savedId);
+    revalidatePath("/admin/social");
+    if (outcome.error) return { error: `Published with issues — ${outcome.error}`, ok: true };
+    return { error: null, ok: true };
   }
 
   revalidatePath("/admin/social");

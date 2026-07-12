@@ -19,10 +19,12 @@ export function Composer({
   post,
   images,
   onDone,
+  connected,
 }: {
   post?: SocialPost;
   images?: { path: string; url: string }[];
   onDone?: () => void;
+  connected?: boolean;
 }) {
   const [state, action, pending] = useActionState(savePost, initial);
   const [keep, setKeep] = useState<string[]>((images ?? []).map((i) => i.path));
@@ -131,7 +133,18 @@ export function Composer({
         />
       </div>
 
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-3 pt-1 flex-wrap">
+        {connected && (
+          <button
+            type="submit"
+            name="intent"
+            value="publish"
+            disabled={pending}
+            className="text-[15px] font-semibold text-white bg-olive rounded-full px-6 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {pending ? "Posting…" : "Post now"}
+          </button>
+        )}
         <button
           type="submit"
           name="intent"
