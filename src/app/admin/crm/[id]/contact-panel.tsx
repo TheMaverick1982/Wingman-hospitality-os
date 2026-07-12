@@ -52,7 +52,7 @@ function when(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export function ContactPanel({ contact, activities, enrollments }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[] }) {
+export function ContactPanel({ contact, activities, enrollments, canDelete }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"email" | "note">("email");
   const [savingStage, setSavingStage] = useState(false);
@@ -199,9 +199,11 @@ export function ContactPanel({ contact, activities, enrollments }: { contact: Co
             </div>
           </div>
 
-          <button type="button" onClick={() => setConfirmDelete(true)} className="text-[13px] font-medium text-danger hover:opacity-70 transition-opacity self-start px-1">
-            Delete contact
-          </button>
+          {canDelete && (
+            <button type="button" onClick={() => setConfirmDelete(true)} className="text-[13px] font-medium text-danger hover:opacity-70 transition-opacity self-start px-1">
+              Delete contact
+            </button>
+          )}
         </div>
 
         {/* Right column: timeline + composer */}
