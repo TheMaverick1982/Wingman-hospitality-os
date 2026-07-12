@@ -3,6 +3,8 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicImageUrl, type SocialPost } from "@/lib/social";
 import { getSocialSettings, isConnected, metaConfigured } from "@/lib/social-meta";
+import { isLinkedInConnected, linkedinConfigured } from "@/lib/social-linkedin";
+import { anyConnected as anyPlatformConnected } from "@/lib/social-publish";
 import { SocialToolbar } from "./toolbar";
 import { PostCard } from "./post-card";
 import { Connections } from "./connections";
@@ -19,6 +21,12 @@ const META_FLASH: Record<string, { kind: "ok" | "error"; text: string }> = {
   denied: { kind: "error", text: "Connection cancelled." },
   badstate: { kind: "error", text: "Connection expired — please try again." },
   unconfigured: { kind: "error", text: "Meta app isn't configured (missing META_APP_ID / META_APP_SECRET)." },
+};
+const LI_FLASH: Record<string, { kind: "ok" | "error"; text: string }> = {
+  connected: { kind: "ok", text: "✓ Connected to LinkedIn." },
+  denied: { kind: "error", text: "LinkedIn connection cancelled." },
+  badstate: { kind: "error", text: "LinkedIn connection expired — please try again." },
+  unconfigured: { kind: "error", text: "LinkedIn app isn't configured (missing LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET)." },
 };
 
 // Kept in a helper so it isn't flagged as an impure call in the render body.
@@ -44,7 +52,7 @@ function Section({ title, items, hint, connected }: { title: string; items: Card
   );
 }
 
-export default async function SocialPage({ searchParams }: { searchParams: Promise<{ meta?: string; msg?: string }> }) {
+export default async function SocialPage({ searchParams }: { searchParams: Promise<{ meta?: string; li?: string; msg?: string }> }) {
   await requirePlatformSection("social");
   const admin = createAdminClient();
 
@@ -57,12 +65,14 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
     getSocialSettings(),
   ]);
   const posts = ((data ?? []) as SocialPost[]).map(withUrls);
-  const connected = isConnected(settings);
+  const connected = anyPlatformConnected(settings);
 
-  const { meta, msg } = await searchParams;
+  const { meta, li, msg } = await searchParams;
   const flash = meta
     ? META_FLASH[meta] ?? (meta === "error" ? { kind: "error" as const, text: msg ?? "Connection failed." } : null)
-    : null;
+    : li
+      ? LI_FLASH[li] ?? (li === "error" ? { kind: "error" as const, text: msg ?? "LinkedIn connection failed." } : null)
+      : null;
 
   const now = nowMs();
   const dueNow = posts.filter((p) => p.status === "scheduled" && p.scheduled_at && new Date(p.scheduled_at).getTime() <= now);
@@ -81,11 +91,19 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       </div>
 
       <Connections
-        configured={metaConfigured()}
-        connected={connected}
-        pageName={settings?.fb_page_name ?? null}
-        igUsername={settings?.ig_username ?? null}
+        anyConnected={connected}
         autoPublish={settings?.auto_publish ?? false}
+        meta={{
+          configured: metaConfigured(),
+          connected: isConnected(settings),
+          pageName: settings?.fb_page_name ?? null,
+          igUsername: settings?.ig_username ?? null,
+        }}
+        linkedin={{
+          configured: linkedinConfigured(),
+          connected: isLinkedInConnected(settings),
+          name: settings?.li_member_name ?? null,
+        }}
         flash={flash}
       />
 

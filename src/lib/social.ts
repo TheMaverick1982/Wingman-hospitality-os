@@ -12,6 +12,7 @@ export const IMAGE_RETENTION_DAYS = 3;
 export const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram" },
   { key: "facebook", label: "Facebook" },
+  { key: "linkedin", label: "LinkedIn" },
 ] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number]["key"];
 

@@ -26,6 +26,12 @@ export type SocialSettings = {
   token_expires_at: string | null;
   auto_publish: boolean;
   connected_at: string | null;
+  // LinkedIn (personal profile) — Phase 3.
+  li_member_id: string | null;
+  li_member_name: string | null;
+  li_access_token: string | null;
+  li_token_expires_at: string | null;
+  li_connected_at: string | null;
 };
 
 export function siteUrl(): string {
