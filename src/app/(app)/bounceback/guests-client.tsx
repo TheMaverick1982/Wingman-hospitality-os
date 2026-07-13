@@ -7,9 +7,11 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { computeStageCounts, stageOf, visitAt, type GuestWithVisits } from "@/lib/hospitality";
+import { analyzeRetention, locationDropoff, locationInsight } from "@/lib/retention-coach";
 import type { Location } from "@/lib/data/locations";
 import { GuestModal, type GuestFormValue } from "./guest-modal";
 import { CsvImportButton } from "./csv-import-button";
+import { RetentionCoach } from "./retention-coach";
 import { deleteGuest } from "./actions";
 import { downloadCsv } from "@/lib/csv";
 
@@ -30,16 +32,26 @@ export function GuestsClient({
   guests,
   locations,
   defaultLocationId,
+  canEdit,
 }: {
   guests: Guest[];
   locations: Location[];
   defaultLocationId: string | null;
+  canEdit: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [modalGuest, setModalGuest] = useState<GuestFormValue | null | undefined>(undefined);
   const [now] = useState(() => Date.now());
 
   const stageCounts = useMemo(() => computeStageCounts(guests), [guests]);
+
+  // Retention drop-off coach: where are we losing the most guests, and (across
+  // locations) is one store dragging it down?
+  const retention = useMemo(() => analyzeRetention(stageCounts.counts), [stageCounts]);
+  const retentionLocationInsight = useMemo(
+    () => (retention.worst ? locationInsight(locationDropoff(guests, locations, retention.worst.fromVisit)) : null),
+    [guests, locations, retention.worst]
+  );
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return guests;
@@ -177,6 +189,8 @@ export function GuestsClient({
           </Btn>
         </div>
       </div>
+
+      <RetentionCoach analysis={retention} locationInsight={retentionLocationInsight} canEdit={canEdit} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Repeat rate" value={`${stageCounts.pct[1] || 0}%`} sub="back for visit 2" />
