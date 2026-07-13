@@ -5,7 +5,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { getOrgLocations } from "@/lib/data/locations";
 import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getLaunchPlan } from "@/lib/launch-plan";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
@@ -24,7 +24,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const isSuperAdmin = profile.accessRole === "super_admin";
   const locations = await getOrgLocations();
-  const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
+  // Keep "Start here" in the sidebar through the whole 14-day launch — including
+  // the usage milestones — not just until setup is done.
+  const launch = isSuperAdmin ? await getLaunchPlan() : null;
 
   const supabase = await createClient();
   const { data: guests } = await supabase
@@ -73,7 +75,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         fallbackRepeatRate={fallbackRepeatRate}
         isPlatformAdmin={profile.isPlatformAdmin}
         permissionOverrides={profile.permissionOverrides}
-        showStartHere={!!onboarding && !onboarding.allDone}
+        showStartHere={!!launch && !launch.allDone}
       />
       <div className="flex-1 flex flex-col min-w-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
@@ -86,7 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           fallbackRepeatRate={fallbackRepeatRate}
           isPlatformAdmin={profile.isPlatformAdmin}
           permissionOverrides={profile.permissionOverrides}
-          showStartHere={!!onboarding && !onboarding.allDone}
+          showStartHere={!!launch && !launch.allDone}
         />
         <Topbar
           locations={switchableLocations}

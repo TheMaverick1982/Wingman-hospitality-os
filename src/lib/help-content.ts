@@ -406,6 +406,30 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Building training programs", href: "/help/training-programs" }],
   },
   {
+    slug: "launch-plan",
+    title: "Your 14-day Launch Plan",
+    summary: "The dated rollout on Start Here that gets Wingman actually running — fast.",
+    categoryId: "getting-started",
+    keywords: ["start here", "launch", "rollout", "onboarding", "14 day", "implementation", "get running", "milestones", "on track"],
+    body: [
+      { kind: "p", text: "Software only pays off when you actually run it. So instead of an open-ended checklist, the Start Here page gives you a 14-day Launch Plan — a handful of moves grouped into four short phases, each with a target day. It shows what's done, what's due now, and anything that's slipped past its date, so you always know your next move." },
+      { kind: "h", text: "The four phases" },
+      { kind: "list", items: [
+        "Set your foundation (Days 1–3) — run the Setup Wizard, build training for your first role.",
+        "Bring your team in (Days 4–7) — add your staff, set hiring criteria, write your team playbook.",
+        "Turn on guest retention (Days 8–11) — log your first first-time guest into Bounce Back, recognize a culture moment.",
+        "Make it a daily habit (Days 12–14) — run your first floor spot-check.",
+      ] },
+      { kind: "note", text: "Milestones tagged \"Put it to work\" are about using Wingman on the floor, not just setting it up — those are the ones that turn it into a habit and drive your return." },
+      { kind: "tip", text: "Each milestone checks itself off automatically as you do the work — there's nothing to mark complete. Once every milestone is done, Start Here retires itself from the sidebar." },
+      { kind: "p", text: "You'll also get a short weekly email showing where you are, your next moves, and anything overdue — a nudge so the rollout doesn't stall in a busy week." },
+    ],
+    links: [
+      { label: "The Setup Wizard", href: "/help/setup-wizard" },
+      { label: "Guest Bounce Back", href: "/help/guest-bounce-back" },
+    ],
+  },
+  {
     slug: "team-and-permissions",
     title: "Team members & permissions",
     summary: "Invite, edit, and set what each person can access.",
