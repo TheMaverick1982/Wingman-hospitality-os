@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { Plus, MessageSquareText, Check, X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -34,6 +34,8 @@ export function CandidateModalButton({
   defaultDepartment,
   departments,
   autoOpenDepartment,
+  prefillName,
+  applicationId,
 }: {
   universalTraits: ScoreTrait[];
   traitsByDept: Record<Department, ScoreTrait[]>;
@@ -45,23 +47,19 @@ export function CandidateModalButton({
   defaultDepartment: Department;
   departments?: Department[];
   autoOpenDepartment?: Department;
+  // When starting from an application: prefill the name and link back on save.
+  prefillName?: string;
+  applicationId?: string;
 }) {
   const roles = departments && departments.length ? departments : ALL_DEPARTMENTS;
-  const [open, setOpen] = useState(false);
-  const [department, setDepartment] = useState<Department>(defaultDepartment);
+  // Auto-open (and preselect the department) when arriving with score/apply
+  // params — derived from props at mount, so no state-syncing effect needed.
+  const [open, setOpen] = useState(Boolean(autoOpenDepartment || prefillName));
+  const [department, setDepartment] = useState<Department>(autoOpenDepartment ?? defaultDepartment);
   const [recommendation, setRecommendation] = useState<(typeof RECOMMENDATION_OPTIONS)[number]>("Unsure");
   const [showGuide, setShowGuide] = useState(true);
   const [state, formAction, pending] = useActionState(addCandidate, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
-
-  const autoOpened = useRef(false);
-  useEffect(() => {
-    if (autoOpenDepartment && !autoOpened.current) {
-      autoOpened.current = true;
-      setDepartment(autoOpenDepartment);
-      setOpen(true);
-    }
-  }, [autoOpenDepartment]);
 
   const combinedTraits = [
     ...universalTraits.map((t) => ({ ...t, universal: true })),
@@ -78,6 +76,7 @@ export function CandidateModalButton({
         <Modal title="Score a candidate" sub="Against your actual values, not a generic rubric." onClose={() => setOpen(false)} wide>
           <form action={formAction}>
             <input type="hidden" name="recommendation" value={recommendation} />
+            {applicationId && <input type="hidden" name="applicationId" value={applicationId} />}
             <div className="grid grid-cols-3 gap-4">
               <Field label="Candidate name">
                 <StaffPicker
@@ -85,6 +84,7 @@ export function CandidateModalButton({
                   staff={staff}
                   required
                   placeholder="Candidate name"
+                  defaultNewName={prefillName}
                   onSelectExisting={(s) => setDepartment(s.department as Department)}
                 />
               </Field>

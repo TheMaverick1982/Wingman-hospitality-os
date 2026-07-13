@@ -16,6 +16,7 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
   const occurredOn = String(formData.get("occurredOn") || "");
   const recommendation = String(formData.get("recommendation") || "");
   const notes = String(formData.get("notes") || "").trim();
+  const applicationId = String(formData.get("applicationId") || "").trim();
 
   if (!name || !locationId || !occurredOn) {
     return { error: "Candidate name, location, and date are required." };
@@ -40,19 +41,32 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("candidates").insert({
-    org_id: org.id,
-    location_id: locationId,
-    name,
-    department,
-    occurred_on: occurredOn,
-    scores,
-    recommendation,
-    notes,
-    created_by: user?.id,
-  });
+  const { data: inserted, error } = await supabase
+    .from("candidates")
+    .insert({
+      org_id: org.id,
+      location_id: locationId,
+      name,
+      department,
+      occurred_on: occurredOn,
+      scores,
+      recommendation,
+      notes,
+      created_by: user?.id,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
+
+  // If this candidate was started from an application, link them and advance
+  // the applicant's status so the tracker reflects they're in the pipeline.
+  if (applicationId && inserted) {
+    await supabase
+      .from("job_applications")
+      .update({ candidate_id: (inserted as { id: string }).id, status: "contacted", updated_at: new Date().toISOString() })
+      .eq("id", applicationId);
+  }
 
   revalidatePath("/hiring");
   return { error: null };

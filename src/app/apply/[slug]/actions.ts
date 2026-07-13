@@ -17,8 +17,8 @@ function esc(s: string): string {
 // and only writing to that org's rows.
 export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const admin = createAdminClient();
-  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled").eq("public_slug", slug).maybeSingle();
-  const org = orgRow as { id: string; name: string; apply_enabled: boolean } | null;
+  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc").eq("public_slug", slug).maybeSingle();
+  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null } | null;
   if (!org || !org.apply_enabled) return { error: "This application form isn't accepting submissions right now." };
 
   const name = String(formData.get("name") || "").trim();
@@ -72,17 +72,23 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     if (!up.error) await admin.from("job_applications").update({ resume_path: path }).eq("id", appId);
   }
 
-  // Notify the location's email on file (fallback to the monitor address).
-  let to = "";
+  // Notify the location's email on file (fallback to the monitor address),
+  // plus any catch-all copy addresses the owner configured.
+  let locEmail = "";
   if (validLoc) {
     const { data: loc } = await admin.from("locations").select("email").eq("id", validLoc).maybeSingle();
-    to = ((loc as { email?: string } | null)?.email || "").trim();
+    locEmail = ((loc as { email?: string } | null)?.email || "").trim();
   }
-  if (!to) to = FALLBACK_ALERT;
+  const ccList = (org.applications_cc || "")
+    .split(/[,\n;]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.includes("@"));
+  const recipients = [...new Set([locEmail, ...ccList].filter(Boolean))];
+  if (recipients.length === 0) recipients.push(FALLBACK_ALERT);
 
   const contact = [email, phone].filter(Boolean).join(" · ");
   await sendEmail({
-    to: [to],
+    to: recipients,
     subject: `New application: ${name}${department ? ` — ${department}` : ""}`,
     html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:600px;">
       <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 6px;">New application</p>
