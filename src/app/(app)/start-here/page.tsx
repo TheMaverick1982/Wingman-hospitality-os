@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Circle, ArrowRight, PartyPopper } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, PartyPopper, Plug } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getOnboardingStatus } from "@/lib/onboarding";
 
@@ -64,6 +64,26 @@ export default async function StartHerePage() {
             )}
           </Link>
         ))}
+      </div>
+
+      {/* Optional / advanced — never blocks the core setup. */}
+      <div className="mt-8">
+        <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-2 mb-2">Optional · Advanced</div>
+        <Link
+          href="/help/api-and-integrations"
+          className="flex items-center gap-4 bg-white border border-dashed border-line rounded-2xl p-5 hover:border-brick transition-colors group"
+        >
+          <Plug size={20} className="text-muted-2 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[15px] font-semibold text-ink">
+              Connect your POS <span className="text-[12px] font-medium text-muted-2">— optional</span>
+            </div>
+            <p className="text-[13px] text-muted mt-0.5">
+              Have your weekly numbers fill in automatically instead of typing them. Most owners skip this at first — you can hand it to your POS provider or bookkeeper anytime.
+            </p>
+          </div>
+          <ArrowRight size={16} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
+        </Link>
       </div>
     </div>
   );
