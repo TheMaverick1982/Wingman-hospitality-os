@@ -165,6 +165,25 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "feature-ideas",
+    title: "Feature ideas & voting",
+    summary: "Suggest features you want, and vote on others' ideas — we read every one.",
+    categoryId: "getting-started",
+    keywords: ["feature", "idea", "request", "vote", "upvote", "roadmap", "suggestion", "feedback", "wishlist"],
+    body: [
+      { kind: "p", text: "The Feature Ideas board (in the left sidebar) is where you tell us what you'd love Wingman to do — and vote for the ideas you want most. It's shared across all Wingman customers, so the ideas with the most votes rise to the top and help us decide what to build next." },
+      { kind: "steps", items: [
+        "Open Feature ideas from the sidebar.",
+        "Click \"Suggest an idea\", give it a short title and (optionally) a sentence on the problem it solves.",
+        "Upvote any idea you'd also like — tap the arrow. Tap again to remove your vote.",
+        "Sort by Newest, Most votes, or Least votes to see what others are asking for.",
+      ] },
+      { kind: "note", text: "Voting is anonymous — no one can see who suggested or voted for what. Each idea shows a status (Open, Planned, In progress, Shipped) so you can follow where it stands." },
+      { kind: "tip", text: "The more specific the idea, the easier it is for us to act on. \"Text guests their bounce-back offer automatically\" beats \"better guest messaging.\"" },
+    ],
+    links: [{ label: "Ask the Wingman assistant", href: "/help/ask-wingman-assistant" }],
+  },
+  {
     slug: "weekly-moves",
     title: "Your weekly 3 moves",
     summary: "Commit to three things each week and tick them off — a simple accountability habit.",
