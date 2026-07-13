@@ -13,11 +13,41 @@ import { SpotCheckModalButton } from "./spot-check-modal";
 import { PreShiftCheckModalButton } from "./pre-shift-check-modal";
 import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
-import { SPOT_CHECK_DIMENSIONS } from "@/lib/constants";
+import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { getChecklistItems } from "./template-actions";
 import { MyPreshiftCard } from "./my-preshift-card";
+import { MyLoyaltyCard } from "./my-loyalty-card";
 import { PreshiftReport, type TodayCompletion, type RosterRow } from "./preshift-report";
+
+// Build the "who completed today / last 30 days" view for a personal checklist
+// from actual completions (shared by pre-shift and FOH loyalty).
+type CompRow = { profile_id: string; occurred_on: string; completed_count: number; item_count: number; updated_at: string | null; created_at: string };
+function buildChecklistReport(comps: CompRow[], todayStr: string, nameById: Map<string, string>, rosterProfiles: { id: string; full_name: string }[]): { today: TodayCompletion[]; roster: RosterRow[] } {
+  const today: TodayCompletion[] = comps
+    .filter((c) => c.occurred_on === todayStr)
+    .map((c) => ({ name: nameById.get(c.profile_id) ?? "Team member", completedCount: c.completed_count, itemCount: c.item_count, completedAt: c.updated_at ?? c.created_at }));
+
+  const byProfile = new Map<string, { count: number; last: string | null }>();
+  for (const c of comps) {
+    const cur = byProfile.get(c.profile_id) ?? { count: 0, last: null };
+    cur.count += 1;
+    if (!cur.last || c.occurred_on > cur.last) cur.last = c.occurred_on;
+    byProfile.set(c.profile_id, cur);
+  }
+  const roster: RosterRow[] = rosterProfiles
+    .map((p) => {
+      const agg = byProfile.get(p.id);
+      return { name: p.full_name, lastCompleted: agg?.last ?? null, count30d: agg?.count ?? 0 };
+    })
+    .sort((a, b) => {
+      if (a.lastCompleted && b.lastCompleted) return a.lastCompleted < b.lastCompleted ? 1 : -1;
+      if (a.lastCompleted) return -1;
+      if (b.lastCompleted) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  return { today, roster };
+}
 
 function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -74,6 +104,7 @@ export default async function AccountabilityPage({
     locations,
     dailyTemplateItems,
     preShiftTemplateItems,
+    loyaltyTemplateItems,
   ] = await Promise.all([
     discountsQ,
     spotChecksQ,
@@ -85,6 +116,7 @@ export default async function AccountabilityPage({
     getOrgLocations(),
     getChecklistItems("daily"),
     getChecklistItems("preshift"),
+    getChecklistItems("loyalty"),
   ]);
 
   const discounts = (discountsData ?? []) as Discount[];
@@ -137,29 +169,48 @@ export default async function AccountabilityPage({
   const components = [dailyPct, preShiftPct, ambiancePct, spotCheckPct].filter((v): v is number => v !== null);
   const accountabilityScore = components.length > 0 ? Math.round(components.reduce((a, b) => a + b, 0) / components.length) : 0;
 
-  // --- Per-staff pre-shift checklist: personal card (everyone) + report (managers) ---
+  // --- Per-staff checklists: personal cards + manager reports (pre-shift + FOH loyalty) ---
   const todayStr = new Date().toISOString().slice(0, 10);
   const preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
+  const loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
 
-  const { data: myCompletion } = await supabase
-    .from("shift_checklist_completions")
-    .select("checked, completed_count, item_count, updated_at, created_at")
-    .eq("profile_id", profile.userId)
-    .eq("checklist_type", "preshift")
-    .eq("occurred_on", todayStr)
-    .maybeSingle();
-  const myChecked = (myCompletion?.checked as boolean[] | undefined) ?? [];
-  const myCompletedAt = (myCompletion?.updated_at as string | undefined) ?? (myCompletion?.created_at as string | undefined) ?? null;
-
+  // Who is FOH? Loyalty is a front-of-house habit, so we only surface its card
+  // to FOH staff (managers/owner see it too), and its report roster is FOH-only.
+  const { data: staffDeptRows } = await supabase.from("staff_members").select("profile_id, department").not("profile_id", "is", null);
+  const fohProfileIds = new Set(
+    ((staffDeptRows ?? []) as { profile_id: string | null; department: string }[])
+      .filter((s) => s.profile_id && FOH_DEPARTMENTS.includes(s.department as Department))
+      .map((s) => s.profile_id as string)
+  );
   const canSeeReport = profile.accessRole !== "staff";
+  const viewerIsFoh = fohProfileIds.has(profile.userId);
+  const showLoyaltyCard = viewerIsFoh || canSeeReport;
+
+  const { data: myCompletions } = await supabase
+    .from("shift_checklist_completions")
+    .select("checklist_type, checked, completed_count, item_count, updated_at, created_at")
+    .eq("profile_id", profile.userId)
+    .in("checklist_type", ["preshift", "loyalty"])
+    .eq("occurred_on", todayStr);
+  const myByType = new Map<string, { checked?: boolean[]; updated_at?: string; created_at?: string }>();
+  for (const c of (myCompletions ?? []) as { checklist_type: string; checked: boolean[]; updated_at: string; created_at: string }[]) myByType.set(c.checklist_type, c);
+  const myPreshift = myByType.get("preshift");
+  const myLoyalty = myByType.get("loyalty");
+  const myChecked = myPreshift?.checked ?? [];
+  const myCompletedAt = myPreshift?.updated_at ?? myPreshift?.created_at ?? null;
+  const myLoyaltyChecked = myLoyalty?.checked ?? [];
+  const myLoyaltyCompletedAt = myLoyalty?.updated_at ?? myLoyalty?.created_at ?? null;
+
   let todayCompletions: TodayCompletion[] = [];
   let roster: RosterRow[] = [];
+  let loyaltyToday: TodayCompletion[] = [];
+  let loyaltyRoster: RosterRow[] = [];
   if (canSeeReport) {
     const thirtyDaysAgo = daysAgoIso(30);
     let compQ = supabase
       .from("shift_checklist_completions")
-      .select("profile_id, occurred_on, completed_count, item_count, updated_at, created_at")
-      .eq("checklist_type", "preshift")
+      .select("profile_id, checklist_type, occurred_on, completed_count, item_count, updated_at, created_at")
+      .in("checklist_type", ["preshift", "loyalty"])
       .gte("occurred_on", thirtyDaysAgo)
       .order("occurred_on", { ascending: false });
     if (effectiveLocation) compQ = compQ.eq("location_id", effectiveLocation);
@@ -172,42 +223,19 @@ export default async function AccountabilityPage({
     const nameById = new Map<string, string>();
     for (const p of (profs ?? []) as { id: string; full_name: string }[]) nameById.set(p.id, p.full_name);
 
-    type Comp = { profile_id: string; occurred_on: string; completed_count: number; item_count: number; updated_at: string | null; created_at: string };
-    const allComps = (comps ?? []) as Comp[];
+    const allComps = (comps ?? []) as (CompRow & { checklist_type: string })[];
+    const preComps = allComps.filter((c) => c.checklist_type === "preshift");
+    const loyComps = allComps.filter((c) => c.checklist_type === "loyalty");
 
-    todayCompletions = allComps
-      .filter((c) => c.occurred_on === todayStr)
-      .map((c) => ({
-        name: nameById.get(c.profile_id) ?? "Team member",
-        completedCount: c.completed_count,
-        itemCount: c.item_count,
-        completedAt: c.updated_at ?? c.created_at,
-      }));
-
-    // Roster: staff + managers (owner excluded), scoped to the viewed location.
-    const rosterProfiles = ((profs ?? []) as { id: string; full_name: string; access_role: string; location_id: string | null }[])
+    // Pre-shift roster: staff + managers (owner excluded), scoped to location.
+    const baseRoster = ((profs ?? []) as { id: string; full_name: string; access_role: string; location_id: string | null }[])
       .filter((p) => p.access_role !== "super_admin")
       .filter((p) => !effectiveLocation || p.location_id === effectiveLocation);
+    // Loyalty roster: only FOH staff.
+    const fohRoster = baseRoster.filter((p) => fohProfileIds.has(p.id));
 
-    const byProfile = new Map<string, { count: number; last: string | null }>();
-    for (const c of allComps) {
-      const cur = byProfile.get(c.profile_id) ?? { count: 0, last: null };
-      cur.count += 1;
-      if (!cur.last || c.occurred_on > cur.last) cur.last = c.occurred_on;
-      byProfile.set(c.profile_id, cur);
-    }
-
-    roster = rosterProfiles
-      .map((p) => {
-        const agg = byProfile.get(p.id);
-        return { name: p.full_name, lastCompleted: agg?.last ?? null, count30d: agg?.count ?? 0 };
-      })
-      .sort((a, b) => {
-        if (a.lastCompleted && b.lastCompleted) return a.lastCompleted < b.lastCompleted ? 1 : -1;
-        if (a.lastCompleted) return -1;
-        if (b.lastCompleted) return 1;
-        return a.name.localeCompare(b.name);
-      });
+    ({ today: todayCompletions, roster } = buildChecklistReport(preComps, todayStr, nameById, baseRoster));
+    ({ today: loyaltyToday, roster: loyaltyRoster } = buildChecklistReport(loyComps, todayStr, nameById, fohRoster));
   }
 
   return (
@@ -273,12 +301,32 @@ export default async function AccountabilityPage({
       <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
         <MyPreshiftCard
           items={preShiftItemTexts}
-          alreadyDone={Boolean(myCompletion)}
+          alreadyDone={Boolean(myPreshift)}
           completedChecked={myChecked}
           completedAt={myCompletedAt}
         />
         {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
       </div>
+
+      {showLoyaltyCard && (
+        <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+          <MyLoyaltyCard
+            items={loyaltyItemTexts}
+            alreadyDone={Boolean(myLoyalty)}
+            completedChecked={myLoyaltyChecked}
+            completedAt={myLoyaltyCompletedAt}
+          />
+          {canSeeReport && (
+            <PreshiftReport
+              today={loyaltyToday}
+              roster={loyaltyRoster}
+              title="FOH loyalty checklist completion"
+              sub="Which front-of-house staff worked their loyalty checklist. Only reflects days they worked."
+              emptyToday="No FOH staff have completed their loyalty checklist yet today."
+            />
+          )}
+        </div>
+      )}
 
       {flags.length > 0 ? (
         <Card className="p-5">
@@ -418,6 +466,7 @@ export default async function AccountabilityPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <ChecklistTemplateEditor checklistType="daily" title="Manager daily checklist" items={dailyTemplateItems} />
             <ChecklistTemplateEditor checklistType="preshift" title="Pre-shift staff checklist" items={preShiftTemplateItems} />
+            <ChecklistTemplateEditor checklistType="loyalty" title="FOH loyalty checklist" items={loyaltyTemplateItems} />
           </div>
         </div>
       )}

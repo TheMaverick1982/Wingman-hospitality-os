@@ -3,15 +3,27 @@ import { CheckCircle2 } from "lucide-react";
 export type TodayCompletion = { name: string; completedCount: number; itemCount: number; completedAt: string };
 export type RosterRow = { name: string; lastCompleted: string | null; count30d: number };
 
-// Manager/owner view of who completed their pre-shift checklist. Built entirely
-// from actual completions — nobody is marked "missing" for a day they didn't
-// work, since completion itself is the signal.
-export function PreshiftReport({ today, roster }: { today: TodayCompletion[]; roster: RosterRow[] }) {
+// Manager/owner view of who completed a personal checklist. Built entirely from
+// actual completions — nobody is marked "missing" for a day they didn't work,
+// since completion itself is the signal. Reused for pre-shift and FOH loyalty.
+export function PreshiftReport({
+  today,
+  roster,
+  title = "Pre-shift checklist completion",
+  sub = "Who completed their own pre-shift checklist. Only reflects days people worked.",
+  emptyToday = "No one has completed their pre-shift checklist yet today.",
+}: {
+  today: TodayCompletion[];
+  roster: RosterRow[];
+  title?: string;
+  sub?: string;
+  emptyToday?: string;
+}) {
   return (
     <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-[#F1F1F1]">
-        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Pre-shift checklist completion</span>
-        <p className="text-[13px] text-muted mt-0.5">Who completed their own pre-shift checklist. Only reflects days people worked.</p>
+        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">{title}</span>
+        <p className="text-[13px] text-muted mt-0.5">{sub}</p>
       </div>
 
       {/* Today */}
@@ -35,7 +47,7 @@ export function PreshiftReport({ today, roster }: { today: TodayCompletion[]; ro
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No one has completed their pre-shift checklist yet today.</p>
+          <p className="text-sm text-muted">{emptyToday}</p>
         )}
       </div>
 

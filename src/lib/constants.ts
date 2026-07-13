@@ -18,6 +18,10 @@ export type Department = (typeof ALL_DEPARTMENTS)[number];
 // AI generation stays focused). Owners check any extra roles they actually have.
 export const WIZARD_DEFAULT_DEPARTMENTS: Department[] = ["Host", "Server", "Bartender", "Chef", "Manager"];
 
+// Front-of-house roles — the people who touch the guest and can capture loyalty
+// at the table/bar. Used to target the FOH loyalty checklist.
+export const FOH_DEPARTMENTS: Department[] = ["Host", "Server", "Busser", "Food Runner", "Bartender", "Barista", "Expo", "Sommelier"];
+
 export const DISCOUNT_CATEGORIES = [
   "Food Quality Issue",
   "Temperature Issue",
@@ -60,6 +64,17 @@ export const PRE_SHIFT_ITEMS = [
   "Know today's reservations and any large parties",
   "Reviewed yesterday's guest feedback or flags",
   "Ready to set the tone — positive energy at the door",
+] as const;
+
+// FOH loyalty checklist — capture and take care of loyalty members at every
+// table and the bar. Completed by front-of-house staff during their shift.
+export const LOYALTY_CHECKLIST_ITEMS = [
+  "Asked every guest if they're a loyalty member",
+  "Signed up interested guests who weren't members yet",
+  "Added the loyalty number for members missing it",
+  "Checked members' points and available rewards",
+  "Told members about a reward they could redeem today",
+  "Applied loyalty to the check before closing it",
 ] as const;
 
 export const AMBIANCE_DIMENSIONS = [
