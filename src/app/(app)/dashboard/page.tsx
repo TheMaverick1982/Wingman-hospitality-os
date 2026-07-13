@@ -14,6 +14,8 @@ import {
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { getOnboardingStatus } from "@/lib/onboarding";
+import { getMomentum } from "@/lib/momentum";
+import { MomentumCard } from "@/components/dashboard/momentum-card";
 import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
@@ -64,6 +66,9 @@ export default async function DashboardPage({
   });
 
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
+  // Momentum is about ongoing usage, so it's only meaningful (and only shown)
+  // once the account is set up — during setup, Start Here drives the habits.
+  const momentum = isSuperAdmin && onboarding?.allDone ? await getMomentum() : null;
   const supabase = await createClient();
 
   const [
@@ -288,6 +293,8 @@ export default async function DashboardPage({
           <span className="text-sm font-semibold text-brick-dark whitespace-nowrap">Start here →</span>
         </Link>
       )}
+
+      {momentum && <MomentumCard momentum={momentum} />}
 
       {org?.weekly_focus && (
         <Link

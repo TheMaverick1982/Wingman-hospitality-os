@@ -140,6 +140,31 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
   },
   {
+    slug: "momentum-score",
+    title: "Your Momentum score",
+    summary: "The habit score that tells you whether you're actually running the plays.",
+    categoryId: "getting-started",
+    keywords: ["momentum", "streak", "habits", "usage", "stalled", "engagement", "score", "on fire", "cold"],
+    body: [
+      { kind: "p", text: "Business Health tells you how the restaurant is doing. Momentum tells you something different — whether you're actually using Wingman this week. It's the leading indicator: the teams that keep the habits going are the ones that get a return." },
+      { kind: "h", text: "The five weekly habits" },
+      { kind: "list", items: [
+        "Floor spot-checks — walk the floor and score a shift.",
+        "First-time guests logged — capture new guests into Bounce Back.",
+        "Daily checklists — the manager's daily run-through.",
+        "Culture moments — recognize someone doing it right.",
+        "Training sign-offs — log real training as it happens.",
+      ] },
+      { kind: "p", text: "Each habit you touch in the last 7 days counts. The card shows your label (Cold → Warming up → Building → Strong → On fire), your streak of weeks in a row you've kept it up, and — when you're drifting — the single next move to restart." },
+      { kind: "tip", text: "Chase the streak, not perfection. Two habits a week keeps the streak alive; you don't need all five every week." },
+      { kind: "note", text: "If usage goes quiet for a week, the account owner gets a short, friendly nudge by email with the one move to get going again. It stops on its own once you're back in rhythm." },
+    ],
+    links: [
+      { label: "Reading your dashboard", href: "/help/reading-your-dashboard" },
+      { label: "Accountability & spot-checks", href: "/help/accountability-overview" },
+    ],
+  },
+  {
     slug: "culture",
     title: "Culture — your standard, in your words",
     summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
