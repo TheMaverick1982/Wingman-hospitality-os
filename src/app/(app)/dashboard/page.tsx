@@ -15,6 +15,7 @@ import {
 import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { getOnboardingStatus } from "@/lib/onboarding";
 import { getMomentum } from "@/lib/momentum";
+import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { MomentumCard } from "@/components/dashboard/momentum-card";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
@@ -22,7 +23,7 @@ import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { ArrowUpRight, ArrowRight, ClipboardCheck, Rocket, Sparkle } from "lucide-react";
+import { ArrowUpRight, ArrowRight, ClipboardCheck, Rocket, Sparkle, TrendingUp } from "lucide-react";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -90,7 +91,7 @@ export default async function DashboardPage({
     bizHealthQuery,
     preshiftActivityQuery,
   ] = await Promise.all([
-    supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)"),
+    supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes, bill_total)"),
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
     scoped(supabase.from("spot_checks").select("id, staff_name, scores, created_at"), effectiveLocation),
     scoped(supabase.from("daily_checklists").select("*").order("occurred_on", { ascending: false }).limit(1), effectiveLocation),
@@ -218,6 +219,15 @@ export default async function DashboardPage({
     locationBenchmarks.length > 0
       ? Math.round(locationBenchmarks.reduce((s, l) => s + l.pct, 0) / locationBenchmarks.length)
       : 0;
+
+  // Retention program ROI — actual dollars from repeat visits (the money the
+  // bounce-back program brought back). Scoped to the selected location; when
+  // viewing all locations, also broken out per location.
+  const programRevenue = computeGuestRevenue(scopedGuests);
+  const programRoiByLocation = locations
+    .map((loc) => ({ name: loc.name, repeat: computeGuestRevenue(guestsByFirstLocation.get(loc.id) ?? []).repeatRevenue }))
+    .filter((l) => l.repeat > 0)
+    .sort((a, b) => b.repeat - a.repeat);
 
   const discountTotal = discounts.reduce((s, d) => s + Number(d.amount), 0);
   const byCategory = aggregateBy(discounts, (d) => d.category, (d) => Number(d.amount));
@@ -386,6 +396,47 @@ export default async function DashboardPage({
           <div className="text-[13px] text-muted mt-2.5">recognized this quarter</div>
         </div>
       </div>
+
+      {programRevenue.billedVisits > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+            <div>
+              <div className="flex items-center gap-1.5 text-olive mb-1">
+                <TrendingUp size={15} />
+                <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-[#4d7c0f]">Retention program ROI</span>
+              </div>
+              <div className="text-[30px] font-bold tracking-[-0.02em] leading-none tabular-nums text-ink">
+                {bhMoney(programRevenue.repeatRevenue)}
+              </div>
+              <p className="text-[12.5px] text-muted mt-1.5 max-w-sm leading-snug">
+                Actual revenue your repeat visits brought back{effectiveLocation ? ` at ${greetingLocation}` : " across every location"} — of {bhMoney(programRevenue.total)} logged.{" "}
+                <Link href="/reporting" className="text-brick font-semibold whitespace-nowrap">Full breakdown →</Link>
+              </p>
+            </div>
+            {!effectiveLocation && programRoiByLocation.length > 1 && (
+              <div className="flex-1 min-w-[220px]">
+                <div className="text-[11px] font-semibold text-muted-2 uppercase tracking-wide mb-2.5">By location</div>
+                <div className="flex flex-col gap-2">
+                  {programRoiByLocation.slice(0, 4).map((l) => {
+                    const max = programRoiByLocation[0].repeat || 1;
+                    return (
+                      <div key={l.name}>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-[12.5px] text-charcoal-2">{l.name}</span>
+                          <span className="text-[12.5px] font-semibold tabular-nums text-ink">{bhMoney(l.repeat)}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-[#F1F1F1] overflow-hidden">
+                          <div className="h-full rounded-full bg-olive" style={{ width: `${Math.round((l.repeat / max) * 100)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm" data-tour="retention">
