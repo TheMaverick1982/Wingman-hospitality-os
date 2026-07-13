@@ -400,6 +400,9 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Reporting rolls up every section into a single view for the date range you choose — retention, checks, training, comps, and more." },
       { kind: "image", src: "/help/reporting.png", alt: "The Reporting screen", caption: "Reporting — every section, one view, for the range you pick." },
+      { kind: "h", text: "Your retention ROI" },
+      { kind: "p", text: "Near the top, the retention-ROI card puts real dollars on your guest work: the annual value of the first-timers you've turned into regulars (each worth roughly your average check times a year of visits), next to the money still on the table — the one-and-done first-timers who haven't come back. It uses your own average check (from the Revenue Growth Planner; a default until you set it) and the same model as our public ROI calculator." },
+      { kind: "tip", text: "The \"on the table\" number is your win-back list. A quick text or a small offer to those guests is the highest-ROI move in the whole app — you already paid to get them in once." },
       { kind: "h", text: "Trends over time" },
       { kind: "list", items: [
         "Repeat rate by cohort — for each of the last 6 months, the share of that month's first-timers who came back for a 2nd visit. It's the truest read on whether you're turning guests into regulars, and it shows the direction, not just today's number.",
