@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { MapPin, Check } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
@@ -82,12 +83,31 @@ export default async function GrowthPlanPage({
 
   const plan = (planRow as GrowthPlanRow | null) ?? EMPTY_PLAN;
   const entries = (entriesData ?? []) as GrowthPlanEntry[];
+  const multiLocation = locations.length > 1;
+  const canSpanLocations = isSuperAdmin || profile.allLocations || (profile.accessibleLocationIds?.length ?? 0) > 0;
   const locationLabel =
     locations.length <= 1
       ? (locations[0]?.name ?? "Your location")
       : effectiveLocation
         ? (locations.find((l) => l.id === effectiveLocation)?.name ?? "Location")
         : "All locations";
+
+  // Multi-location: each location gets its own starting numbers, so surface a
+  // per-location setup tracker (which locations have their numbers filled in).
+  let locationStatus: { id: string; name: string; done: boolean }[] = [];
+  if (multiLocation && canSpanLocations) {
+    const { data: allPlans } = await supabase
+      .from("growth_plans")
+      .select("location_id, current_customers, current_avg_sale, current_repurchase_frequency");
+    const setByLoc = new Map<string, boolean>();
+    for (const p of (allPlans ?? []) as { location_id: string | null; current_customers: number; current_avg_sale: number; current_repurchase_frequency: number }[]) {
+      if (p.location_id) {
+        setByLoc.set(p.location_id, Number(p.current_customers) > 0 && Number(p.current_avg_sale) > 0 && Number(p.current_repurchase_frequency) > 0);
+      }
+    }
+    locationStatus = locations.map((l) => ({ id: l.id, name: l.name, done: setByLoc.get(l.id) ?? false }));
+  }
+  const locationsSetCount = locationStatus.filter((l) => l.done).length;
 
   const baseline = {
     customers: Number(plan.current_customers),
@@ -156,6 +176,59 @@ export default async function GrowthPlanPage({
 
       {activeTab === "plan" ? (
         <>
+          {locationStatus.length > 0 && (
+            <div className="bg-gold-tint border border-[#F0D9A8] rounded-2xl p-5">
+              <div className="flex items-start gap-3">
+                <span className="shrink-0 w-9 h-9 rounded-[10px] bg-white flex items-center justify-center text-[#B45309]">
+                  <MapPin size={17} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-semibold text-ink">Set your numbers for each location</div>
+                  <p className="text-[13px] text-charcoal-2 mt-0.5 leading-relaxed">
+                    Every location has different guests, check sizes, and repurchase rates — so each one keeps its own
+                    starting numbers and growth plan.{" "}
+                    {effectiveLocation
+                      ? <>You&apos;re editing <span className="font-semibold text-ink">{locationLabel}</span>. Pick another location to set its numbers.</>
+                      : <>You&apos;re viewing the org-wide roll-up. Pick a location to set that store&apos;s real numbers.</>}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {locationStatus.map((l) => {
+                      const active = l.id === effectiveLocation;
+                      return (
+                        <Link
+                          key={l.id}
+                          href={`/growth?tab=plan&location=${l.id}`}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                            active ? "bg-charcoal text-white border-charcoal" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                          }`}
+                        >
+                          <span
+                            className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${
+                              l.done ? "bg-[#15803D] text-white" : active ? "bg-white/25 text-white" : "bg-paper text-muted-2"
+                            }`}
+                          >
+                            {l.done ? <Check size={11} strokeWidth={3} /> : <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                          </span>
+                          {l.name}
+                        </Link>
+                      );
+                    })}
+                    <Link
+                      href="/growth?tab=plan"
+                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                        !effectiveLocation ? "bg-charcoal text-white border-charcoal" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                      }`}
+                    >
+                      All locations
+                    </Link>
+                  </div>
+                  <div className="text-[12px] text-muted mt-2.5">
+                    {locationsSetCount} of {locationStatus.length} locations have their starting numbers set.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {canEdit ? (
             <GrowthPlanForm
               locationId={effectiveLocation}
@@ -245,11 +318,6 @@ export default async function GrowthPlanPage({
             </>
           )}
 
-          {isSuperAdmin && locations.length > 1 && (
-            <p className="text-[13px] text-muted">
-              Switch locations with the selector in the top bar — pick a location for its own plan, or &quot;All locations&quot; for an org-wide plan.
-            </p>
-          )}
         </>
       ) : (
         <>
