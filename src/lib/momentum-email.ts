@@ -41,7 +41,7 @@ export function buildMomentumNudgeEmail(m: Momentum, orgName: string): { subject
 
     <p style="font-size:15px;line-height:1.55;color:#1a1a1a;margin:0 0 6px;"><strong>Your one move to restart:</strong> ${esc(move)}.</p>
     <div style="margin:16px 0 8px;">
-      <a href="${moveHref}" style="display:inline-block;background:#c0392b;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">Do it now →</a>
+      <a href="${moveHref}" style="display:inline-block;background:#0a6cff;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">Do it now →</a>
     </div>
 
     <hr style="border:none;border-top:1px solid #eee;margin:26px 0 12px;">

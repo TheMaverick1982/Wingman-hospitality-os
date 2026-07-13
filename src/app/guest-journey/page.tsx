@@ -66,8 +66,8 @@ function JourneyGraphic() {
     <svg viewBox="0 0 960 170" className="w-full h-auto" role="img" aria-label="A six-stage guest journey from Arrival to The Ask">
       <defs>
         <linearGradient id="gj-line" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#e9b7b0" />
-          <stop offset="1" stopColor="#c0392b" />
+          <stop offset="0" stopColor="#a9c8f5" />
+          <stop offset="1" stopColor="#0a6cff" />
         </linearGradient>
       </defs>
       <path d={path} fill="none" stroke="url(#gj-line)" strokeWidth="3" strokeLinecap="round" strokeDasharray="1 10" opacity="0.6" />
@@ -77,8 +77,8 @@ function JourneyGraphic() {
         const last = i === n - 1;
         return (
           <g key={label}>
-            <circle cx={x} cy={yy} r="20" fill={last ? "#c0392b" : "#ffffff"} stroke="#c0392b" strokeWidth="2.5" />
-            <text x={x} y={yy + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={last ? "#ffffff" : "#c0392b"}>
+            <circle cx={x} cy={yy} r="20" fill={last ? "#0a6cff" : "#ffffff"} stroke="#0a6cff" strokeWidth="2.5" />
+            <text x={x} y={yy + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={last ? "#ffffff" : "#0a6cff"}>
               {i + 1}
             </text>
             <text x={x} y={yy > y ? yy + 40 : yy - 30} textAnchor="middle" fontSize="13.5" fontWeight="600" fill="#1a1a1a">

@@ -2,8 +2,8 @@
 // render crisply at any size and in print. Colors use the brand palette
 // (brick #C1440E-ish via currentColor tints handled with explicit hex here).
 
-const BRICK = "#C0392B";
-const BRICK_TINT = "#FBEAE6";
+const BRICK = "#0a6cff";
+const BRICK_TINT = "#E6EFFF";
 const INK = "#1A1A1A";
 const MUTED = "#8A8A8A";
 const LINE = "#E5E5E5";

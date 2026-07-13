@@ -47,10 +47,10 @@ export async function submitIdea(_prev: SubmitIdeaState, formData: FormData): Pr
 async function alertNewIdea(title: string, details: string, orgName: string): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:600px;">
-    <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#c0392b;margin:0 0 6px;">New feature idea</p>
+    <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 6px;">New feature idea</p>
     <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">${esc(title)}</h1>
     ${details ? `<p style="font-size:14.5px;color:#525252;white-space:pre-wrap;margin:0 0 14px;">${esc(details)}</p>` : ""}
-    <p style="font-size:13px;color:#737373;margin:0 0 16px;">From ${esc(orgName)}. It's live on the <a href="${SITE}/features" style="color:#c0392b;">Feature Ideas board</a> for others to vote on.</p>
+    <p style="font-size:13px;color:#737373;margin:0 0 16px;">From ${esc(orgName)}. It's live on the <a href="${SITE}/features" style="color:#0a6cff;">Feature Ideas board</a> for others to vote on.</p>
   </div>`;
   try {
     await sendEmail({ to: [ALERT_TO], subject: `💡 New feature idea: ${title.slice(0, 80)}`, html });
