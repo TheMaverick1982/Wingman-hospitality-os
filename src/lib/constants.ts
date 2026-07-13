@@ -1,5 +1,22 @@
-export const ALL_DEPARTMENTS = ["Host", "Server", "Bartender", "Chef", "Manager"] as const;
+export const ALL_DEPARTMENTS = [
+  "Host",
+  "Server",
+  "Busser",
+  "Food Runner",
+  "Bartender",
+  "Barista",
+  "Chef",
+  "Line Cook",
+  "Dishwasher",
+  "Expo",
+  "Sommelier",
+  "Manager",
+] as const;
 export type Department = (typeof ALL_DEPARTMENTS)[number];
+
+// The roles the Setup Wizard pre-selects (kept to the common core so the single
+// AI generation stays focused). Owners check any extra roles they actually have.
+export const WIZARD_DEFAULT_DEPARTMENTS: Department[] = ["Host", "Server", "Bartender", "Chef", "Manager"];
 
 export const DISCOUNT_CATEGORIES = [
   "Food Quality Issue",
