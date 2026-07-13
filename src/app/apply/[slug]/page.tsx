@@ -23,12 +23,18 @@ export default async function ApplyPage({
   const admin = createAdminClient();
   const { data: orgRow } = await admin
     .from("organizations")
-    .select("id, name, logo_url, apply_enabled, application_form_config")
+    .select("id, name, logo_url, apply_enabled")
     .eq("public_slug", slug)
     .maybeSingle();
-  const org = orgRow as { id: string; name: string; logo_url: string | null; apply_enabled: boolean; application_form_config: unknown } | null;
+  const org = orgRow as { id: string; name: string; logo_url: string | null; apply_enabled: boolean } | null;
   if (!org) return notFound();
-  const formConfig = normalizeFormConfig(org.application_form_config);
+  // Form customization lives in a column added by a later migration — read it in
+  // isolation so the public form still works if that migration hasn't landed yet.
+  let formConfig = normalizeFormConfig(null);
+  {
+    const { data: cfgRow } = await admin.from("organizations").select("application_form_config").eq("id", org.id).maybeSingle();
+    if (cfgRow) formConfig = normalizeFormConfig((cfgRow as { application_form_config: unknown }).application_form_config);
+  }
 
   const [{ data: locs }, { data: meta }] = await Promise.all([
     admin.from("locations").select("id, name").eq("org_id", org.id).order("name"),
