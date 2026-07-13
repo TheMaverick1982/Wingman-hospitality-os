@@ -114,7 +114,7 @@ export default async function TestsPage() {
             <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Tests &amp; exams</h1>
             <p className="text-base text-muted max-w-xl">
               Build a test the same way you build training — let AI write it, or paste what you have and AI makes it better.
-              Score it automatically, and (next) assign it to your team.
+              Score it automatically, then assign it to your team and see who passed.
             </p>
           </div>
         </div>
