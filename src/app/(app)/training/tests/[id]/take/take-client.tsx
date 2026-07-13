@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Lock, Clock } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Lock, Clock, ArrowRight } from "lucide-react";
 import { submitDay, type SubmitResult } from "../../run-actions";
 
 type Q = { id: string; kind: string; prompt: string; options: string[] };
@@ -29,6 +30,7 @@ export function TakeClient(props: {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<SubmitResult | null>(null);
+  const [dayDone, setDayDone] = useState<number | null>(null); // the next day, once this one's submitted
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -40,7 +42,7 @@ export function TakeClient(props: {
       const res = await submitDay(props.assignmentId, props.dayNumber, answers);
       if (res.error) { setErr(res.error); return; }
       if (res.done) setResult(res);
-      else { setAnswers({}); router.refresh(); } // load next day
+      else setDayDone(res.nextDay ?? props.dayNumber + 1); // pause and invite them to continue
     });
   }
 
@@ -93,6 +95,27 @@ export function TakeClient(props: {
     );
   }
 
+  // Between days: they finished a day but there's more. Invite them to keep
+  // going (they can), or stop and come back later — progress is saved.
+  if (dayDone != null) {
+    return (
+      <div className="bg-white border border-line rounded-2xl p-8 text-center">
+        <CheckCircle2 size={30} className="mx-auto text-olive mb-2" />
+        <div className="text-[19px] font-bold text-ink">Day {props.dayNumber} done — nice work</div>
+        <p className="text-[14px] text-muted mt-1.5 max-w-md mx-auto">
+          If you&rsquo;re feeling good about it, keep going to Day {dayDone}. No rush, though —
+          your progress is saved, so you can come back and finish anytime.
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-5">
+          <button onClick={() => { setDayDone(null); setAnswers({}); router.refresh(); }} className="inline-flex items-center gap-2 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors">
+            Keep going to Day {dayDone} <ArrowRight size={15} />
+          </button>
+          <Link href="/training/tests" className="text-[14px] font-semibold text-muted-2 hover:text-ink">I&rsquo;ll finish later</Link>
+        </div>
+      </div>
+    );
+  }
+
   const isLastDay = props.dayNumber >= props.dayCount;
   return (
     <div className="flex flex-col gap-5">
@@ -133,7 +156,7 @@ export function TakeClient(props: {
       <div className="flex items-center gap-3">
         <button onClick={submit} disabled={pending || !answered} className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-50 inline-flex items-center gap-2">
           {pending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
-          {pending ? "Submitting…" : isLastDay ? "Submit & score" : "Submit day & continue"}
+          {pending ? "Submitting…" : isLastDay ? "Submit & score" : `Finish Day ${props.dayNumber}`}
         </button>
         {!answered && <span className="text-[13px] text-muted-2">Answer every question to continue.</span>}
         {err && <span className="text-[13px] text-danger">{err}</span>}
