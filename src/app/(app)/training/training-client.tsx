@@ -31,6 +31,7 @@ export function TrainingClient({
   isGm,
   staff,
   locations,
+  roleTestDepts,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
@@ -38,6 +39,7 @@ export function TrainingClient({
   isGm: boolean;
   staff: StaffMember[];
   locations: Location[];
+  roleTestDepts: string[];
 }) {
   const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [activeRole, setActiveRole] = useState<Department>(roles[0]);
@@ -90,6 +92,7 @@ export function TrainingClient({
         canEdit={isGm}
         staff={staff}
         locations={locations}
+        hasTest={roleTestDepts.includes(activeRole)}
       />
     </div>
   );

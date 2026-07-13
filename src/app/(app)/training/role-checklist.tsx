@@ -11,6 +11,7 @@ import type { Department } from "@/lib/constants";
 import { RoleTrainingBuilder } from "./role-training-builder";
 import { RefineTrainingForm } from "./refine-training-form";
 import { StartTrainingButton } from "./start-training-button";
+import { RoleTestButton } from "./role-test-button";
 import { addChecklistItem, updateChecklistItemText, deleteChecklistItem, type ItemState } from "./role-training-actions";
 import type { ChecklistItem } from "./training-client";
 
@@ -24,6 +25,7 @@ export function RoleChecklist({
   canEdit,
   staff,
   locations,
+  hasTest,
 }: {
   department: Department;
   hospitalityItems: ChecklistItem[];
@@ -32,6 +34,7 @@ export function RoleChecklist({
   canEdit: boolean;
   staff: StaffMember[];
   locations: Location[];
+  hasTest: boolean;
 }) {
   return (
     <div className="bg-panel border border-line rounded-2xl p-6">
@@ -73,9 +76,17 @@ export function RoleChecklist({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-line">
-        <span className="text-sm text-muted">Ready to train someone on this?</span>
-        <StartTrainingButton staff={staff} locations={locations} department={department} small />
+      <div className="pt-4 mt-4 border-t border-line flex flex-col gap-3">
+        {canEdit && (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-sm text-muted">Verify they learned it — make this an online test.</span>
+            <RoleTestButton department={department} hasTest={hasTest} hasTraining={hospitalityItems.length + roleItems.length > 0} />
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted">Ready to train someone on this?</span>
+          <StartTrainingButton staff={staff} locations={locations} department={department} small />
+        </div>
       </div>
     </div>
   );

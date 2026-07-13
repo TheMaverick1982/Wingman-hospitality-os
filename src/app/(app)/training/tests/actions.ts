@@ -154,7 +154,7 @@ ${schema}`;
 }
 
 // Persist a reviewed/approved test (settings + its days + questions).
-export async function applyTest(settings: TestSettings, days: ProposedDay[], source = "ai"): Promise<{ error: string | null; id?: string }> {
+export async function applyTest(settings: TestSettings, days: ProposedDay[], source = "ai", sourceDepartment?: string): Promise<{ error: string | null; id?: string }> {
   const profile = await canBuild();
   if (!profile) return { error: "Not authorized." };
   if (!settings.title?.trim()) return { error: "Give the test a title." };
@@ -164,25 +164,26 @@ export async function applyTest(settings: TestSettings, days: ProposedDay[], sou
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  const { data: test, error } = await supabase
-    .from("tests")
-    .insert({
-      org_id: org.id,
-      title: settings.title.trim().slice(0, 120),
-      description: (settings.description || "").slice(0, 500),
-      mode: settings.mode,
-      target_departments: settings.target_departments.filter((d) => ALL_DEPARTMENTS.includes(d as Department)),
-      day_count: Math.max(1, Math.min(30, settings.day_count)),
-      pass_pct: settings.pass_pct,
-      max_retakes: settings.max_retakes,
-      complete_within_amount: settings.complete_within_amount,
-      complete_within_unit: settings.complete_within_unit,
-      rotates_monthly: settings.rotates_monthly,
-      source,
-      created_by: profile.userId,
-    })
-    .select("id")
-    .single();
+  const insertObj: Record<string, unknown> = {
+    org_id: org.id,
+    title: settings.title.trim().slice(0, 120),
+    description: (settings.description || "").slice(0, 500),
+    mode: settings.mode,
+    target_departments: settings.target_departments.filter((d) => ALL_DEPARTMENTS.includes(d as Department)),
+    day_count: Math.max(1, Math.min(30, settings.day_count)),
+    pass_pct: settings.pass_pct,
+    max_retakes: settings.max_retakes,
+    complete_within_amount: settings.complete_within_amount,
+    complete_within_unit: settings.complete_within_unit,
+    rotates_monthly: settings.rotates_monthly,
+    source,
+    created_by: profile.userId,
+  };
+  // Only reference the column when set, so the common build paths don't depend
+  // on the source_department migration having landed.
+  if (sourceDepartment) insertObj.source_department = sourceDepartment;
+
+  const { data: test, error } = await supabase.from("tests").insert(insertObj).select("id").single();
   if (error) return { error: error.message };
   const testId = test.id as string;
 
@@ -274,6 +275,83 @@ ${schema}`;
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
   }
+}
+
+// One-click "turn this role's training into a test" (or update the one already
+// made from it), straight from the Training page. Generates fresh questions from
+// the role's current standards and pushes the test into the prebuilt tests area,
+// ready to assign. Keeps a single test per role via source_department.
+export async function createOrUpdateTestFromRole(department: string): Promise<{ error: string | null; id?: string; updated?: boolean }> {
+  const profile = await canBuild();
+  if (!profile) return { error: "You don't have access to build tests." };
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
+  if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const [{ data: standards }, { data: items }] = await Promise.all([
+    supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
+    supabase.from("department_training_items").select("item").eq("department", department).order("sort_order"),
+  ]);
+  const material = [
+    ...(standards ?? []).map((s) => `- ${(s as { item: string }).item}`),
+    ...(items ?? []).map((s) => `- ${(s as { item: string }).item}`),
+  ].join("\n");
+  if (!material.trim()) return { error: `No training content found for ${department} yet — build its training first.` };
+
+  const schema = `{"days": [{"day_number": 1, "title": string, "content": string, "questions": [{"kind": "multiple_choice" | "true_false", "prompt": string, "options": [string], "correct_index": number, "explanation": string}]}]}`;
+  const prompt = `Write a one-day knowledge test for the ${department} role based ONLY on this restaurant's own training standards below. Write 6-10 fair, auto-scored questions (multiple_choice with one correct option, or true_false with options exactly ["True","False"]) that verify the person actually learned these standards. Set correct_index (0-based) and a one-line explanation each.
+
+Training standards:
+"""
+${material.slice(0, 8000)}
+"""
+
+Respond with ONLY valid JSON, matching exactly:
+${schema}`;
+
+  let days: ProposedDay[];
+  try {
+    const text = await callModel(TEST_SYSTEM, prompt, 6000);
+    const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
+    days = normalizeDays(parsed.days ?? [], 1, "exam");
+    if (!days[0] || days[0].questions.length === 0) throw new Error("Couldn't write questions from that training. Try again.");
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
+  }
+
+  // Already made into a test? Replace its content, keep its settings.
+  const { data: existing } = await supabase.from("tests").select("id").eq("org_id", org.id).eq("source_department", department).maybeSingle();
+  if (existing) {
+    const testId = (existing as { id: string }).id;
+    await supabase.from("test_questions").delete().eq("test_id", testId);
+    await supabase.from("test_days").delete().eq("test_id", testId);
+    await supabase.from("test_days").insert(days.map((d) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, title: d.title.slice(0, 120), content: (d.content || "").slice(0, 4000) })));
+    const qRows = days.flatMap((d) => d.questions.map((q, i) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, sort_order: i, kind: q.kind, prompt: q.prompt.slice(0, 500), options: q.options, correct_index: q.correct_index, explanation: (q.explanation || "").slice(0, 400) })));
+    if (qRows.length > 0) await supabase.from("test_questions").insert(qRows);
+    await supabase.from("tests").update({ day_count: 1, updated_at: new Date().toISOString() }).eq("id", testId);
+    revalidatePath("/training");
+    revalidatePath("/training/tests");
+    return { error: null, id: testId, updated: true };
+  }
+
+  const settings: TestSettings = {
+    title: `${department} Training Test`,
+    description: `Checks that ${department} team members know their training standards.`,
+    mode: "exam",
+    target_departments: [department],
+    day_count: 1,
+    pass_pct: 80,
+    max_retakes: 1,
+    complete_within_amount: 3,
+    complete_within_unit: "days",
+    rotates_monthly: false,
+  };
+  const res = await applyTest(settings, days, "training", department);
+  revalidatePath("/training");
+  return res.id ? { error: null, id: res.id, updated: false } : { error: res.error };
 }
 
 // ---- Manual editing of a saved test ----------------------------------------
