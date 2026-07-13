@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ArrowLeft, ArrowRight, ClipboardList } from "lucide-react";
+import { translateTexts } from "@/lib/translate";
 import { TestsClient } from "./tests-client";
 
 // AI generation runs from this route — give it room past the default timeout.
@@ -79,6 +80,11 @@ export default async function TestsPage() {
       passPct: m.tests?.pass_pct ?? 80,
       due: m.due_at,
     }));
+    // Show the assigned-test titles in the staffer's language too.
+    if (profile.language !== "en" && myAssignments.length > 0) {
+      const tx = await translateTexts(profile.orgId, profile.language, myAssignments.map((m) => m.title));
+      myAssignments = myAssignments.map((m) => ({ ...m, title: tx.get(m.title) ?? m.title }));
+    }
   }
 
   const MY_TONE: Record<string, string> = { assigned: "bg-paper text-charcoal-2", in_progress: "bg-brick-tint text-brick-dark", passed: "bg-[#E7F6EC] text-[#15803D]", locked: "bg-danger-tint text-danger" };
