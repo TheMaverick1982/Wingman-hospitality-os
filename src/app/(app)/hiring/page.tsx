@@ -5,11 +5,11 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
-import { Pill } from "@/components/ui/pill";
+import { Users } from "lucide-react";
 import { StatusPill } from "@/components/ui/status-pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
-import { HireCandidateButton } from "./hire-candidate-button";
+import { CandidateScorecards } from "./candidate-scorecards";
 import { RoleManager } from "../role-manager";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
@@ -123,7 +123,15 @@ export default async function HiringPage({
             different people. Screen for both.
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
+          {allCandidates.length > 0 && (
+            <a
+              href="#candidate-scorecards"
+              className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
+            >
+              <Users size={15} /> See candidates
+            </a>
+          )}
           <CandidateModalButton
             universalTraits={(coreValues ?? []).map((v) => ({
               title: v.title,
@@ -262,51 +270,22 @@ export default async function HiringPage({
 
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
 
-      <div>
-        <h3 className="font-display text-lg font-semibold mb-3 text-ink">Candidate scorecards</h3>
-        <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#FAFAFA] border-b border-line">
-                {["Candidate", "Department", "Location", "Date", "Avg score", "Recommendation", "Staff"].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allCandidates.map((c) => {
-                const avg = c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length;
-                return (
-                  <tr key={c.id} className="border-b border-line hover:bg-[#FAFAFA] transition-colors">
-                    <td className="px-5 py-3.5 text-ink">{c.name}</td>
-                    <td className="px-5 py-3.5 text-muted">{c.department}</td>
-                    <td className="px-5 py-3.5 text-muted">{locationName(c.location_id)}</td>
-                    <td className="px-5 py-3.5 text-muted">{c.occurred_on}</td>
-                    <td className="px-5 py-3.5 text-ink font-semibold tabular-nums">{avg.toFixed(1)} / 5</td>
-                    <td className="px-5 py-3.5">
-                      <Pill dot tone={c.recommendation === "Strong fit" ? "olive" : c.recommendation === "Not a fit" ? "danger" : "gold"}>
-                        {c.recommendation}
-                      </Pill>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {canEdit && <HireCandidateButton candidateId={c.id} alreadyHired={hiredCandidateIds.has(c.id)} canInvite={isSuperAdmin} />}
-                    </td>
-                  </tr>
-                );
-              })}
-              {allCandidates.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-muted">
-                    No candidates scored yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CandidateScorecards
+        candidates={allCandidates.map((c) => ({
+          id: c.id,
+          name: c.name,
+          department: c.department,
+          locationId: c.location_id,
+          locationName: locationName(c.location_id),
+          date: c.occurred_on,
+          avg: c.scores.length ? c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length : 0,
+          recommendation: c.recommendation,
+          hired: hiredCandidateIds.has(c.id),
+        }))}
+        locations={locations.map((l) => ({ id: l.id, name: l.name }))}
+        canEdit={canEdit}
+        isSuperAdmin={isSuperAdmin}
+      />
     </>
   );
 }
