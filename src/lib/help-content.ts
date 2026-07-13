@@ -264,6 +264,13 @@ export const ARTICLES: HelpArticle[] = [
         "Reactions & referrals — every visit can carry a reaction, and a guest can be flagged as having referred a friend, so you can see your promoter-to-let-down ratio and your referral rate at a glance.",
         "Retention funnel — how many guests convert from visit 1→2, 2→3, and 3→4, so you can see exactly where you lose them.",
       ] },
+      { kind: "h", text: "The retention drop-off coach" },
+      { kind: "p", text: "Once you've logged enough guests, Wingman spots the visit where you lose the most people (say, guests who never come back after their 2nd visit) and shows a banner at the top of Guest Bounce Back. If you run more than one location, it also flags when the drop-off is worst at a specific store — so you know whether it's a company-wide gap or one location that needs attention." },
+      { kind: "list", items: [
+        "Click \"Diagnose with the coach\" and it asks you 3 short questions about what happens at that stage today — the in-restaurant experience, your follow-up or offer, and whether the team recognizes returning guests.",
+        "Answer honestly, then \"Build my plan\" turns your answers into a concrete, this-week action plan for closing that specific drop-off.",
+      ] },
+      { kind: "tip", text: "The plan is grounded in your real funnel numbers and answers — the more specific your answers, the sharper the plan. Managers and owners can run it." },
       { kind: "tip", text: "Your repeat rate on the dashboard is driven by this data — the more consistently visits are logged, the more accurate your retention picture (and the sharper your win-back and referral lists)." },
       { kind: "note", text: "A POS or reservation system can push guests and visits automatically via the API, so no one has to enter them by hand." },
     ],
