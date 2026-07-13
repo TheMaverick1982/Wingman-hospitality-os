@@ -2,7 +2,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
-import { getOrgLocations } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
@@ -15,12 +15,31 @@ import { RoleManager } from "../role-manager";
 // (which surfaces as "Unexpected end of JSON input" in the browser).
 export const maxDuration = 60;
 
-export default async function TrainingPage() {
+export default async function TrainingPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const canEdit = canEditSection(profile.accessRole, "training", profile.permissionOverrides);
 
+  // Standards, skills, and the menu are one shared set per org (correct), but
+  // training sign-offs are per-location — scope the completion rollups + log to
+  // the selected location so a multi-location operator sees one store at a time
+  // instead of every location blended together.
+  const { location } = await searchParams;
+  const effectiveLocation = resolveEffectiveLocation({
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  });
+
   const supabase = await createClient();
+  let signoffsQ = supabase
+    .from("training_signoffs")
+    .select("id, staff_name, department, completion_pct, occurred_on")
+    .order("occurred_on", { ascending: false });
+  if (effectiveLocation) signoffsQ = signoffsQ.eq("location_id", effectiveLocation);
+
   const [
     { data: standards },
     { data: trainingItems },
@@ -37,12 +56,9 @@ export default async function TrainingPage() {
       .from("menu_items")
       .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
       .order("sort_order"),
-    supabase
-      .from("training_signoffs")
-      .select("id, staff_name, department, completion_pct, occurred_on")
-      .order("occurred_on", { ascending: false }),
+    signoffsQ,
     getOrgLocations(),
-    getStaffMembers(null),
+    getStaffMembers(effectiveLocation),
   ]);
 
   // The roles this restaurant runs = the ones with a department_meta row (set in
