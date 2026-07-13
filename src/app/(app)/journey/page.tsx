@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection } from "@/lib/auth/permissions";
 import { JourneyClient, type Stage } from "./journey-client";
 
@@ -14,24 +15,35 @@ function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-export default async function JourneyPage() {
+export default async function JourneyPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const canEdit = canEditSection(profile.accessRole, "journey", profile.permissionOverrides);
   // Whether this person can log a first-timer straight into Bounce Back.
   const canCapture = canEditSection(profile.accessRole, "bounceback", profile.permissionOverrides);
 
+  // The journey map is one shared standard per org, but inspection pass-rates
+  // are per-location — scope them to the selected location so a manager sees
+  // their own floor's numbers, not every location blended together.
+  const { location } = await searchParams;
+  const effectiveLocation = resolveEffectiveLocation({
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  });
+
   const supabase = await createClient();
   const thirtyDaysAgo = daysAgoIso(30);
+  let inspectionsQ = supabase.from("journey_inspections").select("stage_id, passed").gte("created_at", thirtyDaysAgo);
+  if (effectiveLocation) inspectionsQ = inspectionsQ.eq("location_id", effectiveLocation);
   const [{ data }, { data: inspectionRows }] = await Promise.all([
     supabase
       .from("journey_stages")
       .select("id, sort_order, name, purpose, avoid, standard, script, inspect, timing")
       .order("sort_order", { ascending: true }),
-    supabase
-      .from("journey_inspections")
-      .select("stage_id, passed")
-      .gte("created_at", thirtyDaysAgo),
+    inspectionsQ,
   ]);
   const stages = (data ?? []) as Stage[];
 
