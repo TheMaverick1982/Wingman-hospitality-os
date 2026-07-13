@@ -22,11 +22,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MIG_DIR="$ROOT/supabase/migrations"
 
 # Ledger of what's been applied. Created on first run (or by the baseline script).
+# RLS is enabled with no policies so this internal table is inaccessible via the
+# API; the migrator connects as the DB owner and bypasses RLS.
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -c "
   create table if not exists public.schema_migrations_applied (
     filename text primary key,
     applied_at timestamptz not null default now()
-  );"
+  );
+  alter table public.schema_migrations_applied enable row level security;"
 
 applied=0
 shopt -s nullglob

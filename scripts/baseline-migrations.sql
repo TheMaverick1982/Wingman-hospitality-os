@@ -8,6 +8,11 @@ create table if not exists public.schema_migrations_applied (
   applied_at timestamptz not null default now()
 );
 
+-- Internal ops bookkeeping. Enable RLS with NO policies so it's inaccessible via
+-- the API (anon/authenticated). The migrator connects as the DB owner and
+-- bypasses RLS, so it still reads/writes normally.
+alter table public.schema_migrations_applied enable row level security;
+
 insert into public.schema_migrations_applied (filename) values
   ('0001_init.sql'),
   ('0002_role_model_v2.sql'),
