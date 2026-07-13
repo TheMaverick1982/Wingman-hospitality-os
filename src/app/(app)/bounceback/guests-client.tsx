@@ -9,6 +9,7 @@ import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { computeStageCounts, stageOf, visitAt, type GuestWithVisits } from "@/lib/hospitality";
 import type { Location } from "@/lib/data/locations";
 import { GuestModal, type GuestFormValue } from "./guest-modal";
+import { CsvImportButton } from "./csv-import-button";
 import { deleteGuest } from "./actions";
 import { downloadCsv } from "@/lib/csv";
 
@@ -169,9 +170,12 @@ export function GuestsClient({
             regular at one is a first-timer at another.
           </p>
         </div>
-        <Btn icon={Plus} onClick={() => setModalGuest(null)} className="shrink-0">
-          Log New Guest
-        </Btn>
+        <div className="flex items-center gap-2 shrink-0">
+          <CsvImportButton locations={locations} />
+          <Btn icon={Plus} onClick={() => setModalGuest(null)}>
+            Log New Guest
+          </Btn>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

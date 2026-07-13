@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { IDEA_SORTS, type IdeaSort } from "@/lib/feature-ideas";
 import { getIdeas } from "@/lib/feature-ideas-data";
@@ -10,6 +11,8 @@ export const metadata: Metadata = { title: "Feature ideas" };
 export default async function FeaturesPage({ searchParams }: { searchParams: Promise<{ sort?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  // Managers and owners only — hidden for staff-level logins.
+  if (profile.accessRole === "staff") redirect("/dashboard");
 
   const { sort: sortParam } = await searchParams;
   const sort: IdeaSort = sortParam === "most" || sortParam === "least" ? sortParam : "newest";

@@ -128,17 +128,19 @@ export function Sidebar({
           Help
         </Link>
 
-        <Link
-          href="/features"
-          className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
-            pathname.startsWith("/features")
-              ? "bg-brick text-white font-semibold"
-              : "text-charcoal-2 font-medium hover:bg-paper"
-          }`}
-        >
-          <Lightbulb size={19} strokeWidth={2} className={pathname.startsWith("/features") ? "text-white/90" : "text-muted-2"} />
-          Feature ideas
-        </Link>
+        {accessRole !== "staff" && (
+          <Link
+            href="/features"
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+              pathname.startsWith("/features")
+                ? "bg-brick text-white font-semibold"
+                : "text-charcoal-2 font-medium hover:bg-paper"
+            }`}
+          >
+            <Lightbulb size={19} strokeWidth={2} className={pathname.startsWith("/features") ? "text-white/90" : "text-muted-2"} />
+            Feature ideas
+          </Link>
+        )}
 
         {isSuperAdmin && (
           <Link
