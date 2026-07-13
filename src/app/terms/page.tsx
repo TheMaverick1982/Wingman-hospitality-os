@@ -123,6 +123,14 @@ const SECTIONS = [
     ],
   },
   {
+    h: "Governing law and disputes",
+    body: [
+      "These terms, and any dispute arising out of or relating to them or to the service, are governed by the laws of the State of Florida, without regard to its conflict-of-laws rules.",
+      "You and The Maverick Agency agree that the exclusive venue for any dispute that isn't otherwise resolved will be the state or federal courts located in Florida, and each party consents to the personal jurisdiction of those courts.",
+      "Before filing any claim, please email us at hello@joinwingman.app so we can try to resolve it informally first.",
+    ],
+  },
+  {
     h: "Changes to these terms",
     body: [
       "We may update these terms as the product changes. We'll post the latest date at the top and notify account owners of material changes. Continued use means you accept the updated terms.",
