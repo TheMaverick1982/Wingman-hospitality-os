@@ -103,7 +103,7 @@ export async function generateAccountabilityChecklist(_prev: BuildState, formDat
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { error: "ANTHROPIC_API_KEY isn't configured yet -- add it in Vercel's project environment variables." };
+    return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
   }
 
   const label = CHECKLIST_LABEL[checklistType];

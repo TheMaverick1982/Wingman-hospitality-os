@@ -401,8 +401,15 @@ export function GuestsClient({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-muted">
-                  No guests match. Log your first guest to start tracking.
+                <td colSpan={6} className="px-5 py-10 text-center">
+                  {guests.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="text-sm text-muted">No guests yet — log your first to start tracking who comes back.</p>
+                      <Btn icon={Plus} onClick={() => setModalGuest(null)}>Log your first guest</Btn>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted">No guests match your search.</p>
+                  )}
                 </td>
               </tr>
             )}

@@ -100,7 +100,7 @@ export async function draftPlaybookArticle(input: {
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet." };
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
   const instruction = String(input.instruction || "").trim().slice(0, 2000);
   const title = String(input.title || "").trim().slice(0, 200);

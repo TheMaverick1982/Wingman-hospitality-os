@@ -42,7 +42,7 @@ export async function generateAndApplySystem(_prev: WizardState, formData: FormD
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { error: "ANTHROPIC_API_KEY isn't configured yet — add it in Vercel's project environment variables." };
+    return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
   }
 
   const schema = `{"culture_statement": string, "core_values": [{"title": string, "description": string} x5], "preshift_focus": string, "departments": {${selectedDepts.map((d) => `"${d}": [string]`).join(", ")}}}`;

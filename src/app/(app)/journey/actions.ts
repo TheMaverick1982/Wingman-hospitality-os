@@ -79,7 +79,7 @@ export async function generateJourney(_prev: JourneyState, formData: FormData): 
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet — add it in Vercel." };
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id, name, philosophy").single();
@@ -222,7 +222,7 @@ export async function refineStage(_prev: RefineState, formData: FormData): Promi
     return { error: "You've reached the hourly limit for AI. Please try again a bit later.", ok: false };
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet.", ok: false };
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment.", ok: false };
 
   const supabase = await createClient();
   const [{ data: stage }, { data: org }] = await Promise.all([
