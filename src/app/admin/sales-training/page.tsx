@@ -24,7 +24,7 @@ import {
 } from "@/lib/sales-playbook";
 
 export const metadata: Metadata = { title: "Sales Training · Admin" };
-// The "Run a live demo" action reseeds the demo org — give it room.
+// The "Run a live demo" action provisions a fresh private sandbox — give it room.
 export const maxDuration = 60;
 
 const STATUS_BADGE: Record<CommissionStatus, { label: string; className: string }> = {

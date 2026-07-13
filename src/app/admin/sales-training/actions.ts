@@ -7,30 +7,37 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { payableDateFrom } from "@/lib/sales-commissions";
-import { ensureDemoUser, reseedDemoOrg } from "@/lib/demo/reseed";
-import { DEMO_EMAIL } from "@/lib/demo/constants";
+import { provisionDemoSandbox } from "@/lib/demo/reseed";
 
 // Must match the impersonation cookie used by the shared exit action + banner
 // (src/app/admin/organizations/actions.ts) — that's how a sales agent returns
 // to their platform account after running a demo.
 const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
 
-// Let a platform sales agent step into the shared demo account to run a live
-// demo for a prospect, then step back to their own account via the existing
-// impersonation banner. Reseeds the demo first so it's clean.
+// Let a platform sales agent step into a PRIVATE, per-rep demo sandbox to run a
+// live demo for a prospect, then step back to their own account via the existing
+// impersonation banner.
+//
+// Each entry provisions a brand-new, fully-isolated org (throwaway user + fresh
+// seeded showcase) instead of the shared master. That means any number of reps
+// can run demos at the same time without stepping on each other's data, and
+// anything the rep edits mid-demo evaporates when the sandbox auto-expires
+// (reaped by /api/cron/demo-cleanup ~3h later). No reseed needed — it's born clean.
 export async function enterDemoAsStaff() {
   const actor = await platformSectionActor("sales_training");
   if (!actor) throw new Error("You don't have sales access.");
-
-  await ensureDemoUser();
 
   const supabase = await createClient();
   const {
     data: { session: mySession },
   } = await supabase.auth.getSession();
 
+  // Fresh isolated sandbox for this rep. Stamp their identity as the "lead" so
+  // a sandbox can be traced back to the rep who opened it.
+  const { email } = await provisionDemoSandbox({ leadEmail: actor.email, leadName: actor.fullName });
+
   const admin = createAdminClient();
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (linkError || !linkData) throw new Error("Couldn't open the demo. Try again.");
 
   const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: linkData.properties.hashed_token, type: "magiclink" });
@@ -41,9 +48,6 @@ export async function enterDemoAsStaff() {
   if (mySession?.refresh_token) {
     cookieStore.set(IMPERSONATOR_COOKIE, mySession.refresh_token, { httpOnly: true, secure: true, sameSite: "lax", path: "/" });
   }
-
-  // Magic-link entry bypasses the login reseed hook, so reseed here for a clean demo.
-  await reseedDemoOrg();
 
   redirect("/dashboard");
 }
