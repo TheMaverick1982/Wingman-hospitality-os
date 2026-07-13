@@ -2,24 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 
-export const metadata: Metadata = {
-  title: "Pricing",
-  description:
-    "Simple, per-location pricing for Wingman: $199/mo for your first location, $100/mo for each additional one. Culture, training, accountability, and retention tracking included on every plan.",
-  keywords: [
-    "restaurant software pricing",
-    "hospitality management software cost",
-    "multi-location restaurant pricing",
-    "guest retention software pricing",
-  ],
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    title: "Pricing | Wingman",
-    description: "One standard, every location. Simple per-location pricing with everything included.",
-    url: "/pricing",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await getPlatformPricing();
+  const first = dollars(p.firstCents);
+  const addl = dollars(p.addlCents);
+  return {
+    title: "Pricing",
+    description: `Simple, per-location pricing for Wingman: ${first}/mo for your first location, ${addl}/mo for each additional one. Culture, training, accountability, and retention tracking included on every plan.`,
+    keywords: [
+      "restaurant software pricing",
+      "hospitality management software cost",
+      "multi-location restaurant pricing",
+      "guest retention software pricing",
+    ],
+    alternates: { canonical: "/pricing" },
+    openGraph: {
+      title: "Pricing | Wingman",
+      description: "One standard, every location. Simple per-location pricing with everything included.",
+      url: "/pricing",
+    },
+  };
+}
 
 const SINGLE = [
   "Custom culture statement and five core values",
@@ -38,42 +43,47 @@ const MULTI = [
   "Roll out training and checklists group-wide",
 ];
 
-const EXAMPLES = [
-  { count: "1 location", price: "$199", math: "base plan" },
-  { count: "3 locations", price: "$399", math: "$199 + 2 × $100" },
-  { count: "5 locations", price: "$599", math: "$199 + 4 × $100" },
-];
+export default async function PricingPage() {
+  const pricing = await getPlatformPricing();
+  const first = dollars(pricing.firstCents);
+  const addl = dollars(pricing.addlCents);
+  const totalFor = (n: number) => dollars(pricing.firstCents + pricing.addlCents * (n - 1));
 
-const FAQS = [
-  {
-    q: "What counts as a location?",
-    a: "Each physical restaurant with its own floor and team. The first is $199/mo; every additional location adds $100/mo.",
-  },
-  {
-    q: "Is everything included on both plans?",
-    a: "Yes. Culture, training, accountability, and retention tracking are on every plan. Multi-location adds Super Admin oversight, permissions, and cross-location reporting.",
-  },
-  {
-    q: "Do I have to commit up front?",
-    a: "No. Plans are billed monthly and you can add or remove locations as your group changes.",
-  },
-  {
-    q: "How fast can we start?",
-    a: "You answer a few questions about your concept, Wingman builds your standard, and your team can be live on the first shift.",
-  },
-];
+  const EXAMPLES = [
+    { count: "1 location", price: first, math: "base plan" },
+    { count: "3 locations", price: totalFor(3), math: `${first} + 2 × ${addl}` },
+    { count: "5 locations", price: totalFor(5), math: `${first} + 4 × ${addl}` },
+  ];
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQS.map((f) => ({
-    "@type": "Question",
-    name: f.q,
-    acceptedAnswer: { "@type": "Answer", text: f.a },
-  })),
-};
+  const FAQS = [
+    {
+      q: "What counts as a location?",
+      a: `Each physical restaurant with its own floor and team. The first is ${first}/mo; every additional location adds ${addl}/mo.`,
+    },
+    {
+      q: "Is everything included on both plans?",
+      a: "Yes. Culture, training, accountability, and retention tracking are on every plan. Multi-location adds Super Admin oversight, permissions, and cross-location reporting.",
+    },
+    {
+      q: "Do I have to commit up front?",
+      a: "No. Plans are billed monthly and you can add or remove locations as your group changes.",
+    },
+    {
+      q: "How fast can we start?",
+      a: "You answer a few questions about your concept, Wingman builds your standard, and your team can be live on the first shift.",
+    },
+  ];
 
-export default function PricingPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   return (
     <div className="flex-1 flex flex-col force-light bg-panel">
       <script
@@ -108,7 +118,7 @@ export default function PricingPage() {
                 Everything you need to set and keep the standard at one restaurant.
               </p>
               <div className="flex items-baseline gap-1.5 mb-1">
-                <span className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none text-ink">$199</span>
+                <span className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none text-ink">{first}</span>
                 <span className="text-lg text-muted font-medium">/ mo</span>
               </div>
               <div className="text-sm text-muted-2 mb-8">per location, billed monthly</div>
@@ -143,12 +153,12 @@ export default function PricingPage() {
                 in.
               </p>
               <div className="flex items-baseline gap-1.5 mb-1">
-                <span className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none">$199</span>
+                <span className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none">{first}</span>
                 <span className="text-lg text-[#A1A1A1] font-medium">/ mo</span>
               </div>
               <div className="text-[15px] text-[#E5E5E5] mb-1.5">for your first location, then</div>
               <div className="flex items-baseline gap-1.5 mb-8">
-                <span className="text-2xl font-bold tracking-[-0.02em] text-[#4D97FF]">+$100</span>
+                <span className="text-2xl font-bold tracking-[-0.02em] text-[#4D97FF]">+{addl}</span>
                 <span className="text-[15px] text-[#A1A1A1]">per additional location / mo</span>
               </div>
               <Link
@@ -181,7 +191,7 @@ export default function PricingPage() {
             What you&apos;d pay
           </h2>
           <p className="text-[17px] text-muted">
-            The first location is $199/mo. Each one after that adds $100/mo.
+            The first location is {first}/mo. Each one after that adds {addl}/mo.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[900px] mx-auto">

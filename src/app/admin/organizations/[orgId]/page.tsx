@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type AccessRole } from "@/lib/auth/permissions";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
-import { effectiveMonthlyCents, pricingLabel, BASE_CENTS, ADDL_CENTS } from "@/lib/pricing";
+import { effectiveMonthlyCents, pricingLabel, getPlatformPricing } from "@/lib/pricing";
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
 import { BillingCard } from "./billing-card";
@@ -49,7 +49,8 @@ export default async function AdminOrganizationDetailPage({
   const billing = org as unknown as { is_free_account: boolean; billing_status: string; card_brand: string | null; card_last4: string | null };
   const pricing = org as unknown as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; pricing_note: string | null };
   const locCount = (locations ?? []).length || 1;
-  const effCents = effectiveMonthlyCents(pricing, locCount);
+  const platformPricing = await getPlatformPricing();
+  const effCents = await effectiveMonthlyCents(pricing, locCount);
   const kind = pricingLabel(pricing);
   const dollars = (c: number) => `$${(c / 100).toFixed(0)}`;
   const kindLabel = kind === "standard" ? "standard pricing" : kind === "flat" ? "flat custom price" : "custom per-location rate";
@@ -60,9 +61,9 @@ export default async function AdminOrganizationDetailPage({
   if (kind === "flat") {
     effectiveLabel = `${dollars(effCents)}/mo · ${kindLabel} (flat — ignores location count)`;
   } else {
-    const addlRate = pricing.custom_addl_location_cents ?? ADDL_CENTS;
+    const addlRate = pricing.custom_addl_location_cents ?? platformPricing.addlCents;
     const breakdown =
-      `${dollars(BASE_CENTS)} base` +
+      `${dollars(platformPricing.firstCents)} base` +
       (extra > 0 ? ` + ${extra} × ${dollars(addlRate)}/location` : "") +
       ` = ${dollars(effCents)}/mo`;
     effectiveLabel = `${breakdown} · ${kindLabel}`;
@@ -151,6 +152,7 @@ export default async function AdminOrganizationDetailPage({
           addlCents={pricing.custom_addl_location_cents}
           note={pricing.pricing_note ?? ""}
           effectiveLabel={effectiveLabel}
+          baseDollars={Math.round(platformPricing.firstCents / 100)}
         />
       </div>
 

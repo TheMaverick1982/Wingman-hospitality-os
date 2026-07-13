@@ -19,9 +19,13 @@ function emptyRow(): Row {
 export function AddLocationForm({
   currentLocationCount,
   isFreeAccount,
+  firstDollars = 399,
+  addlDollars = 149,
 }: {
   currentLocationCount: number;
   isFreeAccount?: boolean;
+  firstDollars?: number;
+  addlDollars?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([emptyRow()]);
@@ -37,8 +41,8 @@ export function AddLocationForm({
 
   const validRows = rows.filter((r) => r.name.trim());
   const newTotal = currentLocationCount + validRows.length;
-  const currentMonthly = currentLocationCount > 0 ? 199 + (currentLocationCount - 1) * 100 : 0;
-  const nextMonthly = newTotal > 0 ? 199 + (newTotal - 1) * 100 : 0;
+  const currentMonthly = currentLocationCount > 0 ? firstDollars + (currentLocationCount - 1) * addlDollars : 0;
+  const nextMonthly = newTotal > 0 ? firstDollars + (newTotal - 1) * addlDollars : 0;
 
   return (
     <>

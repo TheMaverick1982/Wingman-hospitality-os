@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { commissionsForRep, formatCents, formatDate, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
 import { listDemoTargets } from "@/lib/sales-reps";
 import { ClaimForm } from "./claim-form";
@@ -48,6 +49,9 @@ function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: strin
 
 export default async function SalesTrainingPage() {
   const profile = await requirePlatformSection("sales_training");
+
+  const pricing = await getPlatformPricing();
+  const priceSub = (s: string) => s.replaceAll("{{firstPrice}}", dollars(pricing.firstCents)).replaceAll("{{addlPrice}}", dollars(pricing.addlCents));
 
   const admin = createAdminClient();
   const [myCommissions, { data: orgRows }, demoTargets] = await Promise.all([
@@ -224,7 +228,7 @@ export default async function SalesTrainingPage() {
           {PREP.map((p) => (
             <div key={p.label} className="bg-white border border-line rounded-2xl p-5">
               <div className="text-[15px] font-semibold text-ink">{p.label}</div>
-              <div className="text-[13.5px] text-muted mt-1.5 leading-[1.5]">{p.detail}</div>
+              <div className="text-[13.5px] text-muted mt-1.5 leading-[1.5]">{priceSub(p.detail)}</div>
             </div>
           ))}
         </div>

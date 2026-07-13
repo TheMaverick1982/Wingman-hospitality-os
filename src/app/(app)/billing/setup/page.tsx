@@ -29,7 +29,7 @@ export default async function BillingSetupPage() {
     card_last4: string | null;
   } | null;
 
-  const price = effectiveMonthlyCents(o, locationCount ?? 1);
+  const price = await effectiveMonthlyCents(o, locationCount ?? 1);
   const hasCard = Boolean(o?.card_last4);
 
   return (

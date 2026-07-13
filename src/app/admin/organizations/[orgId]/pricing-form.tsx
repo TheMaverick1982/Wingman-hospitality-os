@@ -12,12 +12,14 @@ export function PricingForm({
   addlCents,
   note,
   effectiveLabel,
+  baseDollars = 399,
 }: {
   orgId: string;
   monthlyCents: number | null;
   addlCents: number | null;
   note: string;
   effectiveLabel: string;
+  baseDollars?: number;
 }) {
   const [monthly, setMonthly] = useState(dollars(monthlyCents));
   const [addl, setAddl] = useState(dollars(addlCents));
@@ -55,7 +57,7 @@ export function PricingForm({
         <label className="text-[13px] text-muted-2">
           Per-additional-location price ($)
           <input type="number" min={0} step="1" value={addl} onChange={(e) => setAddl(e.target.value)} placeholder="e.g. 60" className={`${field} mt-1`} />
-          <span className="block text-[12px] text-muted-2 mt-1">Keeps the $199 base. Ignored if a flat price is set.</span>
+          <span className="block text-[12px] text-muted-2 mt-1">Keeps the ${baseDollars} base. Ignored if a flat price is set.</span>
         </label>
       </div>
 

@@ -47,17 +47,19 @@ function blockToText(b: HelpBlock): string {
 // The full Help Center rendered to plain text, so the model can answer from it
 // and cite article URLs. Small enough (a few KB) to inject directly — no vector
 // store needed. Cached via prompt caching on the API call.
-export function helpCorpus(): string {
+export function helpCorpus(pricing?: { firstPrice: string; addlPrice: string }): string {
   const catTitle = new Map(CATEGORIES.map((c) => [c.id, c.title]));
-  return ARTICLES.map((a) => {
+  const corpus = ARTICLES.map((a) => {
     const body = a.body.map(blockToText).filter(Boolean).join("\n");
     return `## ${a.title}  [${catTitle.get(a.categoryId) ?? a.categoryId}]\nArticle URL: /help/${a.slug}\n${a.summary}\n${body}`;
   }).join("\n\n");
+  if (!pricing) return corpus;
+  return corpus.replaceAll("{{firstPrice}}", pricing.firstPrice).replaceAll("{{addlPrice}}", pricing.addlPrice);
 }
 
 // Product knowledge + behavior rules. `role` tailors the answer to what this
 // user can actually see (staff see fewer sections than owners/managers).
-export function systemInstructions(role: string): string {
+export function systemInstructions(role: string, pricing?: { firstPrice: string; addlPrice: string }): string {
   return `You are "Wingman Assistant", the friendly in-app help assistant for Wingman — a guest-retention platform for restaurants and hospitality operators. You help owners and their teams use the product.
 
 WHAT YOU DO
@@ -72,7 +74,7 @@ RULES
 - This user's role is "${role}". Owners (super_admin) see everything; managers see most things; staff see only shift-relevant areas. Tailor guidance to their role.
 
 HELP CENTER
-${helpCorpus()}`;
+${helpCorpus(pricing)}`;
 }
 
 // The tool the model calls to escalate a bug/idea to the team.

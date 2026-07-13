@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Launch Special — 20% off your first 3 months | Wingman",
@@ -15,7 +16,10 @@ const POINTS = [
   { t: "Replaces the binder, not adds to it", d: "One place for the checklists, training, and coaching your team actually uses on shift." },
 ];
 
-export default function LaunchPage() {
+export default async function LaunchPage() {
+  const pricing = await getPlatformPricing();
+  const standard = dollars(pricing.firstCents);
+  const offer = dollars(Math.round((pricing.firstCents * 0.8) / 100) * 100); // 20% off, whole dollars
   return (
     <main className="min-h-screen bg-paper text-ink">
       <div className="max-w-[720px] mx-auto px-5 py-14 sm:py-20 flex flex-col items-center text-center gap-8">
@@ -38,8 +42,8 @@ export default function LaunchPage() {
         {/* Offer card */}
         <div className="w-full max-w-[440px] bg-white border border-line rounded-2xl shadow-sm p-6 flex flex-col gap-4">
           <div className="flex items-baseline justify-center gap-2">
-            <span className="text-[15px] text-muted-2 line-through">$199/mo</span>
-            <span className="text-[32px] font-bold text-ink">$159<span className="text-[16px] text-muted font-semibold">/mo</span></span>
+            <span className="text-[15px] text-muted-2 line-through">{standard}/mo</span>
+            <span className="text-[32px] font-bold text-ink">{offer}<span className="text-[16px] text-muted font-semibold">/mo</span></span>
           </div>
           <p className="text-[13px] text-muted">first location, for your first 3 months · then standard pricing · cancel anytime</p>
           <div className="rounded-xl border border-dashed border-brick/40 bg-brick-tint/40 py-3">

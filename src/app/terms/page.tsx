@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+import { getPlatformPricing, applyPriceTokens } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -30,7 +31,7 @@ const SECTIONS = [
   {
     h: "Subscription and billing",
     body: [
-      "Wingman is billed monthly: $199 for your first location and $100 per additional location. Adding a location increases your subscription immediately, prorated to the current period.",
+      "Wingman is billed monthly: {{firstPrice}} for your first location and {{addlPrice}} per additional location. Adding a location increases your subscription immediately, prorated to the current period.",
       "Fees are charged to your payment method on file at the start of each billing period and are non-refundable except where required by law.",
       "Wingman is operated and billed by The Maverick Agency. Charges appear on your bank or card statement as \"The Maverick Agency.\"",
     ],
@@ -78,7 +79,8 @@ const SECTIONS = [
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const pricing = await getPlatformPricing();
   return (
     <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
@@ -102,7 +104,7 @@ export default function TermsPage() {
             <h2 className="text-2xl font-semibold tracking-[-0.015em] text-ink mb-3.5">{s.h}</h2>
             {s.body.map((p) => (
               <p key={p} className="text-base leading-[1.6] text-charcoal-2 mb-3.5 last:mb-0">
-                {p}
+                {applyPriceTokens(p, pricing)}
               </p>
             ))}
           </div>
