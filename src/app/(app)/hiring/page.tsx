@@ -5,11 +5,12 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
-import { Users } from "lucide-react";
+import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { CandidatesPanel } from "./candidate-scorecards";
 import { ApplicantsPanel, type Applicant } from "./applicants-panel";
+import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
@@ -73,7 +74,7 @@ export default async function HiringPage({
   // location) so a store manager sees their own pipeline.
   let applicationsQ = supabase
     .from("job_applications")
-    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at")
+    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, interview_at, interview_details, status, created_at")
     .order("created_at", { ascending: false });
   if (effectiveLocation) applicationsQ = applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
 
@@ -105,9 +106,10 @@ export default async function HiringPage({
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
   const allCandidates = candidates ?? [];
 
-  const applicants: Applicant[] = ((applications ?? []) as {
+  const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
-    availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null; status: string; created_at: string;
+    availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
+    interview_at: string | null; interview_details: string | null; status: string; created_at: string;
   }[]).map((a) => ({
     id: a.id,
     name: a.name,
@@ -120,9 +122,15 @@ export default async function HiringPage({
     message: a.message,
     hasResume: Boolean(a.resume_path),
     preferredVisitAt: a.preferred_visit_at,
+    interviewAt: a.interview_at,
+    interviewDetails: a.interview_details ?? "",
     status: a.status,
     createdAt: a.created_at,
   }));
+  // Unconfirmed applications stay in "Applications"; a confirmed interview moves
+  // the person into the candidates area until they're scored.
+  const applicants = allApplications.filter((a) => a.status !== "interviewing" && a.status !== "hired");
+  const interviews = allApplications.filter((a) => a.status === "interviewing");
 
   const { data: hiredStaff } = await supabase.from("staff_members").select("candidate_id").not("candidate_id", "is", null);
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
@@ -151,7 +159,15 @@ export default async function HiringPage({
             different people. Screen for both.
           </p>
         </div>
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 flex-wrap justify-end">
+          {canEdit && (
+            <a
+              href="#applications"
+              className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
+            >
+              <Inbox size={15} /> See Applications{applicants.length > 0 ? ` (${applicants.length})` : ""}
+            </a>
+          )}
           <a
             href="#candidate-scorecards"
             className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
@@ -228,8 +244,6 @@ export default async function HiringPage({
         </div>
       </div>
 
-      {canEdit && <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />}
-
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
@@ -263,6 +277,14 @@ export default async function HiringPage({
           )}
         </div>
       </div>
+
+      {canEdit && (
+        <div id="applications">
+          <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />
+        </div>
+      )}
+
+      {canEdit && interviews.length > 0 && <InterviewsPanel interviews={interviews} />}
 
       <CandidatesPanel
         candidates={allCandidates.map((c) => ({

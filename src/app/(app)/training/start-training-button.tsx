@@ -65,12 +65,12 @@ export function StartTrainingButton({
   return (
     <>
       <Btn small={small} icon={GraduationCap} onClick={() => setOpen(true)}>
-        Start a training
+        Start an in-person training
       </Btn>
       {open && (
         <Modal
-          title="Start a training"
-          sub="Pick someone already on your team, or add a new person and jump straight into their training."
+          title="Start an in-person training"
+          sub="Walk someone through their training in person and sign it off. Pick someone on your team, or add a new person and jump straight in."
           onClose={() => setOpen(false)}
         >
           <div className="flex gap-2 mb-5">
@@ -145,7 +145,7 @@ export function StartTrainingButton({
               Cancel
             </Btn>
             <Btn onClick={go} disabled={pending || (mode === "existing" && filtered.length === 0)}>
-              {pending ? "Starting..." : "Start training"}
+              {pending ? "Starting..." : "Start in-person training"}
             </Btn>
           </div>
         </Modal>
