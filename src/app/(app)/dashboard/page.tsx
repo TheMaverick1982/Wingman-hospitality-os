@@ -161,9 +161,17 @@ export default async function DashboardPage({
   const cultureMoments = (cultureMomentsQuery.data ?? []) as { id: string; author: string; about: string; created_at: string }[];
   const coachingLogs = (coachingLogsQuery.data ?? []) as { id: string; flag_text: string; created_at: string }[];
   const allGuests = (guests ?? []) as GuestWithVisits[];
-  const stageCounts = computeStageCounts(allGuests);
-  const guestsAwaitingFollowUp = allGuests.filter((g) => stageOf(g.guest_visits) === 1).length;
-  const returningGuestCount = allGuests.filter((g) => stageOf(g.guest_visits) >= 2).length;
+  // Guest retention is per-location: a guest belongs to the location of their
+  // first visit (same attribution as the per-location benchmarks below). Scope
+  // the retention funnel, repeat rate, and follow-up counts to the selected
+  // location so the headline KPI + chart match the rest of the dashboard rather
+  // than blending every location together. "All locations" keeps the full set.
+  const scopedGuests = effectiveLocation
+    ? allGuests.filter((g) => g.guest_visits.find((v) => v.visit_number === 1)?.location_id === effectiveLocation)
+    : allGuests;
+  const stageCounts = computeStageCounts(scopedGuests);
+  const guestsAwaitingFollowUp = scopedGuests.filter((g) => stageOf(g.guest_visits) === 1).length;
+  const returningGuestCount = scopedGuests.filter((g) => stageOf(g.guest_visits) >= 2).length;
 
   const bhMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const bhMetrics = bh
