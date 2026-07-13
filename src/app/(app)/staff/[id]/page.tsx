@@ -84,7 +84,7 @@ export default async function StaffProfilePage({
   const [{ data: testAssignments }, { data: completions }] = await Promise.all([
     supabase
       .from("test_assignments")
-      .select("status, best_score, last_score, current_day, due_at, tests(title, day_count, pass_pct)")
+      .select("test_id, status, best_score, last_score, current_day, due_at, tests(title, day_count, pass_pct)")
       .eq("staff_id", id),
     staff.profile_id
       ? supabase
@@ -98,9 +98,10 @@ export default async function StaffProfilePage({
   ]);
 
   const tests = ((testAssignments ?? []) as unknown as {
-    status: string; best_score: number | null; last_score: number | null; current_day: number; due_at: string | null;
+    test_id: string; status: string; best_score: number | null; last_score: number | null; current_day: number; due_at: string | null;
     tests: { title: string; day_count: number; pass_pct: number } | null;
   }[]).map((a) => ({
+    testId: a.test_id,
     title: a.tests?.title ?? "Test",
     status: a.status,
     score: a.best_score ?? a.last_score,
@@ -135,7 +136,7 @@ export default async function StaffProfilePage({
       coreValueTitles={(coreValues ?? []).map((v) => v.title)}
       tests={tests}
       checklists={checklists}
-      initialTab={tab === "training" || tab === "hiring" || tab === "contact" ? tab : "activity"}
+      initialTab={tab === "training" || tab === "tests" || tab === "hiring" || tab === "contact" ? tab : "activity"}
     />
     </>
   );

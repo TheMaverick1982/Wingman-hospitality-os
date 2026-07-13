@@ -6,6 +6,7 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { getActiveDepartments } from "@/lib/roles";
 import { Pill } from "@/components/ui/pill";
+import { ArrowRight } from "lucide-react";
 import { AddStaffButton } from "./add-staff-form";
 import { BulkAddStaffButton } from "./bulk-add-staff-form";
 
@@ -97,8 +98,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#FAFAFA] text-left">
-              {["Name", "Role", "Location", "Contact", "Training", "Status"].map((h) => (
-                <th key={h} className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">
+              {["Name", "Role", "Location", "Contact", "Training", "Status", ""].map((h, i) => (
+                <th key={h || `col-${i}`} className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">
                   {h}
                 </th>
               ))}
@@ -142,12 +143,17 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                       {s.status === "active" ? "Active" : "Inactive"}
                     </Pill>
                   </td>
+                  <td className="px-6 py-3.5 border-b border-[#F5F5F5] text-right">
+                    <Link href={`/staff/${s.id}`} className="inline-flex items-center gap-1 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-1.5 hover:border-brick hover:text-brick transition-colors">
+                      View <ArrowRight size={13} />
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
             {allStaff.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-muted">
+                <td colSpan={7} className="px-6 py-8 text-center text-muted">
                   No staff added yet.
                 </td>
               </tr>
