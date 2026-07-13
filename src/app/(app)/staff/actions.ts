@@ -6,6 +6,14 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 
 export type StaffFormState = { error: string | null; staffId?: string };
 
+// Email is what a staff member logs in with, and phone is how the team reaches
+// them — both are required so a person you add can actually use the app (log in,
+// enter bounce-backs, etc.), not just sit on the roster.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email);
+}
+
 export async function addStaffMember(_prev: StaffFormState, formData: FormData): Promise<StaffFormState> {
   const fullName = String(formData.get("fullName") || "").trim();
   const department = String(formData.get("department") || "");
@@ -16,6 +24,9 @@ export async function addStaffMember(_prev: StaffFormState, formData: FormData):
   if (!fullName) return { error: "Name is required." };
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Choose a role." };
   if (!locationId) return { error: "Choose a location." };
+  if (!email) return { error: "Email is required — it's how they'll log in." };
+  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
+  if (!phone) return { error: "Phone number is required." };
 
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
@@ -75,13 +86,23 @@ export async function bulkAddStaffMembers(_prev: BatchState, formData: FormData)
       failures.push({ index: i, message: "Location is required." });
       continue;
     }
+    const email = (row.email || "").trim();
+    const phone = (row.phone || "").trim();
+    if (!email || !isValidEmail(email)) {
+      failures.push({ index: i, message: "A valid email is required (it's their login)." });
+      continue;
+    }
+    if (!phone) {
+      failures.push({ index: i, message: "Phone is required." });
+      continue;
+    }
     const { error } = await supabase.from("staff_members").insert({
       org_id: org.id,
       location_id: row.locationId,
       full_name: fullName,
       department: row.department,
-      email: (row.email || "").trim(),
-      phone: (row.phone || "").trim(),
+      email,
+      phone,
     });
     if (error) {
       failures.push({ index: i, message: error.message });

@@ -6,7 +6,7 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { bulkAddStaffMembers, type BatchState } from "./actions";
 
@@ -14,12 +14,13 @@ const initialState: BatchState = { error: null, successCount: 0, failures: [] };
 
 type Row = { fullName: string; department: string; locationId: string; email: string; phone: string };
 
-export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
+export function BulkAddStaffButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const multiLocation = locations.length > 1;
   const emptyRow = (): Row => ({
     fullName: "",
-    department: ALL_DEPARTMENTS[0],
+    department: roles[0],
     locationId: locations[0]?.id ?? "",
     email: "",
     phone: "",
@@ -35,7 +36,9 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
     setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [field]: value } : row)));
   }
 
-  const validRows = rows.filter((r) => r.fullName.trim());
+  const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+  // A row only counts once it has everything needed for the person to log in.
+  const validRows = rows.filter((r) => r.fullName.trim() && emailOk(r.email) && r.phone.trim());
 
   return (
     <>
@@ -45,7 +48,7 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
       {open && (
         <Modal
           title="Bulk add staff"
-          sub="Add your existing team all at once instead of one at a time."
+          sub="Add your existing team all at once. Email and phone are required — email is each person's login."
           onClose={() => setOpen(false)}
           wide
         >
@@ -71,7 +74,7 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
                     </Field>
                     <Field label="Role">
                       <select value={row.department} onChange={(e) => updateRow(i, "department", e.target.value)} className={inputClass}>
-                        {ALL_DEPARTMENTS.map((d) => (
+                        {roles.map((d) => (
                           <option key={d} value={d}>
                             {d}
                           </option>
@@ -89,10 +92,10 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
                         </select>
                       </Field>
                     )}
-                    <Field label="Email (optional)">
+                    <Field label="Email">
                       <input type="email" value={row.email} onChange={(e) => updateRow(i, "email", e.target.value)} className={inputClass} />
                     </Field>
-                    <Field label="Phone (optional)">
+                    <Field label="Phone">
                       <input value={row.phone} onChange={(e) => updateRow(i, "phone", e.target.value)} className={inputClass} />
                     </Field>
                   </div>

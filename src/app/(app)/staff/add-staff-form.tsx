@@ -12,9 +12,10 @@ import { addStaffMember, type StaffFormState } from "./actions";
 
 const initialState: StaffFormState = { error: null };
 
-export function AddStaffButton({ locations }: { locations: Location[] }) {
+export function AddStaffButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
-  const [department, setDepartment] = useState<Department>(ALL_DEPARTMENTS[0]);
+  const [department, setDepartment] = useState<Department>(roles[0]);
   const [state, formAction, pending] = useActionState(addStaffMember, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
   const multiLocation = locations.length > 1;
@@ -38,7 +39,7 @@ export function AddStaffButton({ locations }: { locations: Location[] }) {
                 onChange={(e) => setDepartment(e.target.value as Department)}
                 className={inputClass}
               >
-                {ALL_DEPARTMENTS.map((d) => (
+                {roles.map((d) => (
                   <option key={d}>{d}</option>
                 ))}
               </select>
@@ -57,12 +58,15 @@ export function AddStaffButton({ locations }: { locations: Location[] }) {
                 </select>
               </Field>
             )}
-            <Field label="Email (optional)">
-              <input type="email" name="email" className={inputClass} />
+            <Field label="Email">
+              <input type="email" name="email" required className={inputClass} />
             </Field>
-            <Field label="Phone (optional)">
-              <input name="phone" className={inputClass} />
+            <Field label="Phone">
+              <input name="phone" required className={inputClass} />
             </Field>
+            <p className="text-[12px] text-muted-2 -mt-1 mb-3">
+              Email is how they&rsquo;ll log in to enter guest bounce-backs and see their training. Invite them to log in from Settings → Team once they&rsquo;re added.
+            </p>
 
             {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
             <div className="flex justify-end gap-2 mt-2">
