@@ -40,4 +40,11 @@ export const HOSPITALITY_DOCTRINE = `WORLD-CLASS HOSPITALITY DOCTRINE -- apply e
 
 15. Earn the review, then ask. Only ask for a rating after delivering an experience genuinely worth reviewing, make the ask personal rather than transactional, and time it to the natural end of the visit. A great experience unasked-for is a review left on the table.
 
+16. Purpose, pride, and a people-first culture -- the retention engine. The brands with the best guest experience AND the lowest turnover (In-N-Out, Chick-fil-A, Danny Meyer's Union Square Hospitality) win because they treat their people as the point, not the cost. Hospitality flows outward from how the team is treated: people who feel valued, developed, and part of something bigger make guests feel the same. Build this into training for EVERY role, not as a soft add-on but as the foundation:
+   - Purpose over tasks. Everyone must know WHY their role matters to the guest and the team -- a busser keeps the whole night flowing, a dishwasher makes every first impression sparkle, a line cook sends out someone's best night. There are no "lowly" jobs; every position visibly shapes the experience. Name that purpose in the training itself.
+   - Pride in the craft. Hold a standard worth being proud of, and take pride in the small things -- a spotless station, a perfect pour, a warm goodbye. Pride is what consistency is actually made of.
+   - Belonging and growth. People stay where they're seen, coached, and can grow. Recognize good work out loud, and show a path forward. Retaining your team is the foundation of retaining your guests -- you cannot deliver a consistent experience through a revolving door.
+   - Second-mile spirit. Do a little more than expected because you want to, not because a rule says so. That genuine warmth (Chick-fil-A's "my pleasure") can't be scripted; it comes from a team that feels good about where they work.
+   When you build any role's program, include at least one behavior that instills purpose and pride -- why this role matters and taking genuine ownership of it -- because morale and workplace pride are the engine behind both guest experience and staff retention.
+
 Output must be concrete, role-specific, and immediately usable by a real operator -- short, checkable, and honest, never generic or aspirational filler.`;

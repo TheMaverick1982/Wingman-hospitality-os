@@ -24,6 +24,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Seating & flow",
     hasMenu: false,
     standards: [
+      "Own the first impression — you set whether the whole visit feels welcome",
       "Greet every guest immediately — smile, eye contact, drop what you're doing",
       'Ask: "Is this your first time with us?"',
       "Read the guest and seat accordingly",
@@ -46,6 +47,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Menu & product knowledge",
     hasMenu: true,
     standards: [
+      "Take pride in being the guest's whole experience — to them, you are the meal",
       "Build rapport — use names, notice celebrations",
       "One specific recommendation per course, every course",
       "Mention loyalty early — name, points, offers",
@@ -69,6 +71,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Table turns & flow",
     hasMenu: false,
     standards: [
+      "Take pride in the flow — a fast, spotless reset is what keeps the whole night moving",
       "Clear plates quietly, without interrupting the conversation",
       "Refill water before a guest has to ask",
       "Greet guests warmly whenever you approach the table",
@@ -92,6 +95,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Delivery & the table",
     hasMenu: true,
     standards: [
+      "Own the hand-off — you carry the kitchen's best work to the guest",
       "Deliver every plate to the right seat — no auctioning",
       "Announce the dish by name as you set it down",
       "Read the table — anything else they need right now?",
@@ -115,6 +119,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Bar & beverage knowledge",
     hasMenu: true,
     standards: [
+      "Own the bar as your room — regulars come back for how you make them feel",
       "Greet by name whenever possible",
       "Ask a follow-up question from their last visit",
       "First drink out fast — every time",
@@ -136,6 +141,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Coffee & beverage craft",
     hasMenu: true,
     standards: [
+      "Take pride in the craft — a great cup and a warm hello can start someone's whole day",
       "Greet every guest at the counter with a smile and eye contact",
       "Learn and use regulars' names and usual orders",
       "Make a genuine recommendation when a guest is unsure",
@@ -159,6 +165,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Kitchen standards & safety",
     hasMenu: false,
     standards: [
+      "Take pride in every plate — you're sending out someone's best night",
       "Walk the dining room once per hour",
       "Inspect food quality with your eyes, not from the pass",
       "Introduce yourself at a table at least once per shift",
@@ -180,6 +187,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Station & execution",
     hasMenu: false,
     standards: [
+      "Own your station like your name is on every plate that leaves it",
       "Treat every plate as if it's going to your own table",
       "Own a mistake and re-fire immediately, no excuses",
       "Communicate 86s and delays to the floor fast",
@@ -203,6 +211,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Sanitation & flow",
     hasMenu: false,
     standards: [
+      "Take pride in the sparkle — spotless glass and china are the guest's first impression",
       "Keep clean plates and glassware flowing so service never stalls",
       "Handle glassware and china carefully to reduce breakage",
       "Keep the dish area clean, safe, and organized",
@@ -225,6 +234,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "The pass & timing",
     hasMenu: true,
     standards: [
+      "Own the pass — nothing reaches a guest that you wouldn't be proud to serve",
       "Own the pass — nothing leaves that isn't right",
       "Verify every plate against the ticket before it runs",
       "Call clear timing so a table's food arrives together",
@@ -248,6 +258,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Wine & beverage program",
     hasMenu: true,
     standards: [
+      "Take pride in guiding the table — you turn a bottle into a memory",
       "Read the table before recommending — occasion, taste, budget",
       "Guide, don't lecture — make wine approachable and fun",
       "Offer a pairing for the table's dishes, at more than one price",
@@ -271,6 +282,7 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
     trackLabel: "Operations & leadership",
     hasMenu: false,
     standards: [
+      "Set the tone — your team gives guests exactly what you give your team",
       "On the floor during every peak period",
       "Engage every table possible, approach first-time guests",
       "Thank every departing guest personally",
