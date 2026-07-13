@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { EXAMPLE_TESTS } from "@/lib/tests";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "./constants";
 
 /** How long a per-visitor "Try the demo" sandbox lives before the reaper deletes it. */
@@ -188,6 +189,10 @@ async function ensureDemoOrg(userId: string): Promise<DemoContext> {
 const WIPE_TABLES = [
   // children first where a restrict FK could exist; most are cascade/set-null,
   // but explicit ordering keeps this safe regardless.
+  "test_assignments",
+  "test_questions",
+  "test_days",
+  "tests",
   "guest_visits",
   "guests",
   "staff_training_progress",
@@ -588,6 +593,59 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
     { org_id: orgId, staff_name: "Elena Vasquez", department: "Server", completion_pct: 45, occurred_on: isoDay(7), created_by: userId, staff_id: staffByName.get("Elena Vasquez")?.id ?? null },
     { org_id: orgId, staff_name: "Sofia Marin", department: "Server", completion_pct: 30, occurred_on: isoDay(4), created_by: userId, staff_id: staffByName.get("Sofia Marin")?.id ?? null },
   ]);
+
+  // Tests & exams — the Food + Bartender examples, with a live assignment board
+  // (someone passed, someone in progress, someone locked out) and a test
+  // assigned to the demo viewer so they can experience taking it as a staffer.
+  const seedTest = async (key: string): Promise<string | null> => {
+    const ex = EXAMPLE_TESTS.find((e) => e.key === key);
+    if (!ex) return null;
+    const { data: t } = await admin
+      .from("tests")
+      .insert({
+        org_id: orgId, title: ex.settings.title, description: ex.settings.description, mode: ex.settings.mode,
+        target_departments: ex.settings.target_departments, day_count: ex.settings.day_count, pass_pct: ex.settings.pass_pct,
+        max_retakes: ex.settings.max_retakes, complete_within_amount: ex.settings.complete_within_amount,
+        complete_within_unit: ex.settings.complete_within_unit, rotates_monthly: ex.settings.rotates_monthly,
+        source: "example", created_by: userId,
+      })
+      .select("id")
+      .single();
+    if (!t) return null;
+    const testId = t.id as string;
+    await admin.from("test_days").insert(ex.days.map((d) => ({ test_id: testId, org_id: orgId, day_number: d.day_number, title: d.title, content: d.content })));
+    await admin.from("test_questions").insert(
+      ex.questions.map((qq, i) => ({ test_id: testId, org_id: orgId, day_number: qq.day_number, sort_order: i, kind: qq.kind, prompt: qq.prompt, options: qq.options, correct_index: qq.correct_index, explanation: qq.explanation }))
+    );
+    return testId;
+  };
+  const foodTestId = await seedTest("food");
+  await seedTest("bartender");
+
+  // A staff record linked to the demo viewer's own login, so "Assigned to you"
+  // appears and they can take the test live during a walkthrough.
+  const { data: viewerStaff } = await admin
+    .from("staff_members")
+    .insert({ org_id: orgId, location_id: downtown, full_name: "Alex Kim", department: "Server", email: DEMO_EMAIL, phone: "(512) 555-0320", status: "active", hired_on: isoDay(120), profile_id: userId })
+    .select("id")
+    .single();
+
+  if (foodTestId) {
+    const dueSoon = isoTs(-5); // ~5 days out
+    const locByName: Record<string, string> = { "Maya Rivera": downtown, "Elena Vasquez": downtown, "Sofia Marin": riverside, "Nadia Khan": riverside };
+    const forStaff = (name: string, extra: Record<string, unknown>) => {
+      const s = staffByName.get(name);
+      return s ? { org_id: orgId, test_id: foodTestId, staff_id: s.id, location_id: locByName[name] ?? downtown, assigned_by: userId, due_at: dueSoon, ...extra } : null;
+    };
+    const assignments = [
+      viewerStaff ? { org_id: orgId, test_id: foodTestId, staff_id: viewerStaff.id, location_id: downtown, assigned_by: userId, due_at: dueSoon, status: "assigned", current_day: 1 } : null,
+      forStaff("Maya Rivera", { status: "passed", current_day: 5, attempts_used: 1, best_score: 92, last_score: 92, passed_at: isoTs(2) }),
+      forStaff("Elena Vasquez", { status: "locked", current_day: 1, attempts_used: 2, best_score: 60, last_score: 60, locked_at: isoTs(1), locked_alerted: true }),
+      forStaff("Sofia Marin", { status: "in_progress", current_day: 2, attempts_used: 0 }),
+      forStaff("Nadia Khan", { status: "assigned", current_day: 1 }),
+    ].filter(Boolean) as Record<string, unknown>[];
+    if (assignments.length) await admin.from("test_assignments").insert(assignments);
+  }
 
   // Accountability checklist templates.
   await admin.from("accountability_checklist_items").insert([
