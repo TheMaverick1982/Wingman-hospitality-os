@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { authenticateApiKey, apiUnauthorized, apiError } from "@/lib/api-auth";
+import { authenticateApiKey, resolveApiLocation, apiUnauthorized, apiError } from "@/lib/api-auth";
 import { consumeRateLimit, API_V1_LIMIT } from "@/lib/rate-limit";
 
 // GET /api/v1/guests -> recent guests (with their visits) for this org.
@@ -11,15 +11,24 @@ export async function GET(request: NextRequest) {
     return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
   }
 
+  const loc = await resolveApiLocation(request, caller);
+  if (loc.error) return loc.error;
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("guests")
     .select("id, name, phone, email, source, referred_a_friend, created_at, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction)")
     .eq("org_id", caller.orgId)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(loc.locationId ? 1000 : 200);
   if (error) return apiError(error.message, 500);
-  return NextResponse.json({ guests: data ?? [] });
+
+  // When scoped to a location, return only guests seen at that location.
+  let guests = (data ?? []) as { guest_visits: { location_id: string | null }[] }[];
+  if (loc.locationId) {
+    guests = guests.filter((g) => (g.guest_visits ?? []).some((v) => v.location_id === loc.locationId)).slice(0, 200);
+  }
+  return NextResponse.json({ guests });
 }
 
 const REACTIONS = ["wowed", "delighted", "neutral", "let_down"];
@@ -39,6 +48,9 @@ export async function POST(request: NextRequest) {
   if (!(await consumeRateLimit(`apiv1:${caller.keyId}`, API_V1_LIMIT.max, API_V1_LIMIT.windowSeconds))) {
     return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
   }
+
+  const loc = await resolveApiLocation(request, caller);
+  if (loc.error) return loc.error;
 
   const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!raw || typeof raw !== "object") return apiError("Invalid JSON body.");
@@ -70,16 +82,23 @@ export async function POST(request: NextRequest) {
       return apiError("visit.visit_number must be an integer from 1 to 4.");
     }
 
-    let locationId: string | null = null;
+    // Location precedence: explicit visit.location_id (validated) wins; otherwise
+    // fall back to the request's scope (the key's location, or the header). A
+    // location-locked key rejects a visit that names a different location.
+    let locationId: string | null = loc.locationId;
     if (visit.location_id != null && visit.location_id !== "") {
-      locationId = String(visit.location_id);
-      const { data: loc } = await admin
+      const explicit = String(visit.location_id);
+      if (caller.keyLocationId && explicit !== caller.keyLocationId) {
+        return apiError("This key is locked to one location and can't log a visit at another.", 403);
+      }
+      const { data: locRow } = await admin
         .from("locations")
         .select("id")
-        .eq("id", locationId)
+        .eq("id", explicit)
         .eq("org_id", caller.orgId)
         .maybeSingle();
-      if (!loc) return apiError("visit.location_id is not in your organization.");
+      if (!locRow) return apiError("visit.location_id is not in your organization.");
+      locationId = explicit;
     }
 
     const visitDate = visit.visit_date != null && visit.visit_date !== "" ? String(visit.visit_date) : null;

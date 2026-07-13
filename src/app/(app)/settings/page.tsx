@@ -36,7 +36,7 @@ export default async function SettingsPage() {
 
   const { data: apiKeys } = await supabase
     .from("api_keys")
-    .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+    .select("id, name, key_prefix, location_id, created_at, last_used_at, revoked_at")
     .order("created_at", { ascending: false });
 
   const allMembers = members ?? [];
@@ -276,7 +276,7 @@ export default async function SettingsPage() {
         team={teamContent}
         locations={locationsContent}
         billing={billingContent}
-        api={<ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} />}
+        api={<ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />}
       />
     </>
   );

@@ -9,6 +9,7 @@ export type ApiKeyRow = {
   id: string;
   name: string;
   key_prefix: string;
+  location_id: string | null;
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
@@ -23,14 +24,26 @@ export async function createApiKey(_prev: CreateApiKeyState, formData: FormData)
   }
 
   const name = String(formData.get("name") || "").trim() || "Untitled key";
+
+  // Optional: bind the key to one location (the POS at that store). Blank = an
+  // org-wide key covering all locations.
+  const supabase = await createClient();
+  let locationId: string | null = null;
+  const rawLocation = String(formData.get("locationId") || "").trim();
+  if (rawLocation) {
+    const { data: loc } = await supabase.from("locations").select("id").eq("id", rawLocation).eq("org_id", profile.orgId).maybeSingle();
+    if (!loc) return { error: "That location isn't in your organization." };
+    locationId = rawLocation;
+  }
+
   const { plaintext, keyHash, keyPrefix } = generateApiKey();
 
-  const supabase = await createClient();
   const { error } = await supabase.from("api_keys").insert({
     org_id: profile.orgId,
     name,
     key_prefix: keyPrefix,
     key_hash: keyHash,
+    location_id: locationId,
     created_by: profile.userId,
   });
   if (error) return { error: error.message };

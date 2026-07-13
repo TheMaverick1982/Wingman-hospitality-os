@@ -555,6 +555,8 @@ export const ARTICLES: HelpArticle[] = [
         "Menu — sync menu items with price, cost, and units sold.",
       ] },
       { kind: "note", text: "The richer guest fields (source, referral, and per-visit reaction) feed the newer Reporting views — reaction ratio, referral rate, and what brings guests back. Pushing them from your POS makes those reports accurate automatically." },
+      { kind: "h", text: "Multiple locations" },
+      { kind: "p", text: "Running more than one location? When you create a key you can bind it to a single location — give the POS at each store its own key, and everything it sends and reads is automatically scoped to that store (it can't touch another location). Prefer one central key? Leave it on \"All locations\" and target a store per request with the X-Wingman-Location header. Set it once at the top and all the data flows by location — no need to tag every record." },
       { kind: "tip", text: "The Developer Guide has every endpoint, example, and setup step. Open it with the \"Open the Developer Guide\" link below (also under Settings → API access), then hit \"Save as PDF\" to hand a copy to your developer — it always reflects the current API." },
     ],
     links: [

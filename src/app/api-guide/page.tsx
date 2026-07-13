@@ -115,6 +115,31 @@ export default function ApiGuidePage() {
           (<code className="text-xs">429</code> when exceeded).
         </p>
 
+        {/* Multi-location */}
+        <h2 className="text-lg font-semibold tracking-[-0.01em] mb-2 mt-8">Multi-location</h2>
+        <p className="text-sm text-charcoal-2 mb-2">
+          Two ways to scope a request to one location — set it once and reads filter to it, writes default to it:
+        </p>
+        <ul className="text-sm text-charcoal-2 list-disc pl-5 space-y-1 mb-2">
+          <li>
+            <strong>Per-location key (recommended for a POS per store).</strong> When you create a key, bind it to a
+            location. Every call with that key is locked to that store — reads return only its data, writes land there,
+            and it can&apos;t reach another location (a mismatched <code className="text-xs">location_id</code> returns{" "}
+            <code className="text-xs">403</code>).
+          </li>
+          <li>
+            <strong>Header on an org-wide key.</strong> A key left on &ldquo;All locations&rdquo; can scope any single
+            request with a header:
+          </li>
+        </ul>
+        <Code>{`X-Wingman-Location: <location_id>`}</Code>
+        <p className="text-sm text-charcoal-2 mt-2">
+          Precedence: an explicit <code className="text-xs">location_id</code> in the body wins (when allowed), otherwise
+          the request scope (the key&apos;s location, or the header) applies. Omit all three on an org-wide key for
+          organization-wide behavior, exactly as before. You can also pass{" "}
+          <code className="text-xs">?location=&lt;id&gt;</code> instead of the header.
+        </p>
+
         {/* Endpoints */}
         <h2 className="text-lg font-semibold tracking-[-0.01em] mb-4 mt-9">Endpoints</h2>
 
