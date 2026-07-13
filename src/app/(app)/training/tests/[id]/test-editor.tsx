@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus, Pencil, Trash2, Save } from "lucide-react";
+import { Check, Plus, Pencil, Trash2, Save, CalendarPlus } from "lucide-react";
 import type { Department } from "@/lib/constants";
 import { MODE_LABEL, completionWindowLabel, type QuestionKind, type TestDay, type TestQuestion, type TestSettings } from "@/lib/tests";
-import { updateTestSettings, saveQuestion, deleteQuestion, updateDay } from "../actions";
+import { updateTestSettings, saveQuestion, deleteQuestion, updateDay, addTestDay, deleteTestDay } from "../actions";
 
 const input = "rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick";
 
@@ -64,7 +64,7 @@ function QuestionForm({ testId, dayNumber, q, onDone }: { testId: string; dayNum
   );
 }
 
-function DayBlock({ testId, day, questions, mode, canEdit }: { testId: string; day: TestDay; questions: TestQuestion[]; mode: string; canEdit: boolean }) {
+function DayBlock({ testId, day, questions, mode, canEdit, canRemove }: { testId: string; day: TestDay; questions: TestQuestion[]; mode: string; canEdit: boolean; canRemove: boolean }) {
   const [editingContent, setEditingContent] = useState(false);
   const [title, setTitle] = useState(day.title);
   const [content, setContent] = useState(day.content);
@@ -77,7 +77,20 @@ function DayBlock({ testId, day, questions, mode, canEdit }: { testId: string; d
     <div className="bg-white border border-line rounded-2xl p-5 shadow-sm flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <div className="text-[15px] font-semibold text-ink">Day {day.day_number}{day.title ? `: ${day.title}` : ""}</div>
-        {canEdit && day.id && !editingContent && <button onClick={() => setEditingContent(true)} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit day</button>}
+        {canEdit && day.id && !editingContent && (
+          <div className="flex items-center gap-3 shrink-0">
+            <button onClick={() => setEditingContent(true)} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit day</button>
+            {canRemove && (
+              <button
+                onClick={() => { if (confirm(`Remove Day ${day.day_number} and its questions? The days after it move up.`)) start(async () => { await deleteTestDay(testId, day.day_number); router.refresh(); }); }}
+                disabled={pending}
+                className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-muted-2 hover:text-danger disabled:opacity-50"
+              >
+                <Trash2 size={12} /> Remove day
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {editingContent ? (
@@ -132,7 +145,9 @@ export function TestEditor({ testId, settings, days, questions, activeDepartment
   const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dayErr, setDayErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [addingDay, startAddDay] = useTransition();
   const router = useRouter();
 
   function saveSettings() {
@@ -141,6 +156,15 @@ export function TestEditor({ testId, settings, days, questions, activeDepartment
       const res = await updateTestSettings(testId, s);
       if (res.error) setErr(res.error);
       else { setSaved(true); router.refresh(); }
+    });
+  }
+
+  function addDay() {
+    setDayErr(null);
+    startAddDay(async () => {
+      const res = await addTestDay(testId);
+      if (res.error) setDayErr(res.error);
+      else router.refresh();
     });
   }
   const toggleDept = (d: string) => setS((p) => ({ ...p, target_departments: p.target_departments.includes(d) ? p.target_departments.filter((x) => x !== d) : [...p.target_departments, d] }));
@@ -191,9 +215,25 @@ export function TestEditor({ testId, settings, days, questions, activeDepartment
 
       <div className="flex flex-col gap-4">
         {days.map((d) => (
-          <DayBlock key={d.id ?? d.day_number} testId={testId} day={d} questions={questions.filter((q) => q.day_number === d.day_number)} mode={s.mode} canEdit={canEdit} />
+          <DayBlock key={d.id ?? d.day_number} testId={testId} day={d} questions={questions.filter((q) => q.day_number === d.day_number)} mode={s.mode} canEdit={canEdit} canRemove={days.length > 1} />
         ))}
       </div>
+
+      {canEdit && (
+        <div className="flex flex-col gap-2 items-start">
+          <button
+            onClick={addDay}
+            disabled={addingDay}
+            className="inline-flex items-center gap-2 text-[14px] font-semibold text-brick border border-dashed border-brick/40 bg-brick-tint/40 rounded-xl px-5 py-3 hover:bg-brick-tint transition-colors disabled:opacity-60"
+          >
+            <CalendarPlus size={16} /> {addingDay ? "Adding a day…" : "Add another day"}
+          </button>
+          <p className="text-[12.5px] text-muted-2">
+            Each day gets its own {s.mode === "study_quiz" ? "learning section and " : ""}set of questions. Trainees can work ahead through the days in one sitting — nothing forces them to wait.
+          </p>
+          {dayErr && <span className="text-[12.5px] text-danger">{dayErr}</span>}
+        </div>
+      )}
 
       <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-4 text-[13px] text-brick-dark">
         <span className="font-semibold">Ready to roll it out?</span> Use <span className="font-semibold">Assign &amp; results</span> (top of this page, or from the tests list) to assign it to people, a role, or everyone — and track who&rsquo;s passed.
