@@ -1,0 +1,56 @@
+name: Apply DB migrations
+
+# Applies pending Supabase migrations to the production database whenever a
+# migration file changes on the production branch — so a schema change is live
+# before/alongside the Vercel deploy, instead of having to be applied by hand.
+# Also runnable on demand from the Actions tab ("Run workflow").
+#
+# Reuses the SAME secret as the nightly backup workflow:
+#   SUPABASE_DB_URL   Postgres connection string (Session pooler, port 5432)
+#   (Settings -> Secrets and variables -> Actions)
+#
+# ONE-TIME setup on the existing database (so old, already-applied migrations are
+# never re-run): run scripts/baseline-migrations.sql once in the Supabase SQL
+# editor. See MIGRATIONS.md.
+#
+# The branch below must match whatever Vercel deploys production from
+# (Vercel -> Project -> Settings -> Git -> Production Branch). It is currently the
+# repo's default branch.
+
+on:
+  push:
+    branches: [claude/wingman-nextjs-supabase-setup-m5pm98]
+    paths:
+      - "supabase/migrations/**"
+      - "scripts/apply-migrations.sh"
+      - ".github/workflows/migrate.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install psql client
+        run: |
+          set -euo pipefail
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Apply pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set (Settings -> Secrets and variables -> Actions)." && exit 1
+          fi
+          bash scripts/apply-migrations.sh
