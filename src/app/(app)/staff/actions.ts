@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/profile";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { sendLoginInvite, type LoginAccessRole } from "@/lib/invite";
 
 export type StaffFormState = { error: string | null; staffId?: string };
 
@@ -148,6 +150,38 @@ export async function deleteStaffMember(id: string) {
   const supabase = await createClient();
   await supabase.from("staff_members").delete().eq("id", id);
   revalidatePath("/staff");
+}
+
+// Send a login invite to someone already on the roster (e.g. added manually or
+// hired earlier). Owner-only; links the resulting profile back to this record.
+export async function inviteStaffToLogin(staffId: string, accessRole: LoginAccessRole): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only an owner can send a login invite." };
+
+  const supabase = await createClient();
+  const { data: s } = await supabase
+    .from("staff_members")
+    .select("email, full_name, department, location_id, profile_id")
+    .eq("id", staffId)
+    .maybeSingle();
+  if (!s) return { error: "Staff member not found." };
+  const staff = s as { email: string; full_name: string; department: string; location_id: string; profile_id: string | null };
+  if (staff.profile_id) return { error: "They already have a login." };
+  if (!staff.email) return { error: "Add an email to this staff member first." };
+
+  const res = await sendLoginInvite({
+    orgId: profile.orgId,
+    email: staff.email,
+    fullName: staff.full_name,
+    accessRole,
+    department: staff.department,
+    locationId: staff.location_id,
+  });
+  if (res.error) return res;
+
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
+  return { error: null };
 }
 
 export async function updateTrainingProgress(

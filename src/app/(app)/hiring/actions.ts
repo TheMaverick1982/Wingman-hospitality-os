@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/profile";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
+import { linkOrCreateStaff } from "@/lib/staff-link";
+import { sendLoginInvite, type LoginAccessRole } from "@/lib/invite";
 
 export type ActionState = { error: string | null };
 
@@ -55,11 +58,20 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
   return { error: null };
 }
 
-export async function hireCandidate(candidateId: string): Promise<{ error: string | null; staffId?: string }> {
-  const supabase = await createClient();
-  const { data: org } = await supabase.from("organizations").select("id").single();
-  if (!org) return { error: "Organization not found." };
+export type HireOptions = { email?: string; phone?: string; accessRole?: LoginAccessRole; sendInvite?: boolean };
 
+// Hire a scored candidate: create (or link, by email) their Staff record, and —
+// if asked — fire the "set up your account" login invite so they can start
+// logging in. Candidates carry no email, so the email + access level are
+// collected at hire time. Sending a login requires the actor to be a Super Admin.
+export async function hireCandidate(
+  candidateId: string,
+  opts?: HireOptions
+): Promise<{ error: string | null; staffId?: string; invited?: boolean }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+
+  const supabase = await createClient();
   const { data: candidate } = await supabase
     .from("candidates")
     .select("name, department, location_id")
@@ -67,21 +79,38 @@ export async function hireCandidate(candidateId: string): Promise<{ error: strin
     .maybeSingle();
   if (!candidate) return { error: "Candidate not found." };
 
-  const { data: staffRow, error } = await supabase
-    .from("staff_members")
-    .insert({
-      org_id: org.id,
-      location_id: candidate.location_id,
-      candidate_id: candidateId,
-      full_name: candidate.name,
+  const email = (opts?.email || "").trim();
+  const phone = (opts?.phone || "").trim();
+
+  const staffId = await linkOrCreateStaff(supabase, profile.orgId, {
+    email,
+    fullName: candidate.name,
+    department: candidate.department,
+    locationId: candidate.location_id,
+    phone,
+    candidateId,
+    hiredOn: new Date().toISOString().slice(0, 10),
+  });
+  if (!staffId) return { error: "Couldn't create the staff record." };
+
+  let invited = false;
+  if (opts?.sendInvite && email) {
+    if (profile.accessRole !== "super_admin") {
+      return { error: "Hired — but only an owner can send the login invite. Ask them to invite from Settings → Team.", staffId, invited: false };
+    }
+    const res = await sendLoginInvite({
+      orgId: profile.orgId,
+      email,
+      fullName: candidate.name,
+      accessRole: opts.accessRole ?? "staff",
       department: candidate.department,
-      hired_on: new Date().toISOString().slice(0, 10),
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
+      locationId: candidate.location_id,
+    });
+    if (res.error) return { error: `Added to staff, but the login invite failed: ${res.error}`, staffId, invited: false };
+    invited = true;
+  }
 
   revalidatePath("/hiring");
   revalidatePath("/staff");
-  return { error: null, staffId: staffRow.id };
+  return { error: null, staffId, invited };
 }
