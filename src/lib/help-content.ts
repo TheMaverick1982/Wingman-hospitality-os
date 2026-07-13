@@ -349,7 +349,7 @@ export const ARTICLES: HelpArticle[] = [
         "Format — a straight exam, or \"learn, then quiz\" that teaches first (great for a new LTO or menu) and quizzes at the end to confirm they retained it. A learn-then-quiz test can be set to rotate monthly and go out to everyone.",
       ] },
       { kind: "h", text: "See who passed" },
-      { kind: "p", text: "Once tests are out, open Tests & results (from the Training page or a test's own page) to track them. Each test's \"Assign & results\" panel shows everyone assigned with their status (not started, in progress, passed, locked), their score, and their deadline — and you can still add one more person, a role, or send to all right there. So you always know who's done it and who hasn't." },
+      { kind: "p", text: "Once tests are out, open Build & manage tests (from the Training page) or a test's own page to track them. Each test's \"Assign & results\" panel shows everyone assigned with their status (not started, in progress, passed, locked), their score, and their deadline — and you can still add one more person, a role, or send to all right there. So you always know who's done it and who hasn't." },
       { kind: "h", text: "How an employee takes it" },
       { kind: "list", items: [
         "They open Training → Tests and see \"Assigned to you,\" then take the test one day at a time. A fast learner can move through every day in one sitting; a newer hire can spread it across the window you set.",

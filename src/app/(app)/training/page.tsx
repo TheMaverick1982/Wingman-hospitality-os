@@ -123,7 +123,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            <ClipboardList size={14} /> Tests &amp; results
+            <ClipboardList size={14} /> Build &amp; manage tests
           </Link>
           <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             Print / PDF
