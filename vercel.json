@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/launch-checkin",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/momentum-nudge",
+      "schedule": "0 17 * * *"
     }
   ]
 }
