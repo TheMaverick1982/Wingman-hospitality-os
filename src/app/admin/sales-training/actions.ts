@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { payableDateFrom } from "@/lib/sales-commissions";
 import { provisionDemoSandbox } from "@/lib/demo/reseed";
+import { attachDemoRun } from "@/lib/crm-sequences";
 
 // Must match the impersonation cookie used by the shared exit action + banner
 // (src/app/admin/organizations/actions.ts) — that's how a sales agent returns
@@ -23,20 +24,56 @@ const IMPERSONATOR_COOKIE = "wingman_impersonator_refresh";
 // can run demos at the same time without stepping on each other's data, and
 // anything the rep edits mid-demo evaporates when the sandbox auto-expires
 // (reaped by /api/cron/demo-cleanup ~3h later). No reseed needed — it's born clean.
-export async function enterDemoAsStaff() {
+//
+// The rep can name who the demo is FOR (an existing CRM contact or a brand-new
+// prospect). When they do, that contact is tied to them as the lead owner and
+// advanced to Demo Completed, so the demo doubles as the CRM action — no extra
+// data entry, and it rolls straight into their Sales Dashboard pipeline.
+export async function enterDemoAsStaff(formData?: FormData) {
   const actor = await platformSectionActor("sales_training");
   if (!actor) throw new Error("You don't have sales access.");
+
+  const admin = createAdminClient();
+
+  // Who is this demo for? (Optional — "just exploring" runs a demo untied.)
+  const kind = String(formData?.get("target_kind") || "none");
+  let leadEmail: string | undefined;
+  let leadName: string | undefined;
+  let attach: { contactId?: string; email?: string; name?: string } | null = null;
+  if (kind === "existing") {
+    const contactId = String(formData?.get("contact_id") || "").trim();
+    if (contactId) {
+      const { data: c } = await admin.from("crm_contacts").select("email, name").eq("id", contactId).maybeSingle();
+      const contact = c as { email: string; name: string | null } | null;
+      attach = { contactId };
+      leadEmail = contact?.email;
+      leadName = contact?.name ?? undefined;
+    }
+  } else if (kind === "new") {
+    const email = String(formData?.get("new_email") || "").trim().toLowerCase();
+    const name = String(formData?.get("new_name") || "").trim();
+    if (email) {
+      attach = { email, name: name || undefined };
+      leadEmail = email;
+      leadName = name || undefined;
+    }
+  }
 
   const supabase = await createClient();
   const {
     data: { session: mySession },
   } = await supabase.auth.getSession();
 
-  // Fresh isolated sandbox for this rep. Stamp their identity as the "lead" so
-  // a sandbox can be traced back to the rep who opened it.
-  const { email } = await provisionDemoSandbox({ leadEmail: actor.email, leadName: actor.fullName });
+  // Fresh isolated sandbox for this rep. Stamp the prospect (or, if untied, the
+  // rep) as the "lead" so a sandbox can be traced back to who it was run for.
+  const { email } = await provisionDemoSandbox({
+    leadEmail: leadEmail ?? actor.email,
+    leadName: leadName ?? actor.fullName,
+  });
 
-  const admin = createAdminClient();
+  // Tie the prospect to this rep + advance their pipeline (best-effort).
+  if (attach) await attachDemoRun(actor.userId, attach, admin);
+
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (linkError || !linkData) throw new Error("Couldn't open the demo. Try again.");
 

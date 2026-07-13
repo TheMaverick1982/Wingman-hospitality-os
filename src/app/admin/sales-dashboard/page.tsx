@@ -3,9 +3,9 @@ import Link from "next/link";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { listSalesReps } from "@/lib/sales-reps";
+import { listSalesReps, listDemoTargets } from "@/lib/sales-reps";
 import { StatTile } from "@/components/ui/stat-tile";
-import { enterDemoAsStaff } from "../sales-training/actions";
+import { DemoLauncher } from "../sales-training/demo-launcher";
 
 export const metadata: Metadata = { title: "Sales Dashboard · Admin" };
 // The "Run a live demo" action provisions a fresh private sandbox — give it room.
@@ -37,9 +37,10 @@ export default async function SalesDashboardPage() {
   // Owners (who manage commissions) get the all-reps view; reps see only theirs.
   const canSeeAll = canAccessPlatformSection(me.platformAccess, "commissions");
 
-  const [{ data: mine }, reps] = await Promise.all([
+  const [{ data: mine }, reps, demoTargets] = await Promise.all([
     admin.from("crm_contacts").select("stage, assigned_rep_id").eq("assigned_rep_id", me.userId),
     listSalesReps(),
+    listDemoTargets(me.userId),
   ]);
   const myTally = tally((mine ?? []) as ContactRow[]);
 
@@ -70,11 +71,9 @@ export default async function SalesDashboardPage() {
             Your pipeline at a glance — the leads assigned to you and how they&rsquo;re moving. {canSeeAll ? "As an owner you also see every rep below." : "Only you and the owner can see your numbers."}
           </p>
         </div>
-        <form action={enterDemoAsStaff} className="shrink-0">
-          <button type="submit" className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors">
-            ▶ Run a live demo
-          </button>
-        </form>
+        <div className="shrink-0">
+          <DemoLauncher targets={demoTargets} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

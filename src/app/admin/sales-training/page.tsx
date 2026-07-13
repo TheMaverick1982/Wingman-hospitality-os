@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { commissionsForRep, formatCents, formatDate, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
+import { listDemoTargets } from "@/lib/sales-reps";
 import { ClaimForm } from "./claim-form";
-import { enterDemoAsStaff } from "./actions";
+import { DemoLauncher } from "./demo-launcher";
 import {
   PRODUCT_ONE_LINER,
   WHY_IT_MATTERS,
@@ -49,9 +50,10 @@ export default async function SalesTrainingPage() {
   const profile = await requirePlatformSection("sales_training");
 
   const admin = createAdminClient();
-  const [myCommissions, { data: orgRows }] = await Promise.all([
+  const [myCommissions, { data: orgRows }, demoTargets] = await Promise.all([
     commissionsForRep(admin, profile.userId),
     admin.from("organizations").select("id, name").order("name"),
+    listDemoTargets(profile.userId),
   ]);
   const orgs = (orgRows ?? []) as { id: string; name: string }[];
   const myTotals = totalsFor(myCommissions);
@@ -70,11 +72,9 @@ export default async function SalesTrainingPage() {
             real conversations with operators.
           </p>
         </div>
-        <form action={enterDemoAsStaff} className="shrink-0">
-          <button type="submit" className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors">
-            ▶ Run a live demo
-          </button>
-        </form>
+        <div className="shrink-0">
+          <DemoLauncher targets={demoTargets} />
+        </div>
       </div>
 
       {/* Your commissions — balance, claim button, and your claim history */}
