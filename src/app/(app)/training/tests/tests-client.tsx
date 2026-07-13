@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown } from "lucide-react";
+import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown, Eye } from "lucide-react";
 import type { Department } from "@/lib/constants";
 import { MODE_LABEL } from "@/lib/tests";
 import { proposeTest, proposeTestFromTraining, applyTest, createExampleTest, deleteTest, duplicateTest, setTestArchived, type ProposeState, type ProposedDay } from "./actions";
@@ -290,6 +290,7 @@ export function TestsClient({ tests, archived = [], activeDepartments, canEdit }
                     <div className="flex items-center gap-2.5">
                       <button onClick={() => { const name = prompt("Name for the copy", `${t.title} (copy)`); if (name === null) return; startApply(async () => { await duplicateTest(t.id, name || undefined); router.refresh(); }); }} title="Duplicate" className="text-muted-2 hover:text-brick"><Copy size={14} /></button>
                       <button onClick={() => startApply(async () => { await setTestArchived(t.id, true); router.refresh(); })} title="Archive" className="text-muted-2 hover:text-brick"><Archive size={14} /></button>
+                      <Link href={`/training/tests/${t.id}/preview`} title="Preview as staff see it" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 hover:text-brick"><Eye size={13} /> Preview</Link>
                       <Link href={`/training/tests/${t.id}`} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit</Link>
                       <Link href={`/training/tests/${t.id}/assign`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
                         <Users size={13} /> Assign &amp; results

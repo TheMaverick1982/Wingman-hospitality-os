@@ -350,6 +350,8 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Reuse a test each month, keep the list tidy" },
       { kind: "p", text: "For anything you run repeatedly — a monthly LTO or new-menu test — use Duplicate (the copy icon on a test) to clone it with a new name like \"LTO — March,\" swap in the new menu, and assign. When a month's done, Archive it: archived tests drop into a collapsed \"Archived\" section at the bottom (still there, out of the way) and you can Unarchive or Duplicate from there anytime. Archived tests don't show up when you Start a test." },
+      { kind: "h", text: "Preview it before you assign" },
+      { kind: "p", text: "Not sure how it'll land? Click Preview (next to a test in the list, or at the top of the test's page) to step through it exactly as your staff will — the learning content and each day's questions, day by day. Nothing is saved or scored. Flip on \"Show answer key\" to check the correct answers and explanations while you review." },
       { kind: "h", text: "See who passed" },
       { kind: "p", text: "Once tests are out, open Build & manage tests (from the Training page) or a test's own page to track them. Each test's \"Assign & results\" panel shows everyone assigned with their status (not started, in progress, passed, locked), their score, and their deadline — and you can still add one more person, a role, or send to all right there. So you always know who's done it and who hasn't." },
       { kind: "h", text: "How an employee takes it" },
