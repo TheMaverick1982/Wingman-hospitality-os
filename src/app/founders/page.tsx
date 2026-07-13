@@ -45,29 +45,31 @@ export default async function FoundersPage() {
 
   return (
     <main className="min-h-screen bg-paper text-ink">
-      <div className="max-w-[720px] mx-auto px-5 py-14 sm:py-20 flex flex-col items-center text-center gap-8">
+      <div className="max-w-[1080px] mx-auto px-5 py-14 sm:py-20 flex flex-col items-center gap-12">
         <WingmanLogo className="h-6 w-auto" />
 
-        <div className="inline-flex items-center gap-2 rounded-full bg-brick-tint text-brick text-[13px] font-semibold px-4 py-1.5">
-          ⭐ Founders invitation
+        {/* Two-column hero: message left, graphic right */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+          <div className="flex flex-col gap-5 items-center text-center lg:items-start lg:text-left">
+            <div className="inline-flex items-center gap-2 rounded-full bg-brick-tint text-brick text-[13px] font-semibold px-4 py-1.5">
+              ⭐ Founders invitation
+            </div>
+            <h1 className="text-[38px] sm:text-[52px] font-bold tracking-[-0.03em] leading-[1.05]">
+              Be a Wingman founder
+            </h1>
+            <p className="text-[17px] sm:text-[19px] text-muted leading-relaxed max-w-[520px]">
+              A private invite for the first operators building with us. Turn first-time guests into regulars, every
+              shift — at a founders rate that&rsquo;s yours for life.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-brick/30 bg-brick-tint/50 px-4 py-2 text-[13.5px] font-semibold text-brick-dark">
+              <span className="w-[7px] h-[7px] rounded-full bg-brick animate-pulse" />
+              Only {maxSpots} founding spots{spotsLeft != null ? ` · ${spotsLeft} left` : ""} — locked in for life
+            </div>
+          </div>
+          <div className="flex justify-center lg:justify-end">
+            <FoundersFlightPath className="w-full max-w-[500px] h-auto" />
+          </div>
         </div>
-
-        <div className="flex flex-col gap-4">
-          <h1 className="text-[38px] sm:text-[52px] font-bold tracking-[-0.03em] leading-[1.05]">
-            Be a Wingman founder
-          </h1>
-          <p className="text-[17px] sm:text-[19px] text-muted leading-relaxed max-w-[540px] mx-auto">
-            A private invite for the first operators building with us. Turn first-time guests into regulars, every
-            shift — at a founders rate that&rsquo;s yours for life.
-          </p>
-        </div>
-
-        <div className="inline-flex items-center gap-2 rounded-full border border-brick/30 bg-brick-tint/50 px-4 py-2 text-[13.5px] font-semibold text-brick-dark">
-          <span className="w-[7px] h-[7px] rounded-full bg-brick animate-pulse" />
-          Only {maxSpots} founding spots{spotsLeft != null ? ` · ${spotsLeft} left` : ""} — locked in for life
-        </div>
-
-        <FoundersFlightPath className="w-full max-w-[460px] h-auto" />
 
         {/* Offer card */}
         <div className="w-full max-w-[440px] bg-white border border-line rounded-2xl shadow-sm p-6 flex flex-col gap-4">
@@ -98,7 +100,7 @@ export default async function FoundersPage() {
           ))}
         </div>
 
-        <p className="text-[12px] text-muted-2 max-w-[440px]">
+        <p className="text-[12px] text-muted-2 max-w-[440px] text-center">
           {FOUNDER_CODE} applies {terms} to your first location and stays locked in for as long as you&rsquo;re a
           customer. Limited to {maxSpots} founding operators. A card is required to start. Billed by The Maverick Agency.
         </p>
