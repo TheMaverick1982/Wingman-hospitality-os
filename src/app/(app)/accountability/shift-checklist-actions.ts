@@ -3,23 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { getChecklistItems } from "./template-actions";
+import { getChecklistItems, type ChecklistType } from "./template-actions";
 
 export type PreshiftState = { error: string | null; done?: boolean };
 
-// A signed-in staff member (or manager/owner) completes THEIR OWN pre-shift
-// checklist for today. Any authenticated user can record their own completion —
-// this is their personal record, not editing the shared accountability config,
-// so it's intentionally independent of the section's edit permission.
-export async function completeMyPreshift(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
+// A signed-in staff member (or manager/owner) completes THEIR OWN checklist for
+// today (pre-shift or FOH loyalty). Any authenticated user can record their own
+// completion — this is their personal record, not editing the shared
+// accountability config, so it's intentionally independent of the section's
+// edit permission.
+async function completeMyChecklist(type: ChecklistType, formData: FormData): Promise<PreshiftState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
 
   // Rebuild the checked[] array against the live template so a stale/tampered
   // form can't inflate the item count.
-  const template = await getChecklistItems("preshift");
+  const template = await getChecklistItems(type);
   const itemCount = template.length;
-  if (itemCount === 0) return { error: "There's no pre-shift checklist set up yet." };
+  if (itemCount === 0) return { error: "There's no checklist set up yet." };
 
   const checkedIdx = new Set(formData.getAll("checked").map((v) => Number(v)).filter((n) => Number.isInteger(n)));
   const checked = Array.from({ length: itemCount }, (_, i) => checkedIdx.has(i));
@@ -29,12 +30,12 @@ export async function completeMyPreshift(_prev: PreshiftState, formData: FormDat
   const today = new Date().toISOString().slice(0, 10);
   const supabase = await createClient();
 
-  // Upsert this person's completion for today (one per person per day).
+  // Upsert this person's completion for today (one per person per type per day).
   const { data: existing } = await supabase
     .from("shift_checklist_completions")
     .select("id")
     .eq("profile_id", profile.userId)
-    .eq("checklist_type", "preshift")
+    .eq("checklist_type", type)
     .eq("occurred_on", today)
     .maybeSingle();
 
@@ -53,7 +54,7 @@ export async function completeMyPreshift(_prev: PreshiftState, formData: FormDat
     const { error } = await supabase.from("shift_checklist_completions").insert({
       org_id: profile.orgId,
       profile_id: profile.userId,
-      checklist_type: "preshift",
+      checklist_type: type,
       occurred_on: today,
       ...row,
     });
@@ -63,4 +64,12 @@ export async function completeMyPreshift(_prev: PreshiftState, formData: FormDat
   revalidatePath("/accountability");
   revalidatePath("/dashboard");
   return { error: null, done: true };
+}
+
+export async function completeMyPreshift(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
+  return completeMyChecklist("preshift", formData);
+}
+
+export async function completeMyLoyalty(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
+  return completeMyChecklist("loyalty", formData);
 }
