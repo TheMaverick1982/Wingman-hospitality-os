@@ -15,7 +15,7 @@ const FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
   { key: "firstVisitDate", label: "First visit date (YYYY-MM-DD)" },
-  { key: "source", label: "Source" },
+  { key: "source", label: "Source (how they found you)" },
 ];
 
 // Minimal RFC-4180-ish CSV parser (handles quotes, escaped quotes, CRLF).
@@ -58,6 +58,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<FieldKey, number>>({ name: -1, email: -1, phone: -1, source: -1, firstVisitDate: -1 });
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [pending, start] = useTransition();
@@ -75,6 +76,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
 
   const onFile = async (file: File) => {
     setError(null);
+    if (!/\.csv$/i.test(file.name) && !file.type.includes("csv")) return setError("Please choose a .csv file.");
     if (file.size > 5 * 1024 * 1024) return setError("File is too large — 5MB max.");
     const text = await file.text();
     const parsed = parseCsv(text);
@@ -138,10 +140,23 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
                 Upload a CSV of your guests (from your POS, reservations system, or a spreadsheet). You&rsquo;ll map the
                 columns on the next step. The first row should be headers.
               </p>
-              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-2xl p-10 cursor-pointer hover:border-brick transition-colors">
-                <Upload size={22} className="text-muted-2" />
-                <span className="text-sm font-semibold text-ink">Choose a CSV file</span>
-                <span className="text-xs text-muted-2">or drag it here</span>
+              <label
+                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) onFile(file);
+                }}
+                className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-colors ${
+                  dragActive ? "border-brick bg-brick-tint" : "border-line hover:border-brick"
+                }`}
+              >
+                <Upload size={22} className={dragActive ? "text-brick" : "text-muted-2"} />
+                <span className="text-sm font-semibold text-ink">{dragActive ? "Drop to upload" : "Choose a CSV file"}</span>
+                <span className="text-xs text-muted-2">or drag &amp; drop it here</span>
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
               </label>
               {error && <p className="text-sm text-danger mt-3">{error}</p>}
