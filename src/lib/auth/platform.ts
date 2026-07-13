@@ -2,7 +2,7 @@
 // platform staff; platform_access lists which /admin sections they may open.
 
 // Page-backed sections: each has its own /admin page and sidebar nav item.
-export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "social" | "coupons" | "sales_dashboard" | "sales_training" | "commissions" | "team";
+export type PlatformSection = "organizations" | "crm" | "support" | "reporting" | "billing" | "analytics" | "affiliates" | "social" | "coupons" | "sales_dashboard" | "sales_training" | "commissions" | "team" | "health";
 
 // A grantable permission is either a page section or a capability toggle that
 // isn't its own page (e.g. client_login gates "Log in as client", crm_delete
@@ -23,6 +23,7 @@ export const PLATFORM_SECTIONS: { key: PlatformSection; label: string; descripti
   { key: "sales_training", label: "Sales Training", description: "Demo playbook and guidance for staff who run demos.", href: "/admin/sales-training" },
   { key: "commissions", label: "Sales Commissions", description: "Track what sales reps are owed and mark commissions paid.", href: "/admin/sales-commissions" },
   { key: "team", label: "Team", description: "Add and manage platform staff and their access.", href: "/admin/team" },
+  { key: "health", label: "Health", description: "Live error monitor — bugs customers are hitting, with a hand-off-ready issue for each.", href: "/admin/health" },
 ];
 
 // Everything grantable when setting up a teammate: the page sections above plus
