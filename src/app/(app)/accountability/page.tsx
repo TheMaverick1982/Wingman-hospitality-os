@@ -16,6 +16,7 @@ import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { getChecklistItems } from "./template-actions";
+import { translateTexts } from "@/lib/translate";
 import { MyPreshiftCard } from "./my-preshift-card";
 import { MyLoyaltyCard } from "./my-loyalty-card";
 import { PreshiftReport, type TodayCompletion, type RosterRow } from "./preshift-report";
@@ -171,8 +172,16 @@ export default async function AccountabilityPage({
 
   // --- Per-staff checklists: personal cards + manager reports (pre-shift + FOH loyalty) ---
   const todayStr = new Date().toISOString().slice(0, 10);
-  const preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
-  const loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
+  let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
+  let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
+  // Render the staff-facing checklist items in the viewer's language (order is
+  // preserved, so completion-by-index is unaffected). Managers' English config
+  // is untouched.
+  if (profile.language !== "en") {
+    const tx = await translateTexts(profile.orgId, profile.language, [...preShiftItemTexts, ...loyaltyItemTexts]);
+    preShiftItemTexts = preShiftItemTexts.map((s) => tx.get(s) ?? s);
+    loyaltyItemTexts = loyaltyItemTexts.map((s) => tx.get(s) ?? s);
+  }
 
   // Who is FOH? Loyalty is a front-of-house habit, so we only surface its card
   // to FOH staff (managers/owner see it too), and its report roster is FOH-only.
@@ -304,6 +313,7 @@ export default async function AccountabilityPage({
           alreadyDone={Boolean(myPreshift)}
           completedChecked={myChecked}
           completedAt={myCompletedAt}
+          lang={profile.language}
         />
         {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
       </div>
@@ -315,6 +325,7 @@ export default async function AccountabilityPage({
             alreadyDone={Boolean(myLoyalty)}
             completedChecked={myLoyaltyChecked}
             completedAt={myLoyaltyCompletedAt}
+            lang={profile.language}
           />
           {canSeeReport && (
             <PreshiftReport

@@ -67,6 +67,20 @@ const STRINGS: Record<string, Entry> = {
   },
   "test.keepGoing": { en: "Keep going to Day {next}", es: "Seguir al Día {next}" },
   "test.finishLater": { en: "I’ll finish later", es: "Termino después" },
+
+  // Staff checklist cards (pre-shift + FOH loyalty)
+  "checklist.preshift.title": { en: "Your pre-shift checklist", es: "Tu lista de antes del turno" },
+  "checklist.preshift.sub": { en: "Check off what you’ve done, then submit so your manager can see it.", es: "Marca lo que hiciste y envíalo para que tu gerente lo vea." },
+  "checklist.preshift.done": { en: "Your pre-shift checklist is done for today", es: "Tu lista de antes del turno está lista por hoy" },
+  "checklist.loyalty.title": { en: "Your loyalty checklist", es: "Tu lista de lealtad" },
+  "checklist.loyalty.sub": { en: "Take care of every loyalty member on the floor — check off what you did this shift.", es: "Atiende a cada miembro del programa de lealtad — marca lo que hiciste en este turno." },
+  "checklist.loyalty.done": { en: "Your loyalty checklist is done for today", es: "Tu lista de lealtad está lista por hoy" },
+  "checklist.submit": { en: "Submit checklist", es: "Enviar lista" },
+  "checklist.submitting": { en: "Submitting…", es: "Enviando…" },
+  "checklist.cancel": { en: "Cancel", es: "Cancelar" },
+  "checklist.update": { en: "Update", es: "Actualizar" },
+  "checklist.completedAt": { en: "Completed at {time}", es: "Completado a las {time}" },
+  "checklist.completed": { en: "Completed", es: "Completado" },
 };
 
 export type StringKey = keyof typeof STRINGS;
