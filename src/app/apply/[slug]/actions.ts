@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
+import { builtinSetting, normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -18,22 +19,49 @@ function esc(s: string): string {
 // and only writing to that org's rows.
 export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const admin = createAdminClient();
-  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc, notification_settings").eq("public_slug", slug).maybeSingle();
-  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null; notification_settings: Record<string, boolean> | null } | null;
+  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc, notification_settings, application_form_config").eq("public_slug", slug).maybeSingle();
+  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null; notification_settings: Record<string, boolean> | null; application_form_config: unknown } | null;
   if (!org || !org.apply_enabled) return { error: "This application form isn't accepting submissions right now." };
+
+  const config = normalizeFormConfig(org.application_form_config);
+  const emailF = builtinSetting(config, "email");
+  const phoneF = builtinSetting(config, "phone");
+  const deptF = builtinSetting(config, "department");
+  const locF = builtinSetting(config, "location");
+  const availF = builtinSetting(config, "availability");
+  const visitF = builtinSetting(config, "preferredVisit");
+  const msgF = builtinSetting(config, "message");
+  const resumeF = builtinSetting(config, "resume");
 
   const name = String(formData.get("name") || "").trim();
   if (!name) return { error: "Please enter your name." };
-  const email = String(formData.get("email") || "").trim();
-  const phone = String(formData.get("phone") || "").trim();
-  if (!email && !phone) return { error: "Add an email or phone number so they can reach you." };
+  const email = emailF.enabled ? String(formData.get("email") || "").trim() : "";
+  const phone = phoneF.enabled ? String(formData.get("phone") || "").trim() : "";
+  // Honor per-field required flags, and always keep at least one way to reach the
+  // applicant whenever a contact field is shown.
+  if (emailF.enabled && emailF.required && !email) return { error: `Please enter your ${emailF.label.toLowerCase()}.` };
+  if (phoneF.enabled && phoneF.required && !phone) return { error: `Please enter your ${phoneF.label.toLowerCase()}.` };
+  if ((emailF.enabled || phoneF.enabled) && !email && !phone) return { error: "Add an email or phone number so they can reach you." };
 
-  const department = String(formData.get("department") || "").trim();
-  const locationId = String(formData.get("locationId") || "").trim() || null;
-  const availability = String(formData.get("availability") || "").trim();
-  const message = String(formData.get("message") || "").trim();
-  const visit = String(formData.get("preferredVisit") || "").trim();
+  const department = deptF.enabled ? String(formData.get("department") || "").trim() : "";
+  if (deptF.enabled && deptF.required && !department) return { error: `Please choose a ${deptF.label.toLowerCase()}.` };
+  const locationId = locF.enabled ? (String(formData.get("locationId") || "").trim() || null) : null;
+  if (locF.enabled && locF.required && !locationId) return { error: `Please choose a ${locF.label.toLowerCase()}.` };
+  const availability = availF.enabled ? String(formData.get("availability") || "").trim() : "";
+  if (availF.enabled && availF.required && !availability) return { error: `Please fill in ${availF.label.toLowerCase()}.` };
+  const message = msgF.enabled ? String(formData.get("message") || "").trim() : "";
+  if (msgF.enabled && msgF.required && !message) return { error: `Please fill in ${msgF.label.toLowerCase()}.` };
+  const visit = visitF.enabled ? String(formData.get("preferredVisit") || "").trim() : "";
+  if (visitF.enabled && visitF.required && !visit) return { error: `Please pick a time for ${visitF.label.toLowerCase()}.` };
   const preferredVisitAt = visit ? new Date(visit).toISOString() : null;
+
+  // Collect answers to the owner's custom questions.
+  const customAnswers: CustomAnswer[] = [];
+  for (const f of config.custom) {
+    const value = String(formData.get(`custom_${f.id}`) || "").trim();
+    if (f.required && !value) return { error: `Please answer: ${f.label}` };
+    if (value) customAnswers.push({ id: f.id, label: f.label, value: value.slice(0, 2000) });
+  }
 
   // Only accept a location that actually belongs to this org.
   let validLoc: string | null = null;
@@ -41,6 +69,12 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
   if (locationId) {
     const { data: loc } = await admin.from("locations").select("id, name, email").eq("id", locationId).eq("org_id", org.id).maybeSingle();
     if (loc) { validLoc = (loc as { id: string }).id; locationName = (loc as { name: string }).name; }
+  }
+
+  // Validate a required résumé before we write the row.
+  const resumeFile = formData.get("resume") as File | null;
+  if (resumeF.enabled && resumeF.required && !(resumeFile && resumeFile.size > 0)) {
+    return { error: `Please attach your ${resumeF.label.toLowerCase()}.` };
   }
 
   const { data: inserted, error } = await admin
@@ -55,6 +89,7 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
       availability,
       message,
       preferred_visit_at: preferredVisitAt,
+      custom_answers: customAnswers,
       source: formData.get("embed") === "1" ? "embed" : "link",
     })
     .select("id")

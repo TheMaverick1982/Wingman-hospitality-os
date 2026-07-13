@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
+import { normalizeFormConfig } from "@/lib/application-form";
 
 const STATUSES = ["new", "contacted", "not_a_fit", "hired"] as const;
 export type ApplicationStatus = (typeof STATUSES)[number];
@@ -124,6 +125,24 @@ export async function removeOrgLogo(): Promise<{ error: string | null }> {
   if (!profile) return { error: "Not authorized." };
   const admin = createAdminClient();
   await admin.from("organizations").update({ logo_url: null }).eq("id", profile.orgId);
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Save the customized application form (built-in field settings + custom questions).
+export async function updateApplicationForm(config: unknown): Promise<{ error: string | null }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  const clean = normalizeFormConfig(config);
+  // A dropdown with no options can't be answered — guard before saving.
+  const badDropdown = clean.custom.find((f) => f.type === "dropdown" && (!f.options || f.options.length === 0));
+  if (badDropdown) return { error: `Add at least one choice to the "${badDropdown.label || "dropdown"}" question.` };
+  const unlabeled = clean.custom.some((f) => !f.label.trim());
+  if (unlabeled) return { error: "Give every custom question a label." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("organizations").update({ application_form_config: clean }).eq("id", profile.orgId);
+  if (error) return { error: error.message };
   revalidatePath("/hiring");
   return { error: null };
 }

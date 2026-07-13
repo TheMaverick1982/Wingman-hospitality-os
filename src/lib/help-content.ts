@@ -444,7 +444,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Application form & applicants",
     summary: "A public form to collect applications, plus a tracker to schedule visits and move people to hiring.",
     categoryId: "team",
-    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire"],
+    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields"],
     body: [
       { kind: "p", text: "Wingman gives you a ready-made application form so candidates can apply online — no website required. Every submission lands in an Applicants tracker inside Hiring." },
       { kind: "h", text: "Share it, or embed it on your site" },
@@ -460,7 +460,16 @@ export const ARTICLES: HelpArticle[] = [
         "Set one or more catch-all emails so every application is always copied to your office/owner, on top of the location's email — add several separated by commas.",
       ] },
       { kind: "h", text: "What the applicant fills in" },
-      { kind: "p", text: "Name, contact, the role and location they want, availability, when they could come in, an optional note, and an optional resume. When they submit, the email on file for that location — plus any catch-all copies — get notified right away." },
+      { kind: "p", text: "By default: name, contact, the role and location they want, availability, when they could come in, an optional note, and an optional résumé. When they submit, the email on file for that location — plus any catch-all copies — get notified right away (unless you've turned that email off in Settings → Notifications)." },
+      { kind: "h", text: "Customize the form & add your own questions" },
+      { kind: "p", text: "Click \"Customize form\" (under Applicants) to make the form yours — changes go live instantly on both your link and your embed. There's a \"Preview\" link to see exactly what applicants see." },
+      { kind: "list", items: [
+        "Standard fields — turn any built-in field on or off, mark it required, and rename its label (e.g. call \"Anything else?\" → \"Why do you want to work here?\"). Your applicant's name is always asked.",
+        "Custom questions — add your own: short text, a paragraph, a dropdown (with your choices), Yes/No, or a number. Mark any of them required, and drag them into the order you want.",
+        "A heading and intro line you can override to match your voice.",
+      ] },
+      { kind: "p", text: "Answers to your custom questions show right on each applicant's card in the tracker, so you see them at a glance alongside everything else." },
+      { kind: "tip", text: "We always keep at least an email or phone so you can reach people — even if you make both optional, applicants must give one." },
       { kind: "h", text: "Applications → Interview → Candidate" },
       { kind: "p", text: "Applications live in their own \"Applications\" section on the Hiring page, right above your candidates (there's a \"See Applications\" button up top to jump to it). The flow moves in one direction:" },
       { kind: "list", items: [
