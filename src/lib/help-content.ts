@@ -626,6 +626,30 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Roles & who can see what", href: "/help/roles-and-access" }],
   },
   {
+    slug: "staff-profile",
+    title: "The staff profile & activity view",
+    summary: "Everything one person touches — training, tests, checklists, and hiring — under their name.",
+    categoryId: "team",
+    keywords: ["staff", "profile", "activity", "history", "training", "tests", "checklist", "hiring score", "record", "employee"],
+    body: [
+      { kind: "p", text: "Open anyone from the Staff page to see their full record. The profile opens on an Activity overview, with detail tabs for the rest." },
+      { kind: "h", text: "Activity — the overview" },
+      { kind: "list", items: [
+        "Quick cards for training completion, tests passed, and their hiring score — tap any to jump to the detail.",
+        "Tests — every test assigned to them with status (not started, in progress, passed, locked), score, and due date.",
+        "Checklists — how many pre-shift and FOH loyalty checklists they've completed in the last 30 days, and when they last did.",
+      ] },
+      { kind: "h", text: "The detail tabs" },
+      { kind: "list", items: [
+        "Contact — name, email, phone, role, location, and active/inactive status.",
+        "Training — their hospitality and role checklist, item by item, with strong / needs-coaching flags and a sign-off log.",
+        "Hiring history — their interview scorecard and notes, if they were hired through Wingman.",
+      ] },
+      { kind: "note", text: "Checklist completions only appear once the person has a login linked (so their submissions can be tied to them). Owners can send that invite from the top of the profile." },
+    ],
+    links: [{ label: "Team members & permissions", href: "/help/team-and-permissions" }, { label: "Tests & exams", href: "/help/tests-and-exams" }],
+  },
+  {
     slug: "locations",
     title: "Managing locations",
     summary: "Add, edit, and remove locations — and how billing follows.",
