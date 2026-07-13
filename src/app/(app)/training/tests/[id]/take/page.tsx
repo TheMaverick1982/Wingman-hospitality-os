@@ -5,7 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { ArrowLeft } from "lucide-react";
 import { completionWindowLabel } from "@/lib/tests";
+import { translateTexts } from "@/lib/translate";
 import { TakeClient } from "./take-client";
+
+// A first-time translation into a staff member's language can call the AI, so
+// give the page room past the default function timeout.
+export const maxDuration = 60;
 
 export default async function TakeTestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -53,19 +58,37 @@ export default async function TakeTestPage({ params }: { params: Promise<{ id: s
     admin.from("test_questions").select("id, day_number, kind, prompt, options").eq("test_id", id).eq("day_number", day).order("sort_order"),
   ]);
   // Answer keys are deliberately NOT selected — scoring happens server-side.
-  const questions = ((qRows ?? []) as { id: string; kind: string; prompt: string; options: string[] }[]).map((q) => ({ id: q.id, kind: q.kind, prompt: q.prompt, options: q.options }));
+  let questions = ((qRows ?? []) as { id: string; kind: string; prompt: string; options: string[] }[]).map((q) => ({ id: q.id, kind: q.kind, prompt: q.prompt, options: q.options }));
+
+  // Render the owner-authored content in the staffer's language. Option order
+  // is preserved, so server-side scoring by index still holds; only the display
+  // text changes.
+  let title = t.title;
+  let description = t.description;
+  let dayTitle = dayRow?.title ?? "";
+  let dayContent = dayRow?.content ?? "";
+  if (profile.language !== "en") {
+    const strings = [title, description, dayTitle, dayContent, ...questions.flatMap((q) => [q.prompt, ...q.options])].filter((s) => s && s.trim());
+    const tx = await translateTexts(profile.orgId, profile.language, strings);
+    const tr = (s: string) => (s && s.trim() ? tx.get(s) ?? s : s);
+    title = tr(title);
+    description = tr(description);
+    dayTitle = tr(dayTitle);
+    dayContent = tr(dayContent);
+    questions = questions.map((q) => ({ ...q, prompt: tr(q.prompt), options: q.options.map(tr) }));
+  }
 
   return shell(
     <TakeClient
       assignmentId={a.id}
       testId={id}
-      title={t.title}
-      description={t.description}
+      title={title}
+      description={description}
       mode={t.mode}
       dayNumber={day}
       dayCount={t.day_count}
-      dayTitle={dayRow?.title ?? ""}
-      dayContent={dayRow?.content ?? ""}
+      dayTitle={dayTitle}
+      dayContent={dayContent}
       questions={questions}
       status={a.status}
       passPct={t.pass_pct}
