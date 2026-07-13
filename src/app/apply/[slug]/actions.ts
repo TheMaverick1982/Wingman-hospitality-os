@@ -1,0 +1,100 @@
+"use server";
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
+
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
+const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
+
+export type ApplyState = { error: string | null; ok?: boolean };
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// A public visitor submits an application. Runs on the service-role client
+// (there's no logged-in user), validating the org strictly by its public slug
+// and only writing to that org's rows.
+export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
+  const admin = createAdminClient();
+  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled").eq("public_slug", slug).maybeSingle();
+  const org = orgRow as { id: string; name: string; apply_enabled: boolean } | null;
+  if (!org || !org.apply_enabled) return { error: "This application form isn't accepting submissions right now." };
+
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return { error: "Please enter your name." };
+  const email = String(formData.get("email") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  if (!email && !phone) return { error: "Add an email or phone number so they can reach you." };
+
+  const department = String(formData.get("department") || "").trim();
+  const locationId = String(formData.get("locationId") || "").trim() || null;
+  const availability = String(formData.get("availability") || "").trim();
+  const message = String(formData.get("message") || "").trim();
+  const visit = String(formData.get("preferredVisit") || "").trim();
+  const preferredVisitAt = visit ? new Date(visit).toISOString() : null;
+
+  // Only accept a location that actually belongs to this org.
+  let validLoc: string | null = null;
+  let locationName = "";
+  if (locationId) {
+    const { data: loc } = await admin.from("locations").select("id, name, email").eq("id", locationId).eq("org_id", org.id).maybeSingle();
+    if (loc) { validLoc = (loc as { id: string }).id; locationName = (loc as { name: string }).name; }
+  }
+
+  const { data: inserted, error } = await admin
+    .from("job_applications")
+    .insert({
+      org_id: org.id,
+      location_id: validLoc,
+      department,
+      name,
+      email,
+      phone,
+      availability,
+      message,
+      preferred_visit_at: preferredVisitAt,
+      source: formData.get("embed") === "1" ? "embed" : "link",
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) return { error: "Something went wrong submitting your application. Please try again." };
+  const appId = (inserted as { id: string }).id;
+
+  // Optional resume upload to the private bucket.
+  const resume = formData.get("resume") as File | null;
+  if (resume && resume.size > 0) {
+    if (resume.size > 8 * 1024 * 1024) return { error: "Your resume is too large — 8MB max." };
+    const ext = (resume.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "") || "pdf";
+    const path = `${org.id}/${appId}.${ext}`;
+    const bytes = Buffer.from(await resume.arrayBuffer());
+    const up = await admin.storage.from("resumes").upload(path, bytes, { contentType: resume.type || "application/octet-stream", upsert: true });
+    if (!up.error) await admin.from("job_applications").update({ resume_path: path }).eq("id", appId);
+  }
+
+  // Notify the location's email on file (fallback to the monitor address).
+  let to = "";
+  if (validLoc) {
+    const { data: loc } = await admin.from("locations").select("email").eq("id", validLoc).maybeSingle();
+    to = ((loc as { email?: string } | null)?.email || "").trim();
+  }
+  if (!to) to = FALLBACK_ALERT;
+
+  const contact = [email, phone].filter(Boolean).join(" · ");
+  await sendEmail({
+    to: [to],
+    subject: `New application: ${name}${department ? ` — ${department}` : ""}`,
+    html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:600px;">
+      <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 6px;">New application</p>
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">${esc(name)}</h1>
+      <p style="margin:0 0 4px;">${department ? `<strong>${esc(department)}</strong>` : "Role not specified"}${locationName ? ` · ${esc(locationName)}` : ""}</p>
+      ${contact ? `<p style="margin:0 0 4px;color:#525252;">${esc(contact)}</p>` : ""}
+      ${availability ? `<p style="margin:8px 0 0;"><strong>Availability:</strong> ${esc(availability)}</p>` : ""}
+      ${preferredVisitAt ? `<p style="margin:4px 0 0;"><strong>Wants to come in:</strong> ${esc(visit)}</p>` : ""}
+      ${message ? `<p style="margin:8px 0 0;color:#525252;white-space:pre-wrap;">${esc(message)}</p>` : ""}
+      <p style="margin:16px 0 0;font-size:13px;"><a href="${SITE}/hiring" style="color:#0a6cff;font-weight:600;">Open Applicants in Wingman</a> to review, schedule a visit, or start hiring.</p>
+    </div>`,
+  }).catch(() => undefined);
+
+  return { error: null, ok: true };
+}
