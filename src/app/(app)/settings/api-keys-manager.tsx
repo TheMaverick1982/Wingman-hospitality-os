@@ -8,10 +8,14 @@ import { createApiKey, revokeApiKey, type ApiKeyRow, type CreateApiKeyState } fr
 
 const initialState: CreateApiKeyState = { error: null };
 
-export function ApiKeysManager({ keys }: { keys: ApiKeyRow[] }) {
+type LocationOption = { id: string; name: string };
+
+export function ApiKeysManager({ keys, locations }: { keys: ApiKeyRow[]; locations: LocationOption[] }) {
   const [state, formAction, pending] = useActionState(createApiKey, initialState);
   const [copied, setCopied] = useState(false);
   const newKey = state.plaintext;
+  const multiLocation = locations.length > 1;
+  const locationName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "a location" : null);
 
   return (
     <div className="bg-white border border-line rounded-2xl p-6 shadow-sm flex flex-col gap-6">
@@ -56,15 +60,35 @@ export function ApiKeysManager({ keys }: { keys: ApiKeyRow[] }) {
         </div>
       )}
 
-      <form action={formAction} className="flex items-end gap-2">
-        <div className="flex-1">
+      <form action={formAction} className="flex items-end gap-2 flex-wrap">
+        <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-semibold text-muted-2 mb-1">Key name</label>
           <input name="name" placeholder="e.g. Toast POS — weekly growth sync" className={inputClass} />
         </div>
+        {multiLocation && (
+          <div className="min-w-[180px]">
+            <label className="block text-xs font-semibold text-muted-2 mb-1">Location</label>
+            <select name="locationId" defaultValue="" className={inputClass}>
+              <option value="">All locations</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <Btn type="submit" disabled={pending}>
           {pending ? "Creating..." : "Create key"}
         </Btn>
       </form>
+      {multiLocation && (
+        <p className="-mt-3 text-xs text-muted-2">
+          Bind a key to one location (the POS at that store) so everything it sends and reads is scoped to it. Leave on
+          &ldquo;All locations&rdquo; for a central key — it can still target a store per request with the
+          <code className="mx-1 bg-paper border border-line rounded px-1">X-Wingman-Location</code> header.
+        </p>
+      )}
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
 
       <div>
@@ -74,7 +98,7 @@ export function ApiKeysManager({ keys }: { keys: ApiKeyRow[] }) {
         ) : (
           <div className="flex flex-col divide-y divide-line border border-line rounded-lg">
             {keys.map((k) => (
-              <KeyRow key={k.id} k={k} />
+              <KeyRow key={k.id} k={k} locationLabel={locationName(k.location_id)} />
             ))}
           </div>
         )}
@@ -89,7 +113,7 @@ export function ApiKeysManager({ keys }: { keys: ApiKeyRow[] }) {
   );
 }
 
-function KeyRow({ k }: { k: ApiKeyRow }) {
+function KeyRow({ k, locationLabel }: { k: ApiKeyRow; locationLabel: string | null }) {
   const [revoking, startRevoke] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const revoked = Boolean(k.revoked_at);
@@ -97,8 +121,11 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium text-ink truncate">
+        <div className="text-sm font-medium text-ink truncate flex items-center gap-2">
           {k.name} {revoked && <span className="text-xs text-muted-2">(revoked)</span>}
+          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-paper border border-line text-muted shrink-0">
+            {locationLabel ?? "All locations"}
+          </span>
         </div>
         <div className="text-xs text-muted-2">
           <code>{k.key_prefix}…</code> · created {new Date(k.created_at).toLocaleDateString()}

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { authenticateApiKey, apiUnauthorized, apiError } from "@/lib/api-auth";
+import { authenticateApiKey, resolveApiLocation, apiUnauthorized, apiError } from "@/lib/api-auth";
 import { consumeRateLimit, API_V1_LIMIT } from "@/lib/rate-limit";
 
 // GET /api/v1/business-health -> recent weekly business-health inputs for this org.
@@ -11,13 +11,16 @@ export async function GET(request: NextRequest) {
     return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
   }
 
+  const loc = await resolveApiLocation(request, caller);
+  if (loc.error) return loc.error;
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("business_health_metrics")
     .select("id, period_date, location_id, net_sales, labor_cost, labor_hours, comp_cost, covers, checks, seats, created_at")
-    .eq("org_id", caller.orgId)
-    .order("period_date", { ascending: false })
-    .limit(100);
+    .eq("org_id", caller.orgId);
+  if (loc.locationId) query = query.eq("location_id", loc.locationId);
+  const { data, error } = await query.order("period_date", { ascending: false }).limit(100);
   if (error) return apiError(error.message, 500);
   return NextResponse.json({ entries: data ?? [] });
 }
@@ -34,6 +37,9 @@ export async function POST(request: NextRequest) {
   if (!(await consumeRateLimit(`apiv1:${caller.keyId}`, API_V1_LIMIT.max, API_V1_LIMIT.windowSeconds))) {
     return apiError("Rate limit exceeded. Slow down and retry shortly.", 429);
   }
+
+  const scope = await resolveApiLocation(request, caller);
+  if (scope.error) return scope.error;
 
   const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!raw || typeof raw !== "object") return apiError("Invalid JSON body.");
@@ -58,17 +64,22 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  // location_id is optional; if given it must belong to this org.
-  let locationId: string | null = null;
+  // location_id: explicit body value (validated) wins; otherwise fall back to the
+  // request scope (the key's location or the header). Omit both for an org-wide row.
+  let locationId: string | null = scope.locationId;
   if (raw.location_id != null && raw.location_id !== "") {
-    locationId = String(raw.location_id);
+    const explicit = String(raw.location_id);
+    if (caller.keyLocationId && explicit !== caller.keyLocationId) {
+      return apiError("This key is locked to one location and can't write to another.", 403);
+    }
     const { data: loc } = await admin
       .from("locations")
       .select("id")
-      .eq("id", locationId)
+      .eq("id", explicit)
       .eq("org_id", caller.orgId)
       .maybeSingle();
     if (!loc) return apiError("location_id is not in your organization.");
+    locationId = explicit;
   }
 
   // Manual upsert (the unique indexes on period/location are partial).
