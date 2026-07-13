@@ -279,7 +279,7 @@ export default async function HiringPage({
       </div>
 
       {canEdit && (
-        <div id="applications">
+        <div id="applications" className="scroll-mt-24">
           <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />
         </div>
       )}
