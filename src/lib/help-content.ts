@@ -669,7 +669,7 @@ export const ARTICLES: HelpArticle[] = [
     categoryId: "team",
     keywords: ["staff", "profile", "activity", "history", "training", "tests", "checklist", "hiring score", "record", "employee"],
     body: [
-      { kind: "p", text: "Open anyone from the Staff page to see their full record. The profile opens on an Activity overview, with detail tabs for the rest." },
+      { kind: "p", text: "Open anyone from the Staff page — click their name or the View button on the right of their row — to see their full record. The profile opens on an Activity overview, with detail tabs for the rest." },
       { kind: "h", text: "Activity — the overview" },
       { kind: "list", items: [
         "Quick cards for training completion, tests passed, and their hiring score — tap any to jump to the detail.",
@@ -679,7 +679,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "The detail tabs" },
       { kind: "list", items: [
         "Contact — name, email, phone, role, location, and active/inactive status.",
-        "Training — their hospitality and role checklist, item by item, with strong / needs-coaching flags and a sign-off log.",
+        "Training — their hospitality and role checklist, item by item, with strong / needs-coaching flags and the manager sign-off (approve as complete once they're at 100%).",
+        "Tests — the tests they still need to take and the ones they've completed, each with status and score; click any to open its results.",
         "Hiring history — their interview scorecard and notes, if they were hired through Wingman.",
       ] },
       { kind: "note", text: "Checklist completions only appear once the person has a login linked (so their submissions can be tied to them). Owners can send that invite from the top of the profile." },

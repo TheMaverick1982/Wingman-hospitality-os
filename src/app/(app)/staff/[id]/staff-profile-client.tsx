@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Heart, GraduationCap, ThumbsUp, MessageCircleWarning, ClipboardList, ClipboardCheck, CheckCircle2, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, GraduationCap, ThumbsUp, MessageCircleWarning, ClipboardList, ClipboardCheck, CheckCircle2, Lock } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
@@ -32,11 +32,11 @@ type Candidate = {
   notes: string;
 } | null;
 
-type TestRow = { title: string; status: string; score: number | null; passPct: number; day: number; dayCount: number; due: string | null };
+type TestRow = { testId: string; title: string; status: string; score: number | null; passPct: number; day: number; dayCount: number; due: string | null };
 type ChecklistSummary = { count: number; last: string | null };
 type Checklists = { hasLogin: boolean; preshift: ChecklistSummary; loyalty: ChecklistSummary };
 
-type Tab = "activity" | "contact" | "training" | "hiring";
+type Tab = "activity" | "contact" | "training" | "tests" | "hiring";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -108,12 +108,12 @@ export function StaffProfileClient({
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-line">
-        {(["activity", "contact", "training", "hiring"] as const).map((t) => (
+      <div className="flex gap-1 border-b border-line overflow-x-auto">
+        {(["activity", "contact", "training", "tests", "hiring"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-semibold capitalize -mb-px border-b-2 transition-colors ${
+            className={`px-4 py-2.5 text-sm font-semibold capitalize -mb-px border-b-2 transition-colors whitespace-nowrap ${
               tab === t ? "border-brick text-brick" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -148,6 +148,8 @@ export function StaffProfileClient({
           pct={pct}
         />
       )}
+
+      {tab === "tests" && <TestsTab tests={tests} />}
 
       {tab === "hiring" && <HiringTab candidate={candidate} coreValueTitles={coreValueTitles} />}
     </>
@@ -197,7 +199,7 @@ function ActivityTab({
           <div className="text-[22px] font-bold text-ink">{trainingItemCount > 0 ? `${trainingPct}%` : "—"}</div>
           <div className="text-[12.5px] text-muted mt-0.5">{lastSignoff ? `Last signed off ${fmtDate(lastSignoff.occurred_on)}` : "No sign-off yet"}</div>
         </button>
-        <button onClick={() => onGoTo("training")} className="text-left bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors">
+        <button onClick={() => onGoTo("tests")} className="text-left bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors">
           <div className="flex items-center gap-2 text-muted mb-2"><ClipboardList size={15} /> <span className="text-[12.5px] font-semibold uppercase tracking-wide">Tests</span></div>
           <div className="text-[22px] font-bold text-ink">{tests.length > 0 ? `${passed}/${tests.length}` : "—"}</div>
           <div className="text-[12.5px] text-muted mt-0.5">{tests.length > 0 ? "passed" : "None assigned"}</div>
@@ -259,6 +261,71 @@ function ActivityTab({
           </div>
         ) : (
           <p className="px-6 py-5 text-sm text-muted">No login linked yet — checklist completions appear once this person can sign in.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Tests this person has: what they still need to take, and what they've done
+// (with status + score). Each is clickable through to the test's results.
+function TestsTab({ tests }: { tests: TestRow[] }) {
+  const toTake = tests.filter((t) => t.status !== "passed" && t.status !== "locked");
+  const done = tests.filter((t) => t.status === "passed" || t.status === "locked");
+
+  function Row({ t }: { t: TestRow }) {
+    const tone = TEST_TONE[t.status] ?? TEST_TONE.assigned;
+    return (
+      <Link href={`/training/tests/${t.testId}/assign`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#FAFAFA] transition-colors">
+        {t.status === "passed" ? <CheckCircle2 size={16} className="text-[#15803d] shrink-0" /> : t.status === "locked" ? <Lock size={16} className="text-danger shrink-0" /> : <ClipboardList size={16} className="text-muted-2 shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <div className="text-[14.5px] font-semibold text-ink truncate">{t.title}</div>
+          <div className="text-[12.5px] text-muted">
+            Day {Math.min(t.day, t.dayCount)} of {t.dayCount}
+            {t.score != null ? ` · ${t.score}% (pass ${t.passPct}%)` : ""}
+            {t.due ? ` · due ${fmtDate(t.due)}` : ""}
+          </div>
+        </div>
+        <span className={`text-[11.5px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${tone.cls}`}>{tone.label}</span>
+        <ArrowRight size={15} className="text-muted-2 shrink-0" />
+      </Link>
+    );
+  }
+
+  if (tests.length === 0) {
+    return (
+      <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
+        <ClipboardList size={22} className="mx-auto text-muted-2 mb-2" />
+        <p className="text-sm text-muted">No tests assigned yet. Assign one from Training → Start a test.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#F1F1F1] flex items-center gap-2">
+          <ClipboardList size={16} className="text-brick" />
+          <span className="text-[15px] font-semibold text-ink">Still to take</span>
+          <span className="text-[13px] text-muted">· {toTake.length}</span>
+        </div>
+        {toTake.length > 0 ? (
+          <div className="divide-y divide-[#F5F5F5]">{toTake.map((t, i) => <Row key={i} t={t} />)}</div>
+        ) : (
+          <p className="px-5 py-5 text-sm text-muted">All caught up — nothing outstanding.</p>
+        )}
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#F1F1F1] flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-[#15803d]" />
+          <span className="text-[15px] font-semibold text-ink">Completed</span>
+          <span className="text-[13px] text-muted">· {done.length}</span>
+        </div>
+        {done.length > 0 ? (
+          <div className="divide-y divide-[#F5F5F5]">{done.map((t, i) => <Row key={i} t={t} />)}</div>
+        ) : (
+          <p className="px-5 py-5 text-sm text-muted">No completed tests yet.</p>
         )}
       </div>
     </div>
