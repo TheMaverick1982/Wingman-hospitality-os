@@ -252,9 +252,11 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "image", src: "/help/guest-bounce-back.png", alt: "The Guest Bounce Back screen", caption: "Guest Bounce Back — track each guest across their return visits." },
       { kind: "steps", items: [
         "Open Guest Bounce Back (or log a first-timer straight from the Guest Journey's arrival stage).",
-        "Add a guest (name, and phone/email if you have it).",
+        "Add a guest (name, and phone/email if you have it) — one at a time with \"Log New Guest\", or in bulk with \"Import CSV\".",
         "Log each visit as they return, with the incentive or note that brought them back — and how they felt (wowed, delighted, neutral, let down).",
       ] },
+      { kind: "h", text: "Import guests from a CSV" },
+      { kind: "p", text: "Already have a guest list in your POS, reservation system, or a spreadsheet? Click \"Import CSV\" next to Log New Guest, choose your file, and map your columns to Wingman's fields (name, email, phone, first-visit date, source). Wingman guesses the mapping from your headers, so it's usually one click. A first-visit date drops each guest straight into the retention funnel dated correctly. Rows without a name are skipped." },
       { kind: "h", text: "The lists that tell you who to act on" },
       { kind: "list", items: [
         "Win-back list — guests who haven't been in for 30+ days, sorted most-overdue first, so a lapsing regular gets a nudge before they're gone for good.",
