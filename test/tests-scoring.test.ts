@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreTest, completionWindowLabel } from "@/lib/tests";
+import { scoreTest, completionWindowLabel, resolveAttempt } from "@/lib/tests";
 
 describe("scoreTest", () => {
   const qs = [
@@ -29,6 +29,23 @@ describe("scoreTest", () => {
 
   it("returns 0% for an empty test", () => {
     expect(scoreTest([], {}).pct).toBe(0);
+  });
+});
+
+describe("resolveAttempt", () => {
+  it("passes when the score meets the mark", () => {
+    expect(resolveAttempt(80, 80, 1, 1)).toEqual({ passed: true, locked: false, retake: false });
+  });
+  it("allows a retake while attempts remain", () => {
+    // 1 retake => 2 attempts allowed. After the first failed attempt, retake.
+    expect(resolveAttempt(50, 80, 1, 1)).toEqual({ passed: false, locked: false, retake: true });
+  });
+  it("locks once all attempts are used", () => {
+    // After the 2nd failed attempt (attemptsUsed=2, allowed=2), lock.
+    expect(resolveAttempt(50, 80, 2, 1)).toEqual({ passed: false, locked: true, retake: false });
+  });
+  it("locks after one attempt when no retakes are allowed", () => {
+    expect(resolveAttempt(50, 80, 1, 0)).toEqual({ passed: false, locked: true, retake: false });
   });
 });
 
