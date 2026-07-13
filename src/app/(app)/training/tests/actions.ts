@@ -302,7 +302,11 @@ export async function createOrUpdateTestFromRole(department: string): Promise<{ 
   if (!material.trim()) return { error: `No training content found for ${department} yet — build its training first.` };
 
   const schema = `{"days": [{"day_number": 1, "title": string, "content": string, "questions": [{"kind": "multiple_choice" | "true_false", "prompt": string, "options": [string], "correct_index": number, "explanation": string}]}]}`;
-  const prompt = `Write a one-day knowledge test for the ${department} role based ONLY on this restaurant's own training standards below. Write 6-10 fair, auto-scored questions (multiple_choice with one correct option, or true_false with options exactly ["True","False"]) that verify the person actually learned these standards. Set correct_index (0-based) and a one-line explanation each.
+  const prompt = `Build a learn-then-quiz for the ${department} role based ONLY on this restaurant's own training standards below.
+Give ONE day with:
+- "title": a short focus for the day.
+- "content": clear teaching/study text the employee reads BEFORE the questions — a few tight paragraphs or bullet lines that actually teach these standards, so someone could learn from it and then pass. This is the learning section.
+- "questions": 6-10 fair, auto-scored questions (multiple_choice with one correct option, or true_false with options exactly ["True","False"]) that check they learned the content. Set correct_index (0-based) and a one-line explanation each.
 
 Training standards:
 """
@@ -314,9 +318,9 @@ ${schema}`;
 
   let days: ProposedDay[];
   try {
-    const text = await callModel(TEST_SYSTEM, prompt, 6000);
+    const text = await callModel(TEST_SYSTEM, prompt, 7000);
     const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
-    days = normalizeDays(parsed.days ?? [], 1, "exam");
+    days = normalizeDays(parsed.days ?? [], 1, "study_quiz");
     if (!days[0] || days[0].questions.length === 0) throw new Error("Couldn't write questions from that training. Try again.");
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
@@ -331,7 +335,7 @@ ${schema}`;
     await supabase.from("test_days").insert(days.map((d) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, title: d.title.slice(0, 120), content: (d.content || "").slice(0, 4000) })));
     const qRows = days.flatMap((d) => d.questions.map((q, i) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, sort_order: i, kind: q.kind, prompt: q.prompt.slice(0, 500), options: q.options, correct_index: q.correct_index, explanation: (q.explanation || "").slice(0, 400) })));
     if (qRows.length > 0) await supabase.from("test_questions").insert(qRows);
-    await supabase.from("tests").update({ day_count: 1, updated_at: new Date().toISOString() }).eq("id", testId);
+    await supabase.from("tests").update({ day_count: 1, mode: "study_quiz", updated_at: new Date().toISOString() }).eq("id", testId);
     revalidatePath("/training");
     revalidatePath("/training/tests");
     return { error: null, id: testId, updated: true };
@@ -339,8 +343,8 @@ ${schema}`;
 
   const settings: TestSettings = {
     title: `${department} Training Test`,
-    description: `Checks that ${department} team members know their training standards.`,
-    mode: "exam",
+    description: `Learn the ${department} standards, then get quizzed on them.`,
+    mode: "study_quiz",
     target_departments: [department],
     day_count: 1,
     pass_pct: 80,

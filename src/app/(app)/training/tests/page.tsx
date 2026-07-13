@@ -123,6 +123,11 @@ export default async function TestsPage() {
               Score it automatically, then assign it to your team and see who passed.
             </p>
           </div>
+          {rows.length > 0 && (
+            <a href="#your-tests" className="shrink-0 inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+              <ClipboardList size={14} /> Your tests ({rows.length})
+            </a>
+          )}
         </div>
       </div>
 
