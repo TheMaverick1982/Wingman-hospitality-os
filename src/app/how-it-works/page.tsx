@@ -41,8 +41,9 @@ const VALUES = ["Warm, not scripted", "Own the moment", "Anticipate", "Every gue
 const STEP2 = [
   "Upload an existing handbook or interview guide, or start from scratch with a short wizard",
   "AI fills the gaps with hospitality best practices — not just what you already had written down",
-  "Turn any training into an auto-scored test — a Food or Bartender exam, or a monthly menu quiz — assign it, and prove your team actually learned the standard",
-  "Hiring scorecard, training progress, and coaching notes — one profile per person, not three",
+  "Turn any training into a learn-then-quiz — staff read the material, then get tested on it — and prove they actually learned the standard. Hand it out with one “Start a test” to a person, a role, or all staff",
+  "Collect job applications with a ready-made form — share a link or embed it on your site (no careers page needed) — then schedule interviews and score candidates in one place",
+  "Hiring scorecard, training progress, tests, and checklist completion — one profile per person, not three",
 ];
 const STAFF_PROFILE_ITEMS = [
   { text: "Ask: “Is this your first time dining with us?”", done: true, flag: "strong" as const },
@@ -264,8 +265,9 @@ export default function HowItWorksPage() {
                   </div>
                 </div>
                 <p className="text-[12.5px] text-muted-2 mt-3">
-                  Build a test by AI or from your own material, assign it, and they take it a day at a time. You see who
-                  passed — and a lock or a missed deadline emails the manager automatically.
+                  Staff learn the material first, then get quizzed on it. Hit “Start a test” to send it to a person, a
+                  role, or all staff — they take it a day at a time, you see who passed, and a lock or missed deadline
+                  emails the manager automatically.
                 </p>
               </div>
             </div>
@@ -313,6 +315,35 @@ export default function HowItWorksPage() {
                   <span className={`text-[15px] ${c.done ? "text-muted-2 line-through" : "text-ink"}`}>{c.label}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border-y border-line">
+        <div className="max-w-[1180px] mx-auto px-6 sm:px-10 py-16 sm:py-20 flex flex-col lg:flex-row items-center gap-10">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brick-tint mb-4">
+              <span className="text-[12.5px] font-semibold text-brick-dark">Your whole team, in their language</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-[42px] leading-[1.08] tracking-[-0.02em] font-bold text-ink mb-4 max-w-[560px]">
+              Training and checklists in English or Spanish
+            </h2>
+            <p className="text-[17px] sm:text-lg text-muted leading-[1.5] max-w-[540px]">
+              Half of back-of-house often reads English as a second language — so training doesn&apos;t land. In Wingman,
+              each person picks their language on their first login, and their training, tests, and checklists come
+              through translated — the words <em>and</em> your actual content. The standard finally reaches everyone.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-3">
+            <div className="rounded-2xl border border-line bg-paper px-6 py-5 text-center min-w-[130px]">
+              <div className="text-[13px] font-semibold text-muted-2 mb-1">Default</div>
+              <div className="text-[19px] font-bold text-ink">English</div>
+            </div>
+            <span className="text-2xl text-muted-2">↔</span>
+            <div className="rounded-2xl border border-brick/30 bg-brick-tint/40 px-6 py-5 text-center min-w-[130px]">
+              <div className="text-[13px] font-semibold text-brick-dark mb-1">One tap</div>
+              <div className="text-[19px] font-bold text-ink">Español</div>
             </div>
           </div>
         </div>
