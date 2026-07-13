@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The 14-Day Launch Plan. Restaurants don't get ROI from software they set up
 // and never run — the gap is always *implementation velocity*. So instead of a
@@ -209,13 +210,11 @@ export function computeLaunchPlan(signals: LaunchSignals, createdAtMs: number, n
   };
 }
 
-// Load the current org's launch signals (SSR, RLS-scoped) and compute the plan.
-export async function getLaunchPlan(): Promise<LaunchPlan | null> {
-  const supabase = await createClient();
-  const { data: org } = await supabase.from("organizations").select("id, created_at, system_generated").single();
-  if (!org) return null;
-
-  const orgId = org.id as string;
+// Detect the launch signals for one org. Works with either the SSR (RLS-scoped)
+// client or the service-role admin client — both expose `.from`, and the org is
+// always pinned with an explicit org_id filter.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchSignals(client: any, orgId: string, systemGenerated: boolean): Promise<LaunchSignals> {
   const [
     { count: wingmanStandards },
     { count: wingmanTraining },
@@ -226,18 +225,18 @@ export async function getLaunchPlan(): Promise<LaunchPlan | null> {
     { count: cultureCount },
     { count: spotCheckCount },
   ] = await Promise.all([
-    supabase.from("department_standards").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
-    supabase.from("department_training_items").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
-    supabase.from("hiring_traits").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
-    supabase.from("staff_members").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-    supabase.from("playbook_articles").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-    supabase.from("guests").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-    supabase.from("culture_moments").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-    supabase.from("spot_checks").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    client.from("department_standards").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
+    client.from("department_training_items").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
+    client.from("hiring_traits").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("source", "wingman"),
+    client.from("staff_members").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    client.from("playbook_articles").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    client.from("guests").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    client.from("culture_moments").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    client.from("spot_checks").select("id", { count: "exact", head: true }).eq("org_id", orgId),
   ]);
 
-  const signals: LaunchSignals = {
-    wizard: !!(org as { system_generated?: boolean }).system_generated,
+  return {
+    wizard: systemGenerated,
     training: (wingmanStandards ?? 0) + (wingmanTraining ?? 0) > 0,
     staff: (staffCount ?? 0) > 0,
     hiring: (wingmanTraits ?? 0) > 0,
@@ -246,7 +245,25 @@ export async function getLaunchPlan(): Promise<LaunchPlan | null> {
     culture: (cultureCount ?? 0) > 0,
     spotCheck: (spotCheckCount ?? 0) > 0,
   };
+}
 
+// Load the current org's launch signals (SSR, RLS-scoped) and compute the plan.
+export async function getLaunchPlan(): Promise<LaunchPlan | null> {
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id, created_at, system_generated").single();
+  if (!org) return null;
+
+  const signals = await fetchSignals(supabase, org.id as string, !!(org as { system_generated?: boolean }).system_generated);
   const createdAtMs = new Date((org as { created_at: string }).created_at).getTime();
   return computeLaunchPlan(signals, createdAtMs, Date.now());
+}
+
+// Same computation for a specific org via the service-role admin client — used
+// by the weekly accountability-email cron (no user session in a cron).
+export async function getLaunchPlanForOrg(
+  admin: SupabaseClient,
+  org: { id: string; created_at: string; system_generated?: boolean | null }
+): Promise<LaunchPlan> {
+  const signals = await fetchSignals(admin, org.id, !!org.system_generated);
+  return computeLaunchPlan(signals, new Date(org.created_at).getTime(), Date.now());
 }
