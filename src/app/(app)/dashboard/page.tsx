@@ -16,6 +16,8 @@ import { computeCoachingFlags } from "@/lib/coaching-flags";
 import { getOnboardingStatus } from "@/lib/onboarding";
 import { getMomentum } from "@/lib/momentum";
 import { MomentumCard } from "@/components/dashboard/momentum-card";
+import { getWeeklyMoves } from "@/lib/weekly-moves-data";
+import { WeeklyMovesCard } from "./weekly-moves-card";
 import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
@@ -69,6 +71,7 @@ export default async function DashboardPage({
   // Momentum is about ongoing usage, so it's only meaningful (and only shown)
   // once the account is set up — during setup, Start Here drives the habits.
   const momentum = isSuperAdmin && onboarding?.allDone ? await getMomentum() : null;
+  const weeklyMoves = isSuperAdmin && onboarding?.allDone ? await getWeeklyMoves() : null;
   const supabase = await createClient();
 
   const [
@@ -295,6 +298,13 @@ export default async function DashboardPage({
       )}
 
       {momentum && <MomentumCard momentum={momentum} />}
+
+      {weeklyMoves && (
+        <WeeklyMovesCard
+          initialMoves={weeklyMoves.moves}
+          weekLabel={new Date(`${weeklyMoves.weekStart}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+        />
+      )}
 
       {org?.weekly_focus && (
         <Link
