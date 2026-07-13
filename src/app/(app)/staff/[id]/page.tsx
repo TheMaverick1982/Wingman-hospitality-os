@@ -6,6 +6,10 @@ import { getSectionAccess } from "@/lib/auth/permissions";
 import { StaffProfileClient } from "./staff-profile-client";
 import { InviteLoginBanner } from "./invite-login-banner";
 
+function daysAgoIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 export default async function StaffProfilePage({
   params,
   searchParams,
@@ -74,6 +78,45 @@ export default async function StaffProfilePage({
     ? await supabase.from("core_values").select("title").order("sort_order")
     : { data: null };
 
+  // Activity overview: tests assigned to this person + their personal checklist
+  // completions (pre-shift + loyalty), so everything they touch lives here.
+  const thirtyDaysAgo = daysAgoIso(30);
+  const [{ data: testAssignments }, { data: completions }] = await Promise.all([
+    supabase
+      .from("test_assignments")
+      .select("status, best_score, last_score, current_day, due_at, tests(title, day_count, pass_pct)")
+      .eq("staff_id", id),
+    staff.profile_id
+      ? supabase
+          .from("shift_checklist_completions")
+          .select("checklist_type, occurred_on")
+          .eq("profile_id", staff.profile_id)
+          .in("checklist_type", ["preshift", "loyalty"])
+          .gte("occurred_on", thirtyDaysAgo)
+          .order("occurred_on", { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const tests = ((testAssignments ?? []) as unknown as {
+    status: string; best_score: number | null; last_score: number | null; current_day: number; due_at: string | null;
+    tests: { title: string; day_count: number; pass_pct: number } | null;
+  }[]).map((a) => ({
+    title: a.tests?.title ?? "Test",
+    status: a.status,
+    score: a.best_score ?? a.last_score,
+    passPct: a.tests?.pass_pct ?? 80,
+    day: a.current_day,
+    dayCount: a.tests?.day_count ?? 1,
+    due: a.due_at,
+  }));
+
+  const compRows = (completions ?? []) as { checklist_type: string; occurred_on: string }[];
+  const summarize = (type: string) => {
+    const rows = compRows.filter((c) => c.checklist_type === type);
+    return { count: rows.length, last: rows[0]?.occurred_on ?? null };
+  };
+  const checklists = { hasLogin: Boolean(staff.profile_id), preshift: summarize("preshift"), loyalty: summarize("loyalty") };
+
   return (
     <>
     {isSuperAdmin && !staff.profile_id && (
@@ -90,7 +133,9 @@ export default async function StaffProfilePage({
       signoffs={signoffs ?? []}
       candidate={candidateResult?.data ?? null}
       coreValueTitles={(coreValues ?? []).map((v) => v.title)}
-      initialTab={tab === "training" || tab === "hiring" ? tab : "contact"}
+      tests={tests}
+      checklists={checklists}
+      initialTab={tab === "training" || tab === "hiring" || tab === "contact" ? tab : "activity"}
     />
     </>
   );

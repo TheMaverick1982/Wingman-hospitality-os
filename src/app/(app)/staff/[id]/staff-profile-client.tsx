@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Heart, GraduationCap, ThumbsUp, MessageCircleWarning } from "lucide-react";
+import { ArrowLeft, Heart, GraduationCap, ThumbsUp, MessageCircleWarning, ClipboardList, ClipboardCheck, CheckCircle2, Lock } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
@@ -32,6 +32,12 @@ type Candidate = {
   notes: string;
 } | null;
 
+type TestRow = { title: string; status: string; score: number | null; passPct: number; day: number; dayCount: number; due: string | null };
+type ChecklistSummary = { count: number; last: string | null };
+type Checklists = { hasLogin: boolean; preshift: ChecklistSummary; loyalty: ChecklistSummary };
+
+type Tab = "activity" | "contact" | "training" | "hiring";
+
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -50,6 +56,8 @@ export function StaffProfileClient({
   signoffs,
   candidate,
   coreValueTitles,
+  tests,
+  checklists,
   initialTab,
 }: {
   staff: Staff;
@@ -62,9 +70,11 @@ export function StaffProfileClient({
   signoffs: { id: string; completion_pct: number; occurred_on: string }[];
   candidate: Candidate;
   coreValueTitles: string[];
-  initialTab?: "contact" | "training" | "hiring";
+  tests: TestRow[];
+  checklists: Checklists;
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<"contact" | "training" | "hiring">(initialTab ?? "contact");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "activity");
 
   const progressMap = new Map(progress.map((p) => [`${p.item_type}:${p.item_id}`, p]));
   const allItems: (ChecklistItem & { type: "standard" | "training" })[] = [
@@ -99,7 +109,7 @@ export function StaffProfileClient({
       </div>
 
       <div className="flex gap-1 border-b border-line">
-        {(["contact", "training", "hiring"] as const).map((t) => (
+        {(["activity", "contact", "training", "hiring"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -111,6 +121,18 @@ export function StaffProfileClient({
           </button>
         ))}
       </div>
+
+      {tab === "activity" && (
+        <ActivityTab
+          tests={tests}
+          checklists={checklists}
+          trainingPct={pct}
+          trainingItemCount={allItems.length}
+          lastSignoff={signoffs[0] ?? null}
+          candidate={candidate}
+          onGoTo={setTab}
+        />
+      )}
 
       {tab === "contact" && <ContactTab staff={staff} locationName={locationName} canEdit={canEdit} />}
 
@@ -129,6 +151,117 @@ export function StaffProfileClient({
 
       {tab === "hiring" && <HiringTab candidate={candidate} coreValueTitles={coreValueTitles} />}
     </>
+  );
+}
+
+const TEST_TONE: Record<string, { label: string; cls: string }> = {
+  assigned: { label: "Not started", cls: "bg-paper text-charcoal-2" },
+  in_progress: { label: "In progress", cls: "bg-brick-tint text-brick-dark" },
+  passed: { label: "Passed", cls: "bg-[#E7F6EC] text-[#15803D]" },
+  locked: { label: "Locked", cls: "bg-danger-tint text-danger" },
+};
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// One place to see everything a person touches: tests, personal checklists, and
+// a quick read on training and hiring (which have their own detailed tabs).
+function ActivityTab({
+  tests,
+  checklists,
+  trainingPct,
+  trainingItemCount,
+  lastSignoff,
+  candidate,
+  onGoTo,
+}: {
+  tests: TestRow[];
+  checklists: Checklists;
+  trainingPct: number;
+  trainingItemCount: number;
+  lastSignoff: { completion_pct: number; occurred_on: string } | null;
+  candidate: Candidate;
+  onGoTo: (t: Tab) => void;
+}) {
+  const passed = tests.filter((t) => t.status === "passed").length;
+  const hiringAvg = candidate ? candidate.scores.reduce((a, b) => a + b, 0) / (candidate.scores.length || 1) : null;
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Quick summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <button onClick={() => onGoTo("training")} className="text-left bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors">
+          <div className="flex items-center gap-2 text-muted mb-2"><GraduationCap size={15} /> <span className="text-[12.5px] font-semibold uppercase tracking-wide">Training</span></div>
+          <div className="text-[22px] font-bold text-ink">{trainingItemCount > 0 ? `${trainingPct}%` : "—"}</div>
+          <div className="text-[12.5px] text-muted mt-0.5">{lastSignoff ? `Last signed off ${fmtDate(lastSignoff.occurred_on)}` : "No sign-off yet"}</div>
+        </button>
+        <button onClick={() => onGoTo("training")} className="text-left bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors">
+          <div className="flex items-center gap-2 text-muted mb-2"><ClipboardList size={15} /> <span className="text-[12.5px] font-semibold uppercase tracking-wide">Tests</span></div>
+          <div className="text-[22px] font-bold text-ink">{tests.length > 0 ? `${passed}/${tests.length}` : "—"}</div>
+          <div className="text-[12.5px] text-muted mt-0.5">{tests.length > 0 ? "passed" : "None assigned"}</div>
+        </button>
+        <button onClick={() => onGoTo("hiring")} className="text-left bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors">
+          <div className="flex items-center gap-2 text-muted mb-2"><ThumbsUp size={15} /> <span className="text-[12.5px] font-semibold uppercase tracking-wide">Hiring</span></div>
+          <div className="text-[22px] font-bold text-ink">{hiringAvg != null ? `${hiringAvg.toFixed(1)}/5` : "—"}</div>
+          <div className="text-[12.5px] text-muted mt-0.5">{candidate ? candidate.recommendation : "Not hired through Wingman"}</div>
+        </button>
+      </div>
+
+      {/* Tests detail */}
+      <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#F1F1F1] flex items-center gap-2">
+          <ClipboardList size={16} className="text-brick" />
+          <span className="text-[15px] font-semibold text-ink">Tests</span>
+        </div>
+        {tests.length > 0 ? (
+          <div className="divide-y divide-[#F5F5F5]">
+            {tests.map((t, i) => {
+              const tone = TEST_TONE[t.status] ?? TEST_TONE.assigned;
+              return (
+                <div key={i} className="px-6 py-3 flex items-center gap-3">
+                  {t.status === "passed" ? <CheckCircle2 size={15} className="text-[#15803d] shrink-0" /> : t.status === "locked" ? <Lock size={15} className="text-danger shrink-0" /> : <ClipboardList size={15} className="text-muted-2 shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[14px] font-medium text-ink truncate">{t.title}</div>
+                    <div className="text-[12px] text-muted">
+                      Day {Math.min(t.day, t.dayCount)} of {t.dayCount}
+                      {t.score != null ? ` · ${t.score}% (pass ${t.passPct}%)` : ""}
+                      {t.due ? ` · due ${fmtDate(t.due)}` : ""}
+                    </div>
+                  </div>
+                  <span className={`text-[11.5px] font-semibold px-2.5 py-0.5 rounded-full ${tone.cls}`}>{tone.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="px-6 py-5 text-sm text-muted">No tests assigned yet. Assign one from Training → Start a test.</p>
+        )}
+      </div>
+
+      {/* Checklists */}
+      <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#F1F1F1] flex items-center gap-2">
+          <ClipboardCheck size={16} className="text-brick" />
+          <span className="text-[15px] font-semibold text-ink">Checklists · last 30 days</span>
+        </div>
+        {checklists.hasLogin ? (
+          <div className="divide-y divide-[#F5F5F5]">
+            {([["Pre-shift", checklists.preshift], ["FOH loyalty", checklists.loyalty]] as const).map(([label, s]) => (
+              <div key={label} className="px-6 py-3 flex items-center justify-between text-sm">
+                <span className="text-ink">{label}</span>
+                <span className="text-[13px] text-muted tabular-nums">
+                  {s.count} completed{s.last ? ` · last ${fmtDate(s.last)}` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-6 py-5 text-sm text-muted">No login linked yet — checklist completions appear once this person can sign in.</p>
+        )}
+      </div>
+    </div>
   );
 }
 
