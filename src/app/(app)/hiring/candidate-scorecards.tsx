@@ -43,8 +43,22 @@ export function CandidatesPanel({
   const [locationId, setLocationId] = useState("");
   const [recommendation, setRecommendation] = useState("");
   const [department, setDepartment] = useState("");
+  const [datePreset, setDatePreset] = useState(""); // "", "7", "30", "90", "custom"
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [now] = useState(() => Date.now());
 
   const multiLocation = locations.length > 1;
+
+  // Resolve the active date window (YYYY-MM-DD strings, either bound optional).
+  const { from, to } = useMemo(() => {
+    if (datePreset === "custom") return { from: dateFrom, to: dateTo };
+    if (datePreset === "7" || datePreset === "30" || datePreset === "90") {
+      const days = Number(datePreset);
+      return { from: new Date(now - days * 86400000).toISOString().slice(0, 10), to: "" };
+    }
+    return { from: "", to: "" };
+  }, [datePreset, dateFrom, dateTo, now]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,9 +67,11 @@ export function CandidatesPanel({
         (!q || c.name.toLowerCase().includes(q)) &&
         (!locationId || c.locationId === locationId) &&
         (!recommendation || c.recommendation === recommendation) &&
-        (!department || c.department === department)
+        (!department || c.department === department) &&
+        (!from || c.date >= from) &&
+        (!to || c.date <= to)
     );
-  }, [candidates, query, locationId, recommendation, department]);
+  }, [candidates, query, locationId, recommendation, department, from, to]);
 
   // Live "by department" summary of whatever's currently filtered.
   const byDept = useMemo(() => {
@@ -71,7 +87,7 @@ export function CandidatesPanel({
       .sort((a, b) => b.count - a.count);
   }, [filtered]);
 
-  const anyFilter = query || locationId || recommendation || department;
+  const anyFilter = query || locationId || recommendation || department || datePreset;
 
   return (
     <div id="candidate-scorecards" className="scroll-mt-6 flex flex-col gap-4">
@@ -101,7 +117,27 @@ export function CandidatesPanel({
             <option key={r} value={r}>{r}</option>
           ))}
         </select>
+        <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)} className={`${inputClass} py-2 flex-1 min-w-0`}>
+          <option value="">Any date</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="custom">Custom range…</option>
+        </select>
       </div>
+
+      {datePreset === "custom" && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <label className="flex items-center gap-2 text-[13px] text-muted">
+            From
+            <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClass} py-2`} />
+          </label>
+          <label className="flex items-center gap-2 text-[13px] text-muted">
+            To
+            <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)} className={`${inputClass} py-2`} />
+          </label>
+        </div>
+      )}
 
       {/* By-department summary — reflects the active filters. */}
       {byDept.length > 0 && (
