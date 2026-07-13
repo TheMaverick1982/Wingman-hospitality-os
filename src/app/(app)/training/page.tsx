@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ClipboardList } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
@@ -104,6 +106,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors">
+            <ClipboardList size={15} /> Tests &amp; exams
+          </Link>
           <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             Print / PDF
           </a>
