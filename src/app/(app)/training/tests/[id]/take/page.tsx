@@ -74,6 +74,7 @@ export default async function TakeTestPage({ params }: { params: Promise<{ id: s
       attemptsUsed={a.attempts_used}
       maxRetakes={t.max_retakes}
       dueLabel={completionWindowLabel(t.complete_within_amount, t.complete_within_unit)}
+      lang={profile.language}
     />
   );
 }

@@ -3,6 +3,8 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
 import type { Location } from "@/lib/data/locations";
+import type { Lang } from "@/lib/i18n";
+import { LanguageToggle } from "./language-toggle";
 import { logout } from "@/app/login/actions";
 
 const TITLES: Record<string, string> = {
@@ -24,11 +26,13 @@ export function Topbar({
   canSwitch,
   orgIsMultiLocation,
   userLocationName,
+  language,
 }: {
   locations: Location[];
   canSwitch: boolean;
   orgIsMultiLocation: boolean;
   userLocationName: string | null;
+  language: Lang;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -74,9 +78,12 @@ export function Topbar({
           </div>
         )}
       </div>
-      <form action={logout}>
-        <button className="text-[13px] font-semibold text-muted hover:text-ink transition-colors">Sign out</button>
-      </form>
+      <div className="flex items-center gap-3">
+        <LanguageToggle current={language} />
+        <form action={logout}>
+          <button className="text-[13px] font-semibold text-muted hover:text-ink transition-colors">Sign out</button>
+        </form>
+      </div>
     </div>
   );
 }

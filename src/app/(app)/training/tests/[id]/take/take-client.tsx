@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Lock, Clock, ArrowRight } from "lucide-react";
 import { submitDay, type SubmitResult } from "../../run-actions";
+import { t as translate, type Lang } from "@/lib/i18n";
 
 type Q = { id: string; kind: string; prompt: string; options: string[] };
 
@@ -26,7 +27,9 @@ export function TakeClient(props: {
   attemptsUsed: number;
   maxRetakes: number;
   dueLabel: string;
+  lang: Lang;
 }) {
+  const tr = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => translate(props.lang, key, vars);
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<SubmitResult | null>(null);
@@ -51,8 +54,8 @@ export function TakeClient(props: {
     return (
       <div className="bg-white border border-line rounded-2xl p-8 text-center">
         <CheckCircle2 size={32} className="mx-auto text-olive mb-2" />
-        <div className="text-[19px] font-bold text-ink">You passed {props.title}</div>
-        <div className="text-[14px] text-muted mt-1">Score: {props.bestScore ?? props.lastScore}% · pass mark {props.passPct}%</div>
+        <div className="text-[19px] font-bold text-ink">{tr("test.youPassed", { title: props.title })}</div>
+        <div className="text-[14px] text-muted mt-1">{tr("test.score")}: {props.bestScore ?? props.lastScore}% · {tr("test.passMark", { pct: props.passPct })}</div>
       </div>
     );
   }
@@ -60,8 +63,8 @@ export function TakeClient(props: {
     return (
       <div className="bg-white border border-line rounded-2xl p-8 text-center">
         <Lock size={28} className="mx-auto text-brick mb-2" />
-        <div className="text-[18px] font-bold text-ink">This test is locked</div>
-        <div className="text-[14px] text-muted mt-1 max-w-md mx-auto">You&rsquo;ve used all your attempts (last score {props.lastScore}%). Your manager has been notified — they&rsquo;ll coach you and unlock a retest.</div>
+        <div className="text-[18px] font-bold text-ink">{tr("test.locked.title")}</div>
+        <div className="text-[14px] text-muted mt-1 max-w-md mx-auto">{tr("test.locked.body", { pct: props.lastScore ?? 0 })}</div>
       </div>
     );
   }
@@ -72,8 +75,8 @@ export function TakeClient(props: {
       return (
         <div className="bg-white border border-line rounded-2xl p-8 text-center">
           <CheckCircle2 size={32} className="mx-auto text-olive mb-2" />
-          <div className="text-[19px] font-bold text-ink">Passed! {result.score}%</div>
-          <div className="text-[14px] text-muted mt-1">Nice work — you cleared the {props.passPct}% mark.</div>
+          <div className="text-[19px] font-bold text-ink">{tr("test.passed.title", { pct: result.score ?? 0 })}</div>
+          <div className="text-[14px] text-muted mt-1">{tr("test.passed.body", { pct: props.passPct })}</div>
         </div>
       );
     }
@@ -81,16 +84,16 @@ export function TakeClient(props: {
       return (
         <div className="bg-white border border-line rounded-2xl p-8 text-center">
           <Lock size={28} className="mx-auto text-brick mb-2" />
-          <div className="text-[18px] font-bold text-ink">Not passed — {result.score}%</div>
-          <div className="text-[14px] text-muted mt-1 max-w-md mx-auto">That was your last attempt, so the test is now locked. Your manager has been notified to coach you and unlock a retest.</div>
+          <div className="text-[18px] font-bold text-ink">{tr("test.failLocked.title", { pct: result.score ?? 0 })}</div>
+          <div className="text-[14px] text-muted mt-1 max-w-md mx-auto">{tr("test.failLocked.body")}</div>
         </div>
       );
     }
     return (
       <div className="bg-white border border-line rounded-2xl p-8 text-center">
-        <div className="text-[18px] font-bold text-ink">Not quite — {result.score}%</div>
-        <div className="text-[14px] text-muted mt-1">You need {props.passPct}%. Give it another go when you&rsquo;re ready.</div>
-        <button onClick={() => { setResult(null); setAnswers({}); router.refresh(); }} className="mt-4 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2 hover:bg-brick-dark">Retake</button>
+        <div className="text-[18px] font-bold text-ink">{tr("test.fail.title", { pct: result.score ?? 0 })}</div>
+        <div className="text-[14px] text-muted mt-1">{tr("test.fail.body", { pct: props.passPct })}</div>
+        <button onClick={() => { setResult(null); setAnswers({}); router.refresh(); }} className="mt-4 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2 hover:bg-brick-dark">{tr("test.retake")}</button>
       </div>
     );
   }
@@ -101,16 +104,15 @@ export function TakeClient(props: {
     return (
       <div className="bg-white border border-line rounded-2xl p-8 text-center">
         <CheckCircle2 size={30} className="mx-auto text-olive mb-2" />
-        <div className="text-[19px] font-bold text-ink">Day {props.dayNumber} done — nice work</div>
+        <div className="text-[19px] font-bold text-ink">{tr("test.dayDone.title", { n: props.dayNumber })}</div>
         <p className="text-[14px] text-muted mt-1.5 max-w-md mx-auto">
-          If you&rsquo;re feeling good about it, keep going to Day {dayDone}. No rush, though —
-          your progress is saved, so you can come back and finish anytime.
+          {tr("test.dayDone.body", { next: dayDone })}
         </p>
         <div className="flex items-center justify-center gap-3 mt-5">
           <button onClick={() => { setDayDone(null); setAnswers({}); router.refresh(); }} className="inline-flex items-center gap-2 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors">
-            Keep going to Day {dayDone} <ArrowRight size={15} />
+            {tr("test.keepGoing", { next: dayDone })} <ArrowRight size={15} />
           </button>
-          <Link href="/training/tests" className="text-[14px] font-semibold text-muted-2 hover:text-ink">I&rsquo;ll finish later</Link>
+          <Link href="/training/tests" className="text-[14px] font-semibold text-muted-2 hover:text-ink">{tr("test.finishLater")}</Link>
         </div>
       </div>
     );
@@ -122,10 +124,10 @@ export function TakeClient(props: {
       <div>
         <h1 className="text-[28px] font-bold tracking-[-0.02em] text-ink">{props.title}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[13px] text-muted">
-          <span className="font-semibold text-charcoal-2">Day {props.dayNumber} of {props.dayCount}</span>
-          <span>·</span><span>Pass {props.passPct}%</span>
+          <span className="font-semibold text-charcoal-2">{tr("test.dayOf", { n: props.dayNumber, count: props.dayCount })}</span>
+          <span>·</span><span>{tr("test.pass", { pct: props.passPct })}</span>
           <span>·</span><span className="inline-flex items-center gap-1"><Clock size={12} /> {props.dueLabel}</span>
-          {props.attemptsUsed > 0 && <><span>·</span><span>Attempt {props.attemptsUsed + 1} of {1 + props.maxRetakes}</span></>}
+          {props.attemptsUsed > 0 && <><span>·</span><span>{tr("test.attemptOf", { n: props.attemptsUsed + 1, total: 1 + props.maxRetakes })}</span></>}
         </div>
       </div>
 
@@ -150,15 +152,15 @@ export function TakeClient(props: {
             </div>
           </div>
         ))}
-        {props.questions.length === 0 && <div className="text-[14px] text-muted">No questions on this day.</div>}
+        {props.questions.length === 0 && <div className="text-[14px] text-muted">{tr("test.noQuestions")}</div>}
       </div>
 
       <div className="flex items-center gap-3">
         <button onClick={submit} disabled={pending || !answered} className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-50 inline-flex items-center gap-2">
           {pending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
-          {pending ? "Submitting…" : isLastDay ? "Submit & score" : `Finish Day ${props.dayNumber}`}
+          {pending ? tr("test.submitting") : isLastDay ? tr("test.submitScore") : tr("test.finishDay", { n: props.dayNumber })}
         </button>
-        {!answered && <span className="text-[13px] text-muted-2">Answer every question to continue.</span>}
+        {!answered && <span className="text-[13px] text-muted-2">{tr("test.answerEvery")}</span>}
         {err && <span className="text-[13px] text-danger">{err}</span>}
       </div>
     </div>

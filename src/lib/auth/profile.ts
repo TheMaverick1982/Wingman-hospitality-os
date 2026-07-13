@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AccessRole, PermissionOverrides } from "./permissions";
+import { normalizeLang, type Lang } from "@/lib/i18n";
 
 export type CurrentProfile = {
   userId: string;
@@ -25,6 +26,10 @@ export type CurrentProfile = {
   // The email a self-serve visitor entered at the demo gate (from the sandbox
   // user's metadata), used to pre-fill signup. Null outside sandboxes.
   demoLeadEmail: string | null;
+  // The user's chosen UI language ('en' default). `languageChosen` is false
+  // until they've picked one, which triggers the first-login language prompt.
+  language: Lang;
+  languageChosen: boolean;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -42,14 +47,19 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (!user) return null;
 
   const admin = createAdminClient();
-  const [{ data }, { data: locRows }] = await Promise.all([
+  const [{ data }, { data: locRows }, { data: langRow }] = await Promise.all([
     admin
       .from("profiles")
       .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo, demo_expires_at)")
       .eq("id", user.id)
       .maybeSingle(),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
+    // Language preference lives in its own guarded read so that if the migration
+    // adding the column hasn't landed yet, a missing column can't break login —
+    // it just degrades to English with no first-login prompt.
+    admin.from("profiles").select("preferred_language").eq("id", user.id).maybeSingle(),
   ]);
+  const preferredLanguage = (langRow as { preferred_language?: string | null } | null)?.preferred_language ?? null;
 
   if (!data) return null;
   // `Database` is a loose placeholder type today, so postgrest-js can't infer
@@ -83,5 +93,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     isDemo: profile.organizations?.is_demo ?? false,
     isDemoSandbox: !!profile.organizations?.demo_expires_at,
     demoLeadEmail: (user.user_metadata?.lead_email as string | null) ?? null,
+    language: normalizeLang(preferredLanguage),
+    languageChosen: preferredLanguage != null,
   };
 }
