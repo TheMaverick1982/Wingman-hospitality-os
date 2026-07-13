@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
+import { SampleRibbon } from "@/components/ui/sample-ribbon";
 import { MomentModalButton } from "./moment-form";
 import { WeeklyFocusForm } from "./weekly-focus-form";
 import { CultureTextForm } from "./culture-text-form";
@@ -46,7 +47,7 @@ export default async function CulturePage() {
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
   const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
-    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment").single(),
+    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, system_generated").single(),
     supabase.from("core_values").select("title, description").order("sort_order"),
     supabase
       .from("culture_moments")
@@ -55,6 +56,10 @@ export default async function CulturePage() {
     supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("occurred_on", ninetyDaysAgo),
     getStaffMembers(null),
   ]);
+
+  // Culture statement + values are seeded defaults until the wizard personalizes
+  // them (system_generated). Flag that to editors so they know to make it theirs.
+  const isSample = canEdit && !(org as { system_generated?: boolean } | null)?.system_generated;
 
   const allMoments = moments ?? [];
   const leaderboard = Object.entries(
@@ -82,10 +87,13 @@ export default async function CulturePage() {
         </div>
       </div>
 
-      <div className="bg-[#0A0A0A] rounded-[20px] p-8 sm:p-12 text-white">
-        <div className="text-xs font-semibold tracking-[0.08em] uppercase text-[#4D97FF] mb-5">Culture statement</div>
-        <div className="text-2xl sm:text-[34px] font-semibold tracking-[-0.02em] leading-[1.3] max-w-[820px]">
-          &quot;{org?.philosophy}&quot;
+      <div>
+        {isSample && <SampleRibbon what="culture statement & values" />}
+        <div className="bg-[#0A0A0A] rounded-[20px] p-8 sm:p-12 text-white">
+          <div className="text-xs font-semibold tracking-[0.08em] uppercase text-[#4D97FF] mb-5">Culture statement</div>
+          <div className="text-2xl sm:text-[34px] font-semibold tracking-[-0.02em] leading-[1.3] max-w-[820px]">
+            &quot;{org?.philosophy}&quot;
+          </div>
         </div>
       </div>
 
