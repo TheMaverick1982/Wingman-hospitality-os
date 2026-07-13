@@ -253,7 +253,30 @@ export default async function DashboardPage({
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
 
-      {onboarding && !onboarding.allDone && (
+      {onboarding && onboarding.doneCount === 0 && (
+        <div className="bg-[#0A0A0A] rounded-[20px] p-7 sm:p-9 text-white">
+          <div className="flex items-center gap-2 text-[#4D97FF] mb-3">
+            <Rocket size={16} />
+            <span className="text-[11px] font-semibold tracking-[0.08em] uppercase">Welcome to Wingman</span>
+          </div>
+          <h2 className="text-[24px] sm:text-[28px] font-bold tracking-[-0.01em] leading-[1.25] max-w-[640px]">
+            Let&rsquo;s set up {profile.orgName || "your restaurant"}, {firstName}.
+          </h2>
+          <p className="text-[15px] text-[#c9c9c9] mt-2.5 max-w-[560px] leading-[1.5]">
+            Answer a few quick questions and Wingman drafts your culture, standards, and training around your restaurant — about 3 minutes. You can change anything after.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-6">
+            <Link href="/wizard" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">
+              Start setup — 3 min
+            </Link>
+            <Link href="/start-here" className="text-[15px] font-semibold text-white/90 border border-white/25 rounded-full px-5 py-3 hover:bg-white/10 transition-colors">
+              See all the steps
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {onboarding && !onboarding.allDone && onboarding.doneCount > 0 && (
         <Link
           href="/start-here"
           className="flex items-center gap-3 bg-brick-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
