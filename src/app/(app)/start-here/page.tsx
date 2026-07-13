@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle2, Circle, ArrowRight, PartyPopper, Plug } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getOnboardingStatus } from "@/lib/onboarding";
+import { GetStartedTour } from "./get-started-tour";
 
 export default async function StartHerePage() {
   const profile = await getCurrentProfile();
@@ -13,11 +14,14 @@ export default async function StartHerePage() {
 
   return (
     <div className="max-w-[760px] mx-auto w-full">
-      <div className="mb-2">
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Start here</h1>
-        <p className="text-base text-muted">
-          A few steps to get {profile.orgName} fully set up. Do them in any order — each one only takes a minute.
-        </p>
+      <div className="mb-2 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Start here</h1>
+          <p className="text-base text-muted max-w-[520px]">
+            A few steps to get {profile.orgName} fully set up. Do them in any order — each one only takes a minute. New here? Take the tour first.
+          </p>
+        </div>
+        <GetStartedTour />
       </div>
 
       {allDone ? (
