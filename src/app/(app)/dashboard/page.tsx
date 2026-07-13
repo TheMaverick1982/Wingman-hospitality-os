@@ -18,7 +18,7 @@ import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
 import { StatusPill } from "@/components/ui/status-pill";
-import { ArrowUpRight, ClipboardCheck, Rocket, Sparkle } from "lucide-react";
+import { ArrowUpRight, ArrowRight, ClipboardCheck, Rocket, Sparkle } from "lucide-react";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -491,6 +491,11 @@ export default async function DashboardPage({
               </div>
             ))}
           </div>
+          {!bhMetrics && (
+            <Link href="/help/api-and-integrations" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4D97FF] mt-6 hover:opacity-80">
+              Connect your POS <ArrowRight size={14} />
+            </Link>
+          )}
         </div>
 
         {locationBenchmarks.length > 0 && (
