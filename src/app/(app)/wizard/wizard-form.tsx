@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Loader2, RefreshCw, AlertCircle, Wand2 } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Field, inputClass } from "@/components/ui/field";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, WIZARD_DEFAULT_DEPARTMENTS, type Department } from "@/lib/constants";
 import { generateAndApplySystem, type WizardState } from "./actions";
 
 const STEP_META = [
@@ -65,7 +65,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
   const [name, setName] = useState(orgName);
   const [concept, setConcept] = useState(CONCEPTS[2]);
   const [price, setPrice] = useState(PRICES[1]);
-  const [depts, setDepts] = useState<Department[]>([...ALL_DEPARTMENTS]);
+  const [depts, setDepts] = useState<Department[]>([...WIZARD_DEFAULT_DEPARTMENTS]);
   const [greatService, setGreatService] = useState("");
   const [painPoint, setPainPoint] = useState("");
   const [priorities, setPriorities] = useState<string[]>([]);
