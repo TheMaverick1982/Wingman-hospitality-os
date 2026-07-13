@@ -9,18 +9,28 @@ import { inputClass } from "@/components/ui/field";
 import type { Location } from "@/lib/data/locations";
 import { importGuests, type ImportRow, type ImportResult } from "./actions";
 
-type FieldKey = "name" | "email" | "phone" | "visit1" | "visit2" | "visit3" | "visit4" | "source";
-const FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
+const VISITS = [1, 2, 3, 4] as const;
+type VisitPart = "date" | "incentive" | "notes";
+type FieldKey = "name" | "email" | "phone" | "source" | "location" | `v${number}_${VisitPart}`;
+
+const BASE_FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
   { key: "name", label: "Guest name", required: true },
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
-  { key: "visit1", label: "Visit 1 date" },
-  { key: "visit2", label: "Visit 2 date" },
-  { key: "visit3", label: "Visit 3 date" },
-  { key: "visit4", label: "Visit 4 date" },
   { key: "source", label: "Source (how they found you)" },
 ];
-const NO_MAP: Record<FieldKey, number> = { name: -1, email: -1, phone: -1, visit1: -1, visit2: -1, visit3: -1, visit4: -1, source: -1 };
+const VISIT_PARTS: { part: VisitPart; label: string }[] = [
+  { part: "date", label: "Date" },
+  { part: "incentive", label: "Incentive / what was given" },
+  { part: "notes", label: "Notes" },
+];
+
+const ALL_KEYS: FieldKey[] = [
+  ...BASE_FIELDS.map((f) => f.key),
+  "location",
+  ...VISITS.flatMap((n) => VISIT_PARTS.map((p) => `v${n}_${p.part}` as FieldKey)),
+];
+const NO_MAP = () => Object.fromEntries(ALL_KEYS.map((k) => [k, -1])) as Record<FieldKey, number>;
 
 // Accept common CSV date formats and normalize to YYYY-MM-DD; return "" if we
 // can't read it confidently (that visit is simply skipped).
@@ -62,15 +72,29 @@ function parseCsv(text: string): string[][] {
 
 function guessColumn(headers: string[], field: FieldKey): number {
   const h = headers.map((x) => x.toLowerCase().trim());
-  const has = (kw: string[]) => h.findIndex((x) => kw.some((k) => x.includes(k)));
-  if (field === "name") return has(["full name", "name", "guest", "customer"]);
-  if (field === "email") return has(["email", "e-mail"]);
-  if (field === "phone") return has(["phone", "mobile", "cell", "tel"]);
-  if (field === "visit1") return has(["visit 1", "visit1", "first visit"]);
-  if (field === "visit2") return has(["visit 2", "visit2", "second visit"]);
-  if (field === "visit3") return has(["visit 3", "visit3", "third visit"]);
-  if (field === "visit4") return has(["visit 4", "visit4", "fourth visit"]);
-  if (field === "source") return has(["source", "channel", "origin"]);
+  const firstNonNeg = (...v: number[]) => v.find((x) => x >= 0) ?? -1;
+  const findAny = (kw: string[]) => h.findIndex((x) => kw.some((k) => x.includes(k)));
+
+  if (field === "name") return findAny(["guest name", "full name", "customer name", "name", "guest", "customer"]);
+  if (field === "email") return findAny(["email", "e-mail"]);
+  if (field === "phone") return findAny(["phone", "mobile", "cell", "tel"]);
+  if (field === "source") return findAny(["source", "channel", "origin"]);
+  if (field === "location") return findAny(["location", "store", "venue", "branch", "site", "restaurant"]);
+
+  const vm = field.match(/^v(\d)_(date|incentive|notes)$/);
+  if (vm) {
+    const n = Number(vm[1]);
+    const re = new RegExp(`visit\\s*${n}\\b`);
+    const withVisit = (extra: RegExp) => h.findIndex((x) => re.test(x) && extra.test(x));
+    if (vm[2] === "date") {
+      return firstNonNeg(
+        withVisit(/date|visited|when/),
+        h.findIndex((x) => x.replace(/\s+/g, "") === `visit${n}`) // a bare "Visit N" column = its date
+      );
+    }
+    if (vm[2] === "incentive") return withVisit(/incentive|offer|reward|given|comp|promo/);
+    return withVisit(/note/);
+  }
   return -1;
 }
 
@@ -80,20 +104,22 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
   const [step, setStep] = useState<"upload" | "map">("upload");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
-  const [mapping, setMapping] = useState<Record<FieldKey, number>>({ ...NO_MAP });
-  const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  const [mapping, setMapping] = useState<Record<FieldKey, number>>(NO_MAP());
+  const [defaultLocationId, setDefaultLocationId] = useState(locations[0]?.id ?? "");
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [pending, start] = useTransition();
 
   const multiLocation = locations.length > 1;
+  const locIds = new Set(locations.map((l) => l.id));
+  const locByName = new Map(locations.map((l) => [l.name.trim().toLowerCase(), l.id]));
 
   const reset = () => {
     setStep("upload");
     setHeaders([]);
     setRows([]);
-    setMapping({ ...NO_MAP });
+    setMapping(NO_MAP());
     setError(null);
     setResult(null);
   };
@@ -108,29 +134,45 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
     const hdr = parsed[0];
     setHeaders(hdr);
     setRows(parsed.slice(1));
-    setMapping(FIELDS.reduce((acc, f) => ({ ...acc, [f.key]: guessColumn(hdr, f.key) }), { ...NO_MAP }));
+    setMapping(ALL_KEYS.reduce((acc, k) => ({ ...acc, [k]: guessColumn(hdr, k) }), NO_MAP()));
     setStep("map");
   };
+
+  const setKey = (key: FieldKey, val: number) => setMapping((m) => ({ ...m, [key]: val }));
 
   const runImport = () => {
     if (mapping.name < 0) return setError("Map the Guest name column — it's required.");
     setError(null);
     const cell = (r: string[], key: FieldKey) => (mapping[key] >= 0 ? (r[mapping[key]] ?? "") : "");
+    const resolveLoc = (v: string): string | null => {
+      const t = (v || "").trim();
+      if (!t) return null;
+      if (locIds.has(t)) return t;
+      return locByName.get(t.toLowerCase()) ?? null;
+    };
     const payload: ImportRow[] = rows.map((r) => ({
       name: cell(r, "name"),
       email: cell(r, "email"),
       phone: cell(r, "phone"),
       source: cell(r, "source"),
-      visits: ([1, 2, 3, 4] as const)
-        .map((n) => ({ n, date: normDate(cell(r, `visit${n}` as FieldKey)) }))
-        .filter((v) => v.date !== ""),
+      locationId: mapping.location >= 0 ? resolveLoc(cell(r, "location")) : null,
+      visits: VISITS.map((n) => ({
+        n,
+        date: normDate(cell(r, `v${n}_date`)),
+        incentive: cell(r, `v${n}_incentive`).trim(),
+        notes: cell(r, `v${n}_notes`).trim(),
+      })).filter((v) => v.date !== ""),
     }));
     start(async () => {
-      const res = await importGuests(payload, multiLocation ? locationId : locations[0]?.id ?? null);
+      const res = await importGuests(payload, multiLocation ? defaultLocationId : locations[0]?.id ?? null);
       setResult(res);
       if (!res.error) router.refresh();
     });
   };
+
+  const rowFor = (key: FieldKey, label: string, required?: boolean) => (
+    <MapRow label={label} required={required} value={mapping[key]} headers={headers} onChange={(n) => setKey(key, n)} />
+  );
 
   return (
     <>
@@ -187,39 +229,42 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
               <button onClick={() => setStep("upload")} className="flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-ink mb-4">
                 <ArrowLeft size={14} /> Choose a different file
               </button>
-              <p className="text-sm text-muted mb-4">
-                Found <strong className="text-ink">{rows.length}</strong> row{rows.length === 1 ? "" : "s"}. Match your columns to Wingman&rsquo;s fields — map any visit dates you have (1&ndash;4) and each becomes a tracked visit:
+              <p className="text-sm text-muted mb-1">
+                Found <strong className="text-ink">{rows.length}</strong> row{rows.length === 1 ? "" : "s"}. Match your columns to Wingman&rsquo;s fields.
               </p>
-              <p className="text-[12px] text-muted-2 mb-3">Dates can be YYYY-MM-DD or MM/DD/YYYY — we&rsquo;ll normalize them. Anything we can&rsquo;t read is skipped.</p>
-              <div className="flex flex-col gap-3">
-                {FIELDS.map((f) => (
-                  <div key={f.key} className="grid grid-cols-2 items-center gap-3">
-                    <label className="text-[13.5px] font-semibold text-charcoal-2">
-                      {f.label} {f.required && <span className="text-brick">*</span>}
-                    </label>
-                    <select
-                      value={mapping[f.key]}
-                      onChange={(e) => setMapping((m) => ({ ...m, [f.key]: Number(e.target.value) }))}
-                      className={inputClass}
-                    >
-                      <option value={-1}>— Not in my file —</option>
-                      {headers.map((h, i) => (
-                        <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
+              <p className="text-[12px] text-muted-2 mb-4">Dates can be YYYY-MM-DD or MM/DD/YYYY. A visit is recorded only when it has a date; anything we can&rsquo;t read is skipped.</p>
+
+              <div className="flex flex-col gap-3 max-h-[52vh] overflow-y-auto pr-1">
+                {BASE_FIELDS.map((f) => (
+                  <div key={f.key}>{rowFor(f.key, f.label, f.required)}</div>
+                ))}
+
+                {multiLocation && (
+                  <>
+                    {rowFor("location", "Location column (name or ID)")}
+                    <div className="grid grid-cols-2 items-center gap-3">
+                      <label className="text-[13.5px] font-semibold text-charcoal-2">Default location <span className="text-muted-2 font-normal">(unmatched rows)</span></label>
+                      <select value={defaultLocationId} onChange={(e) => setDefaultLocationId(e.target.value)} className={inputClass}>
+                        {locations.map((l) => (
+                          <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {VISITS.map((n) => (
+                  <div key={n} className="border-t border-[#F1F1F1] pt-3 mt-1">
+                    <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Visit {n}</div>
+                    <div className="flex flex-col gap-3">
+                      {VISIT_PARTS.map((p) => (
+                        <div key={p.part}>{rowFor(`v${n}_${p.part}` as FieldKey, p.label)}</div>
                       ))}
-                    </select>
+                    </div>
                   </div>
                 ))}
-                {multiLocation && (
-                  <div className="grid grid-cols-2 items-center gap-3">
-                    <label className="text-[13.5px] font-semibold text-charcoal-2">Location for imported visits</label>
-                    <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputClass}>
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
+
               {error && <p className="text-sm text-danger mt-3">{error}</p>}
               <div className="flex justify-end gap-2 mt-5">
                 <Btn kind="ghost" onClick={() => setOpen(false)}>Cancel</Btn>
@@ -232,5 +277,33 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
         </Modal>
       )}
     </>
+  );
+}
+
+function MapRow({
+  label,
+  required,
+  value,
+  headers,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value: number;
+  headers: string[];
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 items-center gap-3">
+      <label className="text-[13.5px] font-semibold text-charcoal-2">
+        {label} {required && <span className="text-brick">*</span>}
+      </label>
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} className={inputClass}>
+        <option value={-1}>— Not in my file —</option>
+        {headers.map((h, i) => (
+          <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
+        ))}
+      </select>
+    </div>
   );
 }
