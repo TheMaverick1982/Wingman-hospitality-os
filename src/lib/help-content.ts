@@ -185,6 +185,25 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Ask the Wingman assistant", href: "/help/ask-wingman-assistant" }],
   },
   {
+    slug: "language",
+    title: "Working in your language",
+    summary: "Each person can use Wingman in English or Spanish — pick it once, change it anytime.",
+    categoryId: "getting-started",
+    keywords: ["language", "spanish", "español", "english", "translate", "idioma", "bilingual", "cook", "kitchen", "translation"],
+    body: [
+      { kind: "p", text: "Wingman speaks your team's language. Everyone chooses their own — a Spanish-speaking cook can do their training and tests in Spanish while the owner stays in English. The choice is per person, so it never changes what anyone else sees." },
+      { kind: "h", text: "Pick your language" },
+      { kind: "list", items: [
+        "The first time you sign in, Wingman asks which language you'd like. English is the default; choose Spanish (Español) if you prefer.",
+        "Change it anytime from the language switcher in the top bar (the one with the translate icon).",
+        "Your choice is saved to your login and follows you on any device.",
+      ] },
+      { kind: "note", text: "Today the staff test-taking experience is translated. We're rolling translation across more of the app — the language you pick will apply everywhere as we go." },
+      { kind: "tip", text: "If someone on your team is more comfortable in Spanish, have them set it on their first login so their training and tests come through in their language from day one." },
+    ],
+    links: [{ label: "Tests & exams", href: "/help/tests-and-exams" }],
+  },
+  {
     slug: "weekly-moves",
     title: "Your weekly 3 moves",
     summary: "Commit to three things each week and tick them off — a simple accountability habit.",

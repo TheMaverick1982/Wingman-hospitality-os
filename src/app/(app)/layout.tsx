@@ -13,6 +13,7 @@ import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner
 import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoTour } from "@/components/demo/demo-tour";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
+import { FirstLoginLanguage } from "@/components/app-shell/first-login-language";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -95,6 +96,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           canSwitch={canSpanLocations}
           orgIsMultiLocation={locations.length > 1}
           userLocationName={profile.locationName}
+          language={profile.language}
         />
         <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto flex-1 bg-paper">
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6">{children}</div>
@@ -102,6 +104,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       <AssistantWidget />
       {profile.isDemoSandbox && <DemoTour email={profile.demoLeadEmail} />}
+      {!profile.languageChosen && <FirstLoginLanguage />}
     </div>
   );
 }
