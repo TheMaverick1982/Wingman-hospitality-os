@@ -224,12 +224,59 @@ const WIPE_TABLES = [
   "report_schedules",
 ] as const;
 
+// SAFETY GUARD. This mass-delete is destructive — it wipes every tenant table for
+// an org. It must NEVER touch a real customer's org. We re-read is_demo straight
+// from the database immediately before deleting, and refuse to proceed unless the
+// org is explicitly flagged as a demo. So even if a future change accidentally
+// pointed the reseed at a real org, no customer data can be deleted.
+async function assertIsDemoOrg(orgId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("organizations").select("is_demo").eq("id", orgId).maybeSingle();
+  if (error) throw new Error(`Reseed aborted: couldn't verify org ${orgId} before wipe: ${error.message}`);
+  if (!data || (data as { is_demo: boolean }).is_demo !== true) {
+    throw new Error(`Reseed aborted: org ${orgId} is not a demo org — refusing to delete tenant data.`);
+  }
+}
+
 async function wipeDemoOrg(orgId: string): Promise<void> {
   const admin = createAdminClient();
+  await assertIsDemoOrg(orgId); // never wipe a non-demo org
   for (const table of WIPE_TABLES) {
     const { error } = await admin.from(table).delete().eq("org_id", orgId);
     if (error) throw new Error(`Wipe failed on ${table}: ${error.message}`);
   }
+}
+
+// Owner-uploaded / owner-customized org assets that a reseed must never drop.
+// These are things the operator set for themselves (a logo, a customized apply
+// form, notification choices), not part of the seeded showcase — so we snapshot
+// them before the wipe and restore them after repopulating.
+const PRESERVED_ORG_FIELDS = [
+  "logo_url",
+  "public_slug",
+  "apply_enabled",
+  "applications_cc",
+  "application_form_config",
+  "notification_settings",
+] as const;
+
+async function snapshotOwnerAssets(orgId: string): Promise<Record<string, unknown> | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("organizations").select(PRESERVED_ORG_FIELDS.join(", ")).eq("id", orgId).maybeSingle();
+  return (data as Record<string, unknown> | null) ?? null;
+}
+
+async function restoreOwnerAssets(orgId: string, snapshot: Record<string, unknown> | null): Promise<void> {
+  if (!snapshot) return;
+  const admin = createAdminClient();
+  const patch: Record<string, unknown> = {};
+  for (const key of PRESERVED_ORG_FIELDS) {
+    // Only restore a value that was actually set, so a brand-new demo org keeps
+    // its defaults rather than being forced to null/empty.
+    if (snapshot[key] !== undefined && snapshot[key] !== null) patch[key] = snapshot[key];
+  }
+  if (Object.keys(patch).length === 0) return;
+  await admin.from("organizations").update(patch).eq("id", orgId);
 }
 
 // ---------------------------------------------------------------------------

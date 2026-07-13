@@ -64,9 +64,12 @@ export async function assignTest(testId: string, staffIds: string[]): Promise<{ 
   const dueAt = dueFrom(test.complete_within_amount, test.complete_within_unit);
   // Only supply the columns we want to (re)set — on conflict, progress columns
   // (status, current_day, answers, attempts_used) are left untouched.
-  const rows = people.map((s) => ({ org_id: org.id, test_id: testId, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, reminder_alerted: false, updated_at: new Date().toISOString() }));
+  const rows = people.map((s) => ({ org_id: org.id, test_id: testId, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, updated_at: new Date().toISOString() }));
   const { error } = await supabase.from("test_assignments").upsert(rows, { onConflict: "test_id,staff_id" });
   if (error) return { error: error.message, assigned: 0 };
+  // Re-arm the before-deadline reminder for the refreshed due date. Best-effort:
+  // reminder_alerted is added by a later migration, so ignore a missing-column error.
+  await supabase.from("test_assignments").update({ reminder_alerted: false }).eq("test_id", testId).in("staff_id", ids);
 
   await emailAssignees(people, test);
   revalidatePath(`/training/tests/${testId}`);
@@ -124,7 +127,7 @@ export async function startTests(
     const eligible = target.kind === "all" && targets.length > 0 ? pool.filter((s) => targets.includes(s.department)) : pool;
     const dueAt = opts?.dueAt ?? dueFrom(t.complete_within_amount, t.complete_within_unit);
     for (const s of eligible) {
-      rows.push({ org_id: org.id, test_id: t.id, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, reminder_alerted: false, updated_at: now });
+      rows.push({ org_id: org.id, test_id: t.id, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, updated_at: now });
       const e = perPerson.get(s.id) ?? { name: s.full_name, email: s.email, titles: [] };
       e.titles.push(t.title);
       perPerson.set(s.id, e);
@@ -135,6 +138,9 @@ export async function startTests(
   // Only (re)set columns we own — progress columns stay put on conflict.
   const { error } = await supabase.from("test_assignments").upsert(rows, { onConflict: "test_id,staff_id" });
   if (error) return { error: error.message, assigned: 0, tests: 0 };
+  // Re-arm before-deadline reminders for the refreshed due dates. Best-effort:
+  // reminder_alerted is added by a later migration, so a missing column is ignored.
+  await supabase.from("test_assignments").update({ reminder_alerted: false }).in("test_id", ids).in("staff_id", [...perPerson.keys()]);
 
   // One combined email per person listing everything they were handed.
   await Promise.all(
@@ -185,9 +191,12 @@ export async function unlockAssignment(assignmentId: string, testId: string): Pr
   const supabase = await createClient();
   const { error } = await supabase
     .from("test_assignments")
-    .update({ status: "assigned", current_day: 1, answers: {}, locked_at: null, locked_alerted: false, reminder_alerted: false, unlocked_by: profile.userId, unlocked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ status: "assigned", current_day: 1, answers: {}, locked_at: null, locked_alerted: false, unlocked_by: profile.userId, unlocked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", assignmentId);
   if (error) return { error: error.message };
+  // Best-effort re-arm of the before-deadline reminder (column added by a later
+  // migration — a missing column is safely ignored).
+  await supabase.from("test_assignments").update({ reminder_alerted: false }).eq("id", assignmentId);
   revalidatePath(`/training/tests/${testId}`);
   return { error: null };
 }

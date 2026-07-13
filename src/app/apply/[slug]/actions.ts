@@ -19,11 +19,23 @@ function esc(s: string): string {
 // and only writing to that org's rows.
 export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const admin = createAdminClient();
-  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc, notification_settings, application_form_config").eq("public_slug", slug).maybeSingle();
-  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null; notification_settings: Record<string, boolean> | null; application_form_config: unknown } | null;
+  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc").eq("public_slug", slug).maybeSingle();
+  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null } | null;
   if (!org || !org.apply_enabled) return { error: "This application form isn't accepting submissions right now." };
 
-  const config = normalizeFormConfig(org.application_form_config);
+  // notification_settings and application_form_config are added by later migrations
+  // — read them in an isolated, guarded query so a not-yet-applied migration can
+  // never block a real applicant from submitting.
+  let notificationSettings: Record<string, boolean> | null = null;
+  let config = normalizeFormConfig(null);
+  {
+    const { data: extra } = await admin.from("organizations").select("notification_settings, application_form_config").eq("id", org.id).maybeSingle();
+    if (extra) {
+      const e = extra as { notification_settings: Record<string, boolean> | null; application_form_config: unknown };
+      notificationSettings = e.notification_settings ?? null;
+      config = normalizeFormConfig(e.application_form_config);
+    }
+  }
   const emailF = builtinSetting(config, "email");
   const phoneF = builtinSetting(config, "phone");
   const deptF = builtinSetting(config, "department");
@@ -89,13 +101,20 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
       availability,
       message,
       preferred_visit_at: preferredVisitAt,
-      custom_answers: customAnswers,
       source: formData.get("embed") === "1" ? "embed" : "link",
     })
     .select("id")
     .single();
   if (error || !inserted) return { error: "Something went wrong submitting your application. Please try again." };
   const appId = (inserted as { id: string }).id;
+
+  // Persist custom answers separately and defensively: custom_answers is added by
+  // a later migration, so keep it out of the core insert (which must never fail)
+  // and write it here — if the column isn't there yet, the answers are simply
+  // skipped rather than blocking the whole application.
+  if (customAnswers.length > 0) {
+    await admin.from("job_applications").update({ custom_answers: customAnswers }).eq("id", appId);
+  }
 
   // Optional resume upload to the private bucket.
   const resume = formData.get("resume") as File | null;
@@ -124,7 +143,7 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
 
   // The application is always recorded; the notify email is what the account can
   // switch off in Settings → Notifications.
-  if (!isNotificationEnabled(org.notification_settings, "new_application")) {
+  if (!isNotificationEnabled(notificationSettings, "new_application")) {
     return { error: null, ok: true };
   }
 
