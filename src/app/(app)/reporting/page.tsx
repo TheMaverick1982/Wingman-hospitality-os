@@ -8,6 +8,8 @@ import { stageOf, computeSpotCheckAverages, type GuestWithVisits, type SpotCheck
 import { buildPhases } from "@/lib/growth-plan";
 import { monthlyRepeatCohorts, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness, bizHealthTrend, type BizHealthRow, type ChecklistLite, type IncentiveGuest } from "@/lib/reporting-trends";
 import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
+import { computeRoiLedger, DEFAULT_AVG_CHECK, DEFAULT_VISITS_PER_YEAR } from "@/lib/roi-ledger";
+import { RoiLedgerCard } from "@/components/reporting/roi-ledger-card";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
@@ -109,6 +111,25 @@ export default async function ReportingPage({
 
   const referredCount = allGuests.filter((g) => g.referred_a_friend).length;
   const referralRate = allGuests.length > 0 ? Math.round((referredCount / allGuests.length) * 100) : 0;
+
+  // ROI ledger — real dollars against the guest work. Captured = first-timers
+  // won back (ever returned); at risk = one-and-done first-timers whose first
+  // visit is old enough (30d+) that they've had a fair chance to return.
+  const returnWindowCutoff = cutoffDate(30);
+  const returnedRegulars = allGuests.filter((g) => stageOf(g.guest_visits) >= 2).length;
+  const atRiskFirstTimers = allGuests.filter((g) => {
+    if (stageOf(g.guest_visits) !== 1) return false;
+    const firstVisit = g.guest_visits.find((v) => v.visit_number === 1)?.visit_date;
+    return !!firstVisit && firstVisit < returnWindowCutoff;
+  }).length;
+  const planCheck = Number(growthPlan?.current_avg_sale) || 0;
+  const roiLedger = computeRoiLedger({
+    returnedRegulars,
+    atRiskFirstTimers,
+    avgCheck: planCheck > 0 ? planCheck : DEFAULT_AVG_CHECK,
+    visitsPerYear: DEFAULT_VISITS_PER_YEAR,
+    usingDefaultCheck: !(planCheck > 0),
+  });
 
   // Trends (period-over-period, independent of the range toggle above).
   const now = currentDate();
@@ -349,6 +370,8 @@ export default async function ReportingPage({
       </div>
 
       <ReportNarrative snapshot={reportSnapshot} />
+
+      <RoiLedgerCard roi={roiLedger} />
 
       {/* Trends — the story over time, not just a single window. */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
