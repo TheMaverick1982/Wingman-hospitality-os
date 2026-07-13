@@ -75,34 +75,32 @@ export function CandidatesPanel({
 
   return (
     <div id="candidate-scorecards" className="scroll-mt-6 flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="font-display text-lg font-semibold text-ink">Candidates</h3>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-2" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name" className={`${inputClass} pl-9 py-2 w-[170px]`} />
-          </div>
-          {multiLocation && (
-            <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={`${inputClass} py-2 w-[150px]`}>
-              <option value="">All locations</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          )}
-          <select value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} py-2 w-[150px]`}>
-            <option value="">All roles</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-          <select value={recommendation} onChange={(e) => setRecommendation(e.target.value)} className={`${inputClass} py-2 w-[150px]`}>
-            <option value="">All recommendations</option>
-            {RECOMMENDATION_OPTIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+      <h3 className="font-display text-lg font-semibold text-ink">Candidates</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-2" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name" className={`${inputClass} pl-9 py-2 w-full`} />
         </div>
+        {multiLocation && (
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={`${inputClass} py-2 flex-1 min-w-0`}>
+            <option value="">All locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        )}
+        <select value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputClass} py-2 flex-1 min-w-0`}>
+          <option value="">All roles</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+        <select value={recommendation} onChange={(e) => setRecommendation(e.target.value)} className={`${inputClass} py-2 flex-1 min-w-0`}>
+          <option value="">All recommendations</option>
+          {RECOMMENDATION_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
 
       {/* By-department summary — reflects the active filters. */}
