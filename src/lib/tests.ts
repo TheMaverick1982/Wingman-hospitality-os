@@ -110,9 +110,12 @@ const q = (day: number, kind: QuestionKind, prompt: string, options: string[], c
 export const EXAMPLE_TESTS: ExampleTest[] = [
   {
     key: "food",
+    // The food menu has many parts, so this test is broken out BY CATEGORY —
+    // one day per section of the menu (plus allergens/safety) so a big menu is
+    // digestible. Rename the days to match your own menu's categories.
     settings: {
       title: "Food Test",
-      description: "Core food knowledge every kitchen and floor team member should know — ingredients, allergens, prep standards, and food safety.",
+      description: "Food knowledge across the whole menu, broken out by category — starters, salads, mains, sweets — plus allergens and safety. Rename the days to match your menu's sections.",
       mode: "exam",
       target_departments: ["Chef", "Server"],
       day_count: 5,
@@ -123,21 +126,23 @@ export const EXAMPLE_TESTS: ExampleTest[] = [
       rotates_monthly: false,
     },
     days: [
-      { day_number: 1, title: "Menu & ingredients", content: "Know every dish on the menu: what's in it, how it's made, and what makes it worth recommending." },
-      { day_number: 2, title: "Allergens & dietary needs", content: "The big allergens, cross-contact, and how we handle a guest with a dietary restriction." },
-      { day_number: 3, title: "Food safety & temperatures", content: "Safe holding temps, the danger zone, and cross-contamination basics." },
-      { day_number: 4, title: "Prep & plating standards", content: "Our prep specs and plating standard for consistency across every ticket." },
-      { day_number: 5, title: "Putting it together", content: "Tie it all together — describe a dish, flag an allergen, and hold a standard." },
+      { day_number: 1, title: "Starters, breads & shareables", content: "Your appetizers, breads, and shareable plates — key ingredients, and which to suggest for a table to share." },
+      { day_number: 2, title: "Salads & greens", content: "Salads and lighter plates — dressings, proteins you can add, and the allergens that hide in them (nuts, dairy, croutons, anchovy)." },
+      { day_number: 3, title: "Mains & entrées", content: "Your entrées — proteins, how they're cooked, what they're served with, and the one-line pitch for each." },
+      { day_number: 4, title: "Sides, desserts & sweets", content: "Sides and anything sweet — plus which pair well with the mains, and how to drive a dessert." },
+      { day_number: 5, title: "Allergens & food safety", content: "The cross-cutting must-knows for every category: the major allergens, cross-contact, and safe food handling." },
     ],
     questions: [
-      q(1, "multiple_choice", "A guest asks what's in the house Caesar dressing. Which is a core ingredient they should know to mention for allergens?", ["Anchovies", "Peanuts", "Soy sauce", "Sesame oil"], 0, "Traditional Caesar contains anchovies (fish) — an allergen worth surfacing."),
-      q(1, "true_false", "You should be able to recommend a dish by naming it, why it's good, and a reason to order it now.", ["True", "False"], 0),
-      q(2, "multiple_choice", "Which is one of the most common major food allergens?", ["Tree nuts", "Basil", "Olive oil", "Black pepper"], 0),
-      q(2, "true_false", "Cross-contact means an allergen was transferred to a food that doesn't list it as an ingredient.", ["True", "False"], 0),
-      q(3, "multiple_choice", "The temperature 'danger zone' where bacteria grow fastest is roughly:", ["40°F–140°F", "0°F–32°F", "150°F–200°F", "-10°F–20°F"], 0),
-      q(3, "true_false", "Raw proteins should be stored below ready-to-eat foods in the walk-in.", ["True", "False"], 0),
-      q(4, "true_false", "Plating to a consistent standard matters because the guest experience should be the same on every ticket.", ["True", "False"], 0),
-      q(5, "multiple_choice", "A guest says they have a shellfish allergy. What do you do first?", ["Flag it to the kitchen and confirm the dish is safe or offer an alternative", "Tell them most dishes are probably fine", "Remove the garnish and serve it", "Ask another server"], 0),
+      q(1, "multiple_choice", "A table of four is deciding on starters. What's the best move?", ["Suggest a specific shareable and say why it's great for the table", "Tell them to each order their own", "Say they're all good", "Wait for them to decide"], 0),
+      q(1, "true_false", "A great starter recommendation names the dish, says why it's good, and suggests it for the table to share.", ["True", "False"], 0),
+      q(2, "multiple_choice", "A guest wants a salad but is allergic to nuts. What do you do?", ["Check the dish for nuts and cross-contact, confirm with the kitchen, or offer a safe swap", "Just pick off any visible nuts", "Tell them it's probably fine", "Recommend they order something else without checking"], 0),
+      q(2, "true_false", "Dressings can carry common allergens like dairy, egg, or anchovy, so you should know what's in each.", ["True", "False"], 0),
+      q(3, "multiple_choice", "A guest asks how the steak is prepared. The best answer:", ["Describe the cut, how it's cooked, and what it's served with", "Say 'it's really good'", "Go ask the kitchen every time", "Guess"], 0),
+      q(3, "true_false", "You should be able to describe any main in one confident sentence, no notes.", ["True", "False"], 0),
+      q(4, "multiple_choice", "What's the best way to drive a dessert?", ["Name a specific dessert and suggest sharing it", "Ask 'any dessert?' flatly", "Skip it if they seem full", "Just bring the check"], 0),
+      q(5, "multiple_choice", "Which is one of the most common major food allergens?", ["Tree nuts", "Basil", "Olive oil", "Black pepper"], 0),
+      q(5, "multiple_choice", "The temperature 'danger zone' where bacteria grow fastest is roughly:", ["40°F–140°F", "0°F–32°F", "150°F–200°F", "-10°F–20°F"], 0),
+      q(5, "true_false", "For a serious allergy, flag it to the kitchen and confirm the dish is safe before it's served.", ["True", "False"], 0),
     ],
   },
   {

@@ -41,6 +41,7 @@ const VALUES = ["Warm, not scripted", "Own the moment", "Anticipate", "Every gue
 const STEP2 = [
   "Upload an existing handbook or interview guide, or start from scratch with a short wizard",
   "AI fills the gaps with hospitality best practices — not just what you already had written down",
+  "Turn any training into an auto-scored test — a Food or Bartender exam, or a monthly menu quiz — assign it, and prove your team actually learned the standard",
   "Hiring scorecard, training progress, and coaching notes — one profile per person, not three",
 ];
 const STAFF_PROFILE_ITEMS = [
