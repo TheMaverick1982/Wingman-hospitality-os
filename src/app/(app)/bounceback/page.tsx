@@ -1,15 +1,25 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
-import { getOrgLocations } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
+import type { GuestWithVisits } from "@/lib/hospitality";
 import { GuestsClient } from "./guests-client";
 
-export default async function BounceBackPage() {
+export default async function BounceBackPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   if (getSectionAccess(profile.accessRole, "bounceback", profile.permissionOverrides) === "none") redirect("/dashboard");
   const canEdit = canEditSection(profile.accessRole, "bounceback", profile.permissionOverrides);
+
+  const { location } = await searchParams;
+  const effectiveLocation = resolveEffectiveLocation({
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    requestedLocationId: location,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  });
 
   const supabase = await createClient();
   const [{ data: guests }, locations] = await Promise.all([
@@ -22,12 +32,22 @@ export default async function BounceBackPage() {
     getOrgLocations(),
   ]);
 
+  // Honor the top-bar location selector: a guest belongs to the location of
+  // their first visit (a regular at one store is a first-timer at another).
+  // "All locations" (no effective location) shows every guest.
+  const allGuests = (guests ?? []) as GuestWithVisits[];
+  const scopedGuests = effectiveLocation
+    ? allGuests.filter((g) => g.guest_visits.find((v) => v.visit_number === 1)?.location_id === effectiveLocation)
+    : allGuests;
+  const scopedLocationName = effectiveLocation ? (locations.find((l) => l.id === effectiveLocation)?.name ?? null) : null;
+
   return (
     <GuestsClient
-      guests={guests ?? []}
+      guests={scopedGuests}
       locations={locations}
-      defaultLocationId={profile.locationId}
+      defaultLocationId={effectiveLocation ?? profile.locationId}
       canEdit={canEdit}
+      scopedLocationName={scopedLocationName}
     />
   );
 }
