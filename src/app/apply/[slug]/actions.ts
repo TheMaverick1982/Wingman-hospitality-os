@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { isNotificationEnabled } from "@/lib/notifications";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -17,8 +18,8 @@ function esc(s: string): string {
 // and only writing to that org's rows.
 export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const admin = createAdminClient();
-  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc").eq("public_slug", slug).maybeSingle();
-  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null } | null;
+  const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc, notification_settings").eq("public_slug", slug).maybeSingle();
+  const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null; notification_settings: Record<string, boolean> | null } | null;
   if (!org || !org.apply_enabled) return { error: "This application form isn't accepting submissions right now." };
 
   const name = String(formData.get("name") || "").trim();
@@ -85,6 +86,12 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     .filter((s) => s.includes("@"));
   const recipients = [...new Set([locEmail, ...ccList].filter(Boolean))];
   if (recipients.length === 0) recipients.push(FALLBACK_ALERT);
+
+  // The application is always recorded; the notify email is what the account can
+  // switch off in Settings → Notifications.
+  if (!isNotificationEnabled(org.notification_settings, "new_application")) {
+    return { error: null, ok: true };
+  }
 
   const contact = [email, phone].filter(Boolean).join(" · ");
   await sendEmail({

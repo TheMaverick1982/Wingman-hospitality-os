@@ -2,48 +2,31 @@
 
 import { useState } from "react";
 
-const TABS = [
-  { key: "team", label: "Team & permissions" },
-  { key: "locations", label: "Locations" },
-  { key: "billing", label: "Billing" },
-  { key: "api", label: "API access" },
-] as const;
+type TabDef = { key: string; label: string; content: React.ReactNode };
 
-type TabKey = (typeof TABS)[number]["key"];
-
-export function SettingsTabs({
-  team,
-  locations,
-  billing,
-  api,
-}: {
-  team: React.ReactNode;
-  locations: React.ReactNode;
-  billing: React.ReactNode;
-  api: React.ReactNode;
-}) {
-  const [tab, setTab] = useState<TabKey>("team");
+export function SettingsTabs({ tabs }: { tabs: TabDef[] }) {
+  const [tab, setTab] = useState<string>(tabs[0]?.key ?? "");
+  const active = tabs.find((t) => t.key === tab) ?? tabs[0];
 
   return (
     <>
-      <div className="flex gap-1 bg-white border border-line rounded-xl p-1 self-start">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`text-sm font-semibold px-[18px] py-2.5 rounded-[9px] transition-colors ${
-              tab === t.key ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {tabs.length > 1 && (
+        <div className="flex gap-1 bg-white border border-line rounded-xl p-1 self-start flex-wrap">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`text-sm font-semibold px-[18px] py-2.5 rounded-[9px] transition-colors ${
+                (active?.key === t.key) ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === "team" && team}
-      {tab === "locations" && locations}
-      {tab === "billing" && billing}
-      {tab === "api" && api}
+      {active?.content}
     </>
   );
 }
