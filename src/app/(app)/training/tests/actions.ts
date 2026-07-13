@@ -388,6 +388,71 @@ export async function deleteTest(id: string): Promise<void> {
   revalidatePath("/training/tests");
 }
 
+// Duplicate a test (its settings, days, and questions) under a new title —
+// handy for a monthly LTO/menu you re-run each month without rebuilding.
+export async function duplicateTest(id: string, newTitle?: string): Promise<{ error: string | null; id?: string }> {
+  const profile = await canBuild();
+  if (!profile) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const { data: src } = await supabase
+    .from("tests")
+    .select("title, description, mode, target_departments, day_count, pass_pct, max_retakes, complete_within_amount, complete_within_unit, rotates_monthly, source")
+    .eq("id", id)
+    .maybeSingle();
+  if (!src) return { error: "Test not found." };
+  const s = src as {
+    title: string; description: string; mode: string; target_departments: string[]; day_count: number; pass_pct: number;
+    max_retakes: number; complete_within_amount: number | null; complete_within_unit: string; rotates_monthly: boolean; source: string;
+  };
+
+  const title = (newTitle?.trim() || `${s.title} (copy)`).slice(0, 120);
+  const { data: copy, error } = await supabase
+    .from("tests")
+    .insert({
+      org_id: org.id,
+      title,
+      description: s.description,
+      mode: s.mode,
+      target_departments: s.target_departments,
+      day_count: s.day_count,
+      pass_pct: s.pass_pct,
+      max_retakes: s.max_retakes,
+      complete_within_amount: s.complete_within_amount,
+      complete_within_unit: s.complete_within_unit,
+      rotates_monthly: s.rotates_monthly,
+      source: s.source,
+      created_by: profile.userId,
+    })
+    .select("id")
+    .single();
+  if (error || !copy) return { error: error?.message ?? "Couldn't duplicate the test." };
+  const newId = (copy as { id: string }).id;
+
+  const { data: days } = await supabase.from("test_days").select("day_number, title, content").eq("test_id", id);
+  if (days && days.length > 0) {
+    await supabase.from("test_days").insert((days as { day_number: number; title: string; content: string }[]).map((d) => ({ test_id: newId, org_id: org.id, day_number: d.day_number, title: d.title, content: d.content })));
+  }
+  const { data: qs } = await supabase.from("test_questions").select("day_number, sort_order, kind, prompt, options, correct_index, explanation").eq("test_id", id);
+  if (qs && qs.length > 0) {
+    await supabase.from("test_questions").insert((qs as { day_number: number; sort_order: number; kind: string; prompt: string; options: string[]; correct_index: number; explanation: string }[]).map((q) => ({ test_id: newId, org_id: org.id, ...q })));
+  }
+
+  revalidatePath("/training/tests");
+  return { error: null, id: newId };
+}
+
+export async function setTestArchived(id: string, archived: boolean): Promise<{ error: string | null }> {
+  if (!(await canBuild())) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("tests").update({ active: !archived, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/training/tests");
+  return { error: null };
+}
+
 export async function saveQuestion(q: TestQuestion & { test_id: string }): Promise<{ error: string | null }> {
   if (!(await canBuild())) return { error: "Not authorized." };
   const supabase = await createClient();
