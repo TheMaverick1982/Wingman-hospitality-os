@@ -5,6 +5,7 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
+import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
@@ -74,7 +75,7 @@ export default async function HiringPage({
   // location) so a store manager sees their own pipeline.
   let applicationsQ = supabase
     .from("job_applications")
-    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, interview_at, interview_details, status, created_at")
+    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, interview_at, interview_details, status, created_at, custom_answers")
     .order("created_at", { ascending: false });
   if (effectiveLocation) applicationsQ = applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
 
@@ -110,6 +111,7 @@ export default async function HiringPage({
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
     availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
     interview_at: string | null; interview_details: string | null; status: string; created_at: string;
+    custom_answers: CustomAnswer[] | null;
   }[]).map((a) => ({
     id: a.id,
     name: a.name,
@@ -126,6 +128,7 @@ export default async function HiringPage({
     interviewDetails: a.interview_details ?? "",
     status: a.status,
     createdAt: a.created_at,
+    customAnswers: Array.isArray(a.custom_answers) ? a.custom_answers : [],
   }));
   // Unconfirmed applications stay in "Applications"; a confirmed interview moves
   // the person into the candidates area until they're scored.
@@ -136,12 +139,13 @@ export default async function HiringPage({
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
 
   // Public application link (no subdomain — a path slug on the main site).
-  const { data: orgApply } = await supabase.from("organizations").select("public_slug, applications_cc, logo_url").single();
-  const orgApplyRow = orgApply as { public_slug: string | null; applications_cc: string | null; logo_url: string | null } | null;
+  const { data: orgApply } = await supabase.from("organizations").select("public_slug, applications_cc, logo_url, application_form_config").single();
+  const orgApplyRow = orgApply as { public_slug: string | null; applications_cc: string | null; logo_url: string | null; application_form_config: unknown } | null;
   const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
   const applyUrl = orgApplyRow?.public_slug ? `${SITE}/apply/${orgApplyRow.public_slug}` : null;
   const applicationsCc = orgApplyRow?.applications_cc ?? "";
   const orgLogoUrl = orgApplyRow?.logo_url ?? null;
+  const formConfig = normalizeFormConfig(orgApplyRow?.application_form_config);
 
   const latestCandidate = allCandidates[0];
   const latestScorecard =
@@ -280,7 +284,7 @@ export default async function HiringPage({
 
       {canEdit && (
         <div id="applications" className="scroll-mt-24">
-          <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />
+          <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
         </div>
       )}
 

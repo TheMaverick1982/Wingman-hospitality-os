@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus } from "lucide-react";
+import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal } from "lucide-react";
 import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
+import { ApplicationFormEditor } from "./application-form-editor";
+import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
 
 export type Applicant = {
   id: string;
@@ -20,6 +22,7 @@ export type Applicant = {
   interviewDetails: string;
   status: string;
   createdAt: string;
+  customAnswers: CustomAnswer[];
 };
 
 const STATUS: { value: string; label: string; cls: string }[] = [
@@ -37,11 +40,12 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl }: { applicants: Applicant[]; applyUrl: string | null; applicationsCc: string; logoUrl: string | null }) {
+export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const [cc, setCc] = useState(applicationsCc);
   const [ccMsg, setCcMsg] = useState<string | null>(null);
   const [ccPending, startCc] = useTransition();
@@ -105,9 +109,25 @@ export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl 
             <button onClick={() => setShowEmbed((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick transition-colors">
               <Code2 size={14} /> Embed
             </button>
+            <button onClick={() => setShowBuilder((v) => !v)} className={`inline-flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-3.5 py-2 border transition-colors ${showBuilder ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-charcoal-2 hover:border-brick hover:text-brick"}`}>
+              <SlidersHorizontal size={14} /> Customize form
+            </button>
           </div>
         )}
       </div>
+
+      {showBuilder && applyUrl && (
+        <div className="bg-white border border-line rounded-2xl p-5 shadow-sm mb-4">
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-line">
+            <div>
+              <div className="text-[15px] font-semibold text-ink">Customize your application form</div>
+              <p className="text-[12.5px] text-muted-2 mt-0.5">Choose which fields to ask, rename them, and add your own questions. Changes go live on your link and embed.</p>
+            </div>
+            <a href={`${applyUrl}?preview=1`} target="_blank" rel="noopener" className="text-[12.5px] font-semibold text-brick hover:text-brick-dark shrink-0">Preview ↗</a>
+          </div>
+          <ApplicationFormEditor initial={formConfig} />
+        </div>
+      )}
 
       {showEmbed && applyUrl && (
         <div className="bg-white border border-line rounded-2xl p-4 shadow-sm mb-4">
@@ -242,6 +262,13 @@ function ApplicantCard({ a }: { a: Applicant }) {
       {a.availability && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Availability:</span> {a.availability}</div>}
       {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {new Date(a.preferredVisitAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
       {a.message && <p className="text-[13px] text-muted mt-1 whitespace-pre-wrap">{a.message}</p>}
+      {a.customAnswers.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1">
+          {a.customAnswers.filter((c) => String(c.value ?? "").trim()).map((c) => (
+            <div key={c.id} className="text-[13px] text-muted"><span className="font-semibold text-charcoal-2">{c.label}:</span> {c.value}</div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-3 pt-3 border-t border-line">
         {!scheduling ? (

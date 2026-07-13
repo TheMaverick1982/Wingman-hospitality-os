@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { normalizeFormConfig } from "@/lib/application-form";
 import { ApplyForm } from "./apply-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -22,11 +23,12 @@ export default async function ApplyPage({
   const admin = createAdminClient();
   const { data: orgRow } = await admin
     .from("organizations")
-    .select("id, name, logo_url, apply_enabled")
+    .select("id, name, logo_url, apply_enabled, application_form_config")
     .eq("public_slug", slug)
     .maybeSingle();
-  const org = orgRow as { id: string; name: string; logo_url: string | null; apply_enabled: boolean } | null;
+  const org = orgRow as { id: string; name: string; logo_url: string | null; apply_enabled: boolean; application_form_config: unknown } | null;
   if (!org) return notFound();
+  const formConfig = normalizeFormConfig(org.application_form_config);
 
   const [{ data: locs }, { data: meta }] = await Promise.all([
     admin.from("locations").select("id, name").eq("org_id", org.id).order("name"),
@@ -54,6 +56,7 @@ export default async function ApplyPage({
       preRole={preRole}
       preLocation={preLocation}
       embed={isEmbed}
+      config={formConfig}
     />
   );
 
