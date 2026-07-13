@@ -3,10 +3,10 @@
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users } from "lucide-react";
+import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown } from "lucide-react";
 import type { Department } from "@/lib/constants";
 import { MODE_LABEL } from "@/lib/tests";
-import { proposeTest, proposeTestFromTraining, applyTest, createExampleTest, deleteTest, type ProposeState, type ProposedDay } from "./actions";
+import { proposeTest, proposeTestFromTraining, applyTest, createExampleTest, deleteTest, duplicateTest, setTestArchived, type ProposeState, type ProposedDay } from "./actions";
 
 const proposeInitial: ProposeState = { error: null };
 const inputCls = "w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] text-ink outline-none focus:border-brick";
@@ -141,7 +141,7 @@ function SettingsFields({ activeDepartments }: { activeDepartments: Department[]
   );
 }
 
-export function TestsClient({ tests, activeDepartments, canEdit }: { tests: TestListRow[]; activeDepartments: Department[]; canEdit: boolean }) {
+export function TestsClient({ tests, archived = [], activeDepartments, canEdit }: { tests: TestListRow[]; archived?: TestListRow[]; activeDepartments: Department[]; canEdit: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"ai" | "training" | "example">("ai");
   const [propose, proposeAction, proposing] = useActionState(proposeTest, proposeInitial);
@@ -150,6 +150,7 @@ export function TestsClient({ tests, activeDepartments, canEdit }: { tests: Test
   const [applyErr, setApplyErr] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [exampleBusy, setExampleBusy] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const active = tab === "training" ? fromTraining : propose;
   const showPreview = !dismissed && active.days && active.settings;
@@ -286,7 +287,9 @@ export function TestsClient({ tests, activeDepartments, canEdit }: { tests: Test
                 {canEdit && (
                   <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-line">
                     <span className="text-[12.5px] text-muted">{t.assigned > 0 ? `${t.passed}/${t.assigned} passed` : "Not assigned yet"}</span>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <button onClick={() => { const name = prompt("Name for the copy", `${t.title} (copy)`); if (name === null) return; startApply(async () => { await duplicateTest(t.id, name || undefined); router.refresh(); }); }} title="Duplicate" className="text-muted-2 hover:text-brick"><Copy size={14} /></button>
+                      <button onClick={() => startApply(async () => { await setTestArchived(t.id, true); router.refresh(); })} title="Archive" className="text-muted-2 hover:text-brick"><Archive size={14} /></button>
                       <Link href={`/training/tests/${t.id}`} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit</Link>
                       <Link href={`/training/tests/${t.id}/assign`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
                         <Users size={13} /> Assign &amp; results
@@ -299,6 +302,38 @@ export function TestsClient({ tests, activeDepartments, canEdit }: { tests: Test
           </div>
         )}
       </div>
+
+      {canEdit && archived.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <button onClick={() => setShowArchived((v) => !v)} className="flex items-center gap-2 text-[14px] font-semibold text-muted hover:text-ink w-fit">
+            <Archive size={15} /> Archived ({archived.length})
+            <ChevronDown size={15} className={`transition-transform ${showArchived ? "rotate-180" : ""}`} />
+          </button>
+          {showArchived && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {archived.map((t) => (
+                <div key={t.id} className="bg-paper border border-line rounded-2xl p-5 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link href={`/training/tests/${t.id}`} className="text-[15px] font-semibold text-charcoal-2 hover:text-brick transition-colors flex items-center gap-2">
+                      <ClipboardList size={15} className="text-muted-2 shrink-0" /> {t.title}
+                    </Link>
+                    <button onClick={() => { if (confirm(`Delete "${t.title}" for good?`)) startApply(async () => { await deleteTest(t.id); router.refresh(); }); }} className="text-muted-2 hover:text-danger shrink-0"><Trash2 size={14} /></button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="text-[11.5px] font-semibold text-muted bg-white rounded-full px-2.5 py-0.5">{t.day_count} day{t.day_count === 1 ? "" : "s"}</span>
+                    <span className="text-[11.5px] font-semibold text-muted bg-white rounded-full px-2.5 py-0.5">{t.questions} questions</span>
+                    {t.rotates_monthly && <span className="text-[11.5px] font-semibold text-[#B45309] bg-[#FDF3E1] rounded-full px-2.5 py-0.5">Monthly</span>}
+                  </div>
+                  <div className="flex items-center gap-2.5 mt-1 pt-2.5 border-t border-line">
+                    <button onClick={() => { const name = prompt("Name for the copy", `${t.title} (copy)`); if (name === null) return; startApply(async () => { await duplicateTest(t.id, name || undefined); router.refresh(); }); }} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-charcoal-2 hover:text-brick"><Copy size={13} /> Duplicate</button>
+                    <button onClick={() => startApply(async () => { await setTestArchived(t.id, false); router.refresh(); })} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick hover:text-brick-dark"><ArchiveRestore size={13} /> Unarchive</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

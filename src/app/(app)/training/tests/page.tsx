@@ -21,6 +21,7 @@ type TestRow = {
   day_count: number;
   pass_pct: number;
   rotates_monthly: boolean;
+  active: boolean;
   created_at: string;
 };
 
@@ -32,7 +33,7 @@ export default async function TestsPage() {
 
   const supabase = await createClient();
   const [{ data: tests }, { data: meta }, { data: qCounts }, { data: assignRows }] = await Promise.all([
-    supabase.from("tests").select("id, title, description, mode, target_departments, day_count, pass_pct, rotates_monthly, created_at").order("created_at", { ascending: false }),
+    supabase.from("tests").select("id, title, description, mode, target_departments, day_count, pass_pct, rotates_monthly, active, created_at").order("created_at", { ascending: false }),
     supabase.from("department_meta").select("department"),
     supabase.from("test_questions").select("test_id"),
     canEdit ? supabase.from("test_assignments").select("test_id, status") : Promise.resolve({ data: [] }),
@@ -50,12 +51,16 @@ export default async function TestsPage() {
     assignTally.set(r.test_id, e);
   }
 
-  const rows = ((tests ?? []) as TestRow[]).map((t) => ({
+  const allRows = ((tests ?? []) as TestRow[]).map((t) => ({
     ...t,
     questions: questionCount.get(t.id) ?? 0,
     assigned: assignTally.get(t.id)?.total ?? 0,
     passed: assignTally.get(t.id)?.passed ?? 0,
   }));
+  // Archived tests (active = false) drop out of the main list into their own
+  // collapsed section, so a monthly LTO's past months don't clutter things.
+  const rows = allRows.filter((t) => t.active !== false);
+  const archivedRows = allRows.filter((t) => t.active === false);
 
   // Tests assigned to the person viewing (their own to take). Read via admin so
   // a staff member sees only their own assignment rows.
@@ -133,6 +138,7 @@ export default async function TestsPage() {
 
       <TestsClient
         tests={rows}
+        archived={archivedRows}
         activeDepartments={activeDepts as Department[]}
         canEdit={canEdit}
       />

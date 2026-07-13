@@ -62,7 +62,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
       .order("sort_order"),
     signoffsQ,
-    canEdit ? supabase.from("tests").select("id, title, target_departments, day_count").order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    canEdit ? supabase.from("tests").select("id, title, target_departments, day_count").eq("active", true).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
     canEdit ? supabase.from("test_questions").select("test_id") : Promise.resolve({ data: [] }),
     getOrgLocations(),
     getStaffMembers(effectiveLocation),
