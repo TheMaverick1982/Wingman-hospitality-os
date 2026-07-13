@@ -243,6 +243,31 @@ export default function HowItWorksPage() {
                 hire or train lives in one profile from their first interview onward.
               </p>
               <Checkmarks items={STEP2} />
+
+              <div className="mt-8 bg-paper rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[14px] font-semibold text-ink">Food Test · Day 2 of 5</span>
+                  <span className="text-[12px] font-semibold text-[#15803D] bg-[#E7F6EC] px-2.5 py-1 rounded-full">Auto-scored · pass 80%</span>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <div className="text-[14px] font-semibold text-ink mb-2.5">A guest wants a salad but is allergic to nuts. What do you do?</div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-[#15803D]/40 bg-[#E7F6EC] px-3 py-2 text-[13px] font-semibold text-[#15803D]">
+                      <span>✓</span> Check for nuts &amp; cross-contact, confirm with the kitchen, or offer a safe swap
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-[13px] text-muted-2">
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-line-strong inline-block shrink-0" /> Just pick off the visible nuts
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-[13px] text-muted-2">
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-line-strong inline-block shrink-0" /> Tell them it&rsquo;s probably fine
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[12.5px] text-muted-2 mt-3">
+                  Build a test by AI or from your own material, assign it, and they take it a day at a time. You see who
+                  passed — and a lock or a missed deadline emails the manager automatically.
+                </p>
+              </div>
             </div>
           </div>
         </div>
