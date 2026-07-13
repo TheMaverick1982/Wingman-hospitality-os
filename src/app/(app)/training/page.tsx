@@ -79,6 +79,15 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     questions: qCount.get(t.id) ?? 0,
   }));
 
+  // Which roles already have a test generated from their training (guarded on
+  // its own so a not-yet-applied source_department migration can't break the
+  // page — it just hides the "Update" affordance until then).
+  let roleTestDepts: string[] = [];
+  if (canEdit) {
+    const { data: srcRows } = await supabase.from("tests").select("source_department").not("source_department", "is", null);
+    roleTestDepts = [...new Set(((srcRows ?? []) as { source_department: string | null }[]).map((r) => r.source_department).filter((d): d is string => Boolean(d)))];
+  }
+
   // The roles this restaurant runs = the ones with a department_meta row (set in
   // the wizard, managed here). Show only those; fall back to all if none exist.
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
@@ -153,7 +162,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
-      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} />
+      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
 
       <SignoffLog signoffs={allSignoffs} />
     </>
