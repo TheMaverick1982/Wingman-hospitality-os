@@ -18,6 +18,7 @@ export function StaffPicker({
   required,
   placeholder,
   onSelectExisting,
+  defaultNewName,
 }: {
   name: string;
   staff: StaffOption[];
@@ -25,11 +26,13 @@ export function StaffPicker({
   required?: boolean;
   placeholder?: string;
   onSelectExisting?: (staff: StaffOption) => void;
+  // Prefill a brand-new name (e.g. starting a scorecard from an application).
+  defaultNewName?: string;
 }) {
   const filtered = department ? staff.filter((s) => s.department === department) : staff;
-  const [mode, setMode] = useState<"existing" | "new">(filtered.length > 0 ? "existing" : "new");
+  const [mode, setMode] = useState<"existing" | "new">(defaultNewName ? "new" : filtered.length > 0 ? "existing" : "new");
   const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? "");
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState(defaultNewName ?? "");
 
   const selected = filtered.find((s) => s.id === selectedId);
 

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check } from "lucide-react";
-import { updateApplicationStatus, scheduleApplicationVisit, getResumeUrl, deleteApplication } from "./applicant-actions";
+import Link from "next/link";
+import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, UserPlus, Code2, ImagePlus } from "lucide-react";
+import { updateApplicationStatus, scheduleApplicationVisit, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
 
 export type Applicant = {
   id: string;
   name: string;
   department: string;
+  locationId: string | null;
   locationName: string;
   email: string;
   phone: string;
@@ -35,9 +37,38 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ApplicantsPanel({ applicants, applyUrl }: { applicants: Applicant[]; applyUrl: string | null }) {
+export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl }: { applicants: Applicant[]; applyUrl: string | null; applicationsCc: string; logoUrl: string | null }) {
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
+  const [cc, setCc] = useState(applicationsCc);
+  const [ccMsg, setCcMsg] = useState<string | null>(null);
+  const [ccPending, startCc] = useTransition();
+  const [logo, setLogo] = useState(logoUrl);
+  const [logoMsg, setLogoMsg] = useState<string | null>(null);
+  const [logoPending, startLogo] = useTransition();
+
+  const embedCode = applyUrl ? `<iframe src="${applyUrl}?embed=1" title="Job application" style="width:100%;max-width:640px;border:0;min-height:760px"></iframe>` : "";
+
+  function uploadLogo(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.set("logo", file);
+    startLogo(async () => {
+      const res = await uploadOrgLogo(fd);
+      if (res.error) setLogoMsg(res.error);
+      else { setLogo(res.url ?? null); setLogoMsg("Logo saved."); }
+      setTimeout(() => setLogoMsg(null), 2500);
+    });
+  }
+  function dropLogo() {
+    startLogo(async () => { await removeOrgLogo(); setLogo(null); });
+  }
+  function copyEmbed() {
+    navigator.clipboard.writeText(embedCode).then(() => { setEmbedCopied(true); setTimeout(() => setEmbedCopied(false), 2000); });
+  }
   const counts = STATUS.reduce((m, s) => ({ ...m, [s.value]: applicants.filter((a) => a.status === s.value).length }), {} as Record<string, number>);
   const shown = filter === "all" ? applicants : applicants.filter((a) => a.status === filter);
 
@@ -46,6 +77,14 @@ export function ApplicantsPanel({ applicants, applyUrl }: { applicants: Applican
     navigator.clipboard.writeText(applyUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function saveCc() {
+    startCc(async () => {
+      const res = await updateApplicationsCc(cc);
+      setCcMsg(res.error ? res.error : "Saved.");
+      setTimeout(() => setCcMsg(null), 2500);
     });
   }
 
@@ -58,11 +97,64 @@ export function ApplicantsPanel({ applicants, applyUrl }: { applicants: Applican
           <span className="text-[13px] text-muted">· {applicants.length} total</span>
         </div>
         {applyUrl && (
-          <button onClick={copyLink} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick transition-colors">
-            {copied ? <Check size={14} className="text-[#15803d]" /> : <Link2 size={14} />}
-            {copied ? "Link copied" : "Copy application link"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={copyLink} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick transition-colors">
+              {copied ? <Check size={14} className="text-[#15803d]" /> : <Link2 size={14} />}
+              {copied ? "Link copied" : "Copy application link"}
+            </button>
+            <button onClick={() => setShowEmbed((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick transition-colors">
+              <Code2 size={14} /> Embed
+            </button>
+          </div>
         )}
+      </div>
+
+      {showEmbed && applyUrl && (
+        <div className="bg-white border border-line rounded-2xl p-4 shadow-sm mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[13px] font-semibold text-ink">Embed on your website</label>
+            <button onClick={copyEmbed} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick hover:text-brick-dark">
+              {embedCopied ? <Check size={13} className="text-[#15803d]" /> : <Code2 size={13} />} {embedCopied ? "Copied" : "Copy code"}
+            </button>
+          </div>
+          <textarea readOnly value={embedCode} onFocus={(e) => e.currentTarget.select()} rows={2} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[12.5px] font-mono text-charcoal-2 outline-none" />
+          <p className="text-[12px] text-muted-2 mt-1.5">Paste this into your site&rsquo;s HTML to show the application form inline — no Wingman branding.</p>
+        </div>
+      )}
+
+      <div className="bg-white border border-line rounded-2xl p-4 shadow-sm mb-4">
+        <div className="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-line">
+          <div>
+            <div className="text-[13px] font-semibold text-ink">Logo on the form</div>
+            <p className="text-[12px] text-muted-2 mt-0.5">Shown at the top of your application page.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logo} alt="Logo" className="h-9 w-auto max-w-[120px] object-contain rounded" />
+            )}
+            <label className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-3 py-2 cursor-pointer hover:border-brick hover:text-brick ${logoPending ? "opacity-60" : ""}`}>
+              <ImagePlus size={14} /> {logo ? "Replace" : "Upload"}
+              <input type="file" accept="image/*" className="sr-only" disabled={logoPending} onChange={(e) => uploadLogo(e.target.files)} />
+            </label>
+            {logo && <button onClick={dropLogo} disabled={logoPending} className="text-muted-2 hover:text-danger disabled:opacity-50" title="Remove logo"><Trash2 size={15} /></button>}
+          </div>
+        </div>
+        {logoMsg && <p className="text-[12px] text-olive font-semibold mb-2">{logoMsg}</p>}
+
+        <label className="text-[13px] font-semibold text-ink block mb-1.5">Also copy applications to</label>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            value={cc}
+            onChange={(e) => setCc(e.target.value)}
+            placeholder="office@yourplace.com, gm@yourplace.com — add multiple, separated by commas"
+            className="flex-1 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-brick"
+          />
+          <button onClick={saveCc} disabled={ccPending} className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark disabled:opacity-50 shrink-0">
+            {ccPending ? "Saving…" : "Save"}
+          </button>
+        </div>
+        <p className="text-[12px] text-muted-2 mt-1.5">Every new application is emailed to the location&rsquo;s address on file — these addresses always get a copy too. {ccMsg && <span className="text-olive font-semibold">{ccMsg}</span>}</p>
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-4">
@@ -167,6 +259,12 @@ function ApplicantCard({ a }: { a: Applicant }) {
             <Paperclip size={13} /> Resume
           </button>
         )}
+        <Link
+          href={`/hiring?app=${a.id}&an=${encodeURIComponent(a.name)}${a.department ? `&scoreDept=${encodeURIComponent(a.department)}` : ""}${a.locationId ? `&scoreLoc=${a.locationId}` : ""}`}
+          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3 py-1.5 hover:bg-brick-dark"
+        >
+          <UserPlus size={13} /> Start hiring
+        </Link>
         {msg && <span className="text-[12.5px] text-muted self-center">{msg}</span>}
       </div>
     </div>

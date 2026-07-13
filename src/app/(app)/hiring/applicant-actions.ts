@@ -50,6 +50,55 @@ export async function getResumeUrl(id: string): Promise<{ url: string | null; er
   return { url: signed?.signedUrl ?? null, error: signed?.signedUrl ? null : "Couldn't open that resume." };
 }
 
+// Save the catch-all copy list (comma-separated emails) that every application
+// notification is also sent to, on top of the location's email.
+export async function updateApplicationsCc(value: string): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  const cleaned = value
+    .split(/[,\n;]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.includes("@"))
+    .join(", ");
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const { error } = await supabase.from("organizations").update({ applications_cc: cleaned }).eq("id", (org as { id: string }).id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Upload (or replace) the org logo shown on the public application form.
+export async function uploadOrgLogo(formData: FormData): Promise<{ error: string | null; url?: string }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  const file = formData.get("logo") as File | null;
+  if (!file || file.size === 0) return { error: "Choose an image first." };
+  if (!file.type.startsWith("image/")) return { error: "Upload an image (PNG, JPG, or SVG)." };
+  if (file.size > 3 * 1024 * 1024) return { error: "Logo is too large — 3MB max." };
+
+  const admin = createAdminClient();
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const path = `${profile.orgId}/logo-${Date.now()}.${ext}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const up = await admin.storage.from("org-logos").upload(path, bytes, { contentType: file.type, upsert: true });
+  if (up.error) return { error: "Couldn't upload that image. Try again." };
+  const { data: pub } = admin.storage.from("org-logos").getPublicUrl(path);
+  const url = pub.publicUrl;
+  await admin.from("organizations").update({ logo_url: url }).eq("id", profile.orgId);
+  revalidatePath("/hiring");
+  return { error: null, url };
+}
+
+export async function removeOrgLogo(): Promise<{ error: string | null }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  const admin = createAdminClient();
+  await admin.from("organizations").update({ logo_url: null }).eq("id", profile.orgId);
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
 export async function deleteApplication(id: string): Promise<{ error: string | null }> {
   if (!(await gate())) return { error: "Not authorized." };
   const supabase = await createClient();

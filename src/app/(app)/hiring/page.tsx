@@ -46,7 +46,7 @@ export const maxDuration = 60;
 export default async function HiringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ location?: string; scoreDept?: string }>;
+  searchParams: Promise<{ location?: string; scoreDept?: string; app?: string; an?: string; scoreLoc?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -54,7 +54,7 @@ export default async function HiringPage({
   const isSuperAdmin = profile.accessRole === "super_admin";
   const canEdit = canEditSection(profile.accessRole, "hiring", profile.permissionOverrides);
 
-  const { location, scoreDept } = await searchParams;
+  const { location, scoreDept, app: prefillAppId, an: prefillName, scoreLoc } = await searchParams;
   const autoOpenDepartment = ALL_DEPARTMENTS.includes(scoreDept as Department) ? (scoreDept as Department) : undefined;
   const effectiveLocation = resolveEffectiveLocation({
     accessRole: profile.accessRole,
@@ -112,6 +112,7 @@ export default async function HiringPage({
     id: a.id,
     name: a.name,
     department: a.department,
+    locationId: a.location_id,
     locationName: a.location_id ? locationName(a.location_id) : "",
     email: a.email,
     phone: a.phone,
@@ -127,9 +128,12 @@ export default async function HiringPage({
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
 
   // Public application link (no subdomain — a path slug on the main site).
-  const { data: orgSlug } = await supabase.from("organizations").select("public_slug").single();
+  const { data: orgApply } = await supabase.from("organizations").select("public_slug, applications_cc, logo_url").single();
+  const orgApplyRow = orgApply as { public_slug: string | null; applications_cc: string | null; logo_url: string | null } | null;
   const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
-  const applyUrl = (orgSlug as { public_slug: string | null } | null)?.public_slug ? `${SITE}/apply/${(orgSlug as { public_slug: string }).public_slug}` : null;
+  const applyUrl = orgApplyRow?.public_slug ? `${SITE}/apply/${orgApplyRow.public_slug}` : null;
+  const applicationsCc = orgApplyRow?.applications_cc ?? "";
+  const orgLogoUrl = orgApplyRow?.logo_url ?? null;
 
   const latestCandidate = allCandidates[0];
   const latestScorecard =
@@ -171,10 +175,12 @@ export default async function HiringPage({
             staff={staff}
             isGm={isSuperAdmin}
             lockedLocationName={profile.locationName}
-            defaultLocationId={effectiveLocation ?? profile.locationId}
+            defaultLocationId={scoreLoc || effectiveLocation || profile.locationId}
             defaultDepartment={autoOpenDepartment ?? activeDepts[0] ?? ALL_DEPARTMENTS[1]}
             departments={activeDepts}
             autoOpenDepartment={autoOpenDepartment}
+            prefillName={prefillName}
+            applicationId={prefillAppId}
           />
         </div>
       </div>
@@ -222,7 +228,7 @@ export default async function HiringPage({
         </div>
       </div>
 
-      {canEdit && <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} />}
+      {canEdit && <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />}
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
