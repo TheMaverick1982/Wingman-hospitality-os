@@ -32,6 +32,7 @@ export function CandidateModalButton({
   lockedLocationName,
   defaultLocationId,
   defaultDepartment,
+  departments,
   autoOpenDepartment,
 }: {
   universalTraits: ScoreTrait[];
@@ -42,8 +43,10 @@ export function CandidateModalButton({
   lockedLocationName: string | null;
   defaultLocationId: string | null;
   defaultDepartment: Department;
+  departments?: Department[];
   autoOpenDepartment?: Department;
 }) {
+  const roles = departments && departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const [department, setDepartment] = useState<Department>(defaultDepartment);
   const [recommendation, setRecommendation] = useState<(typeof RECOMMENDATION_OPTIONS)[number]>("Unsure");
@@ -92,7 +95,7 @@ export function CandidateModalButton({
                   onChange={(e) => setDepartment(e.target.value as Department)}
                   className={inputClass}
                 >
-                  {ALL_DEPARTMENTS.map((d) => (
+                  {roles.map((d) => (
                     <option key={d}>{d}</option>
                   ))}
                 </select>

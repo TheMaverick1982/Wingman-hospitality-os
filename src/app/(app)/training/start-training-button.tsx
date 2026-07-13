@@ -15,19 +15,22 @@ export function StartTrainingButton({
   staff,
   locations,
   department,
+  departments,
   small,
 }: {
   staff: StaffMember[];
   locations: Location[];
   department?: Department;
+  departments?: Department[];
   small?: boolean;
 }) {
+  const roles = departments && departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const filtered = department ? staff.filter((s) => s.department === department) : staff;
   const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? "");
   const [newName, setNewName] = useState("");
-  const [newDept, setNewDept] = useState<Department>(department ?? ALL_DEPARTMENTS[0]);
+  const [newDept, setNewDept] = useState<Department>(department ?? roles[0]);
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -114,7 +117,7 @@ export function StartTrainingButton({
               {!department && (
                 <Field label="Role">
                   <select value={newDept} onChange={(e) => setNewDept(e.target.value as Department)} className={inputClass}>
-                    {ALL_DEPARTMENTS.map((d) => (
+                    {roles.map((d) => (
                       <option key={d} value={d}>
                         {d}
                       </option>
