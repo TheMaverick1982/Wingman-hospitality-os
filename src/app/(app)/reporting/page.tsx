@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
-import { getOrgLocations } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, computeSpotCheckAverages, type GuestWithVisits, type SpotCheck } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
@@ -39,16 +39,32 @@ function currentDate(): Date {
 export default async function ReportingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; location?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   if (getSectionAccess(profile.accessRole, "reporting", profile.permissionOverrides) === "none") redirect("/dashboard");
   const isSuperAdmin = profile.accessRole === "super_admin";
 
-  const { range: rangeParam } = await searchParams;
+  const { range: rangeParam, location: locationParam } = await searchParams;
   const activeRange = RANGES.find((r) => r.key === rangeParam) ?? RANGES[1];
   const cutoff = cutoffDate(activeRange.days);
+
+  // Honor the top-bar location selector: a specific location scopes every
+  // location-aware metric to it; "All locations" keeps the company-wide roll-up
+  // (and the By-location comparison table). Shared data — the menu and culture
+  // moments — stays org-wide either way.
+  const effectiveLocation = resolveEffectiveLocation({
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    requestedLocationId: locationParam,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  });
+  const locationQs = effectiveLocation ? `&location=${effectiveLocation}` : "";
+  // Generic so the Supabase query's row types survive the wrapper.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scoped = <T,>(q: T): T => (effectiveLocation ? (q as any).eq("location_id", effectiveLocation) : q);
 
   const supabase = await createClient();
   const [
@@ -67,27 +83,34 @@ export default async function ReportingPage({
     { data: checklistRows },
     locations,
   ] = await Promise.all([
-    supabase.from("discounts").select("amount, location_id, server_name").gte("occurred_on", cutoff),
-    supabase.from("spot_checks").select("id, scores, location_id, staff_name, department").gte("occurred_on", cutoff),
-    supabase.from("training_signoffs").select("id").gte("occurred_on", cutoff),
+    scoped(supabase.from("discounts").select("amount, location_id, server_name").gte("occurred_on", cutoff)),
+    scoped(supabase.from("spot_checks").select("id, scores, location_id, staff_name, department").gte("occurred_on", cutoff)),
+    scoped(supabase.from("training_signoffs").select("id").gte("occurred_on", cutoff)),
     supabase.from("culture_moments").select("id").gte("occurred_on", cutoff),
-    supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff),
+    scoped(supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff)),
     supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction, incentive)"),
     supabase.from("report_schedules").select("*").order("created_at", { ascending: false }),
-    supabase
-      .from("growth_plans")
-      .select("current_customers, current_avg_sale, current_repurchase_frequency, target_customers_pct, target_avg_sale_pct, target_frequency_pct")
-      .is("location_id", null)
-      .maybeSingle(),
-    supabase
-      .from("business_health_metrics")
-      .select("period_date, net_sales, labor_cost, comp_cost, checks, location_id")
-      .gte("period_date", cutoffDate(200))
-      .order("period_date", { ascending: false }),
-    supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190)),
+    (effectiveLocation
+      ? supabase
+          .from("growth_plans")
+          .select("current_customers, current_avg_sale, current_repurchase_frequency, target_customers_pct, target_avg_sale_pct, target_frequency_pct")
+          .eq("location_id", effectiveLocation)
+      : supabase
+          .from("growth_plans")
+          .select("current_customers, current_avg_sale, current_repurchase_frequency, target_customers_pct, target_avg_sale_pct, target_frequency_pct")
+          .is("location_id", null)
+    ).maybeSingle(),
+    scoped(
+      supabase
+        .from("business_health_metrics")
+        .select("period_date, net_sales, labor_cost, comp_cost, checks, location_id")
+        .gte("period_date", cutoffDate(200))
+        .order("period_date", { ascending: false })
+    ),
+    scoped(supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190))),
     supabase.from("menu_engineering_items").select("id, name, price, food_cost, popularity"),
-    supabase.from("audits").select("occurred_on, health_score").order("occurred_on", { ascending: false }).limit(8),
-    supabase.from("shift_checklist_completions").select("occurred_on, item_count, completed_count").gte("occurred_on", cutoffDate(190)),
+    scoped(supabase.from("audits").select("occurred_on, health_score").order("occurred_on", { ascending: false }).limit(8)),
+    scoped(supabase.from("shift_checklist_completions").select("occurred_on, item_count, completed_count").gte("occurred_on", cutoffDate(190))),
     getOrgLocations(),
   ]);
 
@@ -97,7 +120,13 @@ export default async function ReportingPage({
     : 0;
   const strongFitCount = (candidates ?? []).filter((c) => c.recommendation === "Strong fit").length;
 
-  const allGuests = (guests ?? []) as (GuestWithVisits & { referred_a_friend?: boolean })[];
+  // Guests carry no location column — attribute each to the location of their
+  // first visit (same rule as the dashboard) so a scoped report only counts its
+  // own guests' retention, reactions, referrals, cohorts, and ROI.
+  const allGuestsRaw = (guests ?? []) as (GuestWithVisits & { referred_a_friend?: boolean })[];
+  const allGuests = effectiveLocation
+    ? allGuestsRaw.filter((g) => g.guest_visits.find((v) => v.visit_number === 1)?.location_id === effectiveLocation)
+    : allGuestsRaw;
   const newGuestsInRange = allGuests.filter((g) =>
     g.guest_visits.some((v) => v.visit_number === 1 && v.visit_date && v.visit_date >= cutoff)
   );
@@ -342,14 +371,18 @@ export default async function ReportingPage({
       <div className="flex items-end justify-between gap-6 flex-wrap">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Reporting</h1>
-          <p className="text-base text-muted">Every section, one view — {activeRange.rangeLabel}.</p>
+          <p className="text-base text-muted">
+            {effectiveLocation
+              ? `${locations.find((l) => l.id === effectiveLocation)?.name ?? "Location"} — ${activeRange.rangeLabel}.`
+              : `Every section, one view — ${activeRange.rangeLabel}.`}
+          </p>
         </div>
         <div className="flex items-center gap-2.5">
           <div className="flex gap-1 bg-white border border-line rounded-xl p-1">
             {RANGES.map((r) => (
               <Link
                 key={r.key}
-                href={`/reporting?range=${r.key}`}
+                href={`/reporting?range=${r.key}${locationQs}`}
                 className={`text-[13px] font-semibold px-3.5 py-2 rounded-[9px] transition-colors ${
                   activeRange.key === r.key ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"
                 }`}
@@ -640,7 +673,7 @@ export default async function ReportingPage({
         ))}
       </div>
 
-      {isSuperAdmin && locations.length > 1 && (
+      {isSuperAdmin && locations.length > 1 && !effectiveLocation && (
         <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F1F1]">
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">By location</span>
