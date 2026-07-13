@@ -232,6 +232,62 @@ export async function markDemoCompletedByEmail(email: string, adminArg?: Admin):
   return true;
 }
 
+// A rep ran a LIVE demo (from the Sales Dashboard / Sales Training). Tie the
+// prospect to the rep as their lead owner, advance the pipeline to Demo
+// Completed, and log it on the timeline. Resolves the contact by id (existing)
+// or by email (creating it if this prospect is brand new). Best-effort — never
+// blocks the rep from getting into the demo. Returns the contact id (or null).
+export async function attachDemoRun(
+  repId: string,
+  target: { contactId?: string; email?: string; name?: string },
+  adminArg?: Admin
+): Promise<string | null> {
+  try {
+    const admin = adminArg ?? createAdminClient();
+    const now = new Date().toISOString();
+
+    // Resolve the contact: prefer an explicit id, else match/create by email.
+    let contactId = target.contactId ?? null;
+    if (!contactId && target.email) {
+      const lower = target.email.toLowerCase();
+      const { data: existing } = await admin.from("crm_contacts").select("id").eq("email", lower).maybeSingle();
+      contactId = (existing as { id: string } | null)?.id ?? null;
+      if (!contactId) {
+        const { data: created } = await admin
+          .from("crm_contacts")
+          .insert({ email: lower, name: target.name || null, first_source: "demo", stage: "new" })
+          .select("id")
+          .single();
+        contactId = (created as { id: string } | null)?.id ?? null;
+      }
+    }
+    if (!contactId) return null;
+
+    const { data: cur } = await admin.from("crm_contacts").select("stage").eq("id", contactId).maybeSingle();
+    const stage = (cur as { stage: string } | null)?.stage ?? "new";
+    // Never regress a won or dead deal; just re-own it and note the demo.
+    const keep = stage === "signed_up" || stage === "lost";
+
+    const update: Record<string, unknown> = {
+      assigned_rep_id: repId, // the rep who ran the demo becomes the lead owner
+      last_activity_at: now,
+      updated_at: now,
+    };
+    if (!keep) update.stage = "demo_completed";
+    if (target.name) update.name = target.name;
+    await admin.from("crm_contacts").update(update).eq("id", contactId);
+    await admin.from("crm_activities").insert({
+      contact_id: contactId,
+      kind: "system",
+      body: keep ? "Live demo run by their rep" : "Live demo run — moved to Demo Completed",
+    });
+    return contactId;
+  } catch (err) {
+    console.error("[crm] attachDemoRun failed", err);
+    return null;
+  }
+}
+
 // Demo no-show — tag them, clear the booking (so a rebook re-triggers Demo Booked
 // and the cron stops the follow-up), and start the draft no-show re-engagement.
 export async function markDemoNoShowByEmail(email: string, adminArg?: Admin): Promise<boolean> {

@@ -105,7 +105,7 @@ export const PREP: PrepItem[] = [
   { label: "Look them up first", detail: "Concept, number of locations, a glance at their recent reviews and website. Two minutes of homework makes the whole call land." },
   { label: "Have one hypothesis", detail: "Based on what you saw, guess their biggest retention gap (e.g. \"great food, but no reason for first-timers to come back\"). You'll test it, not assert it." },
   { label: "Know roughly what they'd pay", detail: "Standard pricing is $199/mo for the first location + $100/mo per additional location. Don't lead with price — but never be caught off guard by it." },
-  { label: "Have the demo ready", detail: "Hit \"Run a live demo\" (top of your Sales Dashboard or Sales Training) to jump into a fresh, fully-loaded demo account — it resets clean each time. Use \"Exit\" in the banner to return to your account when you're done." },
+  { label: "Have the demo ready", detail: "Hit \"Run a live demo\" (top of your Sales Dashboard or Sales Training), then name who it's for — pick the lead or add a new prospect. That ties them to you as the lead owner and moves them to Demo Completed automatically, so the demo is also your CRM entry. You drop into a fresh, fully-loaded demo account (private to you, resets clean each time). Use \"Exit\" in the banner to return when you're done." },
 ];
 
 export type Movement = {
@@ -230,11 +230,11 @@ export type ProcessStep = { title: string; detail: string };
 export const PIPELINE_PROCESS: ProcessStep[] = [
   {
     title: "Assign yourself to the lead",
-    detail: "Set the \"Sales rep\" on every contact you're working (on the contact in CRM). That's what makes it show up in your Sales Dashboard — leads, demos, won, lost — and keeps your numbers yours.",
+    detail: "Set the \"Sales rep\" on every contact you're working (on the contact in CRM). That's what makes it show up in your Sales Dashboard — leads, demos, won, lost — and keeps your numbers yours. Shortcut: when you name the prospect on \"Run a live demo,\" they're assigned to you and moved to Demo Completed automatically — no manual step.",
   },
   {
     title: "After the call, move the stage to the truth",
-    detail: "If they didn't buy on the spot, update the pipeline stage to what's actually true now: Demo Completed (they saw it, they're deciding), Nurturing (interested, not ready yet), or Lost / Dormant (not a fit, or gone quiet). Do it while the call is fresh — a pipeline you can trust is the whole point.",
+    detail: "Running the demo already moved them to Demo Completed. If the call changes that — they're interested but not ready (Nurturing), or it's a no (Lost / Dormant) — update the stage to what's actually true now, while it's fresh. A pipeline you can trust is the whole point.",
   },
   {
     title: "You never move \"Won\" by hand",
