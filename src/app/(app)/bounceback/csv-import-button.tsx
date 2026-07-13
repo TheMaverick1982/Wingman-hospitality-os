@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
@@ -106,20 +106,46 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<FieldKey, number>>(NO_MAP());
   const [defaultLocationId, setDefaultLocationId] = useState(locations[0]?.id ?? "");
+  // Per-CSV-value → system location overrides (for spelling mismatches etc.).
+  const [locOverrides, setLocOverrides] = useState<Record<string, string>>({});
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [pending, start] = useTransition();
 
   const multiLocation = locations.length > 1;
-  const locIds = new Set(locations.map((l) => l.id));
-  const locByName = new Map(locations.map((l) => [l.name.trim().toLowerCase(), l.id]));
+  const locIds = useMemo(() => new Set(locations.map((l) => l.id)), [locations]);
+  const locByName = useMemo(() => new Map(locations.map((l) => [l.name.trim().toLowerCase(), l.id])), [locations]);
+
+  // Best exact/case-insensitive auto-match for a raw CSV location value.
+  const autoMatch = (v: string): string => {
+    const t = (v || "").trim();
+    if (!t) return "";
+    if (locIds.has(t)) return t;
+    return locByName.get(t.toLowerCase()) ?? "";
+  };
+  // The chosen system location id for a CSV value ("" = fall back to default).
+  const effLoc = (v: string): string => (locOverrides[v] !== undefined ? locOverrides[v] : autoMatch(v));
+
+  // The distinct location values present in the file (once a Location column is
+  // mapped) — so the owner can match each to a system location.
+  const distinctLocs = useMemo(() => {
+    if (mapping.location < 0) return [];
+    const set = new Set<string>();
+    for (const r of rows) {
+      const v = (r[mapping.location] ?? "").trim();
+      if (v) set.add(v);
+    }
+    return [...set].slice(0, 100).sort((a, b) => a.localeCompare(b));
+  }, [rows, mapping.location]);
+  const unmatchedCount = distinctLocs.filter((v) => effLoc(v) === "").length;
 
   const reset = () => {
     setStep("upload");
     setHeaders([]);
     setRows([]);
     setMapping(NO_MAP());
+    setLocOverrides({});
     setError(null);
     setResult(null);
   };
@@ -135,6 +161,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
     setHeaders(hdr);
     setRows(parsed.slice(1));
     setMapping(ALL_KEYS.reduce((acc, k) => ({ ...acc, [k]: guessColumn(hdr, k) }), NO_MAP()));
+    setLocOverrides({});
     setStep("map");
   };
 
@@ -144,18 +171,12 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
     if (mapping.name < 0) return setError("Map the Guest name column — it's required.");
     setError(null);
     const cell = (r: string[], key: FieldKey) => (mapping[key] >= 0 ? (r[mapping[key]] ?? "") : "");
-    const resolveLoc = (v: string): string | null => {
-      const t = (v || "").trim();
-      if (!t) return null;
-      if (locIds.has(t)) return t;
-      return locByName.get(t.toLowerCase()) ?? null;
-    };
     const payload: ImportRow[] = rows.map((r) => ({
       name: cell(r, "name"),
       email: cell(r, "email"),
       phone: cell(r, "phone"),
       source: cell(r, "source"),
-      locationId: mapping.location >= 0 ? resolveLoc(cell(r, "location")) : null,
+      locationId: mapping.location >= 0 ? (effLoc(cell(r, "location").trim()) || null) : null,
       visits: VISITS.map((n) => ({
         n,
         date: normDate(cell(r, `v${n}_date`)),
@@ -250,6 +271,45 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
                         ))}
                       </select>
                     </div>
+
+                    {distinctLocs.length > 0 && (
+                      <div className="rounded-xl border border-line bg-paper p-3">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2">
+                            Match your file&rsquo;s locations ({distinctLocs.length})
+                          </span>
+                          {unmatchedCount > 0 && (
+                            <span className="text-[11.5px] font-semibold text-[#B45309]">{unmatchedCount} need a match</span>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-muted-2 mb-2.5">
+                          We matched what we could. For anything spelled differently, pick the right location — or leave it on the default.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          {distinctLocs.map((v) => {
+                            const cur = effLoc(v);
+                            return (
+                              <div key={v} className="grid grid-cols-2 items-center gap-3">
+                                <span className="text-[13px] text-ink truncate flex items-center gap-1.5" title={v}>
+                                  {cur === "" && <span className="text-[#B45309]">●</span>}
+                                  {v}
+                                </span>
+                                <select
+                                  value={cur}
+                                  onChange={(e) => setLocOverrides((m) => ({ ...m, [v]: e.target.value }))}
+                                  className={`${inputClass} py-2 ${cur === "" ? "border-[#F0D9A8]" : ""}`}
+                                >
+                                  <option value="">Use default location</option>
+                                  {locations.map((l) => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
