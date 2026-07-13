@@ -152,6 +152,33 @@ export type BizHealthPoint = {
   compPct: number; // comp_cost / net_sales * 100
 };
 
+export type BizHealthRawRow = BizHealthRow & { location_id: string | null };
+
+// Collapse per-location weekly rows into one company total per week. Reporting is
+// a company-wide report, but business_health_metrics stores one row per location
+// per week (plus optional org-wide rows). Without this, a multi-location org's
+// money-layer trend interleaves/duplicates a point per location for each week.
+//
+// For each week: if any location-scoped rows exist, sum those (the real per-store
+// totals); otherwise fall back to the org-wide (null-location) row. That avoids
+// double-counting when both a per-location and an org-wide row exist for a week.
+export function aggregateBizHealthByWeek(rows: BizHealthRawRow[]): BizHealthRow[] {
+  const byWeek = new Map<string, { located: BizHealthRow[]; orgWide: BizHealthRow[] }>();
+  for (const r of rows) {
+    const e = byWeek.get(r.period_date) ?? { located: [], orgWide: [] };
+    (r.location_id ? e.located : e.orgWide).push(r);
+    byWeek.set(r.period_date, e);
+  }
+  const sum = (rs: BizHealthRow[]): BizHealthRow => ({
+    period_date: rs[0].period_date,
+    net_sales: rs.reduce((s, x) => s + Number(x.net_sales ?? 0), 0),
+    labor_cost: rs.reduce((s, x) => s + Number(x.labor_cost ?? 0), 0),
+    comp_cost: rs.reduce((s, x) => s + Number(x.comp_cost ?? 0), 0),
+    checks: rs.reduce((s, x) => s + Number(x.checks ?? 0), 0),
+  });
+  return [...byWeek.values()].map((e) => sum(e.located.length ? e.located : e.orgWide));
+}
+
 export function bizHealthTrend(rows: BizHealthRow[]): BizHealthPoint[] {
   // Rows may arrive newest-first; render oldest → newest.
   const sorted = [...rows].sort((a, b) => a.period_date.localeCompare(b.period_date));

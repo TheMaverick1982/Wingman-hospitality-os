@@ -6,7 +6,7 @@ import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { stageOf, computeSpotCheckAverages, type GuestWithVisits, type SpotCheck } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
-import { monthlyRepeatCohorts, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness, bizHealthTrend, type BizHealthRow, type ChecklistLite, type IncentiveGuest } from "@/lib/reporting-trends";
+import { monthlyRepeatCohorts, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness, bizHealthTrend, aggregateBizHealthByWeek, type BizHealthRawRow, type ChecklistLite, type IncentiveGuest } from "@/lib/reporting-trends";
 import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
 import { computeRoiLedger, DEFAULT_AVG_CHECK, DEFAULT_VISITS_PER_YEAR } from "@/lib/roi-ledger";
 import { RoiLedgerCard } from "@/components/reporting/roi-ledger-card";
@@ -81,9 +81,9 @@ export default async function ReportingPage({
       .maybeSingle(),
     supabase
       .from("business_health_metrics")
-      .select("period_date, net_sales, labor_cost, comp_cost, checks")
-      .order("period_date", { ascending: false })
-      .limit(12),
+      .select("period_date, net_sales, labor_cost, comp_cost, checks, location_id")
+      .gte("period_date", cutoffDate(200))
+      .order("period_date", { ascending: false }),
     supabase.from("training_signoffs").select("completion_pct, occurred_on").gte("occurred_on", cutoffDate(190)),
     supabase.from("menu_engineering_items").select("id, name, price, food_cost, popularity"),
     supabase.from("audits").select("occurred_on, health_score").order("occurred_on", { ascending: false }).limit(8),
@@ -207,7 +207,13 @@ export default async function ReportingPage({
     checklistComplianceByMonth: hasChecklistHistory ? checklistMonths.map((m) => ({ month: m.label, pct: m.pct })) : undefined,
     bestIncentive: incentives[0] ? { offer: incentives[0].incentive, returnPct: incentives[0].returnPct, newGuests: incentives[0].newGuests } : undefined,
   });
-  const bizPoints = bizHealthTrend((bizHealth ?? []) as BizHealthRow[]);
+  // Company-wide money-layer trend: collapse per-location weekly rows into one
+  // company total per week (multi-location orgs store a row per location), then
+  // show the most recent 12 weeks oldest→newest.
+  const bizWeekly = aggregateBizHealthByWeek((bizHealth ?? []) as BizHealthRawRow[])
+    .sort((a, b) => b.period_date.localeCompare(a.period_date))
+    .slice(0, 12);
+  const bizPoints = bizHealthTrend(bizWeekly);
   const bizMetrics =
     bizPoints.length >= 2
       ? (() => {
