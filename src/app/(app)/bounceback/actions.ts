@@ -56,14 +56,17 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
   return { error: null };
 }
 
-export type ImportVisit = { n: number; date: string };
-export type ImportRow = { name: string; email?: string; phone?: string; source?: string; visits?: ImportVisit[] };
+export type ImportVisit = { n: number; date: string; incentive?: string; notes?: string };
+export type ImportRow = { name: string; email?: string; phone?: string; source?: string; locationId?: string | null; visits?: ImportVisit[] };
 export type ImportResult = { error: string | null; imported: number; skipped: number };
 
 // Bulk-import guests from a mapped CSV. Each row becomes a guest; any mapped
-// visit dates (visits 1–4) also create those visits, so imported guests enter
-// the bounce-back funnel dated correctly. Rows without a name are skipped.
-export async function importGuests(rows: ImportRow[], locationId: string | null): Promise<ImportResult> {
+// visit dates (visits 1–4) also create those visits — with the incentive and
+// notes for each — so imported guests enter the bounce-back funnel dated
+// correctly. Each row can carry its own location (resolved by the caller from a
+// mapped column); rows without one fall back to `fallbackLocationId`. Rows
+// without a name are skipped.
+export async function importGuests(rows: ImportRow[], fallbackLocationId: string | null): Promise<ImportResult> {
   if (!Array.isArray(rows) || rows.length === 0) return { error: "Nothing to import.", imported: 0, skipped: 0 };
   if (rows.length > 1000) return { error: "Import up to 1000 guests at a time.", imported: 0, skipped: 0 };
 
@@ -71,15 +74,14 @@ export async function importGuests(rows: ImportRow[], locationId: string | null)
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found.", imported: 0, skipped: 0 };
 
-  // Only honor a location that actually belongs to this org.
-  let loc: string | null = null;
-  if (locationId) {
-    const { data: l } = await supabase.from("locations").select("id").eq("id", locationId).eq("org_id", org.id).maybeSingle();
-    loc = l ? locationId : null;
-  }
+  // The set of location ids actually in this org — any id not in it is ignored.
+  const { data: orgLocs } = await supabase.from("locations").select("id").eq("org_id", org.id);
+  const validLoc = new Set(((orgLocs ?? []) as { id: string }[]).map((l) => l.id));
+  const fallback = fallbackLocationId && validLoc.has(fallbackLocationId) ? fallbackLocationId : null;
 
   const dateOk = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   const guestRows: { org_id: string; name: string; email: string; phone: string; source: string }[] = [];
+  const rowLoc: (string | null)[] = [];
   const rowVisits: ImportVisit[][] = [];
   let skipped = 0;
   for (const r of rows) {
@@ -95,24 +97,35 @@ export async function importGuests(rows: ImportRow[], locationId: string | null)
       phone: (r.phone || "").trim().slice(0, 60),
       source: ((r.source || "").trim() || "import").slice(0, 40),
     });
+    rowLoc.push(r.locationId && validLoc.has(r.locationId) ? r.locationId : fallback);
     // Keep only valid, in-range visits (dedupe by visit number, last wins).
-    const byN = new Map<number, string>();
+    const byN = new Map<number, ImportVisit>();
     for (const v of r.visits ?? []) {
       const d = (v?.date || "").trim();
-      if (v && v.n >= 1 && v.n <= 4 && dateOk(d)) byN.set(v.n, d);
+      if (v && v.n >= 1 && v.n <= 4 && dateOk(d)) {
+        byN.set(v.n, { n: v.n, date: d, incentive: (v.incentive || "").slice(0, 300), notes: (v.notes || "").slice(0, 1000) });
+      }
     }
-    rowVisits.push([...byN.entries()].map(([n, date]) => ({ n, date })));
+    rowVisits.push([...byN.values()]);
   }
   if (guestRows.length === 0) return { error: null, imported: 0, skipped };
 
   // A single multi-row INSERT ... RETURNING preserves input order, so we can zip
-  // the returned ids back to each row's visits.
+  // the returned ids back to each row's visits + location.
   const { data: inserted, error } = await supabase.from("guests").insert(guestRows).select("id");
   if (error) return { error: error.message, imported: 0, skipped };
   const ids = ((inserted ?? []) as { id: string }[]).map((g) => g.id);
 
   const visits = ids.flatMap((id, i) =>
-    (rowVisits[i] ?? []).map((v) => ({ guest_id: id, org_id: org.id, visit_number: v.n, visit_date: v.date, location_id: loc }))
+    (rowVisits[i] ?? []).map((v) => ({
+      guest_id: id,
+      org_id: org.id,
+      visit_number: v.n,
+      visit_date: v.date,
+      location_id: rowLoc[i],
+      incentive: v.incentive ?? "",
+      notes: v.notes ?? "",
+    }))
   );
   if (visits.length > 0) {
     await supabase.from("guest_visits").upsert(visits as object[], { onConflict: "guest_id,visit_number" });
