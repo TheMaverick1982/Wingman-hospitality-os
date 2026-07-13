@@ -60,9 +60,60 @@ const SECTIONS = [
     ],
   },
   {
-    h: "Availability",
+    h: "Service availability and interruptions",
     body: [
-      "We work to keep Wingman available and reliable, but the service is provided \"as is\" without warranties. We aren't liable for indirect or consequential damages to the extent permitted by law.",
+      "We work hard to keep Wingman available, but we do not guarantee that the service will be uninterrupted, timely, secure, or error-free. Access may be unavailable from time to time — for scheduled maintenance, updates, or circumstances outside our reasonable control such as outages, server or network failures, or problems with the third-party providers the service depends on.",
+      "We are not responsible or liable for any interruption, delay, downtime, suspension, or discontinuation of the service, or for any resulting inability to access your data during those periods. We do not provide any uptime guarantee or service-level commitment unless one is agreed with you separately in writing.",
+    ],
+  },
+  {
+    h: "Third-party services and infrastructure",
+    body: [
+      "Wingman runs on third-party infrastructure and services — including cloud hosting, database, email delivery, analytics, and payment-processing providers. We don't control these providers, and their outages, failures, changes, or discontinuations can affect the service. We are not responsible or liable for the acts, omissions, downtime, or failures of any third-party provider, or for any loss or damage arising from them.",
+    ],
+  },
+  {
+    h: "Data, backups, and export",
+    body: [
+      "You are responsible for keeping your own copies of any data that matters to you. While we take reasonable measures to protect and back up data, we do not warrant that data will never be lost, corrupted, or unavailable, and we are not liable for any loss of or damage to your data, however caused. You can export your data at any time from within the app, and we encourage you to do so regularly.",
+    ],
+  },
+  {
+    h: "AI features and content",
+    body: [
+      "Wingman uses artificial intelligence to help generate training, tests, guest-experience, hiring, and other content and suggestions. AI-generated output can be inaccurate, incomplete, or unsuitable for your situation. You are responsible for reviewing and editing any AI-generated content before relying on it or sharing it with your team, guests, or applicants. We are not liable for any decision made or action taken in reliance on AI-generated content.",
+    ],
+  },
+  {
+    h: "Not professional advice",
+    body: [
+      "Wingman and its content are provided for general operational and informational purposes only. They are not legal, employment, human-resources, tax, financial, or other professional advice. You are solely responsible for your own compliance with all laws and regulations that apply to your business — including employment, wage-and-hour, food-safety, privacy, and marketing laws. Consult a qualified professional where you need advice.",
+    ],
+  },
+  {
+    h: "Disclaimer of warranties",
+    body: [
+      "TO THE FULLEST EXTENT PERMITTED BY LAW, WINGMAN IS PROVIDED “AS IS” AND “AS AVAILABLE,” WITH ALL FAULTS AND WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY. THE MAVERICK AGENCY DISCLAIMS ALL IMPLIED WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ANY WARRANTY THAT THE SERVICE WILL BE UNINTERRUPTED, AVAILABLE, ACCURATE, SECURE, OR ERROR-FREE.",
+    ],
+  },
+  {
+    h: "Limitation of liability",
+    body: [
+      "TO THE FULLEST EXTENT PERMITTED BY LAW, THE MAVERICK AGENCY AND ITS OWNERS, EMPLOYEES, AND SUPPLIERS WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF PROFITS, REVENUE, GOODWILL, OR DATA, ARISING OUT OF OR RELATING TO YOUR USE OF (OR INABILITY TO USE) THE SERVICE — INCLUDING ANY DOWNTIME OR INTERRUPTION — EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.",
+      "TO THE FULLEST EXTENT PERMITTED BY LAW, OUR TOTAL LIABILITY FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THE SERVICE OR THESE TERMS WILL NOT EXCEED THE AMOUNT YOU PAID US FOR THE SERVICE IN THE THREE (3) MONTHS IMMEDIATELY BEFORE THE EVENT GIVING RISE TO THE CLAIM.",
+      "Some jurisdictions do not allow certain limitations, so some of the above may not apply to you; in that case our liability is limited to the smallest amount permitted by law.",
+    ],
+  },
+  {
+    h: "Events beyond our control (force majeure)",
+    body: [
+      "We are not liable for any failure or delay in providing the service caused by events beyond our reasonable control — including internet, hosting, utility, or telecommunications failures; third-party provider outages; cyberattacks; natural disasters; fire or flood; labor disputes; pandemics; or acts of government.",
+    ],
+  },
+  {
+    h: "Indemnification",
+    body: [
+      "You agree to indemnify and hold harmless The Maverick Agency from any claims, losses, or expenses (including reasonable legal fees) arising from your content, your use of the service, your violation of these terms, or your violation of any law or the rights of any third party.",
     ],
   },
   {
@@ -90,7 +141,7 @@ export default async function TermsPage() {
         <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
           Terms of Service
         </h1>
-        <p className="text-base text-muted-2">Last updated July 10, 2026</p>
+        <p className="text-base text-muted-2">Last updated July 13, 2026</p>
       </div>
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
