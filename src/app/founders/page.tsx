@@ -32,10 +32,15 @@ export default async function FoundersPage() {
   const terms = coupon ? describeCoupon(coupon) : "special founders pricing";
   const signup = `/signup?code=${FOUNDER_CODE}`;
 
+  // Scarcity: only 10 founding spots. Show live remaining when the coupon caps
+  // redemptions, otherwise the flat count.
+  const maxSpots = coupon?.max_redemptions ?? 10;
+  const spotsLeft = coupon && coupon.max_redemptions != null ? Math.max(0, coupon.max_redemptions - coupon.redeemed_count) : null;
+
   const PERKS = [
     "Everything in Wingman, every plan — culture, training, tests, accountability, hiring, and retention tracking.",
     "Direct line to the team while we build — your feedback shapes the roadmap.",
-    "Lock in the founders rate for as long as you stay.",
+    `Your founders rate is locked in for life — it never goes up, even as we do.`,
   ];
 
   return (
@@ -53,8 +58,13 @@ export default async function FoundersPage() {
           </h1>
           <p className="text-[17px] sm:text-[19px] text-muted leading-relaxed max-w-[540px] mx-auto">
             A private invite for the first operators building with us. Turn first-time guests into regulars, every
-            shift — at the founders rate.
+            shift — at a founders rate that&rsquo;s yours for life.
           </p>
+        </div>
+
+        <div className="inline-flex items-center gap-2 rounded-full border border-brick/30 bg-brick-tint/50 px-4 py-2 text-[13.5px] font-semibold text-brick-dark">
+          <span className="w-[7px] h-[7px] rounded-full bg-brick animate-pulse" />
+          Only {maxSpots} founding spots{spotsLeft != null ? ` · ${spotsLeft} left` : ""} — locked in for life
         </div>
 
         <FoundersFlightPath className="w-full max-w-[460px] h-auto" />
@@ -65,7 +75,7 @@ export default async function FoundersPage() {
             <span className="text-[15px] text-muted-2 line-through">{standard}/mo</span>
             <span className="text-[32px] font-bold text-ink">{founderPrice}<span className="text-[16px] text-muted font-semibold">/mo</span></span>
           </div>
-          <p className="text-[13px] text-muted">first location · {terms} · then standard pricing · cancel anytime</p>
+          <p className="text-[13px] text-muted">first location · {terms}, locked in for life · cancel anytime</p>
           <div className="rounded-xl border border-dashed border-brick/40 bg-brick-tint/40 py-3">
             <div className="text-[12px] font-semibold uppercase tracking-wide text-muted-2">Use code at checkout</div>
             <div className="text-[22px] font-bold font-mono text-brick tracking-wide">{FOUNDER_CODE}</div>
@@ -89,8 +99,8 @@ export default async function FoundersPage() {
         </div>
 
         <p className="text-[12px] text-muted-2 max-w-[440px]">
-          {FOUNDER_CODE} applies {terms} to your first location. A card is required to start; standard pricing applies
-          after. Billed by The Maverick Agency.
+          {FOUNDER_CODE} applies {terms} to your first location and stays locked in for as long as you&rsquo;re a
+          customer. Limited to {maxSpots} founding operators. A card is required to start. Billed by The Maverick Agency.
         </p>
       </div>
     </main>
