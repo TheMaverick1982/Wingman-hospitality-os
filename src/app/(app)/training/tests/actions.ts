@@ -493,3 +493,57 @@ export async function updateDay(id: string, title: string, content: string, test
   await supabase.from("test_days").update({ title: title.slice(0, 120), content: content.slice(0, 4000) }).eq("id", id);
   revalidatePath(`/training/tests/${testId}`);
 }
+
+// Add a new (empty) day to a test — a fresh learning area + its own questions.
+// The day lands after the current last day and bumps the test's day_count so the
+// take flow knows to include it. The manager fills in the content and questions
+// with the existing per-day editors.
+export async function addTestDay(testId: string): Promise<{ error: string | null; dayNumber?: number }> {
+  const profile = await canBuild();
+  if (!profile) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const { data: test } = await supabase.from("tests").select("day_count").eq("id", testId).maybeSingle();
+  if (!test) return { error: "Test not found." };
+
+  // day_count is the source of truth, but guard against any stray higher day rows.
+  const { data: top } = await supabase.from("test_days").select("day_number").eq("test_id", testId).order("day_number", { ascending: false }).limit(1);
+  const highest = Math.max((test as { day_count: number }).day_count || 0, (top?.[0] as { day_number: number } | undefined)?.day_number ?? 0);
+  if (highest >= 30) return { error: "A test can have at most 30 days." };
+  const next = highest + 1;
+
+  const { error } = await supabase.from("test_days").insert({ test_id: testId, org_id: org.id, day_number: next, title: "", content: "" });
+  if (error) return { error: error.message };
+  await supabase.from("tests").update({ day_count: next, updated_at: new Date().toISOString() }).eq("id", testId);
+  revalidatePath(`/training/tests/${testId}`);
+  return { error: null, dayNumber: next };
+}
+
+// Remove a day (its study content + questions) and close the gap so the days stay
+// 1..N with no holes. Won't remove the last remaining day.
+export async function deleteTestDay(testId: string, dayNumber: number): Promise<{ error: string | null }> {
+  if (!(await canBuild())) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { data: test } = await supabase.from("tests").select("day_count").eq("id", testId).maybeSingle();
+  if (!test) return { error: "Test not found." };
+  const dayCount = (test as { day_count: number }).day_count || 1;
+  if (dayCount <= 1) return { error: "A test needs at least one day." };
+
+  await supabase.from("test_questions").delete().eq("test_id", testId).eq("day_number", dayNumber);
+  await supabase.from("test_days").delete().eq("test_id", testId).eq("day_number", dayNumber);
+
+  // Shift every later day (and its questions) down by one to close the gap.
+  const { data: laterDays } = await supabase.from("test_days").select("id, day_number").eq("test_id", testId).gt("day_number", dayNumber).order("day_number");
+  for (const d of (laterDays ?? []) as { id: string; day_number: number }[]) {
+    await supabase.from("test_days").update({ day_number: d.day_number - 1 }).eq("id", d.id);
+  }
+  const { data: laterQs } = await supabase.from("test_questions").select("id, day_number").eq("test_id", testId).gt("day_number", dayNumber);
+  for (const q of (laterQs ?? []) as { id: string; day_number: number }[]) {
+    await supabase.from("test_questions").update({ day_number: q.day_number - 1 }).eq("id", q.id);
+  }
+
+  await supabase.from("tests").update({ day_count: dayCount - 1, updated_at: new Date().toISOString() }).eq("id", testId);
+  revalidatePath(`/training/tests/${testId}`);
+  return { error: null };
+}

@@ -336,12 +336,12 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Build a test three ways" },
       { kind: "list", items: [
         "Build with AI — set the title, format, and settings, then describe what it should cover (or paste your existing material for the AI to organize and improve). Wingman drafts the days and questions for you to review and approve.",
-        "From a training — turn a role's existing training standards into a learn-then-quiz: the AI writes a learning section that teaches the standards, then questions on it. Fastest path: on the Training page, open a role and click \"Turn into a test\" right under its training program — it builds the test (learning first, then the quiz) and drops it into your tests area ready to assign. Edited the training later? Hit \"Update the test\" to regenerate it.",
+        "From a training — turn a role's existing training standards into a learn-then-quiz: the AI writes a learning section that teaches the standards, then questions on it. Fastest path: on the Training page, open a role and click \"Turn into a test\" right under its training program. It shows a \"building your test…\" note while the AI writes it (a few seconds — don't refresh), then drops it into your tests area with a \"Review & edit\" button so you can read it over and adjust it before you assign anyone. Edited the training later? Hit \"Update the test\" to regenerate it.",
         "Start from an example — drop in a ready-made Food, Bartender, or Kitchen Test and tailor it. (The Kitchen Test is best rebuilt from your own menu + recipes with Build with AI, so it quizzes on your exact dishes.)",
       ] },
       { kind: "h", text: "Set the rules" },
       { kind: "list", items: [
-        "Days — break a test into as many days as you like. A fast learner can move day to day in one sitting; a newer hire can spread it across the window you allow.",
+        "Days — break a test into as many days as you like. Open a test and use \"Add another day\" to tack on more; each day gets its own learning section (in learn-then-quiz mode) and its own set of questions. Remove a day and the ones after it move up. A fast learner can work ahead through every day in one sitting; a newer hire can spread it across the window you allow — nothing forces them to wait between days.",
         "Pass % — the score needed to pass (default 80%).",
         "Retakes — how many times they can retake it (default 1). After that it locks and needs a manager to unlock, with coaching first.",
         "Complete within — give them a deadline in hours or days.",
@@ -358,8 +358,9 @@ export const ARTICLES: HelpArticle[] = [
         "It's scored automatically the moment they finish — pass or fail against your pass mark.",
         "If they don't pass, they can retake it up to the number of retakes you allowed. After that it locks.",
       ] },
-      { kind: "h", text: "Locks, coaching, and overdue alerts" },
+      { kind: "h", text: "Reminders, locks, coaching, and overdue alerts" },
       { kind: "list", items: [
+        "Before the deadline, anyone who hasn't finished gets a friendly reminder email with a link to complete it in time — especially helpful on a multi-day test, where it tells them which day to pick up on. It sends once per assignment as the deadline approaches.",
         "When someone uses up all their attempts without passing, the test locks and the manager on file for that person's location is emailed automatically — so you can coach them, then click Unlock on the results table to grant a retest.",
         "If a deadline passes and a test still isn't complete, that location's manager also gets an email so they can follow up. Both alerts route to the email on file for the location the test was taken for.",
       ] },
