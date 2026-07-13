@@ -311,7 +311,9 @@ export const ARTICLES: HelpArticle[] = [
     categoryId: "team",
     keywords: ["test", "tests", "exam", "quiz", "score", "pass", "retake", "food test", "bartender test", "menu test", "lto", "assign", "day", "study", "certification"],
     body: [
-      { kind: "p", text: "Inside Training & Standards, the \"Tests & exams\" button opens the testing area. A test verifies what your team actually retained — auto-scored multiple-choice and true/false questions, built the same way you build everything else in Wingman." },
+      { kind: "p", text: "Inside Training & Standards, a \"Test your team\" banner sits right at the top with a Start a test button. A test verifies what your team actually retained — auto-scored multiple-choice and true/false questions, built the same way you build everything else in Wingman." },
+      { kind: "h", text: "The fastest way: Start a test" },
+      { kind: "p", text: "Click Start a test to hand tests out in one move — no need to open each test first. Pick who takes it (one person, a whole role, or all staff), check off the test(s) you want them to take, optionally set a due date, and send. Everyone gets an email with a link, and if you assign several at once they get one email listing them all. When you send to all staff, Wingman honors each test's target roles automatically — so a bartender test won't land on the line cooks." },
       { kind: "h", text: "Build a test three ways" },
       { kind: "list", items: [
         "Build with AI — set the title, format, and settings, then describe what it should cover (or paste your existing material for the AI to organize and improve). Wingman drafts the days and questions for you to review and approve.",
@@ -327,8 +329,8 @@ export const ARTICLES: HelpArticle[] = [
         "Which roles must take it — all staff, or specific roles only.",
         "Format — a straight exam, or \"learn, then quiz\" that teaches first (great for a new LTO or menu) and quizzes at the end to confirm they retained it. A learn-then-quiz test can be set to rotate monthly and go out to everyone.",
       ] },
-      { kind: "h", text: "Assign it and see who passed" },
-      { kind: "p", text: "On any test's page, the \"Assign & results\" panel lets you assign it to one person, to a whole role, or send it to all staff. Everyone assigned gets an email with a link to take it. The results table shows each person's status (not started, in progress, passed, locked), their score, and their deadline — so you always know who's done it and who hasn't." },
+      { kind: "h", text: "See who passed" },
+      { kind: "p", text: "Once tests are out, open Tests & results (from the Training page or a test's own page) to track them. Each test's \"Assign & results\" panel shows everyone assigned with their status (not started, in progress, passed, locked), their score, and their deadline — and you can still add one more person, a role, or send to all right there. So you always know who's done it and who hasn't." },
       { kind: "h", text: "How an employee takes it" },
       { kind: "list", items: [
         "They open Training → Tests and see \"Assigned to you,\" then take the test one day at a time. A fast learner can move through every day in one sitting; a newer hire can spread it across the window you set.",
