@@ -73,6 +73,7 @@ export function BulkInviteButton({ locations, departments }: { locations: Locati
                     <Field label="Access level">
                       <select value={row.role} onChange={(e) => updateRow(i, "role", e.target.value)} className={inputClass}>
                         <option value="manager">Manager</option>
+                        <option value="shift_lead">Shift Lead</option>
                         <option value="staff">Staff</option>
                       </select>
                     </Field>

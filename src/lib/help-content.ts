@@ -112,14 +112,15 @@ export const ARTICLES: HelpArticle[] = [
     categoryId: "getting-started",
     keywords: ["roles", "permissions", "access", "super admin", "manager", "staff", "who can see"],
     body: [
-      { kind: "p", text: "Every person has one of three access levels, set when they're invited (and editable anytime in Settings)." },
+      { kind: "p", text: "Every person has one of four access levels, set when they're invited (and editable anytime in Settings)." },
       { kind: "diagram", name: "roles", caption: "Access widens from Staff up to the account owner." },
       { kind: "list", items: [
         "Super Admin — the account owner and co-owners. Full access to everything, including Settings and Billing.",
         "Manager — runs the day-to-day: full access to most sections, no Settings/Billing.",
+        "Shift Lead — an assistant-manager tier: runs the floor (accountability, guest bounce back, training & tests, service recovery, pre-shift) but not the back office (no growth, reporting, hiring edits, team management, or settings).",
         "Staff — sees the areas relevant to their shift (e.g. Dashboard, Training, their pre-shift checklist).",
       ] },
-      { kind: "note", text: "Owners can fine-tune what Managers and Staff see per section under Settings → Team & permissions." },
+      { kind: "note", text: "Owners can fine-tune what Managers, Shift Leads, and Staff see per section under Settings → Team & permissions." },
     ],
     links: [{ label: "Managing your team", href: "/help/team-and-permissions" }],
   },

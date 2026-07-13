@@ -69,6 +69,7 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
                   className={inputClass}
                 >
                   <option value="manager">Manager</option>
+                  <option value="shift_lead">Shift Lead (assistant manager)</option>
                   <option value="staff">Staff</option>
                   <option value="super_admin">Super Admin (co-owner)</option>
                 </select>

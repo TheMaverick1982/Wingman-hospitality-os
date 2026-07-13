@@ -27,7 +27,7 @@ export function HireCandidateButton({
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [accessRole, setAccessRole] = useState<"staff" | "manager" | "super_admin">("staff");
+  const [accessRole, setAccessRole] = useState<"staff" | "shift_lead" | "manager" | "super_admin">("staff");
   const [sendInvite, setSendInvite] = useState(canInvite);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +77,7 @@ export function HireCandidateButton({
           <Field label="Access level">
             <select value={accessRole} onChange={(e) => setAccessRole(e.target.value as typeof accessRole)} className={inputClass}>
               <option value="staff">Staff</option>
+              <option value="shift_lead">Shift Lead (assistant manager)</option>
               <option value="manager">Manager</option>
               <option value="super_admin">Super Admin (co-owner)</option>
             </select>
