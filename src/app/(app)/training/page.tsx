@@ -10,6 +10,7 @@ import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
 import { StartTrainingButton } from "./start-training-button";
+import { StartTestButton, type TestOption } from "./start-test-button";
 import { RoleManager } from "../role-manager";
 
 // AI generation/refinement server actions run from this route; give them room
@@ -48,6 +49,8 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     { data: meta },
     { data: menuItems },
     { data: signoffs },
+    { data: testRows },
+    { data: testQ },
     locations,
     staff,
   ] = await Promise.all([
@@ -59,9 +62,22 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
       .order("sort_order"),
     signoffsQ,
+    canEdit ? supabase.from("tests").select("id, title, target_departments, day_count").order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    canEdit ? supabase.from("test_questions").select("test_id") : Promise.resolve({ data: [] }),
     getOrgLocations(),
     getStaffMembers(effectiveLocation),
   ]);
+
+  // Tests available to hand out via the "Start a test" flow (managers only).
+  const qCount = new Map<string, number>();
+  for (const r of (testQ ?? []) as { test_id: string }[]) qCount.set(r.test_id, (qCount.get(r.test_id) ?? 0) + 1);
+  const testOptions: TestOption[] = ((testRows ?? []) as { id: string; title: string; target_departments: string[] | null; day_count: number }[]).map((t) => ({
+    id: t.id,
+    title: t.title,
+    target_departments: (t.target_departments ?? []).filter(Boolean),
+    day_count: t.day_count,
+    questions: qCount.get(t.id) ?? 0,
+  }));
 
   // The roles this restaurant runs = the ones with a department_meta row (set in
   // the wizard, managed here). Show only those; fall back to all if none exist.
@@ -106,16 +122,34 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors">
-            <ClipboardList size={15} /> Tests &amp; exams
+          <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+            <ClipboardList size={14} /> Tests &amp; results
           </Link>
           <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             Print / PDF
           </a>
           {!canEdit && <Pill>View only</Pill>}
-          {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} />}
+          {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} small />}
         </div>
       </div>
+
+      {canEdit && (
+        <div className="rounded-2xl border border-brick/20 bg-brick-tint/50 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-brick text-white flex items-center justify-center shrink-0">
+            <ClipboardList size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">Test your team</div>
+            <p className="text-[13.5px] text-charcoal-2 mt-0.5 max-w-2xl">
+              Turn any training into a graded online test. Pick who takes it — one person, a role, or all staff — choose the test(s), and send. Everyone gets a link, and you see who passed.
+              {testOptions.length > 0 ? ` ${testOptions.length} test${testOptions.length === 1 ? "" : "s"} ready to assign.` : ""}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <StartTestButton tests={testOptions} staff={staff} departments={renderDepts as Department[]} effectiveLocationId={effectiveLocation} />
+          </div>
+        </div>
+      )}
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 

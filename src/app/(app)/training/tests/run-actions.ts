@@ -72,6 +72,91 @@ export async function assignTest(testId: string, staffIds: string[]): Promise<{ 
   return { error: null, assigned: people.length };
 }
 
+// People-first assign: pick who (one person / a role / all staff) and hand them
+// one or more tests in a single move. This is the primary "Start a test" flow;
+// the per-test board still exists for reviewing results.
+export type StartTarget =
+  | { kind: "person"; staffId: string }
+  | { kind: "role"; department: string }
+  | { kind: "all" };
+
+export async function startTests(
+  target: StartTarget,
+  testIds: string[],
+  opts?: { locationId?: string | null; dueAt?: string | null }
+): Promise<{ error: string | null; assigned: number; tests: number }> {
+  const profile = await manager();
+  if (!profile) return { error: "You don't have access to assign tests.", assigned: 0, tests: 0 };
+  const ids = [...new Set(testIds.filter(Boolean))];
+  if (ids.length === 0) return { error: "Pick at least one test.", assigned: 0, tests: 0 };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found.", assigned: 0, tests: 0 };
+
+  const { data: testRows } = await supabase
+    .from("tests")
+    .select("id, title, target_departments, complete_within_amount, complete_within_unit")
+    .in("id", ids);
+  const tests = (testRows ?? []) as {
+    id: string; title: string; target_departments: string[] | null; complete_within_amount: number | null; complete_within_unit: string;
+  }[];
+  if (tests.length === 0) return { error: "No tests found.", assigned: 0, tests: 0 };
+
+  // Resolve the base pool of people from the target.
+  let q = supabase.from("staff_members").select("id, full_name, email, department, location_id").eq("status", "active");
+  if (target.kind === "person") q = q.eq("id", target.staffId);
+  else if (target.kind === "role") q = q.eq("department", target.department);
+  if (opts?.locationId) q = q.eq("location_id", opts.locationId);
+  const { data: staffRows } = await q;
+  const pool = (staffRows ?? []) as (StaffLite & { department: string })[];
+  if (pool.length === 0) return { error: "No active staff matched.", assigned: 0, tests: 0 };
+
+  // Build every (person × test) assignment. For "all staff", honor each test's
+  // target roles so a bartender test doesn't land on the line cooks; an explicit
+  // person/role pick is taken at face value.
+  const now = new Date().toISOString();
+  const rows: Record<string, unknown>[] = [];
+  const perPerson = new Map<string, { name: string; email: string; titles: string[] }>();
+  for (const t of tests) {
+    const targets = (t.target_departments ?? []).filter(Boolean);
+    const eligible = target.kind === "all" && targets.length > 0 ? pool.filter((s) => targets.includes(s.department)) : pool;
+    const dueAt = opts?.dueAt ?? dueFrom(t.complete_within_amount, t.complete_within_unit);
+    for (const s of eligible) {
+      rows.push({ org_id: org.id, test_id: t.id, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, updated_at: now });
+      const e = perPerson.get(s.id) ?? { name: s.full_name, email: s.email, titles: [] };
+      e.titles.push(t.title);
+      perPerson.set(s.id, e);
+    }
+  }
+  if (rows.length === 0) return { error: "None of those tests apply to the people you picked.", assigned: 0, tests: 0 };
+
+  // Only (re)set columns we own — progress columns stay put on conflict.
+  const { error } = await supabase.from("test_assignments").upsert(rows, { onConflict: "test_id,staff_id" });
+  if (error) return { error: error.message, assigned: 0, tests: 0 };
+
+  // One combined email per person listing everything they were handed.
+  await Promise.all(
+    [...perPerson.values()]
+      .filter((p) => p.email && p.email.includes("@"))
+      .map((p) =>
+        sendEmail({
+          to: [p.email],
+          subject: p.titles.length === 1 ? `You've been assigned a test: ${p.titles[0]}` : `You've been assigned ${p.titles.length} tests`,
+          html: `<p>Hi ${p.name.split(" ")[0] || "there"},</p>
+<p>You've been assigned ${p.titles.length === 1 ? "a test" : `${p.titles.length} tests`} to complete:</p>
+<ul style="margin:0 0 14px;padding-left:20px">${p.titles.map((t) => `<li style="margin:2px 0">${t}</li>`).join("")}</ul>
+<p><a href="${SITE}/training/tests" style="display:inline-block;background:#0a6cff;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:600">Open my tests</a></p>
+<p style="color:#666;font-size:13px">Sign in to Wingman and open Training → Tests to begin. You can do each a day at a time, or all at once.</p>`,
+        }).catch(() => undefined)
+      )
+  );
+
+  revalidatePath("/training");
+  revalidatePath("/training/tests");
+  return { error: null, assigned: perPerson.size, tests: tests.length };
+}
+
 export async function assignTestToRole(testId: string, department: string): Promise<{ error: string | null; assigned: number }> {
   if (!(await manager())) return { error: "Not authorized.", assigned: 0 };
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role.", assigned: 0 };
