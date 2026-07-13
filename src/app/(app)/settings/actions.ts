@@ -6,6 +6,21 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { EDITABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { linkOrCreateStaff } from "@/lib/staff-link";
+
+// The staff roster row needs a concrete location even for an all-locations login,
+// so fall back to the org's first location.
+async function resolveStaffLocation(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  orgId: string,
+  preferred: string | null
+): Promise<string | null> {
+  if (preferred) return preferred;
+  const { data } = await admin.from("locations").select("id").eq("org_id", orgId).order("name").limit(1).maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
 
 export type ActionState = { error: string | null };
 export type BatchState = { error: string | null; successCount: number; failures: { index: number; message: string }[] };
@@ -19,9 +34,11 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   const email = String(formData.get("email") || "").trim();
   const fullName = String(formData.get("fullName") || "").trim();
   const role = String(formData.get("role") || "");
+  const department = String(formData.get("department") || "");
 
   if (!email || !fullName) return { error: "Name and email are required." };
   if (role !== "manager" && role !== "staff" && role !== "super_admin") return { error: "Invalid role." };
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Choose their job role." };
 
   // Resolve the location scope for manager/staff (Super Admins get everything).
   let allLocations = false;
@@ -50,7 +67,21 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   });
   if (assignError) return { error: assignError.message };
 
+  // Tie this login to a Staff record (create or link by email) so they appear on
+  // the Staff page with their job role and their metrics land in the right bucket.
+  const staffLocation = await resolveStaffLocation(admin, profile.orgId, role === "super_admin" || allLocations ? null : locationIds[0]);
+  if (staffLocation) {
+    await linkOrCreateStaff(admin, profile.orgId, {
+      email,
+      fullName,
+      department,
+      locationId: staffLocation,
+      profileId: invited.user.id,
+    });
+  }
+
   revalidatePath("/settings");
+  revalidatePath("/staff");
   return { error: null };
 }
 
@@ -80,7 +111,7 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
     return { error: "Only a Super Admin can invite team members.", successCount: 0, failures: [] };
   }
 
-  let rows: { fullName: string; email: string; role: string; locationId: string }[];
+  let rows: { fullName: string; email: string; role: string; locationId: string; department?: string }[];
   try {
     rows = JSON.parse(String(formData.get("membersJson") || "[]"));
   } catch {
@@ -101,9 +132,14 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
     const fullName = (row.fullName || "").trim();
     const locationId = row.locationId || "";
     const role = row.role === "staff" ? "staff" : "manager";
+    const department = String(row.department || "");
 
     if (!email || !fullName || !locationId) {
       failures.push({ index: i, message: "Name, email, and location are required." });
+      continue;
+    }
+    if (!ALL_DEPARTMENTS.includes(department as Department)) {
+      failures.push({ index: i, message: "A job role is required." });
       continue;
     }
 
@@ -127,10 +163,13 @@ export async function bulkInviteTeamMembers(_prev: BatchState, formData: FormDat
       failures.push({ index: i, message: assignError.message });
       continue;
     }
+    // Link/create their Staff record so the roster + metrics stay unified.
+    await linkOrCreateStaff(admin, profile.orgId, { email, fullName, department, locationId, profileId: invited.user.id });
     successCount++;
   }
 
   revalidatePath("/settings");
+  revalidatePath("/staff");
   return { error: failures.length > 0 && successCount === 0 ? "Couldn't send any invites." : null, successCount, failures };
 }
 

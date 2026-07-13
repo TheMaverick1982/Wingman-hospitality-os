@@ -490,10 +490,12 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Owners manage the team under Settings → Team & permissions." },
       { kind: "steps", items: [
-        "Invite: click \"Invite team member\", set their name, email, role, and location access. They get an email to set a password.",
+        "Invite: click \"Invite team member\", set their name, email, job role (Host, Server, …), access level, and location. They get an email to set a password.",
         "Edit: click \"Edit\" on any member to change their name, access level, or which locations they can access.",
         "Remove: remove a member to revoke their access entirely.",
       ] },
+      { kind: "note", text: "Two different things, on purpose: job role (Host, Server, Chef…) drives their training and which metrics they roll into; access level (Staff, Manager, Super Admin) sets what they can see and edit." },
+      { kind: "tip", text: "Anyone you invite is automatically added to your Staff page under their job role — no need to enter them twice. If they're already on Staff (or were hired from a candidate), the invite just links to that same person, matched by email." },
       { kind: "note", text: "You can't remove or demote the last Super Admin — promote someone else first. Settings and Billing are always owner-only." },
     ],
     links: [{ label: "Roles & who can see what", href: "/help/roles-and-access" }],

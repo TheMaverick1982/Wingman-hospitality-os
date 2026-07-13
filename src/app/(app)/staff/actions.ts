@@ -32,6 +32,19 @@ export async function addStaffMember(_prev: StaffFormState, formData: FormData):
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
+  // Dedupe by email so a person isn't entered twice (they may already exist from
+  // hiring or a login invite). If they're already on staff, point the owner there.
+  const { data: dupe } = await supabase
+    .from("staff_members")
+    .select("id, full_name")
+    .eq("org_id", org.id)
+    .ilike("email", email.toLowerCase())
+    .limit(1)
+    .maybeSingle();
+  if (dupe) {
+    return { error: `${(dupe as { full_name: string }).full_name} is already on your staff with that email.`, staffId: (dupe as { id: string }).id };
+  }
+
   const { data: row, error } = await supabase
     .from("staff_members")
     .insert({
