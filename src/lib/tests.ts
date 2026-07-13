@@ -208,4 +208,36 @@ export const EXAMPLE_TESTS: ExampleTest[] = [
       q(5, "multiple_choice", "Safe cold-holding for raw proteins is roughly:", ["At or below 40°F", "Around 70°F", "50–60°F", "Whatever the walk-in is set to"], 0),
     ],
   },
+  {
+    // A monthly limited-time-offer / seasonal-menu template. It's a
+    // learn-then-quiz set to rotate monthly and go to ALL staff — the owner just
+    // rebuilds it each month from the new menu (Build with AI) and re-sends.
+    key: "lto",
+    settings: {
+      title: "This Month's Menu / LTO",
+      description: "Learn-then-quiz for a new limited-time or seasonal menu. Preset to all staff and set to rotate monthly — each month, rebuild it from the new menu with Build with AI and send it to everyone so the whole team knows the new items.",
+      mode: "study_quiz",
+      target_departments: [],
+      day_count: 1,
+      pass_pct: 80,
+      max_retakes: 2,
+      complete_within_amount: 3,
+      complete_within_unit: "days",
+      rotates_monthly: true,
+    },
+    days: [
+      {
+        day_number: 1,
+        title: "This month's new items",
+        content:
+          "Replace this with the month's new/limited-time items. For each one, include: the name, what's in it, how it's made or served, any allergens, the price, and a one-line pitch for recommending it. Paste your new menu here (or use Build with AI to generate it from the menu), and the team studies it before the quiz below.",
+      },
+    ],
+    questions: [
+      q(1, "true_false", "You should be able to describe each new item — what's in it and why it's worth ordering — before it goes on the floor.", ["True", "False"], 0),
+      q(1, "multiple_choice", "A guest asks about a new limited-time item you haven't memorized yet. Best move:", ["Know it cold from this month's study — describe it confidently and suggest it", "Say 'I'm not sure, it's new'", "Point them to the menu and walk away", "Recommend something else instead"], 0),
+      q(1, "multiple_choice", "Why do we quiz the whole team on the new menu each month?", ["So every guest gets the same confident, accurate description of the new items", "To make people study on their own time", "It's only for new hires", "No real reason"], 0),
+      q(1, "true_false", "Any allergens in the new items should be known and flagged the same way as the core menu.", ["True", "False"], 0),
+    ],
+  },
 ];
