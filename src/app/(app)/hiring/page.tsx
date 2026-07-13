@@ -9,6 +9,7 @@ import { Users } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { CandidatesPanel } from "./candidate-scorecards";
+import { ApplicantsPanel, type Applicant } from "./applicants-panel";
 import { RoleManager } from "../role-manager";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
@@ -68,7 +69,15 @@ export default async function HiringPage({
   let candidatesQ = supabase.from("candidates").select("*").order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
-  const [{ data: coreValues }, { data: hiringTraits }, { data: meta }, { data: candidates }, locations, staff] = await Promise.all([
+  // Incoming applications, scoped to the viewed location (plus any not tied to a
+  // location) so a store manager sees their own pipeline.
+  let applicationsQ = supabase
+    .from("job_applications")
+    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at")
+    .order("created_at", { ascending: false });
+  if (effectiveLocation) applicationsQ = applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
+
+  const [{ data: coreValues }, { data: hiringTraits }, { data: meta }, { data: candidates }, { data: applications }, locations, staff] = await Promise.all([
     supabase
       .from("core_values")
       .select("title, description, hiring_question, hiring_green_flag, hiring_red_flag")
@@ -76,6 +85,7 @@ export default async function HiringPage({
     supabase.from("hiring_traits").select("id, department, title, question, green_flag, red_flag, source").order("sort_order"),
     supabase.from("department_meta").select("department"),
     candidatesQ,
+    applicationsQ,
     getOrgLocations(),
     getStaffMembers(null),
   ]);
@@ -95,8 +105,31 @@ export default async function HiringPage({
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
   const allCandidates = candidates ?? [];
 
+  const applicants: Applicant[] = ((applications ?? []) as {
+    id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
+    availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null; status: string; created_at: string;
+  }[]).map((a) => ({
+    id: a.id,
+    name: a.name,
+    department: a.department,
+    locationName: a.location_id ? locationName(a.location_id) : "",
+    email: a.email,
+    phone: a.phone,
+    availability: a.availability,
+    message: a.message,
+    hasResume: Boolean(a.resume_path),
+    preferredVisitAt: a.preferred_visit_at,
+    status: a.status,
+    createdAt: a.created_at,
+  }));
+
   const { data: hiredStaff } = await supabase.from("staff_members").select("candidate_id").not("candidate_id", "is", null);
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
+
+  // Public application link (no subdomain — a path slug on the main site).
+  const { data: orgSlug } = await supabase.from("organizations").select("public_slug").single();
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
+  const applyUrl = (orgSlug as { public_slug: string | null } | null)?.public_slug ? `${SITE}/apply/${(orgSlug as { public_slug: string }).public_slug}` : null;
 
   const latestCandidate = allCandidates[0];
   const latestScorecard =
@@ -188,6 +221,8 @@ export default async function HiringPage({
           })}
         </div>
       </div>
+
+      {canEdit && <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} />}
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
