@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, UserPlus, Code2, ImagePlus } from "lucide-react";
-import { updateApplicationStatus, scheduleApplicationVisit, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
+import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus } from "lucide-react";
+import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
 
 export type Applicant = {
   id: string;
@@ -17,6 +16,8 @@ export type Applicant = {
   message: string;
   hasResume: boolean;
   preferredVisitAt: string | null;
+  interviewAt: string | null;
+  interviewDetails: string;
   status: string;
   createdAt: string;
 };
@@ -24,7 +25,6 @@ export type Applicant = {
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
   { value: "contacted", label: "Contacted", cls: "bg-[#FDF3E1] text-[#B45309]" },
-  { value: "hired", label: "Hired", cls: "bg-[#E7F6EC] text-[#15803D]" },
   { value: "not_a_fit", label: "Not a fit", cls: "bg-[#F1F1F1] text-charcoal-2" },
 ];
 const toneOf = (s: string) => STATUS.find((x) => x.value === s) ?? STATUS[0];
@@ -193,7 +193,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl 
 
 function ApplicantCard({ a }: { a: Applicant }) {
   const [status, setStatus] = useState(a.status);
-  const [visit, setVisit] = useState(toLocalInput(a.preferredVisitAt));
+  const [when, setWhen] = useState(toLocalInput(a.interviewAt));
+  const [details, setDetails] = useState(a.interviewDetails);
+  const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const tone = toneOf(status);
@@ -202,11 +204,11 @@ function ApplicantCard({ a }: { a: Applicant }) {
     setStatus(next);
     start(async () => { await updateApplicationStatus(a.id, next); });
   }
-  function saveVisit() {
+  function confirm_() {
     start(async () => {
-      const res = await scheduleApplicationVisit(a.id, visit);
-      setMsg(res.error ? res.error : "Visit saved.");
-      setTimeout(() => setMsg(null), 2500);
+      const res = await confirmInterview(a.id, when, details);
+      if (res.error) { setMsg(res.error); setTimeout(() => setMsg(null), 2500); }
+      // On success the row moves to the candidates area; revalidate refetches.
     });
   }
   function openResume() {
@@ -238,34 +240,44 @@ function ApplicantCard({ a }: { a: Applicant }) {
 
       {(a.email || a.phone) && <div className="text-[13px] text-charcoal-2">{[a.email, a.phone].filter(Boolean).join(" · ")}</div>}
       {a.availability && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Availability:</span> {a.availability}</div>}
+      {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {new Date(a.preferredVisitAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
       {a.message && <p className="text-[13px] text-muted mt-1 whitespace-pre-wrap">{a.message}</p>}
 
-      <div className="flex flex-wrap items-end gap-3 mt-3 pt-3 border-t border-line">
-        <div>
-          <label className="text-[11.5px] font-semibold text-muted block mb-1">Status</label>
-          <select value={status} onChange={(e) => changeStatus(e.target.value)} disabled={pending} className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13.5px] text-ink outline-none focus:border-brick">
-            {STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[11.5px] font-semibold text-muted block mb-1">Visit</label>
-          <div className="flex items-center gap-1.5">
-            <input type="datetime-local" value={visit} onChange={(e) => setVisit(e.target.value)} className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-brick" />
-            <button onClick={saveVisit} disabled={pending} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1.5 hover:border-brick hover:text-brick disabled:opacity-50"><CalendarClock size={13} /> Save</button>
+      <div className="mt-3 pt-3 border-t border-line">
+        {!scheduling ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-[11.5px] font-semibold text-muted block mb-1">Status</label>
+              <select value={status} onChange={(e) => changeStatus(e.target.value)} disabled={pending} className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13.5px] text-ink outline-none focus:border-brick">
+                {STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            {a.hasResume && (
+              <button onClick={openResume} disabled={pending} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/30 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50">
+                <Paperclip size={13} /> Resume
+              </button>
+            )}
+            <button onClick={() => setScheduling(true)} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark">
+              <CalendarClock size={13} /> Schedule interview
+            </button>
+            {msg && <span className="text-[12.5px] text-danger self-center">{msg}</span>}
           </div>
-        </div>
-        {a.hasResume && (
-          <button onClick={openResume} disabled={pending} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/30 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50">
-            <Paperclip size={13} /> Resume
-          </button>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            <div className="text-[12.5px] font-semibold text-ink">Schedule the interview — this moves them into your candidates.</div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
+              <input value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Details — who's interviewing, where, what to bring…" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={confirm_} disabled={pending || !when} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark disabled:opacity-50">
+                <Check size={14} /> {pending ? "Confirming…" : "Confirm interview"}
+              </button>
+              <button onClick={() => setScheduling(false)} className="text-[13px] font-semibold text-muted-2 hover:text-ink">Cancel</button>
+              {msg && <span className="text-[12.5px] text-danger self-center">{msg}</span>}
+            </div>
+          </div>
         )}
-        <Link
-          href={`/hiring?app=${a.id}&an=${encodeURIComponent(a.name)}${a.department ? `&scoreDept=${encodeURIComponent(a.department)}` : ""}${a.locationId ? `&scoreLoc=${a.locationId}` : ""}`}
-          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3 py-1.5 hover:bg-brick-dark"
-        >
-          <UserPlus size={13} /> Start hiring
-        </Link>
-        {msg && <span className="text-[12.5px] text-muted self-center">{msg}</span>}
       </div>
     </div>
   );

@@ -24,6 +24,35 @@ export async function updateApplicationStatus(id: string, status: string): Promi
   return { error: null };
 }
 
+// Confirm an interview: set the date/time + details and move the application
+// into the candidates area (status 'interviewing').
+export async function confirmInterview(id: string, when: string, details: string): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  if (!when) return { error: "Pick an interview date and time." };
+  const iso = new Date(when).toISOString();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("job_applications")
+    .update({ interview_at: iso, interview_details: (details || "").slice(0, 2000), status: "interviewing", updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Move a scheduled interview back to the applications list.
+export async function unconfirmInterview(id: string): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("job_applications")
+    .update({ status: "contacted", updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
 export async function scheduleApplicationVisit(id: string, when: string): Promise<{ error: string | null }> {
   if (!(await gate())) return { error: "Not authorized." };
   const iso = when ? new Date(when).toISOString() : null;
