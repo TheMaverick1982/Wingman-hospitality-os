@@ -42,7 +42,7 @@ export function PermissionsMatrixForm({ initialOverrides }: { initialOverrides: 
     return result;
   }, initialState);
 
-  function setLevel(section: Section, role: "manager" | "staff", value: SectionAccess) {
+  function setLevel(section: Section, role: "manager" | "shift_lead" | "staff", value: SectionAccess) {
     setOverrides((o) => ({ ...o, [section]: { ...o[section], [role]: value } }));
     setSaved(false);
   }
@@ -51,21 +51,22 @@ export function PermissionsMatrixForm({ initialOverrides }: { initialOverrides: 
     <form action={formAction}>
       <input type="hidden" name="overridesJson" value={JSON.stringify(overrides)} />
       <div className="border border-[#EDEDED] rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] bg-[#FAFAFA] border-b border-line">
+        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] bg-[#FAFAFA] border-b border-line">
           <div className="px-[18px] py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em]">Section</div>
           <div className="px-3 py-3 text-[11.5px] font-bold text-ink text-center">Super Admin</div>
           <div className="px-3 py-3 text-[11.5px] font-bold text-brick-dark text-center">Manager</div>
+          <div className="px-3 py-3 text-[11.5px] font-bold text-brick-dark text-center">Shift Lead</div>
           <div className="px-3 py-3 text-[11.5px] font-bold text-charcoal-2 text-center">Staff</div>
         </div>
         {ALL_SECTIONS.map((section) => {
           const editable = (EDITABLE_SECTIONS as Section[]).includes(section);
           return (
-            <div key={section} className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center border-b border-[#F5F5F5] last:border-0">
+            <div key={section} className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] items-center border-b border-[#F5F5F5] last:border-0">
               <div className="px-[18px] py-3 text-sm font-medium text-ink">{SECTION_LABELS[section]}</div>
               <div className="px-3 py-2.5 text-center">
                 <span className="inline-block min-w-[58px] py-1 rounded-full text-xs font-semibold bg-[#E7F6EC] text-[#15803D]">Full</span>
               </div>
-              {(["manager", "staff"] as const).map((role) => {
+              {(["manager", "shift_lead", "staff"] as const).map((role) => {
                 const level = getSectionAccess(role, section, overrides);
                 return (
                   <div key={role} className="px-3 py-2 text-center">
