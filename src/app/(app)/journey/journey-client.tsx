@@ -1,7 +1,25 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { generateJourney, refineStage, captureFirstTimer, logInspection, updateStage, addStage, deleteStage, type JourneyState, type RefineState, type CaptureState } from "./actions";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  proposeJourney,
+  applyJourneyStages,
+  refineJourney,
+  applyJourneyRefinement,
+  refineStage,
+  captureFirstTimer,
+  logInspection,
+  updateStage,
+  addStage,
+  deleteStage,
+  type RefineState,
+  type CaptureState,
+  type GenerateState,
+  type JourneyRefineState,
+} from "./actions";
+
+const genInitial: GenerateState = { error: null };
+const refineJourneyInitial: JourneyRefineState = { error: null };
 
 export type InspectionStat = { count: number; passed: number };
 
@@ -17,7 +35,6 @@ export type Stage = {
   timing: string;
 };
 
-const initial: JourneyState = { error: null };
 const refineInitial: RefineState = { error: null, ok: false };
 const captureInitial: CaptureState = { error: null, ok: false, capturedName: null, nonce: 0 };
 
@@ -60,12 +77,60 @@ const STYLES = [
   "Quick-service",
 ];
 
-function GenerateBar({ hasStages }: { hasStages: boolean }) {
-  const [state, action, pending] = useActionState(generateJourney, initial);
+type PreviewStage = { name: string; purpose?: string; avoid?: string; standard?: string; script?: string; inspect?: string; timing?: string };
+
+// Small read-only preview of a proposed stage.
+function StagePreview({ s, index }: { s: PreviewStage; index?: number }) {
+  return (
+    <div className="bg-white border border-line rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-1">
+        {index != null && <span className="w-5 h-5 rounded-full bg-brick-tint text-brick flex items-center justify-center text-[11px] font-bold shrink-0">{index + 1}</span>}
+        <span className="text-[14.5px] font-semibold text-ink">{s.name}</span>
+        {s.timing && <span className="text-[11px] font-semibold text-charcoal-2 bg-paper rounded-full px-2 py-0.5 ml-auto">{s.timing}</span>}
+      </div>
+      {s.purpose && <div className="text-[12.5px] text-muted mb-1.5">{s.purpose}</div>}
+      {s.standard && <div className="text-[13px] text-ink"><span className="text-[11px] font-semibold uppercase tracking-wide text-olive">Standard </span>{s.standard}</div>}
+      {s.script && <div className="text-[13px] text-charcoal-2 italic mt-1">“{s.script}”</div>}
+    </div>
+  );
+}
+
+// Build a journey from a service style + the operator's own description, review
+// the AI's recommendation, and approve it before it replaces anything.
+function JourneyBuilder({ hasStages }: { hasStages: boolean }) {
+  const [state, action, pending] = useActionState(proposeJourney, genInitial);
+  const [applying, startApply] = useTransition();
+  const [applyErr, setApplyErr] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(!hasStages);
+  const preview = state.stages && !dismissed ? state.stages : null;
+
+  function approve() {
+    if (!state.stages) return;
+    setApplyErr(null);
+    startApply(async () => {
+      const res = await applyJourneyStages(state.stages!);
+      if (res.error) setApplyErr(res.error);
+      else setDismissed(true);
+    });
+  }
+
+  if (hasStages && !open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-[13px] font-semibold text-charcoal-2 border border-dashed border-line rounded-2xl px-5 py-3 w-full hover:border-brick hover:text-brick transition-colors">
+        ✨ Rebuild the journey from a description
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <form action={action} className="bg-white border border-line rounded-2xl p-5 flex flex-col sm:flex-row sm:items-end gap-3">
-        <div className="flex-1">
+      <form action={action} onSubmit={() => { setDismissed(false); setApplyErr(null); }} className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="text-[15px] font-semibold text-ink">{hasStages ? "Rebuild your journey" : "Build your guest journey"}</div>
+          {hasStages && <button type="button" onClick={() => setOpen(false)} className="text-[13px] text-muted-2 hover:text-ink">Close</button>}
+        </div>
+        <div>
           <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Service style</label>
           <select name="style" defaultValue="Full-service casual dining" disabled={pending} className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] text-ink outline-none focus:border-brick disabled:opacity-60">
             {STYLES.map((s) => (
@@ -73,17 +138,23 @@ function GenerateBar({ hasStages }: { hasStages: boolean }) {
             ))}
           </select>
         </div>
-        <button
-          type="submit"
-          disabled={pending}
-          onClick={(e) => {
-            if (hasStages && !confirm("Regenerate the whole journey? This replaces your current stages.")) e.preventDefault();
-          }}
-          className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-60"
-        >
-          {pending ? "Building…" : hasStages ? "Regenerate with AI" : "Generate my journey"}
-        </button>
-        {state.error && <span className="text-[13px] text-danger self-center">{state.error}</span>}
+        <div>
+          <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Describe your restaurant &amp; how you want the experience to flow <span className="font-normal text-muted-2">(optional — the more you add, the more it&rsquo;s yours)</span></label>
+          <textarea
+            name="description"
+            rows={4}
+            disabled={pending}
+            placeholder="e.g. Neighborhood wood-fired pizza spot. We seat at the counter, always offer a taste of a new special, and we walk every first-timer through the menu. Big on remembering regulars' usual drink. End every visit with a fresh cookie on the house."
+            className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[14px] text-ink outline-none focus:border-brick disabled:opacity-60 resize-y"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={pending} className="shrink-0 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-60 inline-flex items-center gap-2">
+            {pending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+            {pending ? "Building…" : "Get recommendations"}
+          </button>
+          {state.error && <span className="text-[13px] text-danger">{state.error}</span>}
+        </div>
       </form>
 
       {pending && (
@@ -91,7 +162,145 @@ function GenerateBar({ hasStages }: { hasStages: boolean }) {
           <span className="w-5 h-5 rounded-full border-2 border-brick border-t-transparent animate-spin shrink-0" />
           <div>
             <div className="text-[15px] font-semibold text-ink">Mapping your guest experience, moment by moment…</div>
-            <div className="text-[13px] text-muted mt-0.5">Hang tight — this takes up to a minute. We&rsquo;re crafting the standards your team will run on every shift.</div>
+            <div className="text-[13px] text-muted mt-0.5">Hang tight — this takes up to a minute.</div>
+          </div>
+        </div>
+      )}
+
+      {preview && (
+        <div className="bg-paper border border-brick/30 rounded-2xl p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold uppercase tracking-wide text-brick">Recommended journey — review &amp; approve</span>
+            <span className="text-[12px] text-muted">{preview.length} stages</span>
+          </div>
+          {state.summary && <p className="text-[13.5px] text-charcoal-2">{state.summary}</p>}
+          <div className="flex flex-col gap-2">
+            {preview.map((s, i) => <StagePreview key={i} s={s} index={i} />)}
+          </div>
+          {hasStages && <p className="text-[12.5px] text-[#B45309]">Approving replaces your current journey.</p>}
+          <div className="flex items-center gap-3">
+            <button onClick={approve} disabled={applying} className="text-[14px] font-semibold text-white bg-olive rounded-full px-5 py-2 hover:opacity-90 transition-opacity disabled:opacity-60 inline-flex items-center gap-2">
+              {applying && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+              {applying ? "Saving…" : hasStages ? "Approve & replace" : "Approve & save"}
+            </button>
+            <button onClick={() => setDismissed(true)} disabled={applying} className="text-[14px] text-muted-2 hover:text-ink disabled:opacity-60">Discard</button>
+            {applyErr && <span className="text-[13px] text-danger">{applyErr}</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const JOURNEY_REQUEST_QUICK = ["What am I missing?", "Make the whole thing more upscale", "Add a moment that drives a repeat visit", "Tighten it — fewer stages", "Add an upsell moment"];
+
+// Whole-journey change request: ask in plain English, review the proposed
+// add/edit/remove changes, and approve them.
+function JourneyRefinePanel() {
+  const [state, action, pending] = useActionState(refineJourney, refineJourneyInitial);
+  const [applying, startApply] = useTransition();
+  const [applyErr, setApplyErr] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(false);
+  const proposal = state.proposal && !dismissed ? state.proposal : null;
+
+  function apply() {
+    if (!state.proposal) return;
+    setApplyErr(null);
+    startApply(async () => {
+      const res = await applyJourneyRefinement(state.proposal!);
+      if (res.error) setApplyErr(res.error);
+      else { setDismissed(true); setOpen(false); }
+    });
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-[14px] font-semibold text-brick border border-dashed border-brick/40 rounded-2xl px-5 py-3 w-full hover:bg-brick-tint/40 transition-colors">
+        ✨ Ask AI to improve the journey or request a change
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-brick/30 rounded-2xl p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="text-[15px] font-semibold text-ink">Request a change to your journey</div>
+        <button type="button" onClick={() => setOpen(false)} className="text-[13px] text-muted-2 hover:text-ink">Close</button>
+      </div>
+      <form action={action} onSubmit={() => { setDismissed(false); setApplyErr(null); }} className="flex flex-col gap-2.5">
+        <textarea
+          name="feedback"
+          rows={2}
+          disabled={pending}
+          placeholder="e.g. Add a wine-pairing moment after the order, and make the goodbye warmer with a reason to come back."
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-brick disabled:opacity-60 resize-y"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {JOURNEY_REQUEST_QUICK.map((q) => (
+            <button key={q} type="submit" name="feedback" value={q} disabled={pending} className="text-[12px] font-medium text-charcoal-2 bg-paper border border-line rounded-full px-3 py-1 hover:border-brick hover:text-brick transition-colors disabled:opacity-60">
+              {q}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={pending} className="text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2 hover:bg-brick-dark transition-colors disabled:opacity-60 inline-flex items-center gap-2">
+            {pending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+            {pending ? "Thinking…" : "Get suggestions"}
+          </button>
+          {state.error && <span className="text-[13px] text-danger">{state.error}</span>}
+        </div>
+      </form>
+
+      {proposal && (
+        <div className="bg-paper border border-line rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-[13.5px] font-medium text-ink">{proposal.summary}</p>
+          {proposal.add.length > 0 && (
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive mb-1.5">Add {proposal.add.length}</div>
+              <div className="flex flex-col gap-2">
+                {proposal.add.map((c, i) => (
+                  <div key={i}>
+                    <StagePreview s={c} />
+                    {c.reason && <div className="text-[12px] text-muted-2 mt-0.5 pl-1">Why: {c.reason}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {proposal.edit.length > 0 && (
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">Improve {proposal.edit.length}</div>
+              <div className="flex flex-col gap-2">
+                {proposal.edit.map((c, i) => (
+                  <div key={i}>
+                    <StagePreview s={c} />
+                    {c.reason && <div className="text-[12px] text-muted-2 mt-0.5 pl-1">Why: {c.reason}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {proposal.remove.length > 0 && (
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-2 mb-1.5">Remove {proposal.remove.length}</div>
+              <div className="flex flex-col gap-1">
+                {proposal.remove.map((c, i) => (
+                  <div key={i} className="text-[13px] text-charcoal-2">
+                    <span className="line-through">{c.name}</span>
+                    {c.reason && <span className="text-[12px] text-muted-2"> — {c.reason}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <button onClick={apply} disabled={applying} className="text-[14px] font-semibold text-white bg-olive rounded-full px-5 py-2 hover:opacity-90 transition-opacity disabled:opacity-60 inline-flex items-center gap-2">
+              {applying && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+              {applying ? "Applying…" : "Apply changes"}
+            </button>
+            <button onClick={() => setDismissed(true)} disabled={applying} className="text-[14px] text-muted-2 hover:text-ink disabled:opacity-60">Discard</button>
+            {applyErr && <span className="text-[13px] text-danger">{applyErr}</span>}
           </div>
         </div>
       )}
@@ -280,11 +489,11 @@ function StageCard({ stage, index, canEdit, showCapture, stat }: { stage: Stage;
 export function JourneyClient({ stages, canEdit, canCapture, inspections }: { stages: Stage[]; canEdit: boolean; canCapture: boolean; inspections: Record<string, InspectionStat> }) {
   return (
     <div className="flex flex-col gap-5">
-      {canEdit && <GenerateBar hasStages={stages.length > 0} />}
+      {canEdit && <JourneyBuilder hasStages={stages.length > 0} />}
 
       {stages.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-10 text-center text-muted">
-          No journey yet.{canEdit ? " Pick your service style above and generate one — then edit any stage to make it yours." : " Ask a manager to set it up."}
+          No journey yet.{canEdit ? " Describe your restaurant above and Wingman will recommend a journey for you to approve — then edit any stage to make it yours." : " Ask a manager to set it up."}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -292,11 +501,14 @@ export function JourneyClient({ stages, canEdit, canCapture, inspections }: { st
             <StageCard key={s.id} stage={s} index={i} canEdit={canEdit} showCapture={canCapture && i === 0} stat={inspections[s.id]} />
           ))}
           {canEdit && (
-            <form action={addStage}>
-              <button type="submit" className="text-[14px] font-semibold text-charcoal-2 border border-dashed border-line rounded-2xl px-5 py-3 w-full hover:border-brick hover:text-brick transition-colors">
-                + Add a stage
-              </button>
-            </form>
+            <>
+              <JourneyRefinePanel />
+              <form action={addStage}>
+                <button type="submit" className="text-[14px] font-semibold text-charcoal-2 border border-dashed border-line rounded-2xl px-5 py-3 w-full hover:border-brick hover:text-brick transition-colors">
+                  + Add a blank stage manually
+                </button>
+              </form>
+            </>
           )}
         </div>
       )}
