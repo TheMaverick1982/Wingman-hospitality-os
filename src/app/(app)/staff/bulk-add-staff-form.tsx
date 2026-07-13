@@ -6,7 +6,7 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { bulkAddStaffMembers, type BatchState } from "./actions";
 
@@ -14,12 +14,13 @@ const initialState: BatchState = { error: null, successCount: 0, failures: [] };
 
 type Row = { fullName: string; department: string; locationId: string; email: string; phone: string };
 
-export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
+export function BulkAddStaffButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const multiLocation = locations.length > 1;
   const emptyRow = (): Row => ({
     fullName: "",
-    department: ALL_DEPARTMENTS[0],
+    department: roles[0],
     locationId: locations[0]?.id ?? "",
     email: "",
     phone: "",
@@ -73,7 +74,7 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
                     </Field>
                     <Field label="Role">
                       <select value={row.department} onChange={(e) => updateRow(i, "department", e.target.value)} className={inputClass}>
-                        {ALL_DEPARTMENTS.map((d) => (
+                        {roles.map((d) => (
                           <option key={d} value={d}>
                             {d}
                           </option>

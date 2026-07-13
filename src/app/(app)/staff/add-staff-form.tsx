@@ -12,9 +12,10 @@ import { addStaffMember, type StaffFormState } from "./actions";
 
 const initialState: StaffFormState = { error: null };
 
-export function AddStaffButton({ locations }: { locations: Location[] }) {
+export function AddStaffButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
-  const [department, setDepartment] = useState<Department>(ALL_DEPARTMENTS[0]);
+  const [department, setDepartment] = useState<Department>(roles[0]);
   const [state, formAction, pending] = useActionState(addStaffMember, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
   const multiLocation = locations.length > 1;
@@ -38,7 +39,7 @@ export function AddStaffButton({ locations }: { locations: Location[] }) {
                 onChange={(e) => setDepartment(e.target.value as Department)}
                 className={inputClass}
               >
-                {ALL_DEPARTMENTS.map((d) => (
+                {roles.map((d) => (
                   <option key={d}>{d}</option>
                 ))}
               </select>

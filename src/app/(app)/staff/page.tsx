@@ -4,7 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { getActiveDepartments } from "@/lib/roles";
 import { Pill } from "@/components/ui/pill";
 import { AddStaffButton } from "./add-staff-form";
 import { BulkAddStaffButton } from "./bulk-add-staff-form";
@@ -38,13 +38,20 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
     .order("full_name");
   if (effectiveLocation) staffQ = staffQ.eq("location_id", effectiveLocation);
 
-  const [{ data: staff }, locations, { data: signoffs }] = await Promise.all([
+  const [{ data: staff }, locations, { data: signoffs }, activeDepts] = await Promise.all([
     staffQ,
     getOrgLocations(),
     supabase.from("training_signoffs").select("staff_id, completion_pct, occurred_on").order("occurred_on", { ascending: false }),
+    getActiveDepartments(),
   ]);
 
   const allStaff = staff ?? [];
+  // Show a count card for each role the restaurant runs (the ones set up in
+  // Hiring/Training), plus any role a current staff member is still assigned to
+  // so nobody silently disappears from the breakdown.
+  const activeSet = new Set<string>(activeDepts);
+  const staffOnlyDepts = Array.from(new Set(allStaff.map((s) => s.department as string))).filter((d) => !activeSet.has(d));
+  const gridDepts: string[] = [...activeDepts, ...staffOnlyDepts];
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
 
   const latestPctByStaff: Record<string, number> = {};
@@ -63,15 +70,15 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         </div>
         {canEdit && (
           <div className="flex items-center gap-2 shrink-0">
-            <BulkAddStaffButton locations={locations} />
-            <AddStaffButton locations={locations} />
+            <BulkAddStaffButton locations={locations} departments={activeDepts} />
+            <AddStaffButton locations={locations} departments={activeDepts} />
           </div>
         )}
         {!canEdit && <Pill>View only</Pill>}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {ALL_DEPARTMENTS.map((d) => {
+        {gridDepts.map((d) => {
           const count = allStaff.filter((s) => s.department === d).length;
           return (
             <div key={d} className="bg-white border border-line rounded-2xl p-5 shadow-sm">
