@@ -7,6 +7,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { effectiveMonthlyCents, pricingLabel, getPlatformPricing } from "@/lib/pricing";
 import { impersonateUser } from "../actions";
 import { PricingForm } from "./pricing-form";
+import { AffiliateForm } from "./affiliate-form";
 import { BillingCard } from "./billing-card";
 import { CouponCard } from "./coupon-card";
 import { billingBadge, BILLING_TONE_CLASSES } from "@/lib/billing-label";
@@ -23,11 +24,22 @@ export default async function AdminOrganizationDetailPage({
 
   const { data: org } = await admin
     .from("organizations")
-    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4, coupon_code, trial_ends_at")
+    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4, coupon_code, trial_ends_at, referred_by_affiliate_id")
     .eq("id", orgId)
     .eq("is_platform", false)
     .maybeSingle();
   if (!org) notFound();
+
+  // Approved affiliates, for manual referral attribution (offline intros).
+  const { data: affiliateRows } = await admin
+    .from("affiliates")
+    .select("id, full_name, email, code")
+    .eq("status", "approved")
+    .order("full_name");
+  const affiliates = ((affiliateRows ?? []) as { id: string; full_name: string; email: string; code: string | null }[]).map((a) => ({
+    id: a.id,
+    label: `${a.full_name || a.email}${a.code ? ` (${a.code})` : ""}`,
+  }));
 
   const { data: redemption } = await admin
     .from("coupon_redemptions")
@@ -153,6 +165,18 @@ export default async function AdminOrganizationDetailPage({
           note={pricing.pricing_note ?? ""}
           effectiveLabel={effectiveLabel}
           baseDollars={Math.round(platformPricing.firstCents / 100)}
+        />
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-1">Affiliate attribution</h2>
+        <p className="text-[13px] text-muted mb-4">
+          Credit an affiliate who made the intro when you signed this customer up manually. Their commission accrues from the next payment.
+        </p>
+        <AffiliateForm
+          orgId={org.id}
+          current={(org as unknown as { referred_by_affiliate_id: string | null }).referred_by_affiliate_id}
+          affiliates={affiliates}
         />
       </div>
 
