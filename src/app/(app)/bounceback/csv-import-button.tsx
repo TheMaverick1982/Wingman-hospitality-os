@@ -9,14 +9,35 @@ import { inputClass } from "@/components/ui/field";
 import type { Location } from "@/lib/data/locations";
 import { importGuests, type ImportRow, type ImportResult } from "./actions";
 
-type FieldKey = "name" | "email" | "phone" | "source" | "firstVisitDate";
+type FieldKey = "name" | "email" | "phone" | "visit1" | "visit2" | "visit3" | "visit4" | "source";
 const FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
   { key: "name", label: "Guest name", required: true },
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
-  { key: "firstVisitDate", label: "First visit date (YYYY-MM-DD)" },
+  { key: "visit1", label: "Visit 1 date" },
+  { key: "visit2", label: "Visit 2 date" },
+  { key: "visit3", label: "Visit 3 date" },
+  { key: "visit4", label: "Visit 4 date" },
   { key: "source", label: "Source (how they found you)" },
 ];
+const NO_MAP: Record<FieldKey, number> = { name: -1, email: -1, phone: -1, visit1: -1, visit2: -1, visit3: -1, visit4: -1, source: -1 };
+
+// Accept common CSV date formats and normalize to YYYY-MM-DD; return "" if we
+// can't read it confidently (that visit is simply skipped).
+function normDate(raw: string): string {
+  const s = (raw || "").trim();
+  if (!s) return "";
+  const pad = (x: string) => x.padStart(2, "0");
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/); // M/D/Y (US)
+  if (m) {
+    let y = m[3];
+    if (y.length === 2) y = `20${y}`;
+    return `${y}-${pad(m[1])}-${pad(m[2])}`;
+  }
+  return "";
+}
 
 // Minimal RFC-4180-ish CSV parser (handles quotes, escaped quotes, CRLF).
 function parseCsv(text: string): string[][] {
@@ -45,7 +66,10 @@ function guessColumn(headers: string[], field: FieldKey): number {
   if (field === "name") return has(["full name", "name", "guest", "customer"]);
   if (field === "email") return has(["email", "e-mail"]);
   if (field === "phone") return has(["phone", "mobile", "cell", "tel"]);
-  if (field === "firstVisitDate") return has(["visit date", "first visit", "date", "visited"]);
+  if (field === "visit1") return has(["visit 1", "visit1", "first visit"]);
+  if (field === "visit2") return has(["visit 2", "visit2", "second visit"]);
+  if (field === "visit3") return has(["visit 3", "visit3", "third visit"]);
+  if (field === "visit4") return has(["visit 4", "visit4", "fourth visit"]);
   if (field === "source") return has(["source", "channel", "origin"]);
   return -1;
 }
@@ -56,7 +80,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
   const [step, setStep] = useState<"upload" | "map">("upload");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
-  const [mapping, setMapping] = useState<Record<FieldKey, number>>({ name: -1, email: -1, phone: -1, source: -1, firstVisitDate: -1 });
+  const [mapping, setMapping] = useState<Record<FieldKey, number>>({ ...NO_MAP });
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +93,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
     setStep("upload");
     setHeaders([]);
     setRows([]);
-    setMapping({ name: -1, email: -1, phone: -1, source: -1, firstVisitDate: -1 });
+    setMapping({ ...NO_MAP });
     setError(null);
     setResult(null);
   };
@@ -84,25 +108,22 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
     const hdr = parsed[0];
     setHeaders(hdr);
     setRows(parsed.slice(1));
-    setMapping({
-      name: guessColumn(hdr, "name"),
-      email: guessColumn(hdr, "email"),
-      phone: guessColumn(hdr, "phone"),
-      source: guessColumn(hdr, "source"),
-      firstVisitDate: guessColumn(hdr, "firstVisitDate"),
-    });
+    setMapping(FIELDS.reduce((acc, f) => ({ ...acc, [f.key]: guessColumn(hdr, f.key) }), { ...NO_MAP }));
     setStep("map");
   };
 
   const runImport = () => {
     if (mapping.name < 0) return setError("Map the Guest name column — it's required.");
     setError(null);
+    const cell = (r: string[], key: FieldKey) => (mapping[key] >= 0 ? (r[mapping[key]] ?? "") : "");
     const payload: ImportRow[] = rows.map((r) => ({
-      name: mapping.name >= 0 ? (r[mapping.name] ?? "") : "",
-      email: mapping.email >= 0 ? (r[mapping.email] ?? "") : "",
-      phone: mapping.phone >= 0 ? (r[mapping.phone] ?? "") : "",
-      source: mapping.source >= 0 ? (r[mapping.source] ?? "") : "",
-      firstVisitDate: mapping.firstVisitDate >= 0 ? (r[mapping.firstVisitDate] ?? "") : "",
+      name: cell(r, "name"),
+      email: cell(r, "email"),
+      phone: cell(r, "phone"),
+      source: cell(r, "source"),
+      visits: ([1, 2, 3, 4] as const)
+        .map((n) => ({ n, date: normDate(cell(r, `visit${n}` as FieldKey)) }))
+        .filter((v) => v.date !== ""),
     }));
     start(async () => {
       const res = await importGuests(payload, multiLocation ? locationId : locations[0]?.id ?? null);
@@ -167,8 +188,9 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
                 <ArrowLeft size={14} /> Choose a different file
               </button>
               <p className="text-sm text-muted mb-4">
-                Found <strong className="text-ink">{rows.length}</strong> row{rows.length === 1 ? "" : "s"}. Match your columns to Wingman&rsquo;s fields:
+                Found <strong className="text-ink">{rows.length}</strong> row{rows.length === 1 ? "" : "s"}. Match your columns to Wingman&rsquo;s fields — map any visit dates you have (1&ndash;4) and each becomes a tracked visit:
               </p>
+              <p className="text-[12px] text-muted-2 mb-3">Dates can be YYYY-MM-DD or MM/DD/YYYY — we&rsquo;ll normalize them. Anything we can&rsquo;t read is skipped.</p>
               <div className="flex flex-col gap-3">
                 {FIELDS.map((f) => (
                   <div key={f.key} className="grid grid-cols-2 items-center gap-3">
@@ -189,7 +211,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
                 ))}
                 {multiLocation && (
                   <div className="grid grid-cols-2 items-center gap-3">
-                    <label className="text-[13.5px] font-semibold text-charcoal-2">Location for first visits</label>
+                    <label className="text-[13.5px] font-semibold text-charcoal-2">Location for imported visits</label>
                     <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputClass}>
                       {locations.map((l) => (
                         <option key={l.id} value={l.id}>{l.name}</option>
