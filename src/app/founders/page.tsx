@@ -3,6 +3,7 @@ import Link from "next/link";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { validateCoupon, describeCoupon } from "@/lib/coupons";
+import { FoundersFlightPath } from "./flight-path";
 
 const FOUNDER_CODE = "FOUNDER50";
 
@@ -55,6 +56,8 @@ export default async function FoundersPage() {
             shift — at the founders rate.
           </p>
         </div>
+
+        <FoundersFlightPath className="w-full max-w-[460px] h-auto" />
 
         {/* Offer card */}
         <div className="w-full max-w-[440px] bg-white border border-line rounded-2xl shadow-sm p-6 flex flex-col gap-4">
