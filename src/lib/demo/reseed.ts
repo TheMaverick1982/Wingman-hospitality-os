@@ -621,6 +621,7 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   };
   const foodTestId = await seedTest("food");
   await seedTest("bartender");
+  await seedTest("kitchen");
 
   // A staff record linked to the demo viewer's own login, so "Assigned to you"
   // appears and they can take the test live during a walkthrough.

@@ -238,6 +238,7 @@ export function TestsClient({ tests, activeDepartments, canEdit }: { tests: Test
                 {[
                   { key: "food", title: "Food Test", sub: "5 days · food knowledge, allergens, safety" },
                   { key: "bartender", title: "Bartender Test", sub: "3 days · cocktails, pours, responsible service" },
+                  { key: "kitchen", title: "Kitchen Test", sub: "5 days · recipes, ingredients, method, safety" },
                 ].map((ex) => (
                   <button key={ex.key} onClick={() => addExample(ex.key)} disabled={applying} className="text-left bg-paper border border-line rounded-xl px-4 py-3 hover:border-brick transition-colors disabled:opacity-60 min-w-[240px]">
                     <div className="text-[14.5px] font-semibold text-ink flex items-center gap-2">{ex.title}{exampleBusy === ex.key && <span className="w-3.5 h-3.5 rounded-full border-2 border-brick border-t-transparent animate-spin" />}</div>

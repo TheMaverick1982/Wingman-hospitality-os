@@ -316,7 +316,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "list", items: [
         "Build with AI — set the title, format, and settings, then describe what it should cover (or paste your existing material for the AI to organize and improve). Wingman drafts the days and questions for you to review and approve.",
         "From a training — turn a role's existing training standards into a knowledge test in one click; the AI writes the questions from your own standards.",
-        "Start from an example — drop in the ready-made Food Test or Bartender Test and tailor it.",
+        "Start from an example — drop in a ready-made Food, Bartender, or Kitchen Test and tailor it. (The Kitchen Test is best rebuilt from your own menu + recipes with Build with AI, so it quizzes on your exact dishes.)",
       ] },
       { kind: "h", text: "Set the rules" },
       { kind: "list", items: [

@@ -173,4 +173,39 @@ export const EXAMPLE_TESTS: ExampleTest[] = [
       q(3, "true_false", "You should check ID for anyone who appears under the legal age, every time.", ["True", "False"], 0),
     ],
   },
+  {
+    // A back-of-house recipe/method exam. Its power is realized when the owner
+    // rebuilds it from their OWN menu + recipes via "Build with AI" — paste the
+    // full menu with recipes and it writes ingredient/method questions per dish.
+    key: "kitchen",
+    settings: {
+      title: "Kitchen Test",
+      description: "Back-of-house recipe knowledge — ingredients in every dish, how each is made, prep specs, and food safety. Rebuild it from your own menu + recipes (Build with AI) to quiz on your exact dishes.",
+      mode: "exam",
+      target_departments: ["Chef", "Line Cook"],
+      day_count: 5,
+      pass_pct: 85,
+      max_retakes: 1,
+      complete_within_amount: 5,
+      complete_within_unit: "days",
+      rotates_monthly: false,
+    },
+    days: [
+      { day_number: 1, title: "Mise en place & prep", content: "Every prep item — what goes in it, the spec, and par levels. Replace with your own prep list." },
+      { day_number: 2, title: "Building the dishes", content: "How each dish on the line is built, step by step, in order. Paste your recipes here." },
+      { day_number: 3, title: "Sauces, components & recipes", content: "The sauces and sub-recipes that go into the dishes — ratios and method." },
+      { day_number: 4, title: "Plating & consistency specs", content: "The plating standard for each dish so every ticket looks the same." },
+      { day_number: 5, title: "Allergens, cross-contact & safety", content: "Which dishes carry which allergens, cross-contact prevention by station, and safe temps." },
+    ],
+    questions: [
+      q(1, "true_false", "You should know every prep item's recipe and par level without checking a sheet mid-service.", ["True", "False"], 0),
+      q(1, "multiple_choice", "Mise en place matters most because:", ["Everything is prepped and in place so the line stays consistent and fast under pressure", "It looks organized for the health inspector", "It's only needed on busy nights", "It saves on ingredients"], 0),
+      q(2, "multiple_choice", "You're firing a dish you're unsure how to build. The right move is:", ["Check the recipe/spec before you fire it, or ask the chef — never guess", "Plate it how you think it goes", "Skip a component to save time", "Send it and see if it comes back"], 0),
+      q(2, "true_false", "Dishes should be built in the same order and method every time so they're consistent.", ["True", "False"], 0),
+      q(3, "multiple_choice", "A house sauce is a component in several dishes. Why does its recipe matter so much?", ["An off sauce throws off every dish it's in, so the ratio and method must be exact", "Sauces don't really affect the dish", "Only the chef needs to know it", "It's fine to eyeball it"], 0),
+      q(4, "true_false", "Plating to the spec matters because the guest should get the same dish on every ticket.", ["True", "False"], 0),
+      q(5, "multiple_choice", "A dish is being fired for a guest with a nut allergy. You should:", ["Confirm the dish and its components are nut-free and prevent cross-contact, or flag the chef", "Wipe the plate and send it", "Assume it's fine if there are no visible nuts", "Leave it to the server"], 0),
+      q(5, "multiple_choice", "Safe cold-holding for raw proteins is roughly:", ["At or below 40°F", "Around 70°F", "50–60°F", "Whatever the walk-in is set to"], 0),
+    ],
+  },
 ];
