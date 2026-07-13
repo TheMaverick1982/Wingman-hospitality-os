@@ -6,10 +6,9 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { Users } from "lucide-react";
-import { StatusPill } from "@/components/ui/status-pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
-import { CandidateScorecards } from "./candidate-scorecards";
+import { CandidatesPanel } from "./candidate-scorecards";
 import { RoleManager } from "../role-manager";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
@@ -98,14 +97,6 @@ export default async function HiringPage({
 
   const { data: hiredStaff } = await supabase.from("staff_members").select("candidate_id").not("candidate_id", "is", null);
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
-
-  const byDepartment = ALL_DEPARTMENTS.map((d) => {
-    const cands = allCandidates.filter((c) => c.department === d);
-    const counts: Record<string, number> = {};
-    for (const c of cands) counts[c.recommendation] = (counts[c.recommendation] ?? 0) + 1;
-    const topRec = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-    return { department: d, count: cands.length, status: topRec };
-  }).filter((r) => r.count > 0);
 
   const latestCandidate = allCandidates[0];
   const latestScorecard =
@@ -200,43 +191,7 @@ export default async function HiringPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-5">
-        <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-6 py-5 border-b border-[#F1F1F1] text-[17px] font-semibold tracking-[-0.01em] text-ink">
-            Candidates by department
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#FAFAFA] text-left">
-                <th className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Role</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Candidates</th>
-                <th className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Leading signal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byDepartment.map((r) => {
-                const tone = RECOMMENDATION_TONE[r.status as keyof typeof RECOMMENDATION_TONE];
-                return (
-                  <tr key={r.department} className="hover:bg-[#FAFAFA] transition-colors">
-                    <td className="px-6 py-3.5 font-medium text-ink border-b border-[#F5F5F5]">{r.department}</td>
-                    <td className="px-4 py-3.5 text-muted border-b border-[#F5F5F5] tabular-nums">{r.count}</td>
-                    <td className="px-6 py-3.5 border-b border-[#F5F5F5]">
-                      {tone && <StatusPill label={r.status ?? ""} fg={tone.fg} bg={tone.bg} dot="bg-current" />}
-                    </td>
-                  </tr>
-                );
-              })}
-              {byDepartment.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-muted">
-                    No candidates scored yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
+      <div className="lg:max-w-md">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Values scorecard</div>
           {latestCandidate ? (
@@ -270,7 +225,7 @@ export default async function HiringPage({
 
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
 
-      <CandidateScorecards
+      <CandidatesPanel
         candidates={allCandidates.map((c) => ({
           id: c.id,
           name: c.name,
@@ -283,6 +238,7 @@ export default async function HiringPage({
           hired: hiredCandidateIds.has(c.id),
         }))}
         locations={locations.map((l) => ({ id: l.id, name: l.name }))}
+        departments={Array.from(new Set([...activeDepts, ...allCandidates.map((c) => c.department as string)]))}
         canEdit={canEdit}
         isSuperAdmin={isSuperAdmin}
       />
