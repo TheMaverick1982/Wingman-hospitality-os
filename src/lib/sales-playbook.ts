@@ -21,6 +21,7 @@ export const WHY_IT_MATTERS: string[] = [
   "Winning a new guest costs far more than keeping one. Most restaurants pour everything into getting people in the door and almost nothing into bringing them back — that gap is the whole opportunity.",
   "Great food isn't a system. When the owner is off, the experience often slips. Wingman makes the standard something you can train to, check, and hold — not something that lives only in the owner's head.",
   "A few more regulars a month, held consistently, is the difference between a restaurant that grinds and one that compounds.",
+  "You can't deliver a consistent guest experience through a revolving door. The brands operators admire — In-N-Out, Chick-fil-A — win on guest experience because they win on people first: purpose, pride, and a reason to stay. Wingman builds that into the training for every role, so better staff retention and better guest retention come from the same system.",
 ];
 
 export type ProductArea = { name: string; what: string; problem: string };

@@ -269,6 +269,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Refine with AI" },
       { kind: "p", text: "Once a program exists, use \"Refine with AI\" to improve it conversationally — ask it to add items, suggest ideas, reword, or remove. You review every proposed change before anything is applied." },
       { kind: "tip", text: "Try open-ended prompts like \"What am I missing for wine service?\" or \"Add items about remembering regulars' names.\"" },
+      { kind: "note", text: "Every role's program includes a purpose-and-pride behavior — why that role matters and taking genuine pride in it. It's the In-N-Out / Chick-fil-A idea: teams with high morale and workplace pride are the ones with the best guest experience and the lowest turnover. Ask \"Refine with AI\" to add more of these if you want to lean into it." },
     ],
     links: [{ label: "Hiring criteria", href: "/help/hiring-criteria" }, { label: "Guest Journey", href: "/help/guest-journey" }],
   },
