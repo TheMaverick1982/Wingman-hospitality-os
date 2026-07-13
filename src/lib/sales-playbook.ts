@@ -34,6 +34,7 @@ export const PRODUCT_TOUR: ProductArea[] = [
   { name: "Service Recovery", what: "Tracks comps and how guest issues were made right.", problem: "A bad moment quietly loses a guest forever; this makes recovery a habit, not an accident." },
   { name: "Hiring, Growth & Menu", what: "Interview criteria that screen for the person, plus revenue and menu-engineering tools.", problem: "Rounds out the system — better people, and the numbers to grow profitably." },
   { name: "Reporting", what: "Rolls every section into one view, shows repeat rate by cohort over the last 6 months and week-over-week money trends, and can email a scheduled digest to the owner or an investor.", problem: "Operators fly blind on whether things are actually improving — this turns the whole system into a trend they (and their investors) can watch, hands-off." },
+  { name: "14-Day Launch Plan", what: "A dated rollout on the Start Here page: a few moves every few days across four phases, each milestone checking itself off as they do the work, with an on-track / overdue status and a short weekly accountability email nudging their next move.", problem: "Answers the objection every operator has — 'we bought software before and never used it.' This makes implementation fast and accountable, so they actually run it and get a return instead of it gathering dust." },
 ];
 
 export const GOLDEN_RULES: string[] = [
