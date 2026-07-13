@@ -31,13 +31,19 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -c "
   );
   alter table public.schema_migrations_applied enable row level security;"
 
+# Read the whole ledger once into a set, then diff in memory — one connection
+# instead of one per file. (Applying a genuinely-new migration still opens its
+# own connection, but that's rare; the common case is zero new migrations.)
+declare -A APPLIED
+while IFS= read -r name; do
+  [ -n "$name" ] && APPLIED["$name"]=1
+done < <(psql "$SUPABASE_DB_URL" -tAc "select filename from public.schema_migrations_applied")
+
 applied=0
 shopt -s nullglob
 for path in "$MIG_DIR"/*.sql; do
   name="$(basename "$path")"
-  exists="$(psql "$SUPABASE_DB_URL" -tAc \
-    "select 1 from public.schema_migrations_applied where filename = '$name'")"
-  if [ "$exists" = "1" ]; then
+  if [ -n "${APPLIED[$name]:-}" ]; then
     continue
   fi
   echo "Applying $name"
