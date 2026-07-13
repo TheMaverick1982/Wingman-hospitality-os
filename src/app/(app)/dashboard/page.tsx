@@ -94,12 +94,18 @@ export default async function DashboardPage({
     scoped(supabase.from("discounts").select("*"), effectiveLocation),
     scoped(supabase.from("spot_checks").select("id, staff_name, scores, created_at"), effectiveLocation),
     scoped(supabase.from("daily_checklists").select("*").order("occurred_on", { ascending: false }).limit(1), effectiveLocation),
-    supabase
-      .from("training_signoffs")
-      .select("id, staff_name, department, completion_pct, occurred_on, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase.from("training_signoffs").select("id", { count: "exact", head: true }).gte("created_at", daysAgoIso(SEVEN_DAYS_MS)),
+    scoped(
+      supabase
+        .from("training_signoffs")
+        .select("id, staff_name, department, completion_pct, occurred_on, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      effectiveLocation
+    ),
+    scoped(
+      supabase.from("training_signoffs").select("id", { count: "exact", head: true }).gte("created_at", daysAgoIso(SEVEN_DAYS_MS)),
+      effectiveLocation
+    ),
     supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("created_at", daysAgoIso(NINETY_DAYS_MS)),
     supabase.from("culture_moments").select("id, author, about, created_at").order("created_at", { ascending: false }).limit(4),
     scoped(supabase.from("coaching_logs").select("id, flag_text, created_at").order("created_at", { ascending: false }).limit(4), effectiveLocation),

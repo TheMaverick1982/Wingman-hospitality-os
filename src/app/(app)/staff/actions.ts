@@ -214,12 +214,17 @@ export async function signOffStaffTraining(staffId: string, staffName: string, d
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return;
 
+  // Record the location the sign-off belongs to (the staff member's store) so
+  // the Training page can scope completions per location for multi-location orgs.
+  const { data: staffRow } = await supabase.from("staff_members").select("location_id").eq("id", staffId).maybeSingle();
+
   await supabase.from("training_signoffs").insert({
     org_id: org.id,
     staff_id: staffId,
     staff_name: staffName,
     department,
     completion_pct: completionPct,
+    location_id: staffRow?.location_id ?? null,
   });
 
   revalidatePath(`/staff/${staffId}`);
