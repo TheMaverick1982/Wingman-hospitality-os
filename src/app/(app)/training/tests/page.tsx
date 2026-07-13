@@ -30,17 +30,31 @@ export default async function TestsPage() {
   const canEdit = canEditSection(profile.accessRole, "training", profile.permissionOverrides);
 
   const supabase = await createClient();
-  const [{ data: tests }, { data: meta }, { data: qCounts }] = await Promise.all([
+  const [{ data: tests }, { data: meta }, { data: qCounts }, { data: assignRows }] = await Promise.all([
     supabase.from("tests").select("id, title, description, mode, target_departments, day_count, pass_pct, rotates_monthly, created_at").order("created_at", { ascending: false }),
     supabase.from("department_meta").select("department"),
     supabase.from("test_questions").select("test_id"),
+    canEdit ? supabase.from("test_assignments").select("test_id, status") : Promise.resolve({ data: [] }),
   ]);
 
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
   const questionCount = new Map<string, number>();
   for (const r of (qCounts ?? []) as { test_id: string }[]) questionCount.set(r.test_id, (questionCount.get(r.test_id) ?? 0) + 1);
+  // Per-test assignment tally (assigned total + passed) for the list summary.
+  const assignTally = new Map<string, { total: number; passed: number }>();
+  for (const r of (assignRows ?? []) as { test_id: string; status: string }[]) {
+    const e = assignTally.get(r.test_id) ?? { total: 0, passed: 0 };
+    e.total++;
+    if (r.status === "passed") e.passed++;
+    assignTally.set(r.test_id, e);
+  }
 
-  const rows = ((tests ?? []) as TestRow[]).map((t) => ({ ...t, questions: questionCount.get(t.id) ?? 0 }));
+  const rows = ((tests ?? []) as TestRow[]).map((t) => ({
+    ...t,
+    questions: questionCount.get(t.id) ?? 0,
+    assigned: assignTally.get(t.id)?.total ?? 0,
+    passed: assignTally.get(t.id)?.passed ?? 0,
+  }));
 
   // Tests assigned to the person viewing (their own to take). Read via admin so
   // a staff member sees only their own assignment rows.
