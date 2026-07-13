@@ -92,7 +92,7 @@ export default async function TrainingPage() {
             Print / PDF
           </a>
           {!canEdit && <Pill>View only</Pill>}
-          {canEdit && <StartTrainingButton staff={staff} locations={locations} />}
+          {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} />}
         </div>
       </div>
 

@@ -142,7 +142,8 @@ export default async function HiringPage({
             isGm={isSuperAdmin}
             lockedLocationName={profile.locationName}
             defaultLocationId={effectiveLocation ?? profile.locationId}
-            defaultDepartment={ALL_DEPARTMENTS[1]}
+            defaultDepartment={autoOpenDepartment ?? activeDepts[0] ?? ALL_DEPARTMENTS[1]}
+            departments={activeDepts}
             autoOpenDepartment={autoOpenDepartment}
           />
         </div>
