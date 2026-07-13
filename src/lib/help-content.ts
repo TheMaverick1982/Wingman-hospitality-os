@@ -715,6 +715,28 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Billing", href: "/help/billing" }],
   },
   {
+    slug: "notifications",
+    title: "Notification settings",
+    summary: "Turn Wingman's automatic emails on or off for your account.",
+    categoryId: "admin",
+    keywords: ["notifications", "emails", "alerts", "turn off", "unsubscribe", "reminders", "settings", "overdue", "application", "interview"],
+    body: [
+      { kind: "p", text: "Under Settings → Notifications, you choose which of Wingman's automatic emails your account receives. Both owners and managers can open this section and make changes." },
+      { kind: "note", text: "These settings are account-wide: turning one off stops that email for everyone at your organization, not just for you. They control whether the email sends at all — the underlying activity (an application, a locked test) is still recorded in the app either way." },
+      { kind: "h", text: "What you can switch on or off" },
+      { kind: "list", items: [
+        "New job application — email the location (and any CC addresses) when someone submits your application form.",
+        "Interview day reminders — a morning digest to each location that has an interview booked that day.",
+        "Test not finished by deadline — alert the location's manager when an assigned test blows past its deadline unfinished.",
+        "Test locked (retakes used up) — alert the manager when someone burns all their attempts without passing, so they can coach and unlock.",
+        "Deadline reminders to staff — remind the employee to finish an assigned test before its deadline (handy on multi-day tests).",
+      ] },
+      { kind: "p", text: "Each toggle shows exactly who receives that email. Changes save the moment you flip a switch." },
+      { kind: "tip", text: "Two things always send no matter what: scheduled reports (they have their own recipient list, managed from Reporting) and account/billing emails like a failed payment — so you never miss something important." },
+    ],
+    links: [{ label: "Reporting", href: "/help/reporting" }, { label: "Tests & exams", href: "/help/tests-and-exams" }],
+  },
+  {
     slug: "billing",
     title: "Billing",
     summary: "How billing works, statement descriptor, and what happens if a payment fails.",

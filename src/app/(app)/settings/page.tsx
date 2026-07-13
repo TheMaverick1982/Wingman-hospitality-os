@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getActiveDepartments } from "@/lib/roles";
 import { getPlatformPricing } from "@/lib/pricing";
+import { isManagerOrAbove } from "@/lib/auth/permissions";
+import type { NotificationKey } from "@/lib/notifications";
 import { CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
 import { BulkInviteButton } from "./bulk-invite-form";
@@ -14,13 +16,40 @@ import { DeleteLocationButton } from "./delete-location-button";
 import { EditLocationForm } from "./edit-location-form";
 import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
+import { NotificationSettings } from "./notification-settings";
 import { ApiKeysManager } from "./api-keys-manager";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (profile.accessRole !== "super_admin") redirect("/dashboard");
+  // Owners get the full Settings surface; managers (and shift leads) get in for
+  // the Notifications section only.
+  if (!isManagerOrAbove(profile.accessRole)) redirect("/dashboard");
+  const isOwner = profile.accessRole === "super_admin";
+
+  const admin0 = createAdminClient();
+  const { data: orgNotif } = await admin0
+    .from("organizations")
+    .select("notification_settings")
+    .eq("id", profile.orgId)
+    .maybeSingle();
+  const notificationContent = (
+    <NotificationSettings initial={(orgNotif?.notification_settings as Partial<Record<NotificationKey, boolean>> | null) ?? {}} />
+  );
+
+  // Managers don't see (or trigger the queries for) the owner-only tabs.
+  if (!isOwner) {
+    return (
+      <>
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Settings</h1>
+          <p className="text-base text-muted">Manage the notifications your account receives.</p>
+        </div>
+        <SettingsTabs tabs={[{ key: "notifications", label: "Notifications", content: notificationContent }]} />
+      </>
+    );
+  }
 
   const supabase = await createClient();
   const [{ data: members }, locations, { data: org }, { data: plRows }, activeDepts] = await Promise.all([
@@ -277,10 +306,13 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsTabs
-        team={teamContent}
-        locations={locationsContent}
-        billing={billingContent}
-        api={<ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />}
+        tabs={[
+          { key: "team", label: "Team & permissions", content: teamContent },
+          { key: "locations", label: "Locations", content: locationsContent },
+          { key: "notifications", label: "Notifications", content: notificationContent },
+          { key: "billing", label: "Billing", content: billingContent },
+          { key: "api", label: "API access", content: <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} /> },
+        ]}
       />
     </>
   );

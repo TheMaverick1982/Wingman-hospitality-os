@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { isNotificationEnabled } from "@/lib/notifications";
 
 export const maxDuration = 60;
 
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   const { data: rows, error } = await admin
     .from("test_assignments")
-    .select("id, due_at, status, current_day, staff_members(full_name, email), tests(id, title, day_count, mode)")
+    .select("id, org_id, due_at, status, current_day, staff_members(full_name, email), tests(id, title, day_count, mode)")
     .in("status", ["assigned", "in_progress"])
     .eq("reminder_alerted", false)
     .not("due_at", "is", null)
@@ -45,17 +46,28 @@ export async function GET(request: NextRequest) {
     .limit(1000);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Cache each org's "test_reminders_staff" preference across the run.
+  const orgOn = new Map<string, boolean>();
+  async function remindersOn(orgId: string): Promise<boolean> {
+    if (!orgOn.has(orgId)) {
+      const { data: o } = await admin.from("organizations").select("notification_settings").eq("id", orgId).maybeSingle();
+      orgOn.set(orgId, isNotificationEnabled((o as { notification_settings?: Record<string, boolean> } | null)?.notification_settings ?? null, "test_reminders_staff"));
+    }
+    return orgOn.get(orgId)!;
+  }
+
   let sent = 0;
   const errors: string[] = [];
 
   for (const raw of rows ?? []) {
     const a = raw as unknown as {
-      id: string; due_at: string; status: string; current_day: number;
+      id: string; org_id: string; due_at: string; status: string; current_day: number;
       staff_members: { full_name: string; email: string } | null;
       tests: { id: string; title: string; day_count: number; mode: string } | null;
     };
     const email = (a.staff_members?.email || "").trim();
     if (!email || !email.includes("@") || !a.tests) continue; // no address, or test gone
+    if (!(await remindersOn(a.org_id))) continue;
 
     const firstName = (a.staff_members?.full_name || "there").split(" ")[0] || "there";
     const title = esc(a.tests.title);

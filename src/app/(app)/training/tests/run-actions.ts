@@ -8,6 +8,7 @@ import { canEditSection } from "@/lib/auth/permissions";
 import { sendEmail } from "@/lib/email";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { scoreTest, resolveAttempt } from "@/lib/tests";
+import { isNotificationEnabled } from "@/lib/notifications";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -246,7 +247,12 @@ export async function submitDay(assignmentId: string, dayNumber: number, answers
   else Object.assign(patch, { status: "assigned", current_day: 1, answers: {} }); // retake from day 1
   await admin.from("test_assignments").update(patch).eq("id", a.id);
 
-  if (outcome.locked) await alertLocked(admin, a.id, a.location_id, staffRow.full_name, t.title, pct, attemptsUsed);
+  if (outcome.locked) {
+    const { data: o } = await admin.from("organizations").select("notification_settings").eq("id", profile.orgId).maybeSingle();
+    if (isNotificationEnabled((o as { notification_settings?: Record<string, boolean> } | null)?.notification_settings ?? null, "test_locked")) {
+      await alertLocked(admin, a.id, a.location_id, staffRow.full_name, t.title, pct, attemptsUsed);
+    }
+  }
 
   revalidatePath("/training/tests");
   return { error: null, done: true, passed: outcome.passed, locked: outcome.locked, score: pct };

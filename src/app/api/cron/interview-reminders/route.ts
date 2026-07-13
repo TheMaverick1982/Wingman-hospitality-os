@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { isNotificationEnabled } from "@/lib/notifications";
 
 // Daily reminder to managers about interviews happening today. For each location
 // with a confirmed interview today, email the location's address on file a short
@@ -14,7 +15,7 @@ function esc(s: string): string {
   return s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
 }
 
-type Row = { id: string; name: string; department: string; location_id: string | null; interview_at: string; interview_details: string };
+type Row = { id: string; name: string; department: string; location_id: string | null; org_id: string; interview_at: string; interview_details: string };
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   const { data } = await admin
     .from("job_applications")
-    .select("id, name, department, location_id, interview_at, interview_details")
+    .select("id, name, department, location_id, org_id, interview_at, interview_details")
     .eq("status", "interviewing")
     .gte("interview_at", start.toISOString())
     .lt("interview_at", end.toISOString())
@@ -46,8 +47,19 @@ export async function GET(request: NextRequest) {
     byLocation.set(r.location_id, list);
   }
 
+  // Cache each org's "interview_reminders" preference across the run.
+  const orgReminderOn = new Map<string, boolean>();
+  async function remindersOn(orgId: string): Promise<boolean> {
+    if (!orgReminderOn.has(orgId)) {
+      const { data: o } = await admin.from("organizations").select("notification_settings").eq("id", orgId).maybeSingle();
+      orgReminderOn.set(orgId, isNotificationEnabled((o as { notification_settings?: Record<string, boolean> } | null)?.notification_settings ?? null, "interview_reminders"));
+    }
+    return orgReminderOn.get(orgId)!;
+  }
+
   let sent = 0;
   for (const [locationId, list] of byLocation) {
+    if (!(await remindersOn(list[0].org_id))) continue;
     let to = "";
     let locName = "";
     if (locationId) {

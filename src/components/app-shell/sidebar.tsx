@@ -74,6 +74,9 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
+  // Managers/shift leads reach Settings for the Notifications section (the page
+  // itself hides the owner-only tabs from them).
+  const canSeeSettings = accessRole === "super_admin" || accessRole === "manager" || accessRole === "shift_lead";
 
   // Desktop: a fixed sticky column, hidden on small screens (a mobile drawer
   // renders the same nav via variant="drawer").
@@ -156,7 +159,7 @@ export function Sidebar({
           </Link>
         )}
 
-        {isSuperAdmin && (
+        {canSeeSettings && (
           <>
             <div className="h-px bg-line my-2 mx-2" />
             <Link
