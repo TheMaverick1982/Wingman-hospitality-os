@@ -165,6 +165,28 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "weekly-moves",
+    title: "Your weekly 3 moves",
+    summary: "Commit to three things each week and tick them off — a simple accountability habit.",
+    categoryId: "getting-started",
+    keywords: ["weekly moves", "3 moves", "commitment", "goals", "this week", "priorities", "accountability", "focus"],
+    body: [
+      { kind: "p", text: "On the dashboard, owners pick up to three concrete moves for the week — the things you'll actually get done. Writing down three beats an endless to-do list, and ticking them off through the week is its own accountability." },
+      { kind: "steps", items: [
+        "At the start of the week, tap into the \"This week's 3 moves\" card and write your three — or one-tap a suggestion.",
+        "\"Lock in my 3 moves\" to save them.",
+        "As you do each one, tick it off. The card shows your progress (e.g. 2/3 done).",
+        "Next week, set three fresh moves.",
+      ] },
+      { kind: "tip", text: "Make them concrete and doable in a week — \"text 5 first-timers who haven't come back\" beats \"improve retention.\" The whole point is that they get done." },
+      { kind: "note", text: "Only the owner sets and ticks the moves; everyone in the org can see the week's focus." },
+    ],
+    links: [
+      { label: "Your Momentum score", href: "/help/momentum-score" },
+      { label: "Your 14-day Launch Plan", href: "/help/launch-plan" },
+    ],
+  },
+  {
     slug: "culture",
     title: "Culture — your standard, in your words",
     summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
