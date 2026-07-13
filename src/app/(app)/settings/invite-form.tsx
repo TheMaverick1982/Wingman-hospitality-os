@@ -6,12 +6,14 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { inviteTeamMember, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
-export function InviteTeamMemberButton({ locations }: { locations: Location[] }) {
+export function InviteTeamMemberButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(inviteTeamMember, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
@@ -49,18 +51,32 @@ export function InviteTeamMemberButton({ locations }: { locations: Location[] })
                 <input name="email" type="email" required className={inputClass} />
               </Field>
             </div>
-            <Field label="Access level">
-              <select
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as "manager" | "staff" | "super_admin")}
-                className={inputClass}
-              >
-                <option value="manager">Manager</option>
-                <option value="staff">Staff</option>
-                <option value="super_admin">Super Admin (co-owner — full access)</option>
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Job role">
+                <select name="department" defaultValue={roles[0]} className={inputClass}>
+                  {roles.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Access level">
+                <select
+                  name="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "manager" | "staff" | "super_admin")}
+                  className={inputClass}
+                >
+                  <option value="manager">Manager</option>
+                  <option value="staff">Staff</option>
+                  <option value="super_admin">Super Admin (co-owner)</option>
+                </select>
+              </Field>
+            </div>
+            <p className="text-[12px] text-muted-2 -mt-1 mb-3">
+              Job role sets their training &amp; metrics; access level sets what they can see and edit. They&rsquo;ll appear on your Staff page automatically.
+            </p>
 
             {isSuperAdmin ? (
               <p className="text-[13px] text-muted mb-4">

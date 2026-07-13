@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
+import { getActiveDepartments } from "@/lib/roles";
 import { CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
 import { BulkInviteButton } from "./bulk-invite-form";
@@ -21,11 +22,12 @@ export default async function SettingsPage() {
   if (profile.accessRole !== "super_admin") redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: members }, locations, { data: org }, { data: plRows }] = await Promise.all([
+  const [{ data: members }, locations, { data: org }, { data: plRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
+    getActiveDepartments(),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
   const isPastDue = (org?.billing_status ?? "free") === "past_due";
@@ -78,8 +80,8 @@ export default async function SettingsPage() {
             <span className="text-[13px] text-muted-2 ml-1.5">{allMembers.length} users</span>
           </div>
           <div className="flex items-center gap-2">
-            <BulkInviteButton locations={locations} />
-            <InviteTeamMemberButton locations={locations} />
+            <BulkInviteButton locations={locations} departments={activeDepts} />
+            <InviteTeamMemberButton locations={locations} departments={activeDepts} />
           </div>
         </div>
         <table className="w-full text-sm">

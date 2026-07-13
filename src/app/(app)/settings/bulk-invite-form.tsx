@@ -6,16 +6,18 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { bulkInviteTeamMembers, type BatchState } from "./actions";
 
 const initialState: BatchState = { error: null, successCount: 0, failures: [] };
 
-type Row = { fullName: string; email: string; role: "manager" | "staff"; locationId: string };
+type Row = { fullName: string; email: string; role: "manager" | "staff"; department: string; locationId: string };
 
-export function BulkInviteButton({ locations }: { locations: Location[] }) {
+export function BulkInviteButton({ locations, departments }: { locations: Location[]; departments: Department[] }) {
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
-  const emptyRow = (): Row => ({ fullName: "", email: "", role: "manager", locationId: locations[0]?.id ?? "" });
+  const emptyRow = (): Row => ({ fullName: "", email: "", role: "manager", department: roles[0], locationId: locations[0]?.id ?? "" });
   const [rows, setRows] = useState<Row[]>([emptyRow()]);
   const [state, formAction, pending] = useActionState(bulkInviteTeamMembers, initialState);
   useCloseOnSuccess(pending, state.error, () => {
@@ -58,6 +60,15 @@ export function BulkInviteButton({ locations }: { locations: Location[] }) {
                     </Field>
                     <Field label="Email">
                       <input type="email" value={row.email} onChange={(e) => updateRow(i, "email", e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Job role">
+                      <select value={row.department} onChange={(e) => updateRow(i, "department", e.target.value)} className={inputClass}>
+                        {roles.map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
                     <Field label="Access level">
                       <select value={row.role} onChange={(e) => updateRow(i, "role", e.target.value)} className={inputClass}>
