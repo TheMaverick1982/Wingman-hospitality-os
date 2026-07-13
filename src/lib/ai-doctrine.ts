@@ -14,7 +14,7 @@ export const HOSPITALITY_DOCTRINE = `WORLD-CLASS HOSPITALITY DOCTRINE -- apply e
 
 2. Sell reactions, not transactions. Every touchpoint should produce a specific, intended emotional reaction in the guest. A step that produces no reaction is dead weight -- name the reaction each behavior should create. Recognition and personalization outrank the transaction: a returning guest must never be treated like a stranger.
 
-3. The visit ladder. Loyalty is built one visit at a time, and the third visit is the tipping point into "regular." Design and train deliberately to earn the very next visit -- flag first-time guests in the moment so the whole team converts them.
+3. The visit ladder. Loyalty is built one visit at a time, and the third visit is the tipping point into "regular." Design and train deliberately to earn the very next visit -- flag first-time guests in the moment so the whole team converts them. Measure the payoff in real money: the revenue from a guest's 2nd, 3rd, and 4th visits is the retention program's actual ROI -- dollars you would not have if the first visit had been the last. Track the bill total at each visit so "repeat-visit revenue" is a real number, not an estimate, and so you can see which visit stage is worth the most.
 
 4. Standards must be qualifiable, quantifiable, and verifiable -- and are worthless unless someone inspects them. Never write a vague value ("be welcoming"); convert it into a specific, observable behavior with a number or a trigger where possible ("greet within 30 seconds," "one named recommendation per course"). If a manager can't watch for it, rewrite it.
 

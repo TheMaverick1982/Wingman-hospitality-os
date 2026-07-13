@@ -35,6 +35,13 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
     id = data.id;
   }
 
+  const parseBill = (raw: string): number | null => {
+    const v = raw.trim();
+    if (!v) return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
   const visits = [1, 2, 3, 4].map((n) => ({
     guest_id: id,
     org_id: org.id,
@@ -44,6 +51,7 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
     incentive: String(formData.get(`visit_${n}_incentive`) || ""),
     notes: String(formData.get(`visit_${n}_notes`) || ""),
     reaction: String(formData.get(`visit_${n}_reaction`) || "") || null,
+    bill_total: parseBill(String(formData.get(`visit_${n}_bill_total`) || "")),
   }));
 
   const { error: visitsError } = await supabase
@@ -56,7 +64,7 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
   return { error: null };
 }
 
-export type ImportVisit = { n: number; date: string; incentive?: string; notes?: string };
+export type ImportVisit = { n: number; date: string; incentive?: string; notes?: string; bill?: number | null };
 export type ImportRow = { name: string; email?: string; phone?: string; source?: string; locationId?: string | null; visits?: ImportVisit[] };
 export type ImportResult = { error: string | null; imported: number; skipped: number };
 
@@ -103,7 +111,8 @@ export async function importGuests(rows: ImportRow[], fallbackLocationId: string
     for (const v of r.visits ?? []) {
       const d = (v?.date || "").trim();
       if (v && v.n >= 1 && v.n <= 4 && dateOk(d)) {
-        byN.set(v.n, { n: v.n, date: d, incentive: (v.incentive || "").slice(0, 300), notes: (v.notes || "").slice(0, 1000) });
+        const bill = v.bill != null && Number.isFinite(Number(v.bill)) && Number(v.bill) >= 0 ? Number(v.bill) : null;
+        byN.set(v.n, { n: v.n, date: d, incentive: (v.incentive || "").slice(0, 300), notes: (v.notes || "").slice(0, 1000), bill });
       }
     }
     rowVisits.push([...byN.values()]);
@@ -125,6 +134,7 @@ export async function importGuests(rows: ImportRow[], fallbackLocationId: string
       location_id: rowLoc[i],
       incentive: v.incentive ?? "",
       notes: v.notes ?? "",
+      bill_total: v.bill ?? null,
     }))
   );
   if (visits.length > 0) {

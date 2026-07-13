@@ -14,6 +14,7 @@ export type GuestVisitFormValue = {
   incentive: string;
   notes: string;
   reaction?: string | null;
+  bill_total?: number | null;
 };
 
 export type GuestFormValue = {
@@ -121,13 +122,14 @@ export function GuestModal({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium block mb-1 text-muted">
-                    What was given to bring them back?
-                  </label>
+                  <label className="text-xs font-medium block mb-1 text-muted">Bill total ($)</label>
                   <input
-                    name={`visit_${n}_incentive`}
-                    defaultValue={v?.incentive ?? ""}
-                    placeholder="e.g. Free Detroit Bianco"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name={`visit_${n}_bill_total`}
+                    defaultValue={v?.bill_total != null ? String(v.bill_total) : ""}
+                    placeholder="e.g. 48.50"
                     className={inputClass}
                   />
                 </div>
@@ -145,6 +147,13 @@ export function GuestModal({
                   </select>
                 </div>
               </div>
+              <label className="text-xs font-medium block mb-1 text-muted">What was given to bring them back?</label>
+              <input
+                name={`visit_${n}_incentive`}
+                defaultValue={v?.incentive ?? ""}
+                placeholder="e.g. Free Detroit Bianco"
+                className={`${inputClass} mb-3`}
+              />
               <label className="text-xs font-medium block mb-1 text-muted">Notes</label>
               <textarea
                 name={`visit_${n}_notes`}

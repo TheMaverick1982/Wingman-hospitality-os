@@ -26,7 +26,7 @@ export default async function BounceBackPage({ searchParams }: { searchParams: P
     supabase
       .from("guests")
       .select(
-        "id, name, phone, email, referred_a_friend, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction)"
+        "id, name, phone, email, referred_a_friend, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction, bill_total)"
       )
       .order("created_at", { ascending: false }),
     getOrgLocations(),

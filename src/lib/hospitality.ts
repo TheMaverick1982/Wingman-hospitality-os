@@ -7,6 +7,7 @@ export type GuestVisit = {
   incentive: string | null;
   notes: string | null;
   reaction?: VisitReaction | null;
+  bill_total?: number | null;
 };
 
 export type GuestWithVisits = {

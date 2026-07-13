@@ -212,13 +212,14 @@ export default function ApiGuidePage() {
             <code className="text-xs">incentive</code>, <code className="text-xs">notes</code>,{" "}
             <code className="text-xs">reaction</code> (one of <code className="text-xs">wowed</code>,{" "}
             <code className="text-xs">delighted</code>, <code className="text-xs">neutral</code>,{" "}
-            <code className="text-xs">let_down</code> — feeds the reaction ratio &amp; sentiment).
+            <code className="text-xs">let_down</code> — feeds the reaction ratio &amp; sentiment),{" "}
+            <code className="text-xs">bill_total</code> (number ≥ 0 — powers the actual revenue-by-visit report).
           </p>
           <Code>{`curl -X POST ${BASE_URL}/api/v1/guests \\
   -H "Authorization: Bearer $WINGMAN_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name":"Jane Diner","email":"jane@example.com","source":"pos",
-       "visit":{"visit_number":1,"visit_date":"2026-07-06","reaction":"delighted"}}'`}</Code>
+       "visit":{"visit_number":1,"visit_date":"2026-07-06","reaction":"delighted","bill_total":48.50}}'`}</Code>
         </Endpoint>
 
         <Endpoint method="POST" path="/api/v1/menu">
