@@ -4,7 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, Eye } from "lucide-react";
 import { TestEditor } from "./test-editor";
 import type { TestDay, TestQuestion, TestSettings } from "@/lib/tests";
 
@@ -47,9 +47,14 @@ export default async function TestEditorPage({ params }: { params: Promise<{ id:
           <ArrowLeft size={14} /> All tests
         </Link>
         {canEdit && (
-          <Link href={`/training/tests/${id}/assign`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors">
-            <Users size={14} /> Assign &amp; results
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/training/tests/${id}/preview`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+              <Eye size={14} /> Preview
+            </Link>
+            <Link href={`/training/tests/${id}/assign`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors">
+              <Users size={14} /> Assign &amp; results
+            </Link>
+          </div>
         )}
       </div>
 
