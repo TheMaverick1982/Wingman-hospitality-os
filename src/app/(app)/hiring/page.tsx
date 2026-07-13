@@ -115,14 +115,12 @@ export default async function HiringPage({
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          {allCandidates.length > 0 && (
-            <a
-              href="#candidate-scorecards"
-              className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
-            >
-              <Users size={15} /> See candidates
-            </a>
-          )}
+          <a
+            href="#candidate-scorecards"
+            className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
+          >
+            <Users size={15} /> See candidates{allCandidates.length > 0 ? ` (${allCandidates.length})` : ""}
+          </a>
           <CandidateModalButton
             universalTraits={(coreValues ?? []).map((v) => ({
               title: v.title,
@@ -191,6 +189,10 @@ export default async function HiringPage({
         </div>
       </div>
 
+      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
+
+      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
+
       <div className="lg:max-w-md">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Values scorecard</div>
@@ -220,10 +222,6 @@ export default async function HiringPage({
           )}
         </div>
       </div>
-
-      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
-
-      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
 
       <CandidatesPanel
         candidates={allCandidates.map((c) => ({
