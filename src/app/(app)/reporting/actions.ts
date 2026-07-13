@@ -20,7 +20,7 @@ export async function generateReportNarrative(_prev: NarrativeState, formData: F
     return { error: "You've reached the hourly limit for AI. Please try again a bit later.", text: null };
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet.", text: null };
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment.", text: null };
 
   const snapshot = String(formData.get("snapshot") || "").slice(0, 4000);
   if (!snapshot) return { error: "No report data to summarize.", text: null };

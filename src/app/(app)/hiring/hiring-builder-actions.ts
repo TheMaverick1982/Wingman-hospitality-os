@@ -81,7 +81,7 @@ export async function generateHiringCriteria(_prev: BuildState, formData: FormDa
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { error: "ANTHROPIC_API_KEY isn't configured yet -- add it in Vercel's project environment variables." };
+    return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
   }
 
   let traits: GeneratedTrait[];
@@ -321,7 +321,7 @@ export async function refineHiring(_prev: RefineState, formData: FormData): Prom
   if (feedback.length > 2000) return { error: "Please keep your request under 2000 characters." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { error: "ANTHROPIC_API_KEY isn't configured yet." };
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();

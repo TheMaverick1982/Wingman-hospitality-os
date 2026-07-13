@@ -37,7 +37,7 @@ export async function uploadAndParseMenu(_prev: MenuUploadState, formData: FormD
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { error: "ANTHROPIC_API_KEY isn't configured yet — add it in Vercel's project environment variables." };
+    return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
   }
 
   const isPdf = file.type === "application/pdf";
