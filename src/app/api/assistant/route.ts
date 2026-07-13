@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { consumeAiLimit, ASSISTANT_LIMIT } from "@/lib/rate-limit";
 import { notifySupportNewTicket } from "@/lib/support";
 import {
@@ -94,8 +95,9 @@ export async function POST(request: NextRequest) {
 
   // Split the system prompt so the large, static help corpus is prompt-cached
   // across turns (the first block is small and changes with role).
+  const pricing = await getPlatformPricing();
   const system: SystemBlock[] = [
-    { type: "text", text: systemInstructions(profile.accessRole), cache_control: { type: "ephemeral" } },
+    { type: "text", text: systemInstructions(profile.accessRole, { firstPrice: dollars(pricing.firstCents), addlPrice: dollars(pricing.addlCents) }), cache_control: { type: "ephemeral" } },
   ];
 
   try {

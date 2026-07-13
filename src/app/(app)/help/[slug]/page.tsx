@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ARTICLES, CATEGORIES, getArticle } from "@/lib/help-content";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { ArticleBody } from "../article-body";
 
 export function generateStaticParams() {
@@ -15,6 +16,16 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
 
   const category = CATEGORIES.find((c) => c.id === article.categoryId);
 
+  // Substitute live price tokens in the article copy.
+  const pricing = await getPlatformPricing();
+  const sub = (s: string) => s.replaceAll("{{firstPrice}}", dollars(pricing.firstCents)).replaceAll("{{addlPrice}}", dollars(pricing.addlCents));
+  const body = article.body.map((b) => {
+    const nb = b as { text?: string; items?: string[] };
+    if (typeof nb.text === "string") return { ...b, text: sub(nb.text) };
+    if (Array.isArray(nb.items)) return { ...b, items: nb.items.map(sub) };
+    return b;
+  });
+
   return (
     <div className="max-w-2xl w-full mx-auto">
       <Link href="/help" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink mb-6">
@@ -26,7 +37,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
         <h1 className="text-[26px] font-bold tracking-[-0.02em] text-ink mb-2">{article.title}</h1>
         <p className="text-[15px] text-muted mb-6">{article.summary}</p>
         <div className="border-t border-line pt-6">
-          <ArticleBody blocks={article.body} />
+          <ArticleBody blocks={body} />
         </div>
 
         {article.links && article.links.length > 0 && (

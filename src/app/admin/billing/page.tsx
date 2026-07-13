@@ -1,13 +1,25 @@
-import { CreditCard } from "lucide-react";
+import { CreditCard, Tag } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { getPlatformPricing } from "@/lib/pricing";
+import { PricingForm } from "./pricing-form";
 
 export default async function AdminBillingPage() {
   await requirePlatformSection("billing");
+  const pricing = await getPlatformPricing();
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">Billing</h1>
         <p className="text-sm text-muted mt-1">Per-organization subscriptions and revenue.</p>
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Tag size={17} className="text-brick" />
+          <h2 className="text-[17px] font-semibold text-ink">Plan pricing</h2>
+        </div>
+        <p className="text-sm text-muted mb-5">The standard monthly price. Per-organization custom pricing (on each org&rsquo;s page) still overrides this.</p>
+        <PricingForm firstDollars={Math.round(pricing.firstCents / 100)} addlDollars={Math.round(pricing.addlCents / 100)} />
       </div>
 
       <div className="bg-white border border-line rounded-2xl p-10 text-center">

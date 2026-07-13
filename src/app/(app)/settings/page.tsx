@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getActiveDepartments } from "@/lib/roles";
+import { getPlatformPricing } from "@/lib/pricing";
 import { CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
 import { BulkInviteButton } from "./bulk-invite-form";
@@ -69,7 +70,10 @@ export default async function SettingsPage() {
     if (!m.location_id) continue;
     staffCountByLocation.set(m.location_id, (staffCountByLocation.get(m.location_id) ?? 0) + 1);
   }
-  const monthlyTotal = locations.length > 0 ? 199 + (locations.length - 1) * 100 : 0;
+  const pricing = await getPlatformPricing();
+  const firstD = Math.round(pricing.firstCents / 100);
+  const addlD = Math.round(pricing.addlCents / 100);
+  const monthlyTotal = locations.length > 0 ? firstD + (locations.length - 1) * addlD : 0;
 
   const teamContent = (
     <div className="flex flex-col gap-6">
@@ -138,7 +142,7 @@ export default async function SettingsPage() {
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Locations</span>
             <span className="text-[13px] text-muted-2 ml-1.5">{locations.length} active</span>
           </div>
-          <AddLocationForm currentLocationCount={locations.length} isFreeAccount={isFreeAccount} />
+          <AddLocationForm currentLocationCount={locations.length} isFreeAccount={isFreeAccount} firstDollars={firstD} addlDollars={addlD} />
         </div>
         {locations.map((l, i) => (
           <div key={l.id} className="flex items-center justify-between px-6 py-4 border-b border-[#F5F5F5] last:border-0">
@@ -157,7 +161,7 @@ export default async function SettingsPage() {
               <span className="text-[13px] text-muted">{staffCountByLocation.get(l.id) ?? 0} staff</span>
               {!isFreeAccount && (
                 <span className="text-[13px] font-semibold text-[#15803D] bg-[#E7F6EC] px-2.5 py-1 rounded-full">
-                  {i === 0 ? "$199 base" : "+$100/mo"}
+                  {i === 0 ? `$${firstD} base` : `+$${addlD}/mo`}
                 </span>
               )}
               <EditLocationForm
@@ -183,7 +187,7 @@ export default async function SettingsPage() {
               <div>
                 <div className="text-[15px] font-semibold">Multi-location plan</div>
                 <div className="text-[13px] text-[#A1A1A1] mt-0.5">
-                  $199 first location + $100 per additional · billed monthly
+                  ${firstD} first location + ${addlD} per additional · billed monthly
                 </div>
               </div>
               <div className="text-right">
@@ -192,7 +196,7 @@ export default async function SettingsPage() {
                   <span className="text-[15px] text-[#A1A1A1] font-medium">/mo</span>
                 </div>
                 <div className="text-xs text-[#A1A1A1] mt-0.5">
-                  $199 + {locations.length - 1} × $100
+                  ${firstD} + {locations.length - 1} × ${addlD}
                 </div>
               </div>
             </div>

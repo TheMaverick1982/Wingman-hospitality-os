@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { captureLead } from "@/app/lead-actions";
 import {
   SALES_MODEL,
@@ -118,7 +119,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to respond to." }, { status: 400 });
   }
 
-  const system: SystemBlock[] = [{ type: "text", text: salesSystemPrompt(), cache_control: { type: "ephemeral" } }];
+  const pricing = await getPlatformPricing();
+  const system: SystemBlock[] = [{ type: "text", text: salesSystemPrompt({ first: dollars(pricing.firstCents), addl: dollars(pricing.addlCents) }), cache_control: { type: "ephemeral" } }];
 
   try {
     const first = await callAnthropic(apiKey, system, messages);
