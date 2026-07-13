@@ -35,7 +35,9 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
     setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [field]: value } : row)));
   }
 
-  const validRows = rows.filter((r) => r.fullName.trim());
+  const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+  // A row only counts once it has everything needed for the person to log in.
+  const validRows = rows.filter((r) => r.fullName.trim() && emailOk(r.email) && r.phone.trim());
 
   return (
     <>
@@ -45,7 +47,7 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
       {open && (
         <Modal
           title="Bulk add staff"
-          sub="Add your existing team all at once instead of one at a time."
+          sub="Add your existing team all at once. Email and phone are required — email is each person's login."
           onClose={() => setOpen(false)}
           wide
         >
@@ -89,10 +91,10 @@ export function BulkAddStaffButton({ locations }: { locations: Location[] }) {
                         </select>
                       </Field>
                     )}
-                    <Field label="Email (optional)">
+                    <Field label="Email">
                       <input type="email" value={row.email} onChange={(e) => updateRow(i, "email", e.target.value)} className={inputClass} />
                     </Field>
-                    <Field label="Phone (optional)">
+                    <Field label="Phone">
                       <input value={row.phone} onChange={(e) => updateRow(i, "phone", e.target.value)} className={inputClass} />
                     </Field>
                   </div>
