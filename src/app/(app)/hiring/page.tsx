@@ -290,7 +290,7 @@ export default async function HiringPage({
                       </Pill>
                     </td>
                     <td className="px-5 py-3.5">
-                      {canEdit && <HireCandidateButton candidateId={c.id} alreadyHired={hiredCandidateIds.has(c.id)} />}
+                      {canEdit && <HireCandidateButton candidateId={c.id} alreadyHired={hiredCandidateIds.has(c.id)} canInvite={isSuperAdmin} />}
                     </td>
                   </tr>
                 );

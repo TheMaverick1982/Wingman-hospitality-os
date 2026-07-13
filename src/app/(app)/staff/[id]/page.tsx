@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { StaffProfileClient } from "./staff-profile-client";
+import { InviteLoginBanner } from "./invite-login-banner";
 
 export default async function StaffProfilePage({
   params,
@@ -24,12 +25,13 @@ export default async function StaffProfilePage({
   const [{ data: staff }, locations] = await Promise.all([
     supabase
       .from("staff_members")
-      .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at")
+      .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at, profile_id")
       .eq("id", id)
       .maybeSingle(),
     getOrgLocations(),
   ]);
   if (!staff) return notFound();
+  const isSuperAdmin = profile.accessRole === "super_admin";
 
   const [
     { data: standards },
@@ -73,6 +75,10 @@ export default async function StaffProfilePage({
     : { data: null };
 
   return (
+    <>
+    {isSuperAdmin && !staff.profile_id && (
+      <InviteLoginBanner staffId={staff.id} name={staff.full_name} email={staff.email} />
+    )}
     <StaffProfileClient
       staff={staff}
       locationName={locations.find((l) => l.id === staff.location_id)?.name ?? ""}
@@ -86,5 +92,6 @@ export default async function StaffProfilePage({
       coreValueTitles={(coreValues ?? []).map((v) => v.title)}
       initialTab={tab === "training" || tab === "hiring" ? tab : "contact"}
     />
+    </>
   );
 }
