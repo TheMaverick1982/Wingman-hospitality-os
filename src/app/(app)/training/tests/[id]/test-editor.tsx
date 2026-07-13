@@ -196,7 +196,7 @@ export function TestEditor({ testId, settings, days, questions, activeDepartment
       </div>
 
       <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-4 text-[13px] text-brick-dark">
-        <span className="font-semibold">Coming next:</span> assign this test to an employee or send it to all staff, take-it-day-by-day scoring, retakes &amp; unlock, and a who-passed board.
+        <span className="font-semibold">Ready to roll it out?</span> Use <span className="font-semibold">Assign &amp; results</span> (top of this page, or from the tests list) to assign it to people, a role, or everyone — and track who&rsquo;s passed.
       </div>
     </div>
   );
