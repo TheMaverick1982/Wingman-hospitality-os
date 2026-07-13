@@ -257,7 +257,7 @@ export function TestsClient({ tests, activeDepartments, canEdit }: { tests: Test
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div id="your-tests" className="flex flex-col gap-3 scroll-mt-20">
         <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Your tests</div>
         {tests.length === 0 ? (
           <div className="bg-white border border-line rounded-2xl p-8 text-center text-muted">No tests yet. Build one above.</div>
