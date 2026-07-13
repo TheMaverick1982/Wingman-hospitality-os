@@ -33,11 +33,13 @@ export function GuestsClient({
   locations,
   defaultLocationId,
   canEdit,
+  scopedLocationName,
 }: {
   guests: Guest[];
   locations: Location[];
   defaultLocationId: string | null;
   canEdit: boolean;
+  scopedLocationName: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [modalGuest, setModalGuest] = useState<GuestFormValue | null | undefined>(undefined);
@@ -177,10 +179,17 @@ export function GuestsClient({
       <div className="flex items-start justify-between gap-6">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Turn first visits into regulars</h1>
-          <p className="text-base text-muted">
-            Every guest, tracked across <span className="font-semibold text-ink">all locations</span> — because a
-            regular at one is a first-timer at another.
-          </p>
+          {scopedLocationName ? (
+            <p className="text-base text-muted">
+              Guests whose first visit was at <span className="font-semibold text-ink">{scopedLocationName}</span>. Switch to{" "}
+              <span className="font-semibold text-ink">All locations</span> up top to see everyone.
+            </p>
+          ) : (
+            <p className="text-base text-muted">
+              Every guest, tracked across <span className="font-semibold text-ink">all locations</span> — because a
+              regular at one is a first-timer at another.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <CsvImportButton locations={locations} />
