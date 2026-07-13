@@ -198,7 +198,7 @@ export const ARTICLES: HelpArticle[] = [
         "Change it anytime from the language switcher in the top bar (the one with the translate icon).",
         "Your choice is saved to your login and follows you on any device.",
       ] },
-      { kind: "note", text: "The staff test-taking experience is fully translated — the screen and the actual questions and answers you wrote. Wingman translates your content automatically the first time it's opened in another language and remembers it after that. We're rolling this across more of the app (checklists and training next)." },
+      { kind: "note", text: "The staff test-taking experience and the staff checklists (pre-shift and FOH loyalty) are fully translated — the screen and the actual items, questions, and answers you wrote. Wingman translates your content automatically the first time it's opened in another language and remembers it after that. We're continuing to roll this across the rest of the app." },
       { kind: "tip", text: "If someone on your team is more comfortable in Spanish, have them set it on their first login so their training and tests come through in their language from day one." },
     ],
     links: [{ label: "Tests & exams", href: "/help/tests-and-exams" }],
