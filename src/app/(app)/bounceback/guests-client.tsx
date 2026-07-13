@@ -28,6 +28,18 @@ function daysSince(dateStr: string, now: number): number {
   return Math.floor((now - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// Most recent visit date across a guest's visits (ISO YYYY-MM-DD sorts lexically).
+function lastVisitOf(visits: { visit_date: string | null }[]): string | null {
+  const dates = visits.map((v) => v.visit_date).filter(Boolean) as string[];
+  return dates.length ? dates.sort().at(-1)! : null;
+}
+
+// Format a YYYY-MM-DD date without timezone drift (parse the parts, not the string).
+function fmtVisitDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export function GuestsClient({
   guests,
   locations,
@@ -375,7 +387,7 @@ export function GuestsClient({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#FAFAFA] border-b border-line">
-              {["Guest", "Contact", "Current Stage", "Latest Incentive", "Location", ""].map((h) => (
+              {["Guest", "Contact", "Current Stage", "Last visit", "Latest Incentive", "Location", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {h}
                 </th>
@@ -386,6 +398,7 @@ export function GuestsClient({
             {filtered.map((g) => {
               const stage = stageOf(g.guest_visits);
               const latest = visitAt(g.guest_visits, stage)?.incentive;
+              const lastVisit = lastVisitOf(g.guest_visits);
               const visitLocationIds = [...new Set(g.guest_visits.map((v) => v.location_id).filter(Boolean))] as string[];
               const firstLocationId = visitAt(g.guest_visits, 1)?.location_id ?? visitLocationIds[0];
               const firstLocationName = locations.find((l) => l.id === firstLocationId)?.name ?? "—";
@@ -408,6 +421,9 @@ export function GuestsClient({
                   <td className="px-5 py-3.5">
                     <StatusPill label={`${status.label} · Visit ${stage} of 4`} fg={status.fg} bg={status.bg} dot={status.dot} />
                   </td>
+                  <td className={`px-5 py-3.5 tabular-nums ${lastVisit ? "text-muted" : "text-muted-2"}`}>
+                    {lastVisit ? fmtVisitDate(lastVisit) : "—"}
+                  </td>
                   <td className={`px-5 py-3.5 ${latest ? "text-ink" : "text-muted"}`}>{latest || "None recorded"}</td>
                   <td className="px-5 py-3.5 text-muted">
                     {firstLocationName}
@@ -428,7 +444,7 @@ export function GuestsClient({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center">
+                <td colSpan={7} className="px-5 py-10 text-center">
                   {guests.length === 0 ? (
                     <div className="flex flex-col items-center gap-3">
                       <p className="text-sm text-muted">No guests yet — log your first to start tracking who comes back.</p>
