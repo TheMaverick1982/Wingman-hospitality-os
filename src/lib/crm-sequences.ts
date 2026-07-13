@@ -28,7 +28,7 @@ function esc(s: string): string {
 // (unsubscribe link + postal address).
 export function buildSequenceEmailHtml(body: string, email: string): string {
   const inner = esc(body)
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#c0392b;">$1</a>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#0a6cff;">$1</a>')
     .replace(/\n/g, "<br>");
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:560px;">
     <div>${inner}</div>

@@ -120,10 +120,10 @@ async function alertNewError(e: { message: string; stack?: string; route?: strin
   ].join("\n");
 
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:640px;">
-    <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#c0392b;margin:0 0 6px;">New bug detected</p>
+    <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 6px;">New bug detected</p>
     <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">${esc(e.message)}</h1>
     <p style="font-size:13.5px;color:#525252;margin:0 0 16px;">
-      A customer just hit this on <strong>${esc(e.route ?? "an unknown route")}</strong>${e.userEmail ? ` (${esc(e.userEmail)})` : ""}. It's now on your <a href="${SITE}/admin/health" style="color:#c0392b;">Health dashboard</a>.
+      A customer just hit this on <strong>${esc(e.route ?? "an unknown route")}</strong>${e.userEmail ? ` (${esc(e.userEmail)})` : ""}. It's now on your <a href="${SITE}/admin/health" style="color:#0a6cff;">Health dashboard</a>.
     </p>
     <p style="font-size:13px;font-weight:700;color:#737373;margin:0 0 6px;">Hand this to Claude to fix it:</p>
     <pre style="background:#0f0f0f;color:#e5e5e5;border-radius:10px;padding:14px;font-size:12px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;">${esc(issue)}</pre>

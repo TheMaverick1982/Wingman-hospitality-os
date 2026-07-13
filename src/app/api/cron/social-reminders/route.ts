@@ -85,9 +85,9 @@ export async function GET(request: NextRequest) {
       ${storyNote}
       <div style="border:1px solid #eee;border-radius:12px;padding:16px;margin:12px 0;">
         <p style="font-size:15px;white-space:pre-wrap;">${esc(p.caption)}</p>
-        ${p.link ? `<p style="font-size:14px;"><a href="${esc(p.link)}" style="color:#c0392b;">${esc(p.link)}</a></p>` : ""}
+        ${p.link ? `<p style="font-size:14px;"><a href="${esc(p.link)}" style="color:#0a6cff;">${esc(p.link)}</a></p>` : ""}
         ${p.first_comment ? `<p style="font-size:13px;color:#777;">1st comment: ${esc(p.first_comment)}</p>` : ""}
-        ${imgs.map((u) => `<p style="font-size:13px;"><a href="${esc(u)}" style="color:#c0392b;">Download image</a></p>`).join("")}
+        ${imgs.map((u) => `<p style="font-size:13px;"><a href="${esc(u)}" style="color:#0a6cff;">Download image</a></p>`).join("")}
       </div>
       <p style="font-size:14px;"><a href="${SITE}/admin/social" style="color:#0a6cff;font-weight:600;">Open the planner</a> to copy the caption and mark it posted.</p>
     </div>`;
