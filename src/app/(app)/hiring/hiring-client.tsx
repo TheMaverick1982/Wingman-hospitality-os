@@ -28,22 +28,26 @@ const addInitial: TraitState = { error: null };
 export function HiringClient({
   coreValues,
   traitsByDept,
+  departments,
   canEdit,
 }: {
   coreValues: CoreValueRow[];
   traitsByDept: Record<Department, HiringTrait[]>;
+  departments: Department[];
   canEdit: boolean;
 }) {
-  const [activeRole, setActiveRole] = useState<Department>(ALL_DEPARTMENTS[0]);
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
+  const [activeRole, setActiveRole] = useState<Department>(roles[0]);
+  const activeTraits = traitsByDept[activeRole] ?? [];
   const combinedTraits = [
     ...coreValues.map((v) => ({ title: v.title, question: hiringGuidanceFor(v).question, universal: true })),
-    ...traitsByDept[activeRole].map((t) => ({ title: t.title, question: t.question, universal: false })),
+    ...activeTraits.map((t) => ({ title: t.title, question: t.question, universal: false })),
   ];
 
   return (
     <div>
       <div className="flex gap-2 mb-4 flex-wrap">
-        {ALL_DEPARTMENTS.map((d) => (
+        {roles.map((d) => (
           <button
             key={d}
             onClick={() => setActiveRole(d)}
@@ -58,7 +62,7 @@ export function HiringClient({
 
       <div className="flex items-center gap-2 mb-6">
         <InterviewGuideButton department={activeRole} traits={combinedTraits} />
-        {canEdit && traitsByDept[activeRole].length > 0 && <RefineHiringForm department={activeRole} />}
+        {canEdit && activeTraits.length > 0 && <RefineHiringForm department={activeRole} />}
         {canEdit && <HiringTraitBuilder department={activeRole} />}
       </div>
 
@@ -99,12 +103,12 @@ export function HiringClient({
         </div>
         <div className="flex items-center gap-2">
           <InterviewGuideButton department={activeRole} traits={combinedTraits} />
-          {canEdit && traitsByDept[activeRole].length > 0 && <RefineHiringForm department={activeRole} />}
+          {canEdit && activeTraits.length > 0 && <RefineHiringForm department={activeRole} />}
           {canEdit && <HiringTraitBuilder department={activeRole} />}
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 mb-8">
-        {traitsByDept[activeRole].map((t) => (
+        {activeTraits.map((t) => (
           <TraitCard key={t.id} trait={t} canEdit={canEdit} />
         ))}
         {canEdit && <AddTraitCard department={activeRole} />}

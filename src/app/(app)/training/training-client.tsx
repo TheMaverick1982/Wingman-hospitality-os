@@ -27,18 +27,21 @@ export type RoleSummary = {
 export function TrainingClient({
   data,
   summaries,
+  departments,
   isGm,
   staff,
   locations,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
+  departments: Department[];
   isGm: boolean;
   staff: StaffMember[];
   locations: Location[];
 }) {
-  const [activeRole, setActiveRole] = useState<Department>(ALL_DEPARTMENTS[0]);
-  const dept = data[activeRole];
+  const roles = departments.length ? departments : ALL_DEPARTMENTS;
+  const [activeRole, setActiveRole] = useState<Department>(roles[0]);
+  const dept = data[activeRole] ?? data[roles[0]];
 
   return (
     <div>
@@ -47,7 +50,7 @@ export function TrainingClient({
         <span className="text-sm text-muted">Guest experience first, then role skills · click a role to build</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        {ALL_DEPARTMENTS.map((d) => {
+        {roles.map((d) => {
           const s = summaries[d];
           const active = activeRole === d;
           const barColor = s.pct >= 90 ? "bg-[#16A34A]" : s.pct >= 75 ? "bg-brick" : "bg-[#D97706]";

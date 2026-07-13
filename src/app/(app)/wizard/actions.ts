@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { activateDepartment, deactivateDepartment } from "@/lib/roles";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { consumeAiLimit } from "@/lib/rate-limit";
 
@@ -108,8 +109,9 @@ Draw on these principles to shape the culture statement, core values, per-depart
   }
 
   const supabase = await createClient();
-  const { data: org } = await supabase.from("organizations").select("id").single();
+  const { data: org } = await supabase.from("organizations").select("id, system_generated").single();
   if (!org) return { error: "Organization not found." };
+  const firstRun = !org.system_generated;
 
   const { error: orgError } = await supabase
     .from("organizations")
@@ -141,6 +143,21 @@ Draw on these principles to shape the culture statement, core values, per-depart
       items.map((item, i) => ({ org_id: org.id, department: dept, item, sort_order: i }))
     );
     if (standardsError) return { error: standardsError.message };
+  }
+
+  // The chosen roles become this org's active set: ensure each has a meta row and
+  // starter duties + interview questions (standards just came from the AI above).
+  for (const dept of selectedDepts) {
+    await activateDepartment(supabase, org.id, dept);
+  }
+  // On the very first run, the roles they DIDN'T pick shouldn't show — hide the
+  // seeded defaults they left out. On later re-runs we don't touch roles they've
+  // since added on the Training/Hiring pages.
+  if (firstRun) {
+    const { data: metaRows } = await supabase.from("department_meta").select("department").eq("org_id", org.id);
+    for (const m of (metaRows ?? []) as { department: Department }[]) {
+      if (!selectedDepts.includes(m.department)) await deactivateDepartment(supabase, org.id, m.department);
+    }
   }
 
   revalidatePath("/culture");
