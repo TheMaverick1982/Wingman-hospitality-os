@@ -43,6 +43,8 @@ const PUBLIC_PREFIXES = [
   "/links",
   // Launch-special funnel (unlinked landing page).
   "/launch",
+  // Founders funnel (unindexed, unlinked landing page).
+  "/founders",
 ];
 
 export async function updateSession(request: NextRequest) {
