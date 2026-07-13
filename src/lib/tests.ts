@@ -70,6 +70,22 @@ export function scoreTest(
   return { correct, total, pct };
 }
 
+export type AssignmentStatus = "assigned" | "in_progress" | "passed" | "locked";
+
+// Decide what happens after a scored attempt: pass, allow a retake, or lock out
+// (all attempts used up) — the lock is what triggers the manager alert.
+export function resolveAttempt(
+  pct: number,
+  passPct: number,
+  attemptsUsed: number,
+  maxRetakes: number
+): { passed: boolean; locked: boolean; retake: boolean } {
+  if (pct >= passPct) return { passed: true, locked: false, retake: false };
+  const totalAllowed = 1 + Math.max(0, maxRetakes); // first attempt + retakes
+  if (attemptsUsed >= totalAllowed) return { passed: false, locked: true, retake: false };
+  return { passed: false, locked: false, retake: true };
+}
+
 export function completionWindowLabel(amount: number | null, unit: "hours" | "days"): string {
   if (!amount) return "No deadline";
   return `${amount} ${unit === "hours" ? "hour" : "day"}${amount === 1 ? "" : "s"} to complete`;
