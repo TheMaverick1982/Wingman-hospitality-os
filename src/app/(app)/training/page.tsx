@@ -8,6 +8,7 @@ import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
 import { StartTrainingButton } from "./start-training-button";
+import { RoleManager } from "../role-manager";
 
 // AI generation/refinement server actions run from this route; give them room
 // to finish instead of hitting the platform's short default function timeout
@@ -44,10 +45,16 @@ export default async function TrainingPage() {
     getStaffMembers(null),
   ]);
 
+  // The roles this restaurant runs = the ones with a department_meta row (set in
+  // the wizard, managed here). Show only those; fall back to all if none exist.
+  const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
+  const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
+  const renderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
+
   const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
   const summaries = {} as Record<Department, RoleSummary>;
-  for (const d of ALL_DEPARTMENTS) {
+  for (const d of renderDepts) {
     const metaRow = meta?.find((m) => m.department === d);
     data[d] = {
       standards: (standards ?? []).filter((s) => s.department === d).map((s) => ({ id: s.id, item: s.item, source: s.source })),
@@ -89,7 +96,9 @@ export default async function TrainingPage() {
         </div>
       </div>
 
-      <TrainingClient data={data} summaries={summaries} isGm={canEdit} staff={staff} locations={locations} />
+      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
+
+      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} />
 
       <SignoffLog signoffs={allSignoffs} />
     </>

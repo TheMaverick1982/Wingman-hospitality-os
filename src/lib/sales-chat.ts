@@ -37,7 +37,7 @@ You answer a few questions about your concept and Wingman's AI builds your cultu
 
 KEY FEATURES
 - AI setup wizard: drafts your culture statement, core values, preshift focus, and department standards from a short description of your concept.
-- Training & standards: role-based training items and sign-offs per position (Host, Server, Bartender, Chef, Manager).
+- Training & standards: role-based training items and sign-offs per position. Twelve built-in roles (Host, Server, Busser, Food Runner, Bartender, Barista, Chef, Line Cook, Dishwasher, Expo, Sommelier, Manager); each restaurant runs just the ones it picks and can add/remove roles anytime.
 - Hiring: interview criteria, questions, and green/red flags per role.
 - Guest bounce-back: track guests across visits 1–4, incentives, and reactions to drive return visits.
 - Accountability: daily checklists, spot-checks, coaching flags, pre-shift checks, discount tracking.

@@ -10,6 +10,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { HireCandidateButton } from "./hire-candidate-button";
+import { RoleManager } from "../role-manager";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
   "Strong fit": { fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
@@ -68,16 +69,22 @@ export default async function HiringPage({
   let candidatesQ = supabase.from("candidates").select("*").order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
-  const [{ data: coreValues }, { data: hiringTraits }, { data: candidates }, locations, staff] = await Promise.all([
+  const [{ data: coreValues }, { data: hiringTraits }, { data: meta }, { data: candidates }, locations, staff] = await Promise.all([
     supabase
       .from("core_values")
       .select("title, description, hiring_question, hiring_green_flag, hiring_red_flag")
       .order("sort_order"),
     supabase.from("hiring_traits").select("id, department, title, question, green_flag, red_flag, source").order("sort_order"),
+    supabase.from("department_meta").select("department"),
     candidatesQ,
     getOrgLocations(),
     getStaffMembers(null),
   ]);
+
+  // The roles this restaurant runs = the ones with a department_meta row (set in
+  // the wizard, managed here). Show only those in the role tabs.
+  const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
+  const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
 
   const traitsByDept = {} as Record<Department, HiringTrait[]>;
   for (const d of ALL_DEPARTMENTS) {
@@ -250,7 +257,9 @@ export default async function HiringPage({
         </div>
       </div>
 
-      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} canEdit={canEdit} />
+      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
+
+      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
 
       <div>
         <h3 className="font-display text-lg font-semibold mb-3 text-ink">Candidate scorecards</h3>
