@@ -8,7 +8,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { enterDemoAsStaff } from "../sales-training/actions";
 
 export const metadata: Metadata = { title: "Sales Dashboard · Admin" };
-// The "Run a live demo" action reseeds the demo org — give it room.
+// The "Run a live demo" action provisions a fresh private sandbox — give it room.
 export const maxDuration = 60;
 
 type ContactRow = { stage: string; assigned_rep_id: string | null };
