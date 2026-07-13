@@ -253,10 +253,12 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "steps", items: [
         "Open Guest Bounce Back (or log a first-timer straight from the Guest Journey's arrival stage).",
         "Add a guest (name, and phone/email if you have it) — one at a time with \"Log New Guest\", or in bulk with \"Import CSV\".",
-        "Log each visit as they return, with the incentive or note that brought them back — and how they felt (wowed, delighted, neutral, let down).",
+        "Log each visit as they return, with the incentive or note that brought them back, the bill total, and how they felt (wowed, delighted, neutral, let down).",
       ] },
+      { kind: "h", text: "Revenue by visit — the real ROI" },
+      { kind: "p", text: "Each visit has a Bill total field. Fill it in and Wingman shows a \"Revenue by visit\" breakdown: how much money guests spent on their 1st visit vs. their return visits. The repeat-visit total is the revenue the bounce-back program brought back — money you wouldn't have without turning first-timers into regulars. It's the actual financial ROI of the program, in real dollars instead of an estimate. Reporting rolls the same numbers up for any time range and per location, and uses your real average check to sharpen the retention-ROI figures." },
       { kind: "h", text: "Import guests from a CSV" },
-      { kind: "p", text: "Already have a guest list in your POS, reservation system, or a spreadsheet? Click \"Import CSV\" next to Log New Guest, choose your file, and map your columns to Wingman's fields (name, email, phone, first-visit date, source). Wingman guesses the mapping from your headers, so it's usually one click. A first-visit date drops each guest straight into the retention funnel dated correctly. Rows without a name are skipped." },
+      { kind: "p", text: "Already have a guest list in your POS, reservation system, or a spreadsheet? Click \"Import CSV\" next to Log New Guest, choose your file, and map your columns to Wingman's fields (name, email, phone, source, and per visit: date, bill total, incentive, notes, location). Wingman guesses the mapping from your headers, so it's usually one click. A first-visit date drops each guest straight into the retention funnel dated correctly, and mapped bill totals feed the revenue-by-visit report. Rows without a name are skipped." },
       { kind: "h", text: "The lists that tell you who to act on" },
       { kind: "list", items: [
         "Win-back list — guests who haven't been in for 30+ days, sorted most-overdue first, so a lapsing regular gets a nudge before they're gone for good.",

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("guests")
-    .select("id, name, phone, email, source, referred_a_friend, created_at, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction)")
+    .select("id, name, phone, email, source, referred_a_friend, created_at, guest_visits(visit_number, visit_date, location_id, incentive, notes, reaction, bill_total)")
     .eq("org_id", caller.orgId)
     .order("created_at", { ascending: false })
     .limit(loc.locationId ? 1000 : 200);
@@ -40,7 +40,7 @@ const REACTIONS = ["wowed", "delighted", "neutral", "let_down"];
 //   captured_by?      (who/what logged them, e.g. a POS name),
 //   referred_a_friend? (boolean),
 //   visit?: { visit_number(1-4), visit_date?, location_id?, incentive?, notes?,
-//             reaction?(wowed|delighted|neutral|let_down) }
+//             reaction?(wowed|delighted|neutral|let_down), bill_total?(number >= 0) }
 // }
 export async function POST(request: NextRequest) {
   const caller = await authenticateApiKey(request);
@@ -114,6 +114,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let billTotal: number | null = null;
+    if (visit.bill_total != null && visit.bill_total !== "") {
+      const b = Number(visit.bill_total);
+      if (!Number.isFinite(b) || b < 0) return apiError("visit.bill_total must be a non-negative number.");
+      billTotal = b;
+    }
+
     const { error: visitError } = await admin.from("guest_visits").insert({
       guest_id: guest.id,
       org_id: caller.orgId,
@@ -123,6 +130,7 @@ export async function POST(request: NextRequest) {
       incentive: String(visit.incentive ?? ""),
       notes: String(visit.notes ?? ""),
       reaction,
+      bill_total: billTotal,
     });
     if (visitError) return apiError(visitError.message, 500);
   }

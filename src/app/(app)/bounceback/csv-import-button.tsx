@@ -10,7 +10,7 @@ import type { Location } from "@/lib/data/locations";
 import { importGuests, type ImportRow, type ImportResult } from "./actions";
 
 const VISITS = [1, 2, 3, 4] as const;
-type VisitPart = "date" | "incentive" | "notes";
+type VisitPart = "date" | "bill" | "incentive" | "notes";
 type FieldKey = "name" | "email" | "phone" | "source" | "location" | `v${number}_${VisitPart}`;
 
 const BASE_FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
@@ -21,6 +21,7 @@ const BASE_FIELDS: { key: FieldKey; label: string; required?: boolean }[] = [
 ];
 const VISIT_PARTS: { part: VisitPart; label: string }[] = [
   { part: "date", label: "Date" },
+  { part: "bill", label: "Bill total ($)" },
   { part: "incentive", label: "Incentive / what was given" },
   { part: "notes", label: "Notes" },
 ];
@@ -34,6 +35,14 @@ const NO_MAP = () => Object.fromEntries(ALL_KEYS.map((k) => [k, -1])) as Record<
 
 // Accept common CSV date formats and normalize to YYYY-MM-DD; return "" if we
 // can't read it confidently (that visit is simply skipped).
+// Parse a bill total from a CSV cell, tolerating "$", commas, and blanks.
+function parseBill(raw: string): number | null {
+  const s = (raw || "").replace(/[$,\s]/g, "").trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 function normDate(raw: string): string {
   const s = (raw || "").trim();
   if (!s) return "";
@@ -81,7 +90,7 @@ function guessColumn(headers: string[], field: FieldKey): number {
   if (field === "source") return findAny(["source", "channel", "origin"]);
   if (field === "location") return findAny(["location", "store", "venue", "branch", "site", "restaurant"]);
 
-  const vm = field.match(/^v(\d)_(date|incentive|notes)$/);
+  const vm = field.match(/^v(\d)_(date|bill|incentive|notes)$/);
   if (vm) {
     const n = Number(vm[1]);
     const re = new RegExp(`visit\\s*${n}\\b`);
@@ -92,6 +101,7 @@ function guessColumn(headers: string[], field: FieldKey): number {
         h.findIndex((x) => x.replace(/\s+/g, "") === `visit${n}`) // a bare "Visit N" column = its date
       );
     }
+    if (vm[2] === "bill") return withVisit(/bill|total|spend|spent|check|amount|revenue|sales/);
     if (vm[2] === "incentive") return withVisit(/incentive|offer|reward|given|comp|promo/);
     return withVisit(/note/);
   }
@@ -182,6 +192,7 @@ export function CsvImportButton({ locations }: { locations: Location[] }) {
         date: normDate(cell(r, `v${n}_date`)),
         incentive: cell(r, `v${n}_incentive`).trim(),
         notes: cell(r, `v${n}_notes`).trim(),
+        bill: parseBill(cell(r, `v${n}_bill`)),
       })).filter((v) => v.date !== ""),
     }));
     start(async () => {

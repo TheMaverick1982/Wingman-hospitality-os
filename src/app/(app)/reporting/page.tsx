@@ -9,6 +9,7 @@ import { buildPhases } from "@/lib/growth-plan";
 import { monthlyRepeatCohorts, monthlyTrainingCompletion, monthlyChecklistCompliance, incentiveEffectiveness, bizHealthTrend, aggregateBizHealthByWeek, type BizHealthRawRow, type ChecklistLite, type IncentiveGuest } from "@/lib/reporting-trends";
 import { classifyMenu, QUADRANT_META, type MenuItemRow, type Quadrant } from "@/lib/menu-engineering";
 import { computeRoiLedger, DEFAULT_AVG_CHECK, DEFAULT_VISITS_PER_YEAR } from "@/lib/roi-ledger";
+import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { RoiLedgerCard } from "@/components/reporting/roi-ledger-card";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
@@ -88,7 +89,7 @@ export default async function ReportingPage({
     scoped(supabase.from("training_signoffs").select("id").gte("occurred_on", cutoff)),
     supabase.from("culture_moments").select("id").gte("occurred_on", cutoff),
     scoped(supabase.from("candidates").select("id, recommendation").gte("occurred_on", cutoff)),
-    supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction, incentive)"),
+    supabase.from("guests").select("id, referred_a_friend, guest_visits(visit_number, visit_date, location_id, reaction, incentive, bill_total)"),
     supabase.from("report_schedules").select("*").order("created_at", { ascending: false }),
     (effectiveLocation
       ? supabase
@@ -151,13 +152,20 @@ export default async function ReportingPage({
     const firstVisit = g.guest_visits.find((v) => v.visit_number === 1)?.visit_date;
     return !!firstVisit && firstVisit < returnWindowCutoff;
   }).length;
+  // Actual revenue from logged bill totals. Prefer a real average check computed
+  // from what guests actually spent; fall back to the growth-plan check, then the
+  // default. `revenueInRange` powers the revenue-by-visit report for this window.
+  const revenueAll = computeGuestRevenue(allGuests);
+  const revenueInRange = computeGuestRevenue(allGuests, cutoff);
+  const actualAvgCheck = revenueAll.avgCheck;
   const planCheck = Number(growthPlan?.current_avg_sale) || 0;
+  const roiAvgCheck = actualAvgCheck > 0 ? actualAvgCheck : planCheck > 0 ? planCheck : DEFAULT_AVG_CHECK;
   const roiLedger = computeRoiLedger({
     returnedRegulars,
     atRiskFirstTimers,
-    avgCheck: planCheck > 0 ? planCheck : DEFAULT_AVG_CHECK,
+    avgCheck: roiAvgCheck,
     visitsPerYear: DEFAULT_VISITS_PER_YEAR,
-    usingDefaultCheck: !(planCheck > 0),
+    usingDefaultCheck: actualAvgCheck <= 0 && planCheck <= 0,
   });
 
   // Trends (period-over-period, independent of the range toggle above).
@@ -227,6 +235,9 @@ export default async function ReportingPage({
     reactionRatio: reactionRatioLabel,
     recoverySpendUsd: Math.round(discountTotal),
     referralRatePct: referralRate,
+    actualRevenue: revenueInRange.billedVisits > 0
+      ? { totalUsd: Math.round(revenueInRange.total), repeatVisitUsd: Math.round(revenueInRange.repeatRevenue), avgCheckUsd: Math.round(revenueAll.avgCheck) }
+      : undefined,
     repeatRateByMonth: cohorts.map((c) => ({ month: c.label, repeatPct: c.repeatPct, newGuests: c.newGuests })),
     trainingByMonth: hasTrainingHistory ? trainingMonths.map((m) => ({ month: m.label, completionPct: m.avgCompletion })) : undefined,
     menu: menuRows.length > 0 ? menu.counts : undefined,
@@ -411,6 +422,56 @@ export default async function ReportingPage({
       <ReportNarrative snapshot={reportSnapshot} />
 
       <RoiLedgerCard roi={roiLedger} />
+
+      {revenueInRange.billedVisits > 0 && (
+        <div className="bg-white border border-line rounded-[20px] p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={17} className="text-olive" />
+            <h2 className="text-[17px] font-bold text-ink">Actual revenue by visit — {activeRange.rangeLabel}</h2>
+          </div>
+          <p className="text-[13px] text-muted mb-5 max-w-2xl">
+            Real bill totals logged in this window. The repeat visits are revenue the bounce-back program brought back —
+            money you wouldn&rsquo;t have without turning first-timers into returners.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {revenueInRange.byVisit.map((v) => {
+              const maxTotal = Math.max(...revenueInRange.byVisit.map((x) => x.total), 1);
+              const pct = Math.round((v.total / maxTotal) * 100);
+              return (
+                <div key={v.visit} className="bg-[#FAFAFA] rounded-2xl p-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-[13px] font-semibold text-charcoal-2">Visit {v.visit}</span>
+                    <span className="text-[11.5px] text-muted-2 tabular-nums">{v.count}</span>
+                  </div>
+                  <div className="text-[20px] font-bold text-ink tabular-nums leading-none">${Math.round(v.total).toLocaleString()}</div>
+                  <div className="h-1.5 rounded-full bg-line overflow-hidden mt-3">
+                    <div className={`h-full rounded-full ${v.visit === 1 ? "bg-charcoal-2" : "bg-olive"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-[11.5px] text-muted-2 mt-2">{v.avg > 0 ? `$${Math.round(v.avg).toLocaleString()} avg` : "—"}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-4">
+            <div className="bg-olive-tint rounded-2xl p-4">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#4d7c0f]">Repeat-visit revenue</div>
+              <div className="text-[24px] font-bold text-[#3f6212] tabular-nums leading-tight mt-1">
+                ${Math.round(revenueInRange.repeatRevenue).toLocaleString()}
+              </div>
+              <div className="text-[12px] text-[#4d7c0f] mt-0.5">brought back by return visits</div>
+            </div>
+            <div className="bg-paper rounded-2xl p-4">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted">Total logged</div>
+              <div className="text-[24px] font-bold text-ink tabular-nums leading-tight mt-1">
+                ${Math.round(revenueInRange.total).toLocaleString()}
+              </div>
+              <div className="text-[12px] text-muted mt-0.5">
+                {actualAvgCheck > 0 ? `$${Math.round(actualAvgCheck).toLocaleString()} average check` : "across all visits"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trends — the story over time, not just a single window. */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">

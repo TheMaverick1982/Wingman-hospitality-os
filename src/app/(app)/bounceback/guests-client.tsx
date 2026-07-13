@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { computeStageCounts, stageOf, visitAt, type GuestWithVisits } from "@/lib/hospitality";
 import { analyzeRetention, locationDropoff, locationInsight } from "@/lib/retention-coach";
+import { computeGuestRevenue } from "@/lib/guest-revenue";
 import type { Location } from "@/lib/data/locations";
 import { GuestModal, type GuestFormValue } from "./guest-modal";
 import { CsvImportButton } from "./csv-import-button";
@@ -26,6 +27,10 @@ const REACTION_META = [
 
 function daysSince(dateStr: string, now: number): number {
   return Math.floor((now - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function money(n: number): string {
+  return `$${Math.round(n).toLocaleString()}`;
 }
 
 // Most recent visit date across a guest's visits (ISO YYYY-MM-DD sorts lexically).
@@ -66,6 +71,9 @@ export function GuestsClient({
     () => (retention.worst ? locationInsight(locationDropoff(guests, locations, retention.worst.fromVisit)) : null),
     [guests, locations, retention.worst]
   );
+
+  // Actual revenue captured, by visit stage — real bill totals, not estimates.
+  const revenue = useMemo(() => computeGuestRevenue(guests), [guests]);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return guests;
@@ -174,6 +182,7 @@ export function GuestsClient({
         incentive: v.incentive ?? "",
         notes: v.notes ?? "",
         reaction: v.reaction ?? "",
+        bill_total: v.bill_total ?? null,
       };
     }
     setModalGuest({
@@ -311,6 +320,52 @@ export function GuestsClient({
           <RetentionChart counts={stageCounts.counts} labels={["Visit 1", "Visit 2", "Visit 3", "Visit 4"]} />
         </div>
       </div>
+
+      {revenue.billedVisits > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Revenue by visit</div>
+              <div className="text-[13px] text-muted mt-0.5 max-w-[420px]">
+                Actual bill totals logged at each visit. The repeat visits are the revenue your bounce-back work brought back.
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-[26px] font-bold tracking-[-0.02em] leading-none text-[#15803D] tabular-nums">
+                  {money(revenue.repeatRevenue)}
+                </div>
+                <div className="text-xs text-muted-2 mt-1">repeat-visit revenue</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[26px] font-bold tracking-[-0.02em] leading-none text-ink tabular-nums">
+                  {money(revenue.total)}
+                </div>
+                <div className="text-xs text-muted-2 mt-1">total logged</div>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+            {revenue.byVisit.map((v) => {
+              const maxTotal = Math.max(...revenue.byVisit.map((x) => x.total), 1);
+              const pct = Math.round((v.total / maxTotal) * 100);
+              return (
+                <div key={v.visit} className="bg-[#FAFAFA] rounded-[14px] p-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-[13px] font-semibold text-charcoal-2">Visit {v.visit}</span>
+                    <span className="text-[11.5px] text-muted-2 tabular-nums">{v.count}</span>
+                  </div>
+                  <div className="text-[19px] font-bold text-ink tabular-nums leading-none">{money(v.total)}</div>
+                  <div className="h-1.5 rounded-full bg-line overflow-hidden mt-3">
+                    <div className={`h-full rounded-full ${v.visit === 1 ? "bg-charcoal-2" : "bg-[#16A34A]"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-[11.5px] text-muted-2 mt-2">{v.avg > 0 ? `${money(v.avg)} avg` : "—"}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
