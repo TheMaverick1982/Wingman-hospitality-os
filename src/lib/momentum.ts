@@ -91,15 +91,19 @@ export function computeMomentum(datesByHabit: Record<HabitKey, string[]>, nowMs:
 
 // Fetch each habit's action dates for one org over the streak lookback window.
 // Works with either the SSR (RLS-scoped) or service-role admin client.
+// When `locationId` is set, the four location-aware habits scope to that
+// location; recognition (culture_moments) has no location and stays org-wide.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchActionDates(client: any, orgId: string, sinceIso: string): Promise<Record<HabitKey, string[]>> {
+async function fetchActionDates(client: any, orgId: string, sinceIso: string, locationId?: string | null): Promise<Record<HabitKey, string[]>> {
   const col = (rows: unknown[] | null, key: string) => ((rows ?? []) as Record<string, string>[]).map((r) => r[key]).filter(Boolean);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scoped = (q: any) => (locationId ? q.eq("location_id", locationId) : q);
   const [spot, guests, checklists, culture, training] = await Promise.all([
-    client.from("spot_checks").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso).limit(2000),
-    client.from("guest_visits").select("visit_date").eq("org_id", orgId).eq("visit_number", 1).gte("visit_date", sinceIso).limit(2000),
-    client.from("shift_checklist_completions").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso).limit(2000),
+    scoped(client.from("spot_checks").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso)).limit(2000),
+    scoped(client.from("guest_visits").select("visit_date").eq("org_id", orgId).eq("visit_number", 1).gte("visit_date", sinceIso)).limit(2000),
+    scoped(client.from("shift_checklist_completions").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso)).limit(2000),
     client.from("culture_moments").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso).limit(2000),
-    client.from("training_signoffs").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso).limit(2000),
+    scoped(client.from("training_signoffs").select("occurred_on").eq("org_id", orgId).gte("occurred_on", sinceIso)).limit(2000),
   ]);
   return {
     floorChecks: col(spot.data, "occurred_on"),
@@ -114,13 +118,14 @@ function sinceIso(nowMs: number): string {
   return new Date(nowMs - (STREAK_LOOKBACK_WEEKS + 1) * WEEK_MS).toISOString().slice(0, 10);
 }
 
-// Current org (SSR, RLS-scoped).
-export async function getMomentum(): Promise<Momentum | null> {
+// Current org (SSR, RLS-scoped). Pass a locationId to scope the location-aware
+// habits to one location (null/undefined = whole org).
+export async function getMomentum(locationId?: string | null): Promise<Momentum | null> {
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return null;
   const now = Date.now();
-  const dates = await fetchActionDates(supabase, org.id as string, sinceIso(now));
+  const dates = await fetchActionDates(supabase, org.id as string, sinceIso(now), locationId);
   return computeMomentum(dates, now);
 }
 

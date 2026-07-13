@@ -70,7 +70,7 @@ export default async function DashboardPage({
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
   // Momentum is about ongoing usage, so it's only meaningful (and only shown)
   // once the account is set up — during setup, Start Here drives the habits.
-  const momentum = isSuperAdmin && onboarding?.allDone ? await getMomentum() : null;
+  const momentum = isSuperAdmin && onboarding?.allDone ? await getMomentum(effectiveLocation) : null;
   const weeklyMoves = isSuperAdmin && onboarding?.allDone ? await getWeeklyMoves() : null;
   const supabase = await createClient();
 
