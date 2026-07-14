@@ -19,6 +19,7 @@ import { SettingsTabs } from "./tabs";
 import { NotificationSettings } from "./notification-settings";
 import { ApiKeysManager } from "./api-keys-manager";
 import { BillingEmailForm } from "./billing-email-form";
+import { BillingCancel } from "./billing-cancel";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -56,7 +57,7 @@ export default async function SettingsPage() {
   const [{ data: members }, locations, { data: org }, { data: plRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
     getActiveDepartments(),
   ]);
@@ -291,6 +292,10 @@ export default async function SettingsPage() {
             </span>
           )}
           <BillingEmailForm billingEmail={org?.billing_email ?? null} />
+          <BillingCancel
+            canceled={org?.cancel_at_period_end ?? false}
+            hasApi={(apiKeys ?? []).some((k) => !(k as ApiKeyRow).revoked_at)}
+          />
         </>
       )}
       <p className="text-xs text-muted-2 mt-4 pt-4 border-t border-line">

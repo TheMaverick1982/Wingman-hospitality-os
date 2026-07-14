@@ -807,6 +807,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "note", text: "Billing is handled by The Maverick Agency — charges appear on your statement as \"The Maverick Agency.\"" },
       { kind: "h", text: "Receipts & accounting email" },
       { kind: "p", text: "Every successful payment emails a receipt to the account owner(s). To also send receipts and invoices to your bookkeeper, add an email under Settings → Billing → \"Send invoices & receipts to.\" Leave it blank to keep receipts owner-only." },
+      { kind: "h", text: "Cancelling" },
+      { kind: "p", text: "You can cancel anytime from Settings → Billing → \"Cancel subscription.\" Cancellation takes effect at the end of your current billing period — you keep full access until then and aren't charged again — and you can resume before then from the same place. If you connected your POS or a Zapier automation, remember to disconnect it (Settings → API access) so it stops sending data." },
       { kind: "h", text: "If a payment fails" },
       { kind: "p", text: "You'll be emailed to update your card, and a past-due banner appears in Billing. If the balance stays unpaid for 30 days, the account is suspended per the Terms — so update your card promptly." },
     ],
