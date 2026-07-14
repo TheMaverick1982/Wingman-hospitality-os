@@ -163,7 +163,7 @@ export function CandidatesPanel({
         </div>
       )}
 
-      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[720px]">
             <thead>

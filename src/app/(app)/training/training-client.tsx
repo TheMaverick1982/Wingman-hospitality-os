@@ -51,7 +51,7 @@ export function TrainingClient({
         <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink shrink-0">Training by role</span>
         <span className="text-sm text-muted">Guest experience first, then role skills · click a role to build</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {roles.map((d) => {
           const s = summaries[d];
           const active = activeRole === d;

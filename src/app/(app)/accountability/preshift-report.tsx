@@ -55,7 +55,7 @@ export function PreshiftReport({
       <div className="px-6 py-4">
         <div className="text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] mb-3">Last 30 days</div>
         {roster.length > 0 ? (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[640px]">
             <tbody>
               {roster.map((r, i) => (
                 <tr key={i} className="border-b border-[#F5F5F5] last:border-0">

@@ -355,8 +355,8 @@ export default async function GrowthPlanPage({
             />
           )}
 
-          <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="bg-[#FAFAFA] border-b border-line">
                   {["Period", "Customers", "Avg $ per sale", "Repurchase freq.", "Total", ""].map((h) => (

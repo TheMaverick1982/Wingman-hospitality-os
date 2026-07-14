@@ -181,7 +181,7 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
                 Preview · {previewRows.length} item{previewRows.length === 1 ? "" : "s"} will import
               </div>
               <div className="max-h-[220px] overflow-y-auto">
-                <table className="w-full text-[13px]">
+                <table className="w-full text-[13px] min-w-[640px]">
                   <thead>
                     <tr className="text-left text-muted-2">
                       <th className="px-4 py-1.5 font-medium">Name</th>
@@ -296,7 +296,7 @@ export function MenuClient({ items, canEdit }: { items: MenuItemRow[]; canEdit: 
           </p>
         </div>
         {canEdit && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
             <Btn icon={Upload} kind="ghost" onClick={() => setImporting(true)}>
               Import CSV
             </Btn>
@@ -331,7 +331,7 @@ export function MenuClient({ items, canEdit }: { items: MenuItemRow[]; canEdit: 
             <StatTile label="Dogs" value={counts.dog} sub="low profit, low sales" />
           </div>
 
-          <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[760px]">
                 <thead>

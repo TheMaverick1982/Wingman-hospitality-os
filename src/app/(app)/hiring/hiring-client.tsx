@@ -229,7 +229,7 @@ function TraitCard({ trait, canEdit }: { trait: HiringTrait; canEdit: boolean })
     <div className="bg-panel border border-line rounded-2xl p-5 group">
       <div className="flex items-start justify-between mb-2">
         <p className="text-sm font-semibold text-ink">{trait.title}</p>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
           {trait.source === "custom" && <Pill tone="muted">Custom</Pill>}
           {canEdit && (
             <div className="hidden group-hover:flex items-center gap-2">
