@@ -217,6 +217,14 @@ export default async function AccountabilityPage({
   // Full roster (name + department) for the spot-check staff picker.
   const { data: staffRosterRows } = await supabase.from("staff_members").select("full_name, department").order("full_name");
   const spotCheckStaff = ((staffRosterRows ?? []) as { full_name: string; department: string }[]).filter((s) => s.full_name);
+  // The roles this org actually has (distinct staff departments, in canonical
+  // order) — used for spot-check and role-checklist assignment so we never offer
+  // roles they don't run. Falls back to all roles when no staff exist yet.
+  const rolesInUse = ((): string[] => {
+    const present = new Set(((staffRosterRows ?? []) as { department: string }[]).map((s) => s.department));
+    const ordered = ALL_DEPARTMENTS.filter((d) => present.has(d));
+    return ordered.length ? ordered : [...ALL_DEPARTMENTS];
+  })();
   const fohProfileIds = new Set(
     ((staffDeptRows ?? []) as { profile_id: string | null; department: string }[])
       .filter((s) => s.profile_id && FOH_DEPARTMENTS.includes(s.department as Department))
@@ -334,6 +342,7 @@ export default async function AccountabilityPage({
                 lockedLocationName={profile.locationName}
                 defaultLocationId={effectiveLocation ?? profile.locationId}
                 staff={spotCheckStaff}
+                departmentOptions={rolesInUse}
               />
               <PreShiftCheckModalButton
                 locations={locations}
@@ -596,7 +605,7 @@ export default async function AccountabilityPage({
 
           <div className="mt-8">
             <CustomChecklistsManager
-              departments={[...ALL_DEPARTMENTS]}
+              departments={rolesInUse}
               checklists={customChecklists.map((c, i) => ({ id: c.id, title: c.title, departments: c.departments ?? [], sort_order: c.sort_order, items: customItemsRaw[i] }))}
             />
           </div>
