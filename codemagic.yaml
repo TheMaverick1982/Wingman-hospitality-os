@@ -32,10 +32,21 @@ workflows:
         script: npx cap sync android
       - name: Point Gradle at the Android SDK
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      - name: Build signed release bundle (.aab)
+      - name: Build release bundle (.aab)
         script: |
           cd android
           ./gradlew bundleRelease
+      - name: Sign the bundle with the upload key
+        script: |
+          AAB="$CM_BUILD_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+          echo "Signing $AAB with the upload keystore..."
+          jarsigner \
+            -keystore "$CM_KEYSTORE_PATH" \
+            -storepass "$CM_KEYSTORE_PASSWORD" \
+            -keypass "$CM_KEY_PASSWORD" \
+            -sigalg SHA256withRSA -digestalg SHA-256 \
+            "$AAB" "$CM_KEY_ALIAS"
+          jarsigner -verify "$AAB" && echo "Bundle is signed."
     artifacts:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/mapping.txt
