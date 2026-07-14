@@ -31,9 +31,9 @@ export function ApiKeysManager({ keys, locations }: { keys: ApiKeyRow[]; locatio
           href="/api-guide"
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line text-sm font-semibold text-ink px-3 py-2 hover:bg-paper"
+          className="shrink-0 inline-flex items-center gap-2 rounded-full bg-brick text-sm font-semibold text-white px-4 py-2.5 shadow-sm hover:bg-brick-dark transition-colors"
         >
-          <FileText size={15} /> Developer guide
+          <FileText size={16} /> Developer guide &amp; SOP
         </a>
       </div>
 
