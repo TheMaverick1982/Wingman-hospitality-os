@@ -256,6 +256,10 @@ async function publishInstagram(post: SocialPost, imageUrls: string[], igUserId:
     creationId = String(container.data.id ?? "");
   }
 
+  // Image/carousel containers must also finish processing before publishing.
+  // Publishing too early returns "Media ID is not available" — wait for FINISHED.
+  const ready = await waitForContainer(creationId, token);
+  if (ready.error) return { error: ready.error };
   return finishInstagram(igUserId, creationId, post.first_comment, token);
 }
 
@@ -270,18 +274,20 @@ async function finishInstagram(igUserId: string, creationId: string, firstCommen
   return { url: url || undefined };
 }
 
-// Poll a video/reel container until IG finishes processing it (bounded so the
-// serverless function doesn't run over — long videos may need a retry).
+// Poll a media container until IG finishes processing it, then it's safe to
+// publish. Images are usually FINISHED on the first check; videos/reels take
+// longer. Bounded so the serverless function doesn't run over.
 async function waitForContainer(creationId: string, token: string): Promise<{ error?: string }> {
+  if (!creationId) return { error: "Media ID is not available." };
   for (let i = 0; i < 11; i++) {
     const st = await graph(creationId, { fields: "status_code", access_token: token });
     if (!st.ok) return { error: st.error };
     const code = String(st.data.status_code ?? "");
     if (code === "FINISHED") return {};
-    if (code === "ERROR" || code === "EXPIRED") return { error: `video processing ${code.toLowerCase()}` };
-    await new Promise((r) => setTimeout(r, 4000));
+    if (code === "ERROR" || code === "EXPIRED") return { error: `media processing ${code.toLowerCase()}` };
+    await new Promise((r) => setTimeout(r, i === 0 ? 1500 : 4000));
   }
-  return { error: "video still processing — hit Retry publish in a moment" };
+  return { error: "still processing — hit Retry publish in a moment" };
 }
 
 async function maybeFirstComment(objectId: string, comment: string | null, token: string): Promise<void> {
