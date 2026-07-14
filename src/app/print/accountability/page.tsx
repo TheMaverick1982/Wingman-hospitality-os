@@ -1,16 +1,17 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { createClient } from "@/lib/supabase/server";
 import { getChecklistItems, type ChecklistType } from "@/app/(app)/accountability/template-actions";
 import { PrintShell } from "../print-shell";
 
-// The checklists that can be printed, in print order. Kept in sync with the
-// selector on the Accountability page.
-const PRINTABLE: { type: ChecklistType; title: string }[] = [
+// The built-in checklists that can be printed, in print order. Custom (owner-
+// created) checklists are appended at runtime. Kept in sync with the selector on
+// the Accountability page.
+const BUILTINS: { type: ChecklistType; title: string }[] = [
   { type: "daily", title: "Manager daily checklist" },
   { type: "preshift", title: "Pre-shift checklist" },
   { type: "server", title: "Server standards checklist" },
   { type: "loyalty", title: "FOH loyalty checklist" },
 ];
-const VALID = new Set(PRINTABLE.map((p) => p.type));
 
 function ChecklistSection({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
@@ -33,12 +34,18 @@ export default async function PrintAccountabilityPage({ searchParams }: { search
   const profile = await getCurrentProfile();
   if (!profile) return null;
 
-  // ?lists=daily,preshift,... selects which checklists to include; absent = all.
+  // Built-ins + this org's custom checklists make up everything printable.
+  const supabase = await createClient();
+  const { data: customRows } = await supabase.from("custom_checklists").select("id, title").order("sort_order");
+  const printable = [...BUILTINS, ...((customRows ?? []) as { id: string; title: string }[]).map((c) => ({ type: c.id, title: c.title }))];
+  const valid = new Set(printable.map((p) => p.type));
+
+  // ?lists=daily,preshift,<custom-id>,... selects which checklists to include; absent = all.
   const { lists } = await searchParams;
   const requested = lists
-    ? lists.split(",").map((s) => s.trim()).filter((s) => VALID.has(s as ChecklistType))
-    : PRINTABLE.map((p) => p.type);
-  const chosen = PRINTABLE.filter((p) => requested.includes(p.type));
+    ? lists.split(",").map((s) => s.trim()).filter((s) => valid.has(s))
+    : printable.map((p) => p.type);
+  const chosen = printable.filter((p) => requested.includes(p.type));
 
   // Load each selected checklist's items — falls back to the built-in defaults
   // when an org hasn't customized that list, so the print is never blank.

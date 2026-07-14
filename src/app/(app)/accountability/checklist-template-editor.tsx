@@ -27,7 +27,7 @@ export function ChecklistTemplateEditor({
   title,
   items,
 }: {
-  checklistType: ChecklistType;
+  checklistType: ChecklistType | string;
   title: string;
   items: TemplateItem[];
 }) {
@@ -154,7 +154,7 @@ function BuilderItemList({ items, setItems }: { items: string[]; setItems: (v: s
   );
 }
 
-function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType; label: string }) {
+function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType | string; label: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
   const [state, formAction, pending] = useActionState(generateAccountabilityChecklist, buildInitial);

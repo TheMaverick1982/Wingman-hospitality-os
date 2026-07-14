@@ -3,16 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { getChecklistItems, type ChecklistType } from "./template-actions";
+import { getChecklistItems } from "./template-actions";
 
 export type PreshiftState = { error: string | null; done?: boolean };
 
 // A signed-in staff member (or manager/owner) completes THEIR OWN checklist for
-// today (pre-shift or FOH loyalty). Any authenticated user can record their own
-// completion — this is their personal record, not editing the shared
-// accountability config, so it's intentionally independent of the section's
-// edit permission.
-async function completeMyChecklist(type: ChecklistType, formData: FormData): Promise<PreshiftState> {
+// today (pre-shift, FOH loyalty, server, or a custom checklist). Any
+// authenticated user can record their own completion — this is their personal
+// record, not editing the shared accountability config, so it's intentionally
+// independent of the section's edit permission. The checklist items are rebuilt
+// server-side against the live template (RLS-scoped to the org), so an unknown
+// or cross-org type resolves to zero items and is rejected.
+async function completeMyChecklist(type: string, formData: FormData): Promise<PreshiftState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
 
@@ -76,4 +78,13 @@ export async function completeMyLoyalty(_prev: PreshiftState, formData: FormData
 
 export async function completeMyServer(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
   return completeMyChecklist("server", formData);
+}
+
+// Generic completion for a custom (owner-created) checklist. The checklist id
+// rides in the form as `checklistType`; completeMyChecklist rebuilds items from
+// the live, org-scoped template, so an invalid id yields zero items and errors.
+export async function completeMyCustomChecklist(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
+  const type = String(formData.get("checklistType") || "");
+  if (!type) return { error: "Missing checklist." };
+  return completeMyChecklist(type, formData);
 }

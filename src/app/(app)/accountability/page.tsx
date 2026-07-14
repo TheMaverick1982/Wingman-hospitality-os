@@ -13,8 +13,10 @@ import { SpotCheckModalButton } from "./spot-check-modal";
 import { PreShiftCheckModalButton } from "./pre-shift-check-modal";
 import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
-import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, type Department } from "@/lib/constants";
+import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
+import { CustomChecklistsManager } from "./custom-checklists-manager";
+import { MyChecklistCard } from "./my-checklist-card";
 import { PrintChecklistsButton } from "./print-checklists-button";
 import { getChecklistItems } from "./template-actions";
 import { translateTexts } from "@/lib/translate";
@@ -176,6 +178,17 @@ export default async function AccountabilityPage({
 
   // --- Per-staff checklists: personal cards + manager reports (pre-shift + FOH loyalty) ---
   const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Custom (owner-created) role checklists + their items.
+  const { data: customRows } = await supabase.from("custom_checklists").select("id, title, departments, sort_order").order("sort_order");
+  const customChecklists = (customRows ?? []) as { id: string; title: string; departments: string[] | null; sort_order: number }[];
+  const customItemsRaw = await Promise.all(customChecklists.map((c) => getChecklistItems(c.id)));
+  let customLists = customChecklists.map((c, i) => ({ ...c, departments: c.departments ?? [], items: customItemsRaw[i].map((it) => it.item) }));
+  const customIds = customLists.map((c) => c.id);
+  // The viewer's own department decides which role checklists they personally run.
+  const { data: myStaffRow } = await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle();
+  const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? null;
+
   let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
   let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
   let serverItemTexts = serverTemplateItems.map((i) => i.item);
@@ -183,11 +196,20 @@ export default async function AccountabilityPage({
   // preserved, so completion-by-index is unaffected). Managers' English config
   // is untouched.
   if (profile.language !== "en") {
-    const tx = await translateTexts(profile.orgId, profile.language, [...preShiftItemTexts, ...loyaltyItemTexts, ...serverItemTexts]);
+    const tx = await translateTexts(profile.orgId, profile.language, [
+      ...preShiftItemTexts,
+      ...loyaltyItemTexts,
+      ...serverItemTexts,
+      ...customLists.flatMap((c) => c.items),
+    ]);
     preShiftItemTexts = preShiftItemTexts.map((s) => tx.get(s) ?? s);
     loyaltyItemTexts = loyaltyItemTexts.map((s) => tx.get(s) ?? s);
     serverItemTexts = serverItemTexts.map((s) => tx.get(s) ?? s);
+    customLists = customLists.map((c) => ({ ...c, items: c.items.map((s) => tx.get(s) ?? s) }));
   }
+  // Cards the viewer personally runs: all-staff checklists (no roles) + ones that
+  // include their role.
+  const myCustomLists = customLists.filter((c) => c.departments.length === 0 || (myDepartment != null && c.departments.includes(myDepartment)));
 
   // Who is FOH? Loyalty is a front-of-house habit, so we only surface its card
   // to FOH staff (managers/owner see it too), and its report roster is FOH-only.
@@ -209,7 +231,7 @@ export default async function AccountabilityPage({
     .from("shift_checklist_completions")
     .select("checklist_type, checked, completed_count, item_count, updated_at, created_at")
     .eq("profile_id", profile.userId)
-    .in("checklist_type", ["preshift", "loyalty", "server"])
+    .in("checklist_type", ["preshift", "loyalty", "server", ...customIds])
     .eq("occurred_on", todayStr);
   const myByType = new Map<string, { checked?: boolean[]; updated_at?: string; created_at?: string }>();
   for (const c of (myCompletions ?? []) as { checklist_type: string; checked: boolean[]; updated_at: string; created_at: string }[]) myByType.set(c.checklist_type, c);
@@ -229,12 +251,13 @@ export default async function AccountabilityPage({
   let loyaltyRoster: RosterRow[] = [];
   let serverToday: TodayCompletion[] = [];
   let serverRoster: RosterRow[] = [];
+  let customReports: { id: string; title: string; today: TodayCompletion[]; roster: RosterRow[] }[] = [];
   if (canSeeReport) {
     const thirtyDaysAgo = daysAgoIso(30);
     let compQ = supabase
       .from("shift_checklist_completions")
       .select("profile_id, checklist_type, occurred_on, completed_count, item_count, updated_at, created_at")
-      .in("checklist_type", ["preshift", "loyalty", "server"])
+      .in("checklist_type", ["preshift", "loyalty", "server", ...customIds])
       .gte("occurred_on", thirtyDaysAgo)
       .order("occurred_on", { ascending: false });
     if (effectiveLocation) compQ = compQ.eq("location_id", effectiveLocation);
@@ -262,6 +285,18 @@ export default async function AccountabilityPage({
     ({ today: todayCompletions, roster } = buildChecklistReport(preComps, todayStr, nameById, baseRoster));
     ({ today: loyaltyToday, roster: loyaltyRoster } = buildChecklistReport(loyComps, todayStr, nameById, fohRoster));
     ({ today: serverToday, roster: serverRoster } = buildChecklistReport(srvComps, todayStr, nameById, fohRoster));
+
+    // A report per custom checklist, rostered to its assigned roles (or all staff).
+    const deptByProfile = new Map<string, string>();
+    for (const s of (staffDeptRows ?? []) as { profile_id: string | null; department: string }[]) {
+      if (s.profile_id) deptByProfile.set(s.profile_id, s.department);
+    }
+    customReports = customLists.map((c) => {
+      const comps = allComps.filter((x) => x.checklist_type === c.id);
+      const rosterFor = c.departments.length === 0 ? baseRoster : baseRoster.filter((p) => c.departments.includes(deptByProfile.get(p.id) ?? ""));
+      const built = buildChecklistReport(comps, todayStr, nameById, rosterFor);
+      return { id: c.id, title: c.title, today: built.today, roster: built.roster };
+    });
   }
 
   return (
@@ -280,6 +315,7 @@ export default async function AccountabilityPage({
               { type: "preshift", label: "Pre-shift checklist" },
               { type: "server", label: "Server standards checklist" },
               { type: "loyalty", label: "FOH loyalty checklist" },
+              ...customLists.map((c) => ({ type: c.id, label: c.title })),
             ]}
           />
           {!canEdit && <Pill>View only</Pill>}
@@ -382,6 +418,39 @@ export default async function AccountabilityPage({
           )}
         </div>
       )}
+
+      {/* Owner-created role checklists: the viewer's own card + (for managers) a
+          completion report per checklist. */}
+      {customLists.map((c) => {
+        const runs = myCustomLists.some((x) => x.id === c.id);
+        const rep = canSeeReport ? customReports.find((r) => r.id === c.id) : undefined;
+        if (!runs && !rep) return null;
+        const comp = myByType.get(c.id);
+        return (
+          <div key={c.id} className={runs && rep ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+            {runs && (
+              <MyChecklistCard
+                checklistId={c.id}
+                title={c.title}
+                items={c.items}
+                alreadyDone={Boolean(comp)}
+                completedChecked={comp?.checked ?? []}
+                completedAt={comp?.updated_at ?? comp?.created_at ?? null}
+                lang={profile.language}
+              />
+            )}
+            {rep && (
+              <PreshiftReport
+                today={rep.today}
+                roster={rep.roster}
+                title={`${c.title} — completion`}
+                sub="Who completed this checklist. Only reflects days they worked."
+                emptyToday="No one has completed this checklist yet today."
+              />
+            )}
+          </div>
+        );
+      })}
 
       {flags.length > 0 ? (
         <Card className="p-5">
@@ -523,6 +592,13 @@ export default async function AccountabilityPage({
             <ChecklistTemplateEditor checklistType="preshift" title="Pre-shift staff checklist" items={preShiftTemplateItems} />
             <ChecklistTemplateEditor checklistType="server" title="Server standards checklist" items={serverTemplateItems} />
             <ChecklistTemplateEditor checklistType="loyalty" title="FOH loyalty checklist" items={loyaltyTemplateItems} />
+          </div>
+
+          <div className="mt-8">
+            <CustomChecklistsManager
+              departments={[...ALL_DEPARTMENTS]}
+              checklists={customChecklists.map((c, i) => ({ id: c.id, title: c.title, departments: c.departments ?? [], sort_order: c.sort_order, items: customItemsRaw[i] }))}
+            />
           </div>
         </div>
       )}

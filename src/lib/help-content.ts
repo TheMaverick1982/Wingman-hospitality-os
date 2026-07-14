@@ -574,6 +574,28 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Staff pre-shift checklists", href: "/help/pre-shift-checklists" }, { label: "FOH loyalty checklist", href: "/help/loyalty-checklist" }],
   },
   {
+    slug: "role-checklists",
+    title: "Build your own role checklists (with AI)",
+    summary: "Create custom checklists, assign them to one or more roles, and have staff complete them each shift.",
+    categoryId: "operations",
+    keywords: ["custom checklist", "role", "create checklist", "build with ai", "assign", "department", "bartender", "line cook", "host", "per role", "shift"],
+    body: [
+      { kind: "p", text: "Beyond the built-in checklists, the account owner can create their own — one per role, or shared across the whole team — so every position has a standard they run before each shift." },
+      { kind: "h", text: "Create one" },
+      { kind: "steps", items: [
+        "Open Accountability and scroll to \"Role checklists\" (owner only).",
+        "Click \"New checklist\", name it (e.g. \"Bartender opening checklist\"), and pick the roles it applies to — leave all unselected for everyone.",
+        "Add items by hand, or hit \"Build with AI\" to draft, paste, or upload an existing checklist and have Wingman turn it into a best-practice list you can edit.",
+      ] },
+      { kind: "h", text: "How staff get it" },
+      { kind: "p", text: "Anyone whose role is assigned to the checklist sees it on their Accountability page when they log in. They check off each item and submit — it saves with a timestamp and they can update it. Assign a checklist to several roles and everyone in those roles gets it." },
+      { kind: "h", text: "For managers" },
+      { kind: "p", text: "Each role checklist gets its own completion panel — who did it today plus a 30-day view — rostered to exactly the roles it's assigned to. Role checklists are also included in the Print / PDF picker." },
+      { kind: "tip", text: "Reassign or rename a checklist anytime with \"Rename / reassign\" — the staff who see it update automatically." },
+    ],
+    links: [{ label: "Server standards checklist", href: "/help/server-checklist" }, { label: "Staff pre-shift checklists", href: "/help/pre-shift-checklists" }],
+  },
+  {
     slug: "standout-audit",
     title: "The Standout Audit",
     summary: "Score your operation and find the single most important thing to fix first.",
