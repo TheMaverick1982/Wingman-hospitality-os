@@ -11,6 +11,8 @@ import { AffiliateForm } from "./affiliate-form";
 import { BillingCard } from "./billing-card";
 import { CouponCard } from "./coupon-card";
 import { billingBadge, BILLING_TONE_CLASSES } from "@/lib/billing-label";
+import { getOrgSetup, getOrgLogins, relativeTime } from "@/lib/admin/org-metrics";
+import { CheckCircle2, Circle } from "lucide-react";
 
 export default async function AdminOrganizationDetailPage({
   params,
@@ -58,6 +60,11 @@ export default async function AdminOrganizationDetailPage({
 
   type ProfileRow = { id: string; full_name: string; access_role: AccessRole; location_id: string | null; locations: { name: string } | null };
 
+  // Customer health: setup progress + login activity across the team.
+  const memberIds = ((profiles ?? []) as unknown as ProfileRow[]).map((p) => p.id);
+  const [setup, logins] = await Promise.all([getOrgSetup(admin, orgId), getOrgLogins(admin, memberIds)]);
+  const setupPct = setup.total > 0 ? Math.round((setup.doneCount / setup.total) * 100) : 0;
+
   const billing = org as unknown as { is_free_account: boolean; billing_status: string; card_brand: string | null; card_last4: string | null };
   const pricing = org as unknown as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; pricing_note: string | null };
   const locCount = (locations ?? []).length || 1;
@@ -97,6 +104,46 @@ export default async function AdminOrganizationDetailPage({
         <p className="text-sm text-muted mt-1">
           Created {org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}
         </p>
+      </div>
+
+      {/* Customer health — engagement at a glance */}
+      <div className="bg-white border border-line rounded-2xl p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-4">Customer health</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
+          <div>
+            <div className="text-[12px] font-semibold text-muted-2 uppercase tracking-wide">Last login</div>
+            <div className="text-lg font-bold text-ink mt-0.5">{relativeTime(logins.lastLogin)}</div>
+            <div className="text-[12px] text-muted-2">{logins.lastLogin ? new Date(logins.lastLogin).toLocaleString() : "No one has signed in yet"}</div>
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold text-muted-2 uppercase tracking-wide">Team activated</div>
+            <div className="text-lg font-bold text-ink mt-0.5">
+              {logins.activated} <span className="text-muted-2 font-medium">/ {logins.total}</span>
+            </div>
+            <div className="text-[12px] text-muted-2">members have logged in</div>
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold text-muted-2 uppercase tracking-wide">Setup progress</div>
+            <div className="text-lg font-bold text-ink mt-0.5">
+              {setupPct}% <span className="text-muted-2 font-medium text-sm">· {setup.doneCount}/{setup.total} steps</span>
+            </div>
+            <div className="h-1.5 bg-paper rounded-full mt-2 overflow-hidden">
+              <div className={`h-full rounded-full ${setupPct === 100 ? "bg-olive" : "bg-brick"}`} style={{ width: `${setupPct}%` }} />
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-4 border-t border-[#F1F1F1]">
+          {setup.steps.map((s) => (
+            <span
+              key={s.label}
+              className={`inline-flex items-center gap-1.5 text-[12.5px] font-medium px-2.5 py-1 rounded-full ${
+                s.done ? "text-olive bg-olive-tint" : "text-muted-2 bg-paper"
+              }`}
+            >
+              {s.done ? <CheckCircle2 size={13} /> : <Circle size={13} />} {s.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
