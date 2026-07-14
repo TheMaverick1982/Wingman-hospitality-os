@@ -67,7 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : computeRepeatRate(guestRows, homeLocation?.id ?? profile.locationId ?? null);
 
   return (
-    <div className="w-full flex min-h-full flex-1">
+    <div className="w-full flex h-[100dvh] overflow-hidden">
       <Sidebar
         accessRole={profile.accessRole}
         fullName={profile.fullName}
@@ -78,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         permissionOverrides={profile.permissionOverrides}
         showStartHere={!!launch && !launch.allDone}
       />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
         <MobileNav
