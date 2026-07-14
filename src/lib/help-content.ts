@@ -19,6 +19,7 @@ export type HelpBlock =
   | { kind: "tip"; text: string }
   | { kind: "note"; text: string }
   | { kind: "image"; src: string; alt: string; caption?: string }
+  | { kind: "button"; label: string; href: string; external?: boolean }
   | { kind: "diagram"; name: "retention-journey" | "roles" | "pos-sync"; caption?: string };
 
 export type HelpLink = { label: string; href: string; external?: boolean };
@@ -821,6 +822,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["api", "integration", "pos", "zapier", "key", "sync", "webhook", "developer"],
     body: [
       { kind: "p", text: "Wingman has a small API so your POS or a Zapier automation can keep it in sync — for example, pushing weekly numbers into the Business Health card and Revenue Growth Planner, syncing guests, or updating the menu." },
+      { kind: "button", label: "Open the Developer Guide", href: "/api-guide", external: true },
       { kind: "diagram", name: "pos-sync", caption: "Your POS or a Zap pushes data through the API into each Wingman tool." },
       { kind: "steps", items: [
         "Go to Settings → API access (Super Admin only).",
