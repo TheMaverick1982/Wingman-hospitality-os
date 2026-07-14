@@ -75,6 +75,35 @@ function FieldTable({ rows }: { rows: [string, string, string, string][] }) {
   );
 }
 
+// The integration SOP field-map: for each Wingman area, what to connect and how often.
+function SopTable({ rows }: { rows: [string, string, string, string][] }) {
+  return (
+    <div className="overflow-x-auto my-3">
+      <table className="w-full text-sm border-collapse min-w-[560px]">
+        <thead>
+          <tr className="text-left">
+            {["Wingman area", "Source field(s) to connect", "Endpoint", "Cadence"].map((h) => (
+              <th key={h} className="border-b border-line px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted align-bottom">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([area, fields, endpoint, cadence]) => (
+            <tr key={area} className="break-inside-avoid">
+              <td className="border-b border-[#F1F1F1] px-2 py-2 font-semibold text-ink text-[13px] align-top">{area}</td>
+              <td className="border-b border-[#F1F1F1] px-2 py-2 text-charcoal-2 text-[12.5px] align-top">{fields}</td>
+              <td className="border-b border-[#F1F1F1] px-2 py-2 align-top"><code className="text-[11.5px]">{endpoint}</code></td>
+              <td className="border-b border-[#F1F1F1] px-2 py-2 text-charcoal-2 text-[12.5px] align-top">{cadence}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function ApiGuidePage() {
   return (
     <div className="min-h-screen bg-white text-ink">
@@ -251,6 +280,75 @@ export default function ApiGuidePage() {
         <p className="text-sm text-charcoal-2 mb-6">
           Each <code className="text-xs">POST</code> above has a matching <code className="text-xs">GET</code> that lists
           recent records (e.g. <code className="text-xs">GET /api/v1/growth</code>).
+        </p>
+
+        {/* Integration SOP */}
+        <h2 className="text-lg font-semibold tracking-[-0.01em] mb-2 mt-9">Integration SOP — what to connect</h2>
+        <p className="text-sm text-charcoal-2 mb-3">
+          A standard operating procedure for wiring a POS / back-office system into Wingman end to end. Follow the steps,
+          then use the field map to connect each part of the system to the right endpoint.
+        </p>
+        <ol className="text-sm text-charcoal-2 list-decimal pl-5 space-y-1.5 mb-4">
+          <li>
+            <strong>Create the key(s).</strong> Settings → API access. For a multi-store account, create <strong>one key
+            per location</strong> (bound to that store) so each POS can only touch its own data; use an org-wide key only
+            for a central back-office job.
+          </li>
+          <li>
+            <strong>Map the fields per area.</strong> For each row in the table below, connect the listed source
+            field(s) from your POS / spreadsheet / analytics to the endpoint&apos;s body fields (see the Endpoints section
+            above for exact names, types, and which are required).
+          </li>
+          <li>
+            <strong>Choose the key of write.</strong> All four areas are idempotent on their date/name key — re-posting the
+            same <code className="text-xs">period_date</code> (or menu item name) updates the record instead of
+            duplicating it, so a re-run is always safe.
+          </li>
+          <li>
+            <strong>Set the cadence.</strong> Schedule each sync at the frequency in the table (most are weekly, after the
+            books close; guests can be real-time or batched).
+          </li>
+          <li>
+            <strong>Verify.</strong> Call the matching <code className="text-xs">GET</code> (e.g.{" "}
+            <code className="text-xs">GET /api/v1/business-health</code>) and confirm the latest record matches your
+            source, then check it surfaced on the dashboard / planner in-app.
+          </li>
+        </ol>
+
+        <h3 className="text-[15px] font-semibold text-ink mb-1 mt-2">Field map: system part → Wingman</h3>
+        <SopTable
+          rows={[
+            [
+              "Dashboard · Business Health",
+              "POS weekly totals: net sales, labor $, labor hours, comps/voids/discounts, covers, checks, seats",
+              "POST /api/v1/business-health",
+              "Weekly (after close)",
+            ],
+            [
+              "Revenue Growth Planner",
+              "POS/analytics: customer count, average sale, repeat-visit frequency",
+              "POST /api/v1/growth",
+              "Weekly / per period",
+            ],
+            [
+              "Guests · Bounce Back & retention",
+              "POS/CRM/reservations: name, phone, email, source, and each visit (visit #, date, location, reaction, bill total)",
+              "POST /api/v1/guests",
+              "Real-time or nightly batch",
+            ],
+            [
+              "Menu Engineering matrix",
+              "POS menu + sales: item name, price, food cost, units sold (or explicit 1–3 popularity)",
+              "POST /api/v1/menu",
+              "Weekly / on menu change",
+            ],
+          ]}
+        />
+        <p className="text-xs text-muted mb-6">
+          Location scoping applies to every write — a per-location key lands the data at that store, or pass{" "}
+          <code className="text-xs">location_id</code> / the <code className="text-xs">X-Wingman-Location</code> header on an
+          org-wide key (see Multi-location above). Anything marked optional in the Endpoints tables can be left unmapped to
+          start and added later.
         </p>
 
         {/* Zapier */}
