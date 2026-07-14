@@ -428,18 +428,18 @@ function StageCard({ stage, index, canEdit, showCapture, stat }: { stage: Stage;
 
   return (
     <div className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+        <div className="flex items-start gap-3 min-w-0">
           <span className="w-7 h-7 rounded-full bg-brick-tint text-brick flex items-center justify-center text-[13px] font-bold shrink-0">{index + 1}</span>
-          <div>
+          <div className="min-w-0">
             <div className="text-[17px] font-semibold text-ink">{stage.name}</div>
             {stage.purpose && <div className="text-[13.5px] text-muted mt-0.5">{stage.purpose}</div>}
           </div>
         </div>
-        {stage.timing && <span className="text-[12px] font-semibold text-charcoal-2 bg-paper rounded-full px-2.5 py-1 shrink-0">{stage.timing}</span>}
+        {stage.timing && <span className="text-[12px] font-semibold text-charcoal-2 bg-paper rounded-full px-2.5 py-1 self-start shrink-0 ml-10 sm:ml-0">{stage.timing}</span>}
       </div>
 
-      <div className="flex flex-col gap-2.5 pl-10">
+      <div className="flex flex-col gap-2.5 sm:pl-10">
         {stage.standard && (
           <div>
             <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive mb-0.5">The standard</div>
