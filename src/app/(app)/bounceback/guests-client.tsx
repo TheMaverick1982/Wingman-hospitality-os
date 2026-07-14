@@ -438,7 +438,77 @@ export function GuestsClient({
         </Btn>
       </div>
 
-      <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
+      {/* Mobile: a tappable card per guest (the table is unreadable on phones). */}
+      <div className="sm:hidden flex flex-col gap-2.5">
+        {filtered.map((g) => {
+          const stage = stageOf(g.guest_visits);
+          const latest = visitAt(g.guest_visits, stage)?.incentive;
+          const lastVisit = lastVisitOf(g.guest_visits);
+          const visitLocationIds = [...new Set(g.guest_visits.map((v) => v.location_id).filter(Boolean))] as string[];
+          const firstLocationId = visitAt(g.guest_visits, 1)?.location_id ?? visitLocationIds[0];
+          const firstLocationName = locations.find((l) => l.id === firstLocationId)?.name ?? "—";
+          const extraLocationCount = visitLocationIds.filter((id) => id !== firstLocationId).length;
+          const status =
+            stage >= 4
+              ? { label: "Regular", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" }
+              : stage >= 2
+                ? { label: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" }
+                : { label: "First visit", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
+          return (
+            <div key={g.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 font-semibold text-ink">
+                    <span className="truncate">{g.name}</span>
+                    {g.referred_a_friend && <Megaphone size={13} className="text-gold shrink-0" />}
+                  </div>
+                  <div className="text-[13px] text-muted truncate mt-0.5">{g.phone || g.email || "No contact on file"}</div>
+                </div>
+                <div className="shrink-0">
+                  <StatusPill label={`Visit ${stage} of 4`} fg={status.fg} bg={status.bg} dot={status.dot} />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[12.5px] text-muted-2">
+                <span>
+                  Last visit: <span className="text-charcoal-2">{lastVisit ? fmtVisitDate(lastVisit) : "—"}</span>
+                </span>
+                <span>
+                  {firstLocationName}
+                  {extraLocationCount > 0 && <span className="text-gold"> +{extraLocationCount}</span>}
+                </span>
+                {latest && (
+                  <span>
+                    Incentive: <span className="text-charcoal-2">{latest}</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
+                <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(g)}>
+                  Edit
+                </Btn>
+                <button onClick={() => deleteGuest(g.id)} className="text-brick ml-auto p-1" aria-label="Delete guest">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
+            {guests.length === 0 ? (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted">No guests yet — log your first to start tracking who comes back.</p>
+                <Btn icon={Plus} onClick={() => setModalGuest(null)}>Log your first guest</Btn>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No guests match your search.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: the full table. */}
+      <div className="hidden sm:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
         <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-[#FAFAFA] border-b border-line">
