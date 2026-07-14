@@ -47,8 +47,8 @@ export function TrainingClient({
 
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-4">
-        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Training by role</span>
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-4">
+        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink shrink-0">Training by role</span>
         <span className="text-sm text-muted">Guest experience first, then role skills · click a role to build</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">

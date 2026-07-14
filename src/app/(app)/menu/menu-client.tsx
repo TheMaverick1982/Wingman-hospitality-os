@@ -287,7 +287,7 @@ export function MenuClient({ items, canEdit }: { items: MenuItemRow[]; canEdit: 
 
   return (
     <>
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Menu Engineering</h1>
           <p className="text-base text-muted max-w-2xl">

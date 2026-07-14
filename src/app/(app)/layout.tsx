@@ -98,8 +98,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userLocationName={profile.locationName}
           language={profile.language}
         />
-        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto flex-1 bg-paper">
-          <div className="max-w-[1400px] mx-auto flex flex-col gap-6">{children}</div>
+        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
+          <div className="max-w-[1400px] mx-auto flex flex-col gap-6 min-w-0">{children}</div>
         </div>
       </div>
       <AssistantWidget />
