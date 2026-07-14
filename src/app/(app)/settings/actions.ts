@@ -8,6 +8,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { EDITABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { linkOrCreateStaff } from "@/lib/staff-link";
+import { requestOrgCancellation, resumeOrgSubscription } from "@/lib/billing";
 
 // The staff roster row needs a concrete location even for an all-locations login,
 // so fall back to the org's first location.
@@ -493,6 +494,30 @@ export async function updateBillingEmail(_prev: ActionState, formData: FormData)
   const { error } = await supabase.from("organizations").update({ billing_email: raw || null }).eq("id", profile.orgId);
   if (error) return { error: error.message };
 
+  revalidatePath("/settings");
+  return { error: null };
+}
+
+// Self-serve cancel: schedule cancellation at period end. Owner only; free
+// accounts have nothing to cancel.
+export async function cancelSubscription(): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can cancel." };
+
+  const admin = createAdminClient();
+  const { data: org } = await admin.from("organizations").select("is_free_account").eq("id", profile.orgId).maybeSingle();
+  if ((org as { is_free_account?: boolean } | null)?.is_free_account) return { error: "This is a free account — nothing to cancel." };
+
+  await requestOrgCancellation(admin, profile.orgId);
+  revalidatePath("/settings");
+  return { error: null };
+}
+
+export async function resumeSubscription(): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can change billing." };
+
+  await resumeOrgSubscription(createAdminClient(), profile.orgId);
   revalidatePath("/settings");
   return { error: null };
 }

@@ -98,6 +98,37 @@ function receiptHtml(
   `);
 }
 
+// Reminder shown when a canceling org still has live API integrations, so their
+// POS/Zapier feed doesn't keep pushing data after they leave.
+function apiDisconnectBlock(hasApi: boolean): string {
+  if (!hasApi) return "";
+  return `<div style="margin:16px 0;padding:12px 14px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;">
+    <p style="font-size:14px;line-height:1.5;color:#9A3412;margin:0;"><strong>Heads up:</strong> your account still has an active API connection (your POS or a Zapier automation). Disconnect it so it stops sending data — in Wingman go to <strong>Settings → API access</strong> and revoke your keys, and turn off the matching Zap on your side.</p>
+  </div>`;
+}
+
+function cancellationConfirmHtml(orgName: string, periodEndLabel: string | null, hasApi: boolean): string {
+  const name = esc(orgName);
+  const until = periodEndLabel
+    ? `Your account stays active until <strong>${esc(periodEndLabel)}</strong>, the end of your current billing period. You won't be charged again.`
+    : `Your account stays active until the end of your current billing period. You won't be charged again.`;
+  return shell(`
+    <h2 style="font-size:20px;margin:0 0 10px;">Your subscription is set to cancel</h2>
+    <p style="font-size:15px;line-height:1.55;color:#525252;">We've scheduled cancellation for <strong>${name}</strong>. ${until}</p>
+    ${apiDisconnectBlock(hasApi)}
+    <p style="font-size:14px;line-height:1.55;color:#525252;">Changed your mind? You can resume anytime before then from <strong>Settings → Billing</strong>. We'd love to keep helping your team.</p>
+    <p style="font-size:13px;line-height:1.5;color:#737373;">Questions, or want to talk it through? Just reply to this email.</p>
+  `);
+}
+
+function ownerCancelRequestHtml(orgName: string, hasApi: boolean): string {
+  const name = esc(orgName);
+  return shell(`
+    <h2 style="font-size:18px;margin:0 0 10px;">Cancellation requested — ${name}</h2>
+    <p style="font-size:15px;line-height:1.55;color:#525252;"><strong>${name}</strong> just requested to cancel at period end via self-serve. Process the cancellation with the payment processor so they aren't charged again.${hasApi ? " They also still have an active API integration — they've been reminded to disconnect it." : ""} Reach out if you'd like to try to save them.</p>
+  `);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -217,6 +248,53 @@ export async function markCanceled(admin: SupabaseClient, orgId: string): Promis
   // Move the linked CRM contact to Past Clients and start the Reactivation
   // sequence so we can win them back.
   await markOrgChurned(admin, orgId);
+}
+
+// Self-serve cancellation: the owner schedules cancellation for the end of the
+// current period (keeps access until then, no future charge). Emails the customer
+// a confirmation (with an API-disconnect reminder if they have integrations) and
+// alerts the operator to finalize it with the processor. When the processor is
+// wired, also call its cancel-at-period-end API here.
+export async function requestOrgCancellation(admin: SupabaseClient, orgId: string): Promise<void> {
+  await admin.from("organizations").update({ cancel_at_period_end: true }).eq("id", orgId);
+
+  const { data: orgRow } = await admin
+    .from("organizations")
+    .select("name, current_period_end, billing_email")
+    .eq("id", orgId)
+    .maybeSingle();
+  const org = orgRow as { name: string; current_period_end: string | null; billing_email: string | null } | null;
+  const name = org?.name ?? "your organization";
+
+  const { count: apiCount } = await admin
+    .from("api_keys")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .is("revoked_at", null);
+  const hasApi = (apiCount ?? 0) > 0;
+
+  const periodEndLabel = org?.current_period_end
+    ? new Date(org.current_period_end).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : null;
+
+  const recipients = [...new Set([...(await getOrgOwnerEmails(admin, orgId)), org?.billing_email].filter(Boolean))] as string[];
+  if (recipients.length) {
+    await sendEmail({
+      to: recipients,
+      subject: "Your Wingman subscription is set to cancel",
+      html: cancellationConfirmHtml(name, periodEndLabel, hasApi),
+    }).catch(() => {});
+  }
+  await sendEmail({
+    to: [BILLING_OWNER_EMAIL],
+    subject: `Cancellation requested — ${name}`,
+    html: ownerCancelRequestHtml(name, hasApi),
+  }).catch(() => {});
+}
+
+// Owner changed their mind before the period ended.
+export async function resumeOrgSubscription(admin: SupabaseClient, orgId: string): Promise<void> {
+  await admin.from("organizations").update({ cancel_at_period_end: false }).eq("id", orgId);
 }
 
 // ---------------------------------------------------------------------------
