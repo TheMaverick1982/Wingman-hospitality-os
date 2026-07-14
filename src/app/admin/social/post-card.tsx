@@ -69,8 +69,10 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
       {post.imageUrls.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {post.imageUrls.map((img) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={img.path} src={img.url} alt="" className="w-24 h-24 object-cover rounded-lg border border-line" />
+            <a key={img.path} href={img.url} target="_blank" rel="noopener" title="Open full size" className="block rounded-xl overflow-hidden border border-line hover:border-brick transition-colors">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img.url} alt="" className="w-48 h-48 sm:w-56 sm:h-56 object-contain bg-paper" />
+            </a>
           ))}
         </div>
       ) : post.images_purged_at ? (
