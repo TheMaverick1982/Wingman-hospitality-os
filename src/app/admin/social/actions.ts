@@ -73,8 +73,19 @@ export async function publishNow(formData: FormData): Promise<void> {
   const post = data as SocialPost | null;
   if (!post) return;
   if (isAssistedOnly(post.format)) return; // stories are posted by hand
+  if (post.status === "posted") return; // already live — never double-post
 
   const now = new Date().toISOString();
+
+  // Atomic claim: a double-click (or any overlapping call) must not publish the
+  // same post twice. Only the update whose last_publish_at still matches what we
+  // read wins the claim; a concurrent second call matches zero rows and bails.
+  const prev = post.last_publish_at ?? null;
+  let claim = admin.from("social_posts").update({ last_publish_at: now, updated_at: now }).eq("id", id).neq("status", "posted");
+  claim = prev === null ? claim.is("last_publish_at", null) : claim.eq("last_publish_at", prev);
+  const { data: claimed } = await claim.select("id").maybeSingle();
+  if (!claimed) return; // another publish already claimed this post
+
   const outcome = await publishAll(post, settings);
   const publishedUrls = {
     ...(post.published_urls ?? {}),

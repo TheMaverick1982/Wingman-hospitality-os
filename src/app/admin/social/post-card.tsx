@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { markPosted, setStatus, deletePost, publishNow } from "./actions";
 import { Composer } from "./composer";
 import { CardRefine } from "./card-refine";
@@ -25,6 +26,17 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-1.5 hover:border-brick hover:text-brick transition-colors"
     >
       {copied ? "Copied ✓" : label}
+    </button>
+  );
+}
+
+// Submit button that disables itself while its form's server action is running —
+// stops a second click from firing a duplicate publish/mark-posted.
+function SubmitButton({ className, pendingLabel, children }: { className: string; pendingLabel: string; children: React.ReactNode }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className={`${className} disabled:opacity-60`}>
+      {pending ? pendingLabel : children}
     </button>
   );
 }
@@ -119,9 +131,12 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
         {connected && post.status !== "posted" && !isAssistedOnly(post.format) && (
           <form action={publishNow}>
             <input type="hidden" name="id" value={post.id} />
-            <button type="submit" className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
+            <SubmitButton
+              pendingLabel="Publishing…"
+              className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors"
+            >
               {post.publish_error ? "Retry publish" : "Publish now"}
-            </button>
+            </SubmitButton>
           </form>
         )}
         {isAssistedOnly(post.format) && post.status !== "posted" && (
@@ -130,9 +145,12 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
         {post.status !== "posted" && (
           <form action={markPosted}>
             <input type="hidden" name="id" value={post.id} />
-            <button type="submit" className="text-[13px] font-semibold text-white bg-olive rounded-full px-3.5 py-1.5 hover:opacity-90 transition-opacity">
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="text-[13px] font-semibold text-white bg-olive rounded-full px-3.5 py-1.5 hover:opacity-90 transition-opacity"
+            >
               Mark posted
-            </button>
+            </SubmitButton>
           </form>
         )}
         {usesCard && <CardRefine postId={post.id} />}
