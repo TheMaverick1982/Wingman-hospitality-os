@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { markPosted, setStatus, deletePost, publishNow } from "./actions";
 import { Composer } from "./composer";
+import { CardRefine } from "./card-refine";
 import { SOCIAL_PLATFORMS, isAssistedOnly, type SocialPost } from "@/lib/social";
 
 type CardPost = SocialPost & { imageUrls: { path: string; url: string }[] };
@@ -44,6 +45,9 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
   const [editing, setEditing] = useState(false);
   const platformLabels = post.platforms.map((p) => SOCIAL_PLATFORMS.find((x) => x.key === p)?.label ?? p).join(" · ");
   const liveUrls = Object.entries(post.published_urls ?? {}) as [string, string][];
+  // The branded card graphic is only used on Facebook / Instagram (LinkedIn is
+  // text-only). Offer graphic refinement while the post is still editable.
+  const usesCard = post.status !== "posted" && post.platforms.some((p) => p === "facebook" || p === "instagram");
 
   if (editing) {
     return (
@@ -131,6 +135,7 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
             </button>
           </form>
         )}
+        {usesCard && <CardRefine postId={post.id} />}
         <button type="button" onClick={() => setEditing(true)} className="text-[13px] font-semibold text-charcoal-2 hover:text-brick px-2">
           Edit
         </button>
