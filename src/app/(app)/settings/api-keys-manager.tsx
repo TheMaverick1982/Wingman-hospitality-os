@@ -24,7 +24,7 @@ export function ApiKeysManager({ keys, locations }: { keys: ApiKeyRow[]; locatio
           <h3 className="font-display text-lg font-semibold text-ink mb-1">API access</h3>
           <p className="text-sm text-muted">
             Create a key to connect Wingman to your POS or a Zapier automation — for example, to
-            auto-populate your Revenue Growth Planner each week. Keys are only visible to Super Admins.
+            auto-populate your Revenue Growth Planner each week. Keys are visible to Super Admins and any Developer accounts you add.
           </p>
         </div>
         <a
@@ -35,6 +35,16 @@ export function ApiKeysManager({ keys, locations }: { keys: ApiKeyRow[]; locatio
         >
           <FileText size={16} /> Developer guide &amp; SOP
         </a>
+      </div>
+
+      <div className="rounded-lg border border-line bg-paper p-4 text-sm text-charcoal-2">
+        <p className="font-semibold text-ink mb-0.5">Want your developer to set this up?</p>
+        <p>
+          Invite them above under <strong>Team &amp; permissions → Invite</strong> and give them the{" "}
+          <strong>Developer</strong> access level. They get an API-only login — a single page with keys, the developer
+          guide, and a live &ldquo;data received&rdquo; check to confirm the POS → Zapier → Wingman flow — and nothing else
+          in your account. You can remove them anytime.
+        </p>
       </div>
 
       {newKey && (

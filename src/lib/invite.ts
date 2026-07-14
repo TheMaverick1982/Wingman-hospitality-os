@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { linkOrCreateStaff } from "@/lib/staff-link";
 
-export type LoginAccessRole = "manager" | "shift_lead" | "staff" | "super_admin";
+export type LoginAccessRole = "manager" | "shift_lead" | "staff" | "super_admin" | "developer";
 
 // Send a "set up your account" login invite and tie it to the person's Staff
 // record. The caller must be a Super Admin — assign_team_member_profile is a

@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { canManageApi } from "@/lib/auth/permissions";
 import { generateApiKey } from "@/lib/api-keys";
 
 export type ApiKeyRow = {
@@ -19,15 +20,17 @@ export type CreateApiKeyState = { error: string | null; plaintext?: string };
 
 export async function createApiKey(_prev: CreateApiKeyState, formData: FormData): Promise<CreateApiKeyState> {
   const profile = await getCurrentProfile();
-  if (!profile || profile.accessRole !== "super_admin") {
-    return { error: "Only a Super Admin can create API keys." };
+  if (!profile || !canManageApi(profile.accessRole)) {
+    return { error: "Only a Super Admin or Developer can create API keys." };
   }
 
   const name = String(formData.get("name") || "").trim() || "Untitled key";
 
   // Optional: bind the key to one location (the POS at that store). Blank = an
-  // org-wide key covering all locations.
-  const supabase = await createClient();
+  // org-wide key covering all locations. The api_keys table is RLS-restricted to
+  // Super Admins, so writes go through the service-role client after the
+  // app-level role check above (org is pinned to the caller's org).
+  const supabase = createAdminClient();
   let locationId: string | null = null;
   const rawLocation = String(formData.get("locationId") || "").trim();
   if (rawLocation) {
@@ -49,17 +52,18 @@ export async function createApiKey(_prev: CreateApiKeyState, formData: FormData)
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
+  revalidatePath("/api-access");
   // The plaintext is returned exactly once and never stored anywhere.
   return { error: null, plaintext };
 }
 
 export async function revokeApiKey(id: string): Promise<{ error: string | null }> {
   const profile = await getCurrentProfile();
-  if (!profile || profile.accessRole !== "super_admin") {
-    return { error: "Only a Super Admin can revoke API keys." };
+  if (!profile || !canManageApi(profile.accessRole)) {
+    return { error: "Only a Super Admin or Developer can revoke API keys." };
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("api_keys")
     .update({ revoked_at: new Date().toISOString() })
@@ -68,5 +72,6 @@ export async function revokeApiKey(id: string): Promise<{ error: string | null }
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
+  revalidatePath("/api-access");
   return { error: null };
 }

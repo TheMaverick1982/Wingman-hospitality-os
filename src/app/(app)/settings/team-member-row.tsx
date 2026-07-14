@@ -10,7 +10,7 @@ import { EditTeamMemberForm } from "./edit-team-member-form";
 export type TeamMember = {
   id: string;
   full_name: string;
-  access_role: "super_admin" | "manager" | "shift_lead" | "staff";
+  access_role: "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
   location_id: string | null;
   all_locations: boolean;
   accessibleCount: number;
@@ -19,7 +19,7 @@ export type TeamMember = {
   email: string;
 };
 
-type Role = "super_admin" | "manager" | "shift_lead" | "staff";
+type Role = "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
 
 function locationLabel(role: Role, allLocations: boolean, accessibleCount: number, home: string | null, locations: Location[]): string {
   if (role === "super_admin" || allLocations) return "All locations";
@@ -64,7 +64,7 @@ export function TeamMemberRow({
     role === "super_admin" ? (
       <Pill tone="brick">Super Admin</Pill>
     ) : (
-      <Pill>{role === "manager" ? "Manager" : role === "shift_lead" ? "Shift Lead" : "Staff"}</Pill>
+      <Pill>{role === "manager" ? "Manager" : role === "shift_lead" ? "Shift Lead" : role === "developer" ? "Developer" : "Staff"}</Pill>
     );
 
   const locLabel = locationLabel(role, member.all_locations, member.accessibleCount, member.location_id, locations);

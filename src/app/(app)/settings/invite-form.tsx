@@ -19,7 +19,7 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   const multiLocation = locations.length > 1;
-  const [role, setRole] = useState<"manager" | "staff" | "super_admin">("manager");
+  const [role, setRole] = useState<"manager" | "shift_lead" | "staff" | "super_admin" | "developer">("manager");
   const [scope, setScope] = useState<"all" | "specific">("specific");
   const [checked, setChecked] = useState<Set<string>>(() => new Set(locations[0] ? [locations[0].id] : []));
 
@@ -65,13 +65,14 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
                 <select
                   name="role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as "manager" | "staff" | "super_admin")}
+                  onChange={(e) => setRole(e.target.value as "manager" | "shift_lead" | "staff" | "super_admin" | "developer")}
                   className={inputClass}
                 >
                   <option value="manager">Manager</option>
                   <option value="shift_lead">Shift Lead (assistant manager)</option>
                   <option value="staff">Staff</option>
                   <option value="super_admin">Super Admin (co-owner)</option>
+                  <option value="developer">Developer (API integration only)</option>
                 </select>
               </Field>
             </div>
