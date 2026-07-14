@@ -14,20 +14,30 @@ import { addSpotCheck, type ActionState } from "./actions";
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
 
+type StaffOption = { full_name: string; department: string };
+
 export function SpotCheckModalButton({
   locations,
   isGm,
   lockedLocationName,
   defaultLocationId,
+  staff = [],
 }: {
   locations: Location[];
   isGm: boolean;
   lockedLocationName: string | null;
   defaultLocationId: string | null;
+  staff?: StaffOption[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addSpotCheck, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
+
+  // Staff member: pick from the roster (auto-fills their department), or type a
+  // name if they're not listed yet.
+  const [staffName, setStaffName] = useState("");
+  const [dept, setDept] = useState<string>(ALL_DEPARTMENTS[1]);
+  const [manual, setManual] = useState(staff.length === 0);
 
   return (
     <>
@@ -39,10 +49,58 @@ export function SpotCheckModalButton({
           <form action={formAction}>
             <div className="grid grid-cols-3 gap-4">
               <Field label="Staff member">
-                <input name="staffName" required className={inputClass} />
+                {/* The submitted value — a select/text drives it. */}
+                <input type="hidden" name="staffName" value={staffName} />
+                {manual ? (
+                  <input
+                    autoFocus
+                    value={staffName}
+                    onChange={(e) => setStaffName(e.target.value)}
+                    placeholder="Type a name"
+                    className={inputClass}
+                  />
+                ) : (
+                  <select
+                    value={staffName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__other") {
+                        setManual(true);
+                        setStaffName("");
+                        return;
+                      }
+                      setStaffName(v);
+                      const s = staff.find((x) => x.full_name === v);
+                      if (s) setDept(s.department);
+                    }}
+                    className={inputClass}
+                  >
+                    <option value="" disabled>
+                      Select staff…
+                    </option>
+                    {staff.map((s) => (
+                      <option key={`${s.full_name}-${s.department}`} value={s.full_name}>
+                        {s.full_name} — {s.department}
+                      </option>
+                    ))}
+                    <option value="__other">Other (type a name)…</option>
+                  </select>
+                )}
+                {manual && staff.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManual(false);
+                      setStaffName("");
+                    }}
+                    className="text-[12px] font-semibold text-brick mt-1 hover:opacity-70"
+                  >
+                    ← Pick from roster
+                  </button>
+                )}
               </Field>
               <Field label="Department">
-                <select name="department" defaultValue={ALL_DEPARTMENTS[1]} className={inputClass}>
+                <select name="department" value={dept} onChange={(e) => setDept(e.target.value)} className={inputClass}>
                   {ALL_DEPARTMENTS.map((d) => (
                     <option key={d}>{d}</option>
                   ))}
@@ -91,7 +149,7 @@ export function SpotCheckModalButton({
               <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
                 Cancel
               </Btn>
-              <Btn type="submit" disabled={pending}>
+              <Btn type="submit" disabled={pending || !staffName.trim()}>
                 {pending ? "Saving..." : "Save spot-check"}
               </Btn>
             </div>

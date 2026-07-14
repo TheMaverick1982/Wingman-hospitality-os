@@ -192,6 +192,9 @@ export default async function AccountabilityPage({
   // Who is FOH? Loyalty is a front-of-house habit, so we only surface its card
   // to FOH staff (managers/owner see it too), and its report roster is FOH-only.
   const { data: staffDeptRows } = await supabase.from("staff_members").select("profile_id, department").not("profile_id", "is", null);
+  // Full roster (name + department) for the spot-check staff picker.
+  const { data: staffRosterRows } = await supabase.from("staff_members").select("full_name, department").order("full_name");
+  const spotCheckStaff = ((staffRosterRows ?? []) as { full_name: string; department: string }[]).filter((s) => s.full_name);
   const fohProfileIds = new Set(
     ((staffDeptRows ?? []) as { profile_id: string | null; department: string }[])
       .filter((s) => s.profile_id && FOH_DEPARTMENTS.includes(s.department as Department))
@@ -294,6 +297,7 @@ export default async function AccountabilityPage({
                 isGm={isSuperAdmin}
                 lockedLocationName={profile.locationName}
                 defaultLocationId={effectiveLocation ?? profile.locationId}
+                staff={spotCheckStaff}
               />
               <PreShiftCheckModalButton
                 locations={locations}
