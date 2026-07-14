@@ -236,7 +236,8 @@ export default function ApiGuidePage() {
             ]}
           />
           <p className="text-xs text-muted mb-1">
-            <code>visit</code>: <code className="text-xs">visit_number</code> (1–4),{" "}
+            <code>visit</code> (send only if your POS can tell a returning guest apart and knows which visit this is —
+            otherwise omit it and just create the guest): <code className="text-xs">visit_number</code> (1–4),{" "}
             <code className="text-xs">visit_date</code> (YYYY-MM-DD), <code className="text-xs">location_id</code>,{" "}
             <code className="text-xs">incentive</code>, <code className="text-xs">notes</code>,{" "}
             <code className="text-xs">reaction</code> (one of <code className="text-xs">wowed</code>,{" "}
@@ -332,7 +333,7 @@ export default function ApiGuidePage() {
             ],
             [
               "Guests · Bounce Back & retention",
-              "POS/CRM/reservations: name, phone, email, source, and each visit (visit #, date, location, reaction, bill total)",
+              "POS/CRM/reservations: name, phone, email, source. Only if your POS identifies returning guests: send each visit with its sequence (visit # 1–4), date, location, reaction, bill total — this powers the retention funnel. If it can't tell a 1st from a 4th visit, send the guest without visit data.",
               "POST /api/v1/guests",
               "Real-time or nightly batch",
             ],
