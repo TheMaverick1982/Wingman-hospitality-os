@@ -73,7 +73,7 @@ export default async function CulturePage() {
 
   return (
     <>
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your culture, in your words</h1>
           <p className="text-base text-muted">The standard every hire is trained to and every shift is measured against.</p>

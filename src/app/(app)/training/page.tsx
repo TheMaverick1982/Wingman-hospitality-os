@@ -123,14 +123,14 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Training & standards</h1>
           <p className="text-base text-muted max-w-xl">
             Department-by-department progress toward your standard, with a real sign-off log.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             <ClipboardList size={14} /> Build &amp; manage tests
           </Link>

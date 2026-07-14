@@ -120,7 +120,7 @@ export default async function TestsPage() {
         <Link href="/training" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 hover:text-brick transition-colors mb-3">
           <ArrowLeft size={14} /> Back to Training
         </Link>
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
           <div>
             <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Tests &amp; exams</h1>
             <p className="text-base text-muted max-w-xl">
