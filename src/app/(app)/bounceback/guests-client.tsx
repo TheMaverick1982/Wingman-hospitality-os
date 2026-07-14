@@ -220,9 +220,11 @@ export function GuestsClient({
         </div>
       </div>
 
-      <RetentionCoach analysis={retention} locationInsight={retentionLocationInsight} canEdit={canEdit} />
+      <div className="order-3 lg:order-none">
+        <RetentionCoach analysis={retention} locationInsight={retentionLocationInsight} canEdit={canEdit} />
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="order-3 lg:order-none grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Repeat rate" value={`${stageCounts.pct[1] || 0}%`} sub="back for visit 2" />
         <StatTile label="Avg. visits / guest" value={avgVisits} sub="across tracked guests" />
         <StatTile label="At risk of churn" value={atRisk.length} sub="no visit in 30+ days" trend={atRisk.length > 0 ? "Needs action" : undefined} trendTone="down" />
@@ -295,7 +297,7 @@ export function GuestsClient({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
+      <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
           <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Visit funnel</div>
           <div className="text-[13px] text-muted mb-6">Where guests drop off — and where they stick.</div>
@@ -367,7 +369,7 @@ export function GuestsClient({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
@@ -423,7 +425,7 @@ export function GuestsClient({
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="order-1 lg:order-none flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-white border border-line">
           <Search size={15} className="text-muted shrink-0" />
           <input
@@ -439,7 +441,7 @@ export function GuestsClient({
       </div>
 
       {/* Mobile: a tappable card per guest (the table is unreadable on phones). */}
-      <div className="sm:hidden flex flex-col gap-2.5">
+      <div className="order-2 lg:order-none sm:hidden flex flex-col gap-2.5">
         {filtered.map((g) => {
           const stage = stageOf(g.guest_visits);
           const latest = visitAt(g.guest_visits, stage)?.incentive;
@@ -508,7 +510,7 @@ export function GuestsClient({
       </div>
 
       {/* Desktop: the full table. */}
-      <div className="hidden sm:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
+      <div className="order-2 lg:order-none hidden sm:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
         <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-[#FAFAFA] border-b border-line">
