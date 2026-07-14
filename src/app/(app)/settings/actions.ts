@@ -479,3 +479,20 @@ export async function updatePermissionOverrides(_prev: ActionState, formData: Fo
   revalidatePath("/", "layout");
   return { error: null };
 }
+
+// Where receipts/invoices are cc'd (e.g. the customer's accounting inbox). Owner
+// only. Empty clears it (receipts then go to the account owner(s) only).
+export async function updateBillingEmail(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { error: "Only the account owner can change billing." };
+
+  const raw = String(formData.get("billingEmail") || "").trim();
+  if (raw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) return { error: "Enter a valid email address." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("organizations").update({ billing_email: raw || null }).eq("id", profile.orgId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  return { error: null };
+}
