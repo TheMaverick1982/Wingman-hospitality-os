@@ -7,7 +7,10 @@ workflows:
   android:
     name: Wingman Android (Play)
     max_build_duration: 60
-    instance_type: linux_x2
+    # Free-tier build minutes run on Codemagic's macOS instances; the Linux
+    # instances need a paid plan. The macOS image ships the Android SDK + JDK,
+    # so the Android bundle builds here fine.
+    instance_type: mac_mini_m2
     environment:
       # Create this Android keystore in Codemagic:
       #   Teams/Personal → Code signing identities → Android keystores →
