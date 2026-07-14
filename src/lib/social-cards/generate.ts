@@ -133,6 +133,7 @@ ${SCHEMA}
 Rules:
 - Rotate card "type" and content mix; never repeat a hook, stat, or card headline within the batch.
 - Facebook & Instagram captions cover the SAME idea but are written natively for each (IG can use "link in bio"; put hashtags in first_comment). LinkedIn is a longer, more professional take in Brian's voice (2-4 short paragraphs), links work.
+- HARD RULE: Brian is a marketing/ops expert who has worked WITH restaurants — he does NOT own or run one. NO post (especially LinkedIn) may imply he's a restaurant owner/operator. Never write "my restaurant", "our floor", "our guests", "my staff"; refer to restaurants/operators in the third person.
 - Card text is SHORT and punchy — it's a graphic, not a paragraph. Keep headlines/subheads tight.
 - "link" is one of the real CTA URLs and should vary across the batch.`;
 

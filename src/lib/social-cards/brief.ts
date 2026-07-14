@@ -26,6 +26,8 @@ PROVEN ANGLES (rotate): retention math ($45 one-timer vs $1,000+/yr regular, zer
 
 CTAs: Live demo https://www.joinwingman.app/demo · ROI calculator https://www.joinwingman.app/calculator · Book a call https://www.joinwingman.app/book-a-demo. Vary the CTA; don't end every post the same way.
 
+LINKEDIN POSITIONING (critical): Brian is a marketing/operations expert who has worked WITH restaurants — he is NOT a restaurant owner or operator. LinkedIn posts must NEVER imply he owns or runs a restaurant. Never use owner/operator first-person framing like "my restaurant", "our floor", "our dining room", "when we comp", "my GMs". Speak about restaurants in the third person ("operators", "the restaurants I work with", "most full-service restaurants"). His credibility is as an outside expert who has helped restaurants, and as the founder of Wingman.
+
 HONESTY RULE: Wingman is early — do NOT invent customer testimonials, star ratings, or named results. Use industry truths and observations instead.
 
 NO REPEATS: never reuse an identical caption, hook, stat, or card headline — not within a batch and not versus anything already scheduled. Each post is a distinct angle or fresh wording.`;
