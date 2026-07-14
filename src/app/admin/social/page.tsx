@@ -44,6 +44,24 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
   const posts = ((data ?? []) as SocialPost[]).map(withUrls);
   const connected = anyPlatformConnected(settings);
 
+  // Furthest-out SCHEDULED post per channel — "how much runway is booked" so the
+  // owner can see where the last post is set to go out for each platform.
+  const lastByPlatform: Record<string, string | null> = { facebook: null, instagram: null, linkedin: null };
+  for (const p of posts) {
+    if (p.status !== "scheduled" || !p.scheduled_at) continue;
+    for (const plat of p.platforms) {
+      if (!(plat in lastByPlatform)) continue;
+      if (!lastByPlatform[plat] || new Date(p.scheduled_at) > new Date(lastByPlatform[plat]!)) lastByPlatform[plat] = p.scheduled_at;
+    }
+  }
+  const fmtLast = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null;
+  const RUNWAY = [
+    { key: "facebook", label: "Facebook", dot: "#1877F2" },
+    { key: "instagram", label: "Instagram", dot: "#E1306C" },
+    { key: "linkedin", label: "LinkedIn", dot: "#0A66C2" },
+  ];
+
   const { meta, li, msg } = await searchParams;
   const flash = meta
     ? META_FLASH[meta] ?? (meta === "error" ? { kind: "error" as const, text: msg ?? "Connection failed." } : null)
@@ -79,6 +97,23 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       />
 
       <AiDrafts initialBrief={settings?.content_brief ?? ""} initialAuto={settings?.auto_generate ?? false} />
+
+      {/* Last scheduled post per channel — where the runway ends for each. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {RUNWAY.map((c) => {
+          const last = fmtLast(lastByPlatform[c.key]);
+          return (
+            <div key={c.key} className="bg-white border border-line rounded-xl px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-2 text-[12.5px] font-semibold text-charcoal-2">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: c.dot }} /> {c.label}
+              </div>
+              <div className="mt-1 text-[14px] text-ink">
+                {last ? <>Last scheduled: <span className="font-semibold">{last}</span></> : <span className="text-muted-2">No posts scheduled</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <SocialToolbar connected={connected} />
 
