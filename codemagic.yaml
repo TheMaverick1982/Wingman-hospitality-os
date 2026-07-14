@@ -1,0 +1,60 @@
+# Codemagic CI — builds the Wingman native apps from the Capacitor project.
+# The app is a native shell that loads https://www.joinwingman.app, so the build
+# just generates the native projects, wires icons/splash, and produces store
+# artifacts. Android is wired first; the iOS workflow is here for when the Apple
+# account clears.
+workflows:
+  android:
+    name: Wingman Android (Play)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      # Create this Android keystore in Codemagic:
+      #   Teams/Personal → Code signing identities → Android keystores →
+      #   "Generate new keystore", reference name: wingman_upload_keystore
+      android_signing:
+        - wingman_upload_keystore
+      vars:
+        PACKAGE_NAME: "com.joinwingman.app"
+      node: 20
+      java: 17
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Add Android platform
+        script: npx cap add android || echo "android platform already present"
+      - name: Generate app icons & splash
+        script: npx capacitor-assets generate --android
+      - name: Sync Capacitor into the native project
+        script: npx cap sync android
+      - name: Point Gradle at the Android SDK
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build signed release bundle (.aab)
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/mapping.txt
+
+  ios:
+    name: Wingman iOS (App Store)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Add iOS platform
+        script: npx cap add ios || echo "ios platform already present"
+      - name: Generate app icons & splash
+        script: npx capacitor-assets generate --ios
+      - name: Sync Capacitor into the native project
+        script: npx cap sync ios
+    artifacts:
+      - build/ios/ipa/*.ipa
+    # iOS code signing (certificate + provisioning profile) is added in the
+    # Codemagic UI once the Apple Developer account is approved.
