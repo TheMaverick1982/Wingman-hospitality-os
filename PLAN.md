@@ -25,15 +25,24 @@ Uses the existing 3-tier `access_role` model (`super_admin` / `manager` /
 | Role | Partners access |
 |---|---|
 | **super_admin** (account owner) | **Full org visibility** — every location, every contact, every manager's activity. All-Locations aggregate + drill into any store. Authors goals. Receives Leadership Rollup. |
-| **manager** | Scoped to the location they're assigned to (`profiles.location_id`). Sees and works only that location's contacts/activities. Receives their store's monthly Hit List. |
+| **manager** | Scoped to the location(s) they're assigned to. A manager can oversee **multiple stores**. Sees and works only their assigned locations' contacts/activities. Receives a monthly Hit List for each store they own. |
 | **staff** (and `shift_lead`) | **No access.** Hidden in nav, blocked at the data layer. |
+
+**Multi-location managers:** the current schema ties a manager to a single
+`profiles.location_id` (their "home" store). Since it's common for one manager to
+oversee several stores, we add a **`manager_locations`** join table (see §3) that
+grants a manager access to additional locations. Their effective location set =
+`profiles.location_id` ∪ `manager_locations` rows. The owner assigns these in the
+team/people settings.
 
 Enforced in two places so it can't leak:
 1. **Nav** hides the module for staff/shift_lead.
-2. **Supabase RLS** on every Partners table scopes to org, and for a manager
-   to their `location_id`; `super_admin` bypasses the location filter and sees
-   the full org. Owner "see everything" is a database-level rule, not a UI
-   toggle.
+2. **Supabase RLS** on every Partners table scopes to org, and for a manager to
+   their **assigned-location set** (home `location_id` + `manager_locations`);
+   `super_admin` bypasses the location filter and sees the full org. Owner "see
+   everything" is a database-level rule, not a UI toggle. RLS uses a
+   `manager_can_access_location(location_id)` helper so the same check is reused
+   everywhere.
 
 ## 3. Data model (migration 0100)
 
@@ -68,6 +77,15 @@ toward goals and carry actual revenue.
 Per (location, year, quarter) targets: `goal_new_contacts`, `goal_events`,
 `goal_fundraisers`, `goal_active_connections`. Org-wide default + per-location
 override (only stores that differ get a row). Authored by super_admin.
+
+### `manager_locations` (multi-store managers)
+Join table granting a manager access to stores beyond their home
+`profiles.location_id`: `id`, `organization_id`, `profile_id` (the manager),
+`location_id`, `created_at`, unique on (`profile_id`, `location_id`). A
+manager's effective location set = home `location_id` ∪ these rows. Backs the
+`manager_can_access_location()` RLS helper. Owner-managed in team/people
+settings. (General-purpose, but introduced with Partners since it's the first
+feature that needs it.)
 
 ### `partner_metrics_snapshots`
 Frozen per (location, year, quarter): `total_contacts`, `new_contacts`,
@@ -210,9 +228,11 @@ the new counters start.
 Grouped into ~4 PRs so each merges clean and Vercel deploys in reviewable chunks.
 
 **PR 1 — Foundation & Contacts**
-1. Migration 0100: 4 tables + `last_activity_at` trigger + RLS (org + manager
-   location scope; super_admin full org).
+1. Migration 0100: 4 Partners tables + `manager_locations` join table +
+   `last_activity_at` trigger + `manager_can_access_location()` helper + RLS
+   (org + manager multi-location scope; super_admin full org).
 2. Nav entry (role-gated: super_admin + manager; hidden from staff/shift_lead).
+   Owner UI to assign a manager to multiple stores (team/people settings).
 3. Contacts tab: list, add/edit, location scoping, KPI cards.
 4. Log-Activity slide-out + `last_activity_at` denormalization + quick Log Call/Text.
 
@@ -238,7 +258,8 @@ Grouped into ~4 PRs so each merges clean and Vercel deploys in reviewable chunks
 
 - Name: **Partners** / community.
 - Access: **super_admin + manager**; **staff hidden**. Managers see only their
-  assigned location; owner sees all locations, contacts, and managers.
+  assigned location(s) — **multi-store managers supported** via `manager_locations`;
+  owner sees all locations, contacts, and managers.
 - Goals: **owner-set in Settings**, per-quarter per metric, org default + per-store override.
 - Scan Card: **yes**, step 3.5, camera + Claude vision.
 - Revenue: **actual booked**, entered after the event, with a nudge to enter it.
