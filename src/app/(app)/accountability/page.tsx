@@ -15,6 +15,7 @@ import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
+import { PrintChecklistsButton } from "./print-checklists-button";
 import { getChecklistItems } from "./template-actions";
 import { translateTexts } from "@/lib/translate";
 import { MyPreshiftCard } from "./my-preshift-card";
@@ -270,9 +271,14 @@ export default async function AccountabilityPage({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          <a href="/print/accountability" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            Print / PDF
-          </a>
+          <PrintChecklistsButton
+            options={[
+              { type: "daily", label: "Manager daily checklist" },
+              { type: "preshift", label: "Pre-shift checklist" },
+              { type: "server", label: "Server standards checklist" },
+              { type: "loyalty", label: "FOH loyalty checklist" },
+            ]}
+          />
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && (
             <>
