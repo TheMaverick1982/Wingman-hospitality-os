@@ -1,5 +1,5 @@
 {
-  "appId": "app.joinwingman",
+  "appId": "com.joinwingman.app",
   "appName": "Wingman",
   "webDir": "native/www",
   "server": {
