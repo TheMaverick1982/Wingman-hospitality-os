@@ -77,6 +77,32 @@ export const LOYALTY_CHECKLIST_ITEMS = [
   "Applied loyalty to the check before closing it",
 ] as const;
 
+// Server standards checklist — a pre-shift acknowledgment each server reads and
+// checks off, so the hospitality standard is front-of-mind before service. A
+// generic, de-branded best-practice version; every org can edit it.
+export const SERVER_CHECKLIST_ITEMS = [
+  "I'm here to create guest experiences, not just take orders",
+  "I make every guest feel recognized, valued, and taken care of",
+  "I acknowledge every guest immediately with eye contact and a greeting",
+  "If I'm busy, I verbally acknowledge guests right away",
+  "I treat every guest as an individual, not a transaction",
+  "I read the table and adjust — I never sound scripted",
+  "I recognize returning guests and use their names when I can",
+  "I ask if it's their first visit and flag first-timers to a manager",
+  "I make confident recommendations, not just take the order",
+  "I use the 3-touch model: pre-meal, mid-meal, post-meal",
+  "I stay aware of my tables — drinks, plates, and body language",
+  "I move with urgency so nothing feels slow or forgotten",
+  "I check in early to catch issues before they escalate",
+  "I involve a manager early when something needs fixing",
+  "I thank every guest sincerely and give them a reason to return",
+  "I aim to deliver a 5-star experience every shift",
+  "I ask for a review only when the experience was clearly great",
+  "I uphold the standard regardless of my role or position",
+  "I'll create at least one memorable moment this shift",
+  "Guests should leave thinking: they take care of people here",
+] as const;
+
 export const AMBIANCE_DIMENSIONS = [
   "Cleanliness (floors, tables, restrooms)",
   "Music volume & selection",

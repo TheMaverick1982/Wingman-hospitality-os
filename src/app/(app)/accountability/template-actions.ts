@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { DAILY_CHECKLIST_ITEMS, PRE_SHIFT_ITEMS, LOYALTY_CHECKLIST_ITEMS } from "@/lib/constants";
+import { DAILY_CHECKLIST_ITEMS, PRE_SHIFT_ITEMS, LOYALTY_CHECKLIST_ITEMS, SERVER_CHECKLIST_ITEMS } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
 
-export type ChecklistType = "daily" | "preshift" | "loyalty";
+export type ChecklistType = "daily" | "preshift" | "loyalty" | "server";
 
 export type TemplateItem = { id: string; item: string; source: "wingman" | "custom" };
 
@@ -16,12 +16,14 @@ const DEFAULTS: Record<ChecklistType, readonly string[]> = {
   daily: DAILY_CHECKLIST_ITEMS,
   preshift: PRE_SHIFT_ITEMS,
   loyalty: LOYALTY_CHECKLIST_ITEMS,
+  server: SERVER_CHECKLIST_ITEMS,
 };
 
 const CHECKLIST_LABEL: Record<ChecklistType, string> = {
   daily: "Manager daily checklist",
   preshift: "Pre-shift staff checklist",
   loyalty: "FOH loyalty checklist",
+  server: "Server standards checklist",
 };
 
 /** Org's custom items if they've saved any, else the app's built-in defaults. */
@@ -114,7 +116,9 @@ export async function generateAccountabilityChecklist(_prev: BuildState, formDat
       ? "a manager, once per shift"
       : checklistType === "loyalty"
         ? "each front-of-house staff member during their shift, to capture and take care of loyalty-program members at every table and the bar"
-        : "each staff member, before their shift starts";
+        : checklistType === "server"
+          ? "each server, before their shift starts, as an acknowledgment of the hospitality standard they'll uphold on the floor"
+          : "each staff member, before their shift starts";
 
   let items: string[];
   try {

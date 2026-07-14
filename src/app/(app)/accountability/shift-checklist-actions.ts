@@ -73,3 +73,7 @@ export async function completeMyPreshift(_prev: PreshiftState, formData: FormDat
 export async function completeMyLoyalty(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
   return completeMyChecklist("loyalty", formData);
 }
+
+export async function completeMyServer(_prev: PreshiftState, formData: FormData): Promise<PreshiftState> {
+  return completeMyChecklist("server", formData);
+}
