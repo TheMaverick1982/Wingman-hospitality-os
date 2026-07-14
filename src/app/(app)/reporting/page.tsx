@@ -388,7 +388,7 @@ export default async function ReportingPage({
               : `Every section, one view — ${activeRange.rangeLabel}.`}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex gap-1 bg-white border border-line rounded-xl p-1">
             {RANGES.map((r) => (
               <Link
