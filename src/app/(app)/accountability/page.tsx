@@ -189,23 +189,6 @@ export default async function AccountabilityPage({
   const { data: myStaffRow } = await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle();
   const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? null;
 
-  // Role assignment for the built-in staff checklists. A stored row (departments
-  // may be empty = all staff) overrides the app's default audience; no row keeps
-  // the default (pre-shift = all, server/loyalty = front-of-house).
-  const { data: assignRows } = await supabase.from("checklist_assignments").select("checklist_type, departments");
-  const assignMap = new Map<string, string[]>();
-  for (const a of (assignRows ?? []) as { checklist_type: string; departments: string[] | null }[]) assignMap.set(a.checklist_type, a.departments ?? []);
-  const fohInUse = FOH_DEPARTMENTS.filter((d) => rolesInUse.includes(d));
-  const effRoles = (type: "preshift" | "server" | "loyalty"): string[] => {
-    const row = assignMap.get(type);
-    if (row) return row; // stored assignment wins ([] = all staff)
-    return type === "preshift" ? [] : fohInUse; // defaults
-  };
-  const seesChecklist = (type: "preshift" | "server" | "loyalty"): boolean => {
-    const roles = effRoles(type);
-    return roles.length === 0 || (myDepartment != null && roles.includes(myDepartment));
-  };
-
   let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
   let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
   let serverItemTexts = serverTemplateItems.map((i) => i.item);
@@ -242,6 +225,24 @@ export default async function AccountabilityPage({
     const ordered = ALL_DEPARTMENTS.filter((d) => present.has(d));
     return ordered.length ? ordered : [...ALL_DEPARTMENTS];
   })();
+
+  // Role assignment for the built-in staff checklists. A stored row (departments
+  // may be empty = all staff) overrides the app's default audience; no row keeps
+  // the default (pre-shift = all, server/loyalty = front-of-house).
+  const { data: assignRows } = await supabase.from("checklist_assignments").select("checklist_type, departments");
+  const assignMap = new Map<string, string[]>();
+  for (const a of (assignRows ?? []) as { checklist_type: string; departments: string[] | null }[]) assignMap.set(a.checklist_type, a.departments ?? []);
+  const fohInUse = FOH_DEPARTMENTS.filter((d) => rolesInUse.includes(d));
+  const effRoles = (type: "preshift" | "server" | "loyalty"): string[] => {
+    const row = assignMap.get(type);
+    if (row) return row; // stored assignment wins ([] = all staff)
+    return type === "preshift" ? [] : fohInUse; // defaults
+  };
+  const seesChecklist = (type: "preshift" | "server" | "loyalty"): boolean => {
+    const roles = effRoles(type);
+    return roles.length === 0 || (myDepartment != null && roles.includes(myDepartment));
+  };
+
   const canSeeReport = profile.accessRole !== "staff";
   const showPreshiftCard = seesChecklist("preshift");
   const showServerCard = seesChecklist("server");
