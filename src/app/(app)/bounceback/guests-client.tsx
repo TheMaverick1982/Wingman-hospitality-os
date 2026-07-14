@@ -195,6 +195,88 @@ export function GuestsClient({
     });
   }
 
+  const searchBar = (
+    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg w-full bg-white border border-line">
+      <Search size={15} className="text-muted shrink-0" />
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search guests by name, email, or phone..."
+        className="text-sm outline-none w-full bg-transparent text-ink"
+      />
+    </div>
+  );
+
+  const guestCards = (
+    <div className="flex flex-col gap-2.5">
+      {filtered.map((g) => {
+        const stage = stageOf(g.guest_visits);
+        const latest = visitAt(g.guest_visits, stage)?.incentive;
+        const lastVisit = lastVisitOf(g.guest_visits);
+        const visitLocationIds = [...new Set(g.guest_visits.map((v) => v.location_id).filter(Boolean))] as string[];
+        const firstLocationId = visitAt(g.guest_visits, 1)?.location_id ?? visitLocationIds[0];
+        const firstLocationName = locations.find((l) => l.id === firstLocationId)?.name ?? "—";
+        const extraLocationCount = visitLocationIds.filter((id) => id !== firstLocationId).length;
+        const status =
+          stage >= 4
+            ? { label: "Regular", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" }
+            : stage >= 2
+              ? { label: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" }
+              : { label: "First visit", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
+        return (
+          <div key={g.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 font-semibold text-ink">
+                  <span className="truncate">{g.name}</span>
+                  {g.referred_a_friend && <Megaphone size={13} className="text-gold shrink-0" />}
+                </div>
+                <div className="text-[13px] text-muted truncate mt-0.5">{g.phone || g.email || "No contact on file"}</div>
+              </div>
+              <div className="shrink-0">
+                <StatusPill label={`Visit ${stage} of 4`} fg={status.fg} bg={status.bg} dot={status.dot} />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[12.5px] text-muted-2">
+              <span>
+                Last visit: <span className="text-charcoal-2">{lastVisit ? fmtVisitDate(lastVisit) : "—"}</span>
+              </span>
+              <span>
+                {firstLocationName}
+                {extraLocationCount > 0 && <span className="text-gold"> +{extraLocationCount}</span>}
+              </span>
+              {latest && (
+                <span>
+                  Incentive: <span className="text-charcoal-2">{latest}</span>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
+              <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(g)}>
+                Edit
+              </Btn>
+              <button onClick={() => deleteGuest(g.id)} className="text-brick ml-auto p-1" aria-label="Delete guest">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {filtered.length === 0 && (
+        <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
+          {guests.length === 0 ? (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-muted">No guests yet — log your first to start tracking who comes back.</p>
+              <Btn icon={Plus} onClick={() => setModalGuest(null)}>Log your first guest</Btn>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No guests match your search.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -220,11 +302,15 @@ export function GuestsClient({
         </div>
       </div>
 
-      <div className="order-3 lg:order-none">
-        <RetentionCoach analysis={retention} locationInsight={retentionLocationInsight} canEdit={canEdit} />
+      {/* Mobile & tablet: search + guest list right under the buttons for fast logging. */}
+      <div className="lg:hidden flex flex-col gap-3">
+        {searchBar}
+        {guestCards}
       </div>
 
-      <div className="order-3 lg:order-none grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <RetentionCoach analysis={retention} locationInsight={retentionLocationInsight} canEdit={canEdit} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Repeat rate" value={`${stageCounts.pct[1] || 0}%`} sub="back for visit 2" />
         <StatTile label="Avg. visits / guest" value={avgVisits} sub="across tracked guests" />
         <StatTile label="At risk of churn" value={atRisk.length} sub="no visit in 30+ days" trend={atRisk.length > 0 ? "Needs action" : undefined} trendTone="down" />
@@ -297,7 +383,7 @@ export function GuestsClient({
         </div>
       )}
 
-      <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
           <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Visit funnel</div>
           <div className="text-[13px] text-muted mb-6">Where guests drop off — and where they stick.</div>
@@ -369,7 +455,7 @@ export function GuestsClient({
         </div>
       )}
 
-      <div className="order-3 lg:order-none grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
@@ -425,7 +511,7 @@ export function GuestsClient({
         </div>
       </div>
 
-      <div className="order-1 lg:order-none flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="hidden lg:flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-white border border-line">
           <Search size={15} className="text-muted shrink-0" />
           <input
@@ -440,77 +526,8 @@ export function GuestsClient({
         </Btn>
       </div>
 
-      {/* Mobile: a tappable card per guest (the table is unreadable on phones). */}
-      <div className="order-2 lg:order-none sm:hidden flex flex-col gap-2.5">
-        {filtered.map((g) => {
-          const stage = stageOf(g.guest_visits);
-          const latest = visitAt(g.guest_visits, stage)?.incentive;
-          const lastVisit = lastVisitOf(g.guest_visits);
-          const visitLocationIds = [...new Set(g.guest_visits.map((v) => v.location_id).filter(Boolean))] as string[];
-          const firstLocationId = visitAt(g.guest_visits, 1)?.location_id ?? visitLocationIds[0];
-          const firstLocationName = locations.find((l) => l.id === firstLocationId)?.name ?? "—";
-          const extraLocationCount = visitLocationIds.filter((id) => id !== firstLocationId).length;
-          const status =
-            stage >= 4
-              ? { label: "Regular", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" }
-              : stage >= 2
-                ? { label: "In progress", fg: "text-brick-dark", bg: "bg-brick-tint", dot: "bg-brick" }
-                : { label: "First visit", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
-          return (
-            <div key={g.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 font-semibold text-ink">
-                    <span className="truncate">{g.name}</span>
-                    {g.referred_a_friend && <Megaphone size={13} className="text-gold shrink-0" />}
-                  </div>
-                  <div className="text-[13px] text-muted truncate mt-0.5">{g.phone || g.email || "No contact on file"}</div>
-                </div>
-                <div className="shrink-0">
-                  <StatusPill label={`Visit ${stage} of 4`} fg={status.fg} bg={status.bg} dot={status.dot} />
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[12.5px] text-muted-2">
-                <span>
-                  Last visit: <span className="text-charcoal-2">{lastVisit ? fmtVisitDate(lastVisit) : "—"}</span>
-                </span>
-                <span>
-                  {firstLocationName}
-                  {extraLocationCount > 0 && <span className="text-gold"> +{extraLocationCount}</span>}
-                </span>
-                {latest && (
-                  <span>
-                    Incentive: <span className="text-charcoal-2">{latest}</span>
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
-                <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(g)}>
-                  Edit
-                </Btn>
-                <button onClick={() => deleteGuest(g.id)} className="text-brick ml-auto p-1" aria-label="Delete guest">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
-            {guests.length === 0 ? (
-              <div className="flex flex-col items-center gap-3">
-                <p className="text-sm text-muted">No guests yet — log your first to start tracking who comes back.</p>
-                <Btn icon={Plus} onClick={() => setModalGuest(null)}>Log your first guest</Btn>
-              </div>
-            ) : (
-              <p className="text-sm text-muted">No guests match your search.</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop: the full table. */}
-      <div className="order-2 lg:order-none hidden sm:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
+      {/* Desktop: the full table (mobile/tablet uses the card block up top). */}
+      <div className="hidden lg:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
         <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-[#FAFAFA] border-b border-line">
