@@ -197,9 +197,9 @@ export function GuestsClient({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Turn first visits into regulars</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+        <div className="min-w-0">
+          <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Turn first visits into regulars</h1>
           {scopedLocationName ? (
             <p className="text-base text-muted">
               Guests whose first visit was at <span className="font-semibold text-ink">{scopedLocationName}</span>. Switch to{" "}
@@ -212,7 +212,7 @@ export function GuestsClient({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <CsvImportButton locations={locations} />
           <Btn icon={Plus} onClick={() => setModalGuest(null)}>
             Log New Guest
