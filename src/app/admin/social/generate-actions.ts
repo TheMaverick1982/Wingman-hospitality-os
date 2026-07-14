@@ -3,12 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateSocialDrafts } from "@/lib/social-cards/generate";
+import { generateSocialDrafts, type GenPlatform } from "@/lib/social-cards/generate";
 
 // Manually generate a batch of draft posts (owner clicks "Generate drafts").
-export async function generateDraftsAction(count: number): Promise<{ error: string | null; created: number }> {
+export async function generateDraftsAction(
+  count: number,
+  platforms: GenPlatform[],
+  focus?: string
+): Promise<{ error: string | null; created: number }> {
   if (!(await platformSectionActor("social"))) return { error: "Not authorized.", created: 0 };
-  const res = await generateSocialDrafts(count);
+  if (!platforms || platforms.length === 0) return { error: "Pick at least one channel.", created: 0 };
+  const res = await generateSocialDrafts(count, platforms, focus);
   revalidatePath("/admin/social");
   return res;
 }

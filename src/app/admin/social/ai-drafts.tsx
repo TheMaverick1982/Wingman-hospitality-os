@@ -5,11 +5,20 @@ import Link from "next/link";
 import { Sparkles, ChevronDown, Check, Images } from "lucide-react";
 import { generateDraftsAction, saveContentBrief } from "./generate-actions";
 
+const CHANNELS = [
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+  { key: "linkedin", label: "LinkedIn" },
+] as const;
+
 export function AiDrafts({ initialBrief, initialAuto }: { initialBrief: string; initialAuto: boolean }) {
   const [count, setCount] = useState(15);
+  const [channels, setChannels] = useState<Record<string, boolean>>({ facebook: true, instagram: true, linkedin: true });
+  const [focus, setFocus] = useState("");
   const [gen, startGen] = useTransition();
   const [genMsg, setGenMsg] = useState<string | null>(null);
   const [genErr, setGenErr] = useState<string | null>(null);
+  const selected = CHANNELS.filter((c) => channels[c.key]).map((c) => c.key);
 
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState(initialBrief);
@@ -19,10 +28,11 @@ export function AiDrafts({ initialBrief, initialAuto }: { initialBrief: string; 
 
   function generate() {
     setGenErr(null); setGenMsg(null);
+    if (selected.length === 0) { setGenErr("Pick at least one channel."); return; }
     startGen(async () => {
-      const res = await generateDraftsAction(count);
+      const res = await generateDraftsAction(count, selected, focus);
       if (res.error) setGenErr(res.error);
-      else setGenMsg(`Created ${res.created} draft post${res.created === 1 ? "" : "s"} (Facebook + Instagram cards + LinkedIn text). Review them below, then approve to schedule.`);
+      else setGenMsg(`Created ${res.created} idea${res.created === 1 ? "" : "s"} as drafts across ${selected.join(", ")}. Review them below, then approve to schedule.`);
     });
   }
   function save() {
@@ -52,6 +62,24 @@ export function AiDrafts({ initialBrief, initialAuto }: { initialBrief: string; 
         </Link>
       </div>
 
+      {/* Channels */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <span className="text-[12.5px] font-semibold text-charcoal-2">Channels:</span>
+        {CHANNELS.map((c) => (
+          <label key={c.key} className={`inline-flex items-center gap-1.5 text-[13px] font-medium rounded-full border px-3 py-1.5 cursor-pointer transition-colors ${channels[c.key] ? "bg-brick-tint border-brick text-brick-dark" : "border-line text-charcoal-2 hover:border-brick"}`}>
+            <input type="checkbox" checked={!!channels[c.key]} onChange={(e) => setChannels((s) => ({ ...s, [c.key]: e.target.checked }))} className="accent-brick" />
+            {c.label}
+          </label>
+        ))}
+      </div>
+
+      {/* Optional per-batch focus */}
+      <div>
+        <label className="text-[12.5px] font-semibold text-charcoal-2 block mb-1">Focus for this batch <span className="font-normal text-muted-2">(optional)</span></label>
+        <input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="e.g. lean into the retention-math angle, or push the free calculator this week" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
+        <p className="text-[12px] text-muted-2 mt-1">Leave blank and it picks a fresh mix on its own. This steers just this batch — it doesn&rsquo;t change your saved brief.</p>
+      </div>
+
       <div className="flex items-center gap-3 flex-wrap">
         <label className="inline-flex items-center gap-2 text-[13px] text-charcoal-2">
           How many
@@ -72,7 +100,9 @@ export function AiDrafts({ initialBrief, initialAuto }: { initialBrief: string; 
         </button>
         {open && (
           <div className="mt-3 flex flex-col gap-3">
-            <p className="text-[12.5px] text-muted-2">Paste your brand voice, angles, and rules here — the AI writes from this. Leave blank to use the built-in Wingman brief.</p>
+            <p className="text-[12.5px] text-muted-2">
+              This is the <span className="font-semibold text-charcoal-2">persistent voice &amp; rules</span> the AI always follows — it already includes Wingman&rsquo;s angles, content mix, honesty rules, and the &ldquo;you&rsquo;re not a restaurant owner&rdquo; positioning. It&rsquo;s <span className="font-semibold text-charcoal-2">not</span> for &ldquo;today&rsquo;s topic&rdquo; — use the <span className="font-semibold text-charcoal-2">Focus</span> box above for that. Leave this blank to use the built-in Wingman brief.
+            </p>
             <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={10} placeholder="Your content brief / voice / rules…" className="w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[13px] text-ink outline-none focus:border-brick font-mono leading-relaxed" />
             <label className="inline-flex items-center gap-2 text-[13px] text-charcoal-2">
               <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="accent-brick" />
