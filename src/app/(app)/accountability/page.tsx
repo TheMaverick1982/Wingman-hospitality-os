@@ -15,6 +15,7 @@ import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
 import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
+import { ChecklistRolesBar } from "./checklist-roles-bar";
 import { CustomChecklistsManager } from "./custom-checklists-manager";
 import { MyChecklistCard } from "./my-checklist-card";
 import { PrintChecklistsButton } from "./print-checklists-button";
@@ -189,6 +190,23 @@ export default async function AccountabilityPage({
   const { data: myStaffRow } = await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle();
   const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? null;
 
+  // Role assignment for the built-in staff checklists. A stored row (departments
+  // may be empty = all staff) overrides the app's default audience; no row keeps
+  // the default (pre-shift = all, server/loyalty = front-of-house).
+  const { data: assignRows } = await supabase.from("checklist_assignments").select("checklist_type, departments");
+  const assignMap = new Map<string, string[]>();
+  for (const a of (assignRows ?? []) as { checklist_type: string; departments: string[] | null }[]) assignMap.set(a.checklist_type, a.departments ?? []);
+  const fohInUse = FOH_DEPARTMENTS.filter((d) => rolesInUse.includes(d));
+  const effRoles = (type: "preshift" | "server" | "loyalty"): string[] => {
+    const row = assignMap.get(type);
+    if (row) return row; // stored assignment wins ([] = all staff)
+    return type === "preshift" ? [] : fohInUse; // defaults
+  };
+  const seesChecklist = (type: "preshift" | "server" | "loyalty"): boolean => {
+    const roles = effRoles(type);
+    return roles.length === 0 || (myDepartment != null && roles.includes(myDepartment));
+  };
+
   let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
   let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
   let serverItemTexts = serverTemplateItems.map((i) => i.item);
@@ -211,8 +229,8 @@ export default async function AccountabilityPage({
   // include their role.
   const myCustomLists = customLists.filter((c) => c.departments.length === 0 || (myDepartment != null && c.departments.includes(myDepartment)));
 
-  // Who is FOH? Loyalty is a front-of-house habit, so we only surface its card
-  // to FOH staff (managers/owner see it too), and its report roster is FOH-only.
+  // Staff departments — used to decide which role a person is in (for checklist
+  // visibility) and to roster the completion reports.
   const { data: staffDeptRows } = await supabase.from("staff_members").select("profile_id, department").not("profile_id", "is", null);
   // Full roster (name + department) for the spot-check staff picker.
   const { data: staffRosterRows } = await supabase.from("staff_members").select("full_name, department").order("full_name");
@@ -225,15 +243,10 @@ export default async function AccountabilityPage({
     const ordered = ALL_DEPARTMENTS.filter((d) => present.has(d));
     return ordered.length ? ordered : [...ALL_DEPARTMENTS];
   })();
-  const fohProfileIds = new Set(
-    ((staffDeptRows ?? []) as { profile_id: string | null; department: string }[])
-      .filter((s) => s.profile_id && FOH_DEPARTMENTS.includes(s.department as Department))
-      .map((s) => s.profile_id as string)
-  );
   const canSeeReport = profile.accessRole !== "staff";
-  const viewerIsFoh = fohProfileIds.has(profile.userId);
-  const showLoyaltyCard = viewerIsFoh || canSeeReport;
-  const showServerCard = viewerIsFoh || canSeeReport;
+  const showPreshiftCard = seesChecklist("preshift");
+  const showServerCard = seesChecklist("server");
+  const showLoyaltyCard = seesChecklist("loyalty");
 
   const { data: myCompletions } = await supabase
     .from("shift_checklist_completions")
@@ -283,26 +296,26 @@ export default async function AccountabilityPage({
     const loyComps = allComps.filter((c) => c.checklist_type === "loyalty");
     const srvComps = allComps.filter((c) => c.checklist_type === "server");
 
-    // Pre-shift roster: staff + managers (owner excluded), scoped to location.
+    // Base roster: staff + managers (owner excluded), scoped to location.
     const baseRoster = ((profs ?? []) as { id: string; full_name: string; access_role: string; location_id: string | null }[])
       .filter((p) => p.access_role !== "super_admin")
       .filter((p) => !effectiveLocation || p.location_id === effectiveLocation);
-    // Loyalty & server rosters: only FOH staff.
-    const fohRoster = baseRoster.filter((p) => fohProfileIds.has(p.id));
-
-    ({ today: todayCompletions, roster } = buildChecklistReport(preComps, todayStr, nameById, baseRoster));
-    ({ today: loyaltyToday, roster: loyaltyRoster } = buildChecklistReport(loyComps, todayStr, nameById, fohRoster));
-    ({ today: serverToday, roster: serverRoster } = buildChecklistReport(srvComps, todayStr, nameById, fohRoster));
-
-    // A report per custom checklist, rostered to its assigned roles (or all staff).
+    // Each checklist's roster is exactly the roles it's assigned to (empty = all).
     const deptByProfile = new Map<string, string>();
     for (const s of (staffDeptRows ?? []) as { profile_id: string | null; department: string }[]) {
       if (s.profile_id) deptByProfile.set(s.profile_id, s.department);
     }
+    const rosterForRoles = (roles: string[]) =>
+      roles.length === 0 ? baseRoster : baseRoster.filter((p) => roles.includes(deptByProfile.get(p.id) ?? ""));
+
+    ({ today: todayCompletions, roster } = buildChecklistReport(preComps, todayStr, nameById, rosterForRoles(effRoles("preshift"))));
+    ({ today: loyaltyToday, roster: loyaltyRoster } = buildChecklistReport(loyComps, todayStr, nameById, rosterForRoles(effRoles("loyalty"))));
+    ({ today: serverToday, roster: serverRoster } = buildChecklistReport(srvComps, todayStr, nameById, rosterForRoles(effRoles("server"))));
+
+    // A report per custom checklist, rostered to its assigned roles (or all staff).
     customReports = customLists.map((c) => {
       const comps = allComps.filter((x) => x.checklist_type === c.id);
-      const rosterFor = c.departments.length === 0 ? baseRoster : baseRoster.filter((p) => c.departments.includes(deptByProfile.get(p.id) ?? ""));
-      const built = buildChecklistReport(comps, todayStr, nameById, rosterFor);
+      const built = buildChecklistReport(comps, todayStr, nameById, rosterForRoles(c.departments));
       return { id: c.id, title: c.title, today: built.today, roster: built.roster };
     });
   }
@@ -375,26 +388,32 @@ export default async function AccountabilityPage({
         <StatTile label="Checklist completion" value={dailyPct !== null ? `${dailyPct}%` : "—"} sub="opening & closing" />
       </div>
 
-      <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-        <MyPreshiftCard
-          items={preShiftItemTexts}
-          alreadyDone={Boolean(myPreshift)}
-          completedChecked={myChecked}
-          completedAt={myCompletedAt}
-          lang={profile.language}
-        />
-        {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
-      </div>
+      {(showPreshiftCard || canSeeReport) && (
+        <div className={showPreshiftCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+          {showPreshiftCard && (
+            <MyPreshiftCard
+              items={preShiftItemTexts}
+              alreadyDone={Boolean(myPreshift)}
+              completedChecked={myChecked}
+              completedAt={myCompletedAt}
+              lang={profile.language}
+            />
+          )}
+          {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
+        </div>
+      )}
 
-      {showServerCard && (
-        <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-          <MyServerCard
-            items={serverItemTexts}
-            alreadyDone={Boolean(myServer)}
-            completedChecked={myServerChecked}
-            completedAt={myServerCompletedAt}
-            lang={profile.language}
-          />
+      {(showServerCard || canSeeReport) && (
+        <div className={showServerCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+          {showServerCard && (
+            <MyServerCard
+              items={serverItemTexts}
+              alreadyDone={Boolean(myServer)}
+              completedChecked={myServerChecked}
+              completedAt={myServerCompletedAt}
+              lang={profile.language}
+            />
+          )}
           {canSeeReport && (
             <PreshiftReport
               today={serverToday}
@@ -407,15 +426,17 @@ export default async function AccountabilityPage({
         </div>
       )}
 
-      {showLoyaltyCard && (
-        <div className={canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-          <MyLoyaltyCard
-            items={loyaltyItemTexts}
-            alreadyDone={Boolean(myLoyalty)}
-            completedChecked={myLoyaltyChecked}
-            completedAt={myLoyaltyCompletedAt}
-            lang={profile.language}
-          />
+      {(showLoyaltyCard || canSeeReport) && (
+        <div className={showLoyaltyCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
+          {showLoyaltyCard && (
+            <MyLoyaltyCard
+              items={loyaltyItemTexts}
+              alreadyDone={Boolean(myLoyalty)}
+              completedChecked={myLoyaltyChecked}
+              completedAt={myLoyaltyCompletedAt}
+              lang={profile.language}
+            />
+          )}
           {canSeeReport && (
             <PreshiftReport
               today={loyaltyToday}
@@ -598,9 +619,18 @@ export default async function AccountabilityPage({
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <ChecklistTemplateEditor checklistType="daily" title="Manager daily checklist" items={dailyTemplateItems} />
-            <ChecklistTemplateEditor checklistType="preshift" title="Pre-shift staff checklist" items={preShiftTemplateItems} />
-            <ChecklistTemplateEditor checklistType="server" title="Server standards checklist" items={serverTemplateItems} />
-            <ChecklistTemplateEditor checklistType="loyalty" title="FOH loyalty checklist" items={loyaltyTemplateItems} />
+            <div className="flex flex-col gap-2">
+              <ChecklistRolesBar checklistType="preshift" departments={effRoles("preshift")} options={rolesInUse} />
+              <ChecklistTemplateEditor checklistType="preshift" title="Pre-shift staff checklist" items={preShiftTemplateItems} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <ChecklistRolesBar checklistType="server" departments={effRoles("server")} options={rolesInUse} />
+              <ChecklistTemplateEditor checklistType="server" title="Server standards checklist" items={serverTemplateItems} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <ChecklistRolesBar checklistType="loyalty" departments={effRoles("loyalty")} options={rolesInUse} />
+              <ChecklistTemplateEditor checklistType="loyalty" title="FOH loyalty checklist" items={loyaltyTemplateItems} />
+            </div>
           </div>
 
           <div className="mt-8">

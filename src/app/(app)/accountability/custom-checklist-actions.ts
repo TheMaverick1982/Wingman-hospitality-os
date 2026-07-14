@@ -65,6 +65,26 @@ export async function updateCustomChecklist(id: string, title: string, departmen
   return { error: null };
 }
 
+// The built-in staff-facing checklists whose audience can be role-assigned.
+const ASSIGNABLE = new Set<string>(["preshift", "server", "loyalty"]);
+
+// Set which roles a built-in checklist shows up for (empty = all staff). Stored
+// in checklist_assignments, keyed by the built-in checklist_type.
+export async function setChecklistRoles(checklistType: string, departments: string[]): Promise<CustomChecklistState> {
+  const res = await editorOrgId();
+  if ("error" in res) return { error: res.error };
+  if (!ASSIGNABLE.has(checklistType)) return { error: "That checklist can't be role-assigned." };
+  const depts = cleanDepartments(departments);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("checklist_assignments")
+    .upsert({ org_id: res.orgId, checklist_type: checklistType, departments: depts, updated_at: new Date().toISOString() }, { onConflict: "org_id,checklist_type" });
+  if (error) return { error: error.message };
+  revalidatePath("/accountability");
+  return { error: null };
+}
+
 // Delete a checklist and its items. Past completion records are left in place
 // (harmless — reports only surface checklists that still exist).
 export async function deleteCustomChecklist(id: string): Promise<CustomChecklistState> {
