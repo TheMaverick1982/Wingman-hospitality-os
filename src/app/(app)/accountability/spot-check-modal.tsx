@@ -22,21 +22,26 @@ export function SpotCheckModalButton({
   lockedLocationName,
   defaultLocationId,
   staff = [],
+  departmentOptions,
 }: {
   locations: Location[];
   isGm: boolean;
   lockedLocationName: string | null;
   defaultLocationId: string | null;
   staff?: StaffOption[];
+  departmentOptions?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(addSpotCheck, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
+  // Only offer the roles this org actually runs (falls back to all).
+  const depts = departmentOptions && departmentOptions.length > 0 ? departmentOptions : [...ALL_DEPARTMENTS];
+
   // Staff member: pick from the roster (auto-fills their department), or type a
   // name if they're not listed yet.
   const [staffName, setStaffName] = useState("");
-  const [dept, setDept] = useState<string>(ALL_DEPARTMENTS[1]);
+  const [dept, setDept] = useState<string>(depts[0]);
   const [manual, setManual] = useState(staff.length === 0);
 
   return (
@@ -101,7 +106,7 @@ export function SpotCheckModalButton({
               </Field>
               <Field label="Department">
                 <select name="department" value={dept} onChange={(e) => setDept(e.target.value)} className={inputClass}>
-                  {ALL_DEPARTMENTS.map((d) => (
+                  {depts.map((d) => (
                     <option key={d}>{d}</option>
                   ))}
                 </select>
