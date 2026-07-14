@@ -26,8 +26,12 @@ const CHECKLIST_LABEL: Record<ChecklistType, string> = {
   server: "Server standards checklist",
 };
 
-/** Org's custom items if they've saved any, else the app's built-in defaults. */
-export async function getChecklistItems(checklistType: ChecklistType): Promise<TemplateItem[]> {
+const BUILTIN_TYPES = new Set<string>(["daily", "preshift", "loyalty", "server"]);
+
+/** Org's custom items if they've saved any, else the app's built-in defaults.
+ * Accepts a built-in type OR a custom checklist's id; custom lists have no
+ * built-in defaults, so an empty custom list returns []. */
+export async function getChecklistItems(checklistType: string): Promise<TemplateItem[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("accountability_checklist_items")
@@ -35,7 +39,37 @@ export async function getChecklistItems(checklistType: ChecklistType): Promise<T
     .eq("checklist_type", checklistType)
     .order("sort_order");
   if (data && data.length > 0) return data;
-  return DEFAULTS[checklistType].map((item, i) => ({ id: `default-${i}`, item, source: "wingman" as const }));
+  const defaults = DEFAULTS[checklistType as ChecklistType];
+  return defaults ? defaults.map((item, i) => ({ id: `default-${i}`, item, source: "wingman" as const })) : [];
+}
+
+// Resolve a checklist's display label + who-completes-it, for built-ins and for
+// custom checklists (whose label is the owner-given title). Returns null when the
+// type is neither — used to reject invalid checklist references.
+async function resolveChecklist(
+  supabase: SupabaseClient,
+  checklistType: string
+): Promise<{ label: string; who: string } | null> {
+  if (BUILTIN_TYPES.has(checklistType)) {
+    const t = checklistType as ChecklistType;
+    const who =
+      t === "daily"
+        ? "a manager, once per shift"
+        : t === "loyalty"
+          ? "each front-of-house staff member during their shift, to capture and take care of loyalty-program members at every table and the bar"
+          : t === "server"
+            ? "each server, before their shift starts, as an acknowledgment of the hospitality standard they'll uphold on the floor"
+            : "each staff member, before their shift starts";
+    return { label: CHECKLIST_LABEL[t], who };
+  }
+  const { data } = await supabase.from("custom_checklists").select("title, departments").eq("id", checklistType).maybeSingle();
+  const row = data as { title?: string; departments?: string[] | null } | null;
+  if (!row?.title) return null;
+  const roles = (row.departments ?? []).filter(Boolean);
+  const who = roles.length
+    ? `each ${roles.join(" / ")}, before their shift starts`
+    : "each assigned staff member, before their shift starts";
+  return { label: row.title, who };
 }
 
 function callAnthropic(apiKey: string, body: Record<string, unknown>) {
@@ -100,25 +134,19 @@ export async function generateAccountabilityChecklist(_prev: BuildState, formDat
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
 
-  const checklistType = String(formData.get("checklistType") || "") as ChecklistType;
+  const checklistType = String(formData.get("checklistType") || "");
   const mode = String(formData.get("mode") || "");
-  if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };
   if (mode !== "upload" && mode !== "paste" && mode !== "wizard") return { error: "Invalid mode." };
+
+  const supabase = await createClient();
+  const resolved = await resolveChecklist(supabase, checklistType);
+  if (!resolved) return { error: "Invalid checklist." };
+  const { label, who } = resolved;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
   }
-
-  const label = CHECKLIST_LABEL[checklistType];
-  const who =
-    checklistType === "daily"
-      ? "a manager, once per shift"
-      : checklistType === "loyalty"
-        ? "each front-of-house staff member during their shift, to capture and take care of loyalty-program members at every table and the bar"
-        : checklistType === "server"
-          ? "each server, before their shift starts, as an acknowledgment of the hospitality standard they'll uphold on the floor"
-          : "each staff member, before their shift starts";
 
   let items: string[];
   try {
@@ -211,18 +239,18 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
 }
 
 // Persist the reviewed checklist, replacing this checklist's previous AI output.
-export async function saveAccountabilityChecklist(checklistType: ChecklistType, items: string[]): Promise<BuildState> {
+export async function saveAccountabilityChecklist(checklistType: string, items: string[]): Promise<BuildState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "accountability", profile.permissionOverrides)) {
     return { error: "You don't have access to save checklists." };
   }
-  if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };
 
   const clean = (items ?? []).map((s) => String(s).trim()).filter(Boolean);
   if (clean.length === 0) return { error: "Nothing to save — keep at least one item." };
 
   const supabase = await createClient();
+  if (!(await resolveChecklist(supabase, checklistType))) return { error: "Invalid checklist." };
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
@@ -256,7 +284,9 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 // them -- seed the defaults as real 'wingman' rows so they have real ids to
 // edit/delete. Returns the seeded rows (id, sort_order) if it seeded, so a
 // caller holding a synthetic "default-{index}" id can resolve it to a real one.
-async function seedDefaultsIfEmpty(supabase: SupabaseClient, orgId: string, checklistType: ChecklistType) {
+async function seedDefaultsIfEmpty(supabase: SupabaseClient, orgId: string, checklistType: string) {
+  const defaults = DEFAULTS[checklistType as ChecklistType];
+  if (!defaults) return null; // custom checklists have no built-in defaults to seed
   const { count } = await supabase
     .from("accountability_checklist_items")
     .select("id", { count: "exact", head: true })
@@ -267,13 +297,13 @@ async function seedDefaultsIfEmpty(supabase: SupabaseClient, orgId: string, chec
   const { data } = await supabase
     .from("accountability_checklist_items")
     .insert(
-      DEFAULTS[checklistType].map((item, i) => ({ org_id: orgId, checklist_type: checklistType, item, sort_order: i, source: "wingman" as const }))
+      defaults.map((item, i) => ({ org_id: orgId, checklist_type: checklistType, item, sort_order: i, source: "wingman" as const }))
     )
     .select("id, sort_order");
   return data ?? [];
 }
 
-async function resolveId(supabase: SupabaseClient, orgId: string, checklistType: ChecklistType, id: string): Promise<string | null> {
+async function resolveId(supabase: SupabaseClient, orgId: string, checklistType: string, id: string): Promise<string | null> {
   if (!id.startsWith("default-")) return id;
   const index = Number(id.slice("default-".length));
   const seeded = await seedDefaultsIfEmpty(supabase, orgId, checklistType);
@@ -287,12 +317,12 @@ async function resolveId(supabase: SupabaseClient, orgId: string, checklistType:
 export type ItemState = { error: string | null };
 
 export async function addAccountabilityItem(_prev: ItemState, formData: FormData): Promise<ItemState> {
-  const checklistType = String(formData.get("checklistType") || "") as ChecklistType;
+  const checklistType = String(formData.get("checklistType") || "");
   const text = String(formData.get("text") || "").trim();
-  if (!CHECKLIST_LABEL[checklistType]) return { error: "Invalid checklist." };
   if (!text) return { error: "Item text is required." };
 
   const supabase = await createClient();
+  if (!(await resolveChecklist(supabase, checklistType))) return { error: "Invalid checklist." };
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
@@ -317,7 +347,7 @@ export async function addAccountabilityItem(_prev: ItemState, formData: FormData
   return { error: null };
 }
 
-export async function updateAccountabilityItemText(checklistType: ChecklistType, id: string, text: string) {
+export async function updateAccountabilityItemText(checklistType: string, id: string, text: string) {
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return;
@@ -327,7 +357,7 @@ export async function updateAccountabilityItemText(checklistType: ChecklistType,
   revalidatePath("/accountability");
 }
 
-export async function deleteAccountabilityItem(checklistType: ChecklistType, id: string) {
+export async function deleteAccountabilityItem(checklistType: string, id: string) {
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return;

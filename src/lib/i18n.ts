@@ -78,6 +78,8 @@ const STRINGS: Record<string, Entry> = {
   "checklist.server.title": { en: "Your server checklist", es: "Tu lista de servidor" },
   "checklist.server.sub": { en: "Read and acknowledge the standard before you hit the floor — check off each one, then submit.", es: "Lee y reconoce el estándar antes de salir al piso — marca cada punto y envíalo." },
   "checklist.server.done": { en: "Your server checklist is acknowledged for today", es: "Tu lista de servidor está reconocida por hoy" },
+  "checklist.custom.sub": { en: "Check off what you've done, then submit so your manager can see it.", es: "Marca lo que hiciste y envíalo para que tu gerente lo vea." },
+  "checklist.custom.done": { en: "This checklist is done for today", es: "Esta lista está lista por hoy" },
   "checklist.submit": { en: "Submit checklist", es: "Enviar lista" },
   "checklist.submitting": { en: "Submitting…", es: "Enviando…" },
   "checklist.cancel": { en: "Cancel", es: "Cancelar" },
