@@ -120,14 +120,17 @@ function ChecklistHeader({ checklist, departments }: { checklist: ChecklistWithI
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(checklist.title);
   const [depts, setDepts] = useState<string[]>(checklist.departments ?? []);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const toggle = (d: string) => setDepts((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d]));
 
   function save() {
+    setError(null);
     start(async () => {
-      await updateCustomChecklist(checklist.id, title, depts);
-      setEditing(false);
+      const res = await updateCustomChecklist(checklist.id, title, depts);
+      if (res?.error) setError(res.error);
+      else setEditing(false);
     });
   }
   function remove() {
@@ -142,6 +145,7 @@ function ChecklistHeader({ checklist, departments }: { checklist: ChecklistWithI
       <div className="flex flex-col gap-2 bg-paper border border-line rounded-xl p-3">
         <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} py-1.5 text-sm`} />
         <RolePicker departments={departments} selected={depts} onToggle={toggle} />
+        {error && <p className="text-[12px] text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Btn small kind="ghost" onClick={() => setEditing(false)}>
             Cancel

@@ -217,11 +217,20 @@ export default async function AccountabilityPage({
   // Full roster (name + department) for the spot-check staff picker.
   const { data: staffRosterRows } = await supabase.from("staff_members").select("full_name, department").order("full_name");
   const spotCheckStaff = ((staffRosterRows ?? []) as { full_name: string; department: string }[]).filter((s) => s.full_name);
-  // The roles this org actually has (distinct staff departments, in canonical
-  // order) — used for spot-check and role-checklist assignment so we never offer
-  // roles they don't run. Falls back to all roles when no staff exist yet.
+  // Every role the company actually uses — any department that has staff, or that
+  // the owner has set up standards or training for. Used for spot-check and
+  // role-checklist assignment so we offer real roles, not the full master list.
+  // Falls back to all roles when the org hasn't set anything up yet.
+  const [{ data: stdDeptRows }, { data: trainDeptRows }] = await Promise.all([
+    supabase.from("department_standards").select("department"),
+    supabase.from("department_training_items").select("department"),
+  ]);
   const rolesInUse = ((): string[] => {
-    const present = new Set(((staffRosterRows ?? []) as { department: string }[]).map((s) => s.department));
+    const present = new Set<string>([
+      ...((staffRosterRows ?? []) as { department: string }[]).map((s) => s.department),
+      ...((stdDeptRows ?? []) as { department: string }[]).map((d) => d.department),
+      ...((trainDeptRows ?? []) as { department: string }[]).map((d) => d.department),
+    ]);
     const ordered = ALL_DEPARTMENTS.filter((d) => present.has(d));
     return ordered.length ? ordered : [...ALL_DEPARTMENTS];
   })();
