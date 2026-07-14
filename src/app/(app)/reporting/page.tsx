@@ -735,12 +735,12 @@ export default async function ReportingPage({
       </div>
 
       {isSuperAdmin && locations.length > 1 && !effectiveLocation && (
-        <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F1F1]">
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">By location</span>
             <span className="text-[13px] font-semibold text-muted">{activeRange.rangeLabel}</span>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-[#FAFAFA] text-left">
                 {["Location", "New guests", "Repeat rate", "Recovery spend", "Accountability"].map((h) => (

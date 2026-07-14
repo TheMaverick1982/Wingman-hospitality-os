@@ -467,7 +467,7 @@ function TrainingTab({
       </div>
 
       {signoffs.length > 0 && (
-        <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
           <div className="px-6 py-4 border-b border-[#F1F1F1] text-sm font-semibold text-ink">Sign-off history</div>
           <div className="divide-y divide-[#F5F5F5]">
             {signoffs.map((s) => (

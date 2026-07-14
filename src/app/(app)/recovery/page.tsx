@@ -62,7 +62,7 @@ export default async function RecoveryPage({
             Tag every discount and recovery so patterns surface instead of hiding in the POS.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && (
             <DiscountModalButton

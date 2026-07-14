@@ -18,7 +18,7 @@ export function SignoffLog({ signoffs }: { signoffs: Signoff[] }) {
   }, [signoffs, filter]);
 
   return (
-    <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
       <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F1F1]">
         <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Sign-off log</span>
         <div className="flex gap-1.5">
@@ -35,7 +35,7 @@ export function SignoffLog({ signoffs }: { signoffs: Signoff[] }) {
           ))}
         </div>
       </div>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="bg-[#FAFAFA] text-left">
             <th className="px-6 py-3 text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] border-b border-line">Department</th>

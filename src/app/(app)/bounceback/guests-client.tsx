@@ -423,9 +423,9 @@ export function GuestsClient({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-white border border-line">
-          <Search size={15} className="text-muted" />
+          <Search size={15} className="text-muted shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -438,8 +438,8 @@ export function GuestsClient({
         </Btn>
       </div>
 
-      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-[#FAFAFA] border-b border-line">
               {["Guest", "Contact", "Current Stage", "Last visit", "Latest Incentive", "Location", ""].map((h) => (

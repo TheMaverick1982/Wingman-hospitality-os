@@ -70,7 +70,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
           </p>
         </div>
         {canEdit && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
             <BulkAddStaffButton locations={locations} departments={activeDepts} />
             <AddStaffButton locations={locations} departments={activeDepts} />
           </div>
@@ -91,11 +91,11 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         })}
       </div>
 
-      <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
         <div className="px-6 py-5 border-b border-[#F1F1F1] text-[17px] font-semibold tracking-[-0.01em] text-ink">
           Team directory
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-[#FAFAFA] text-left">
               {["Name", "Role", "Location", "Contact", "Training", "Status", ""].map((h, i) => (
