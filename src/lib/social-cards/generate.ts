@@ -180,8 +180,9 @@ Rules:
     if (needCard) {
       try {
         cardPath = await uploadCardPng(await renderSocialCard(spec, 1080));
-      } catch {
-        cardPath = null; // if the card fails to render, still create the drafts (owner can add art)
+      } catch (e) {
+        console.error("[social] card render/upload failed", e); // still create the drafts (owner can add art)
+        cardPath = null;
       }
     }
     const slot = slots[i];
