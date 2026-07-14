@@ -7,6 +7,7 @@ import { isLinkedInConnected, linkedinConfigured } from "@/lib/social-linkedin";
 import { anyConnected as anyPlatformConnected } from "@/lib/social-publish";
 import { SocialToolbar } from "./toolbar";
 import { SocialBoard } from "./social-board";
+import { AiDrafts } from "./ai-drafts";
 import { Connections } from "./connections";
 
 export const metadata: Metadata = { title: "Social · Admin" };
@@ -76,6 +77,8 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
         }}
         flash={flash}
       />
+
+      <AiDrafts initialBrief={settings?.content_brief ?? ""} initialAuto={settings?.auto_generate ?? false} />
 
       <SocialToolbar connected={connected} />
 

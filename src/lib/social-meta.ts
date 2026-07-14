@@ -34,6 +34,10 @@ export type SocialSettings = {
   li_connected_at: string | null;
   // When we last emailed the "content running low" nudge (null = clear).
   content_runway_alert_at: string | null;
+  // Auto-generation of drafts.
+  content_brief: string | null;
+  auto_generate: boolean;
+  content_generated_at: string | null;
 };
 
 export function siteUrl(): string {
