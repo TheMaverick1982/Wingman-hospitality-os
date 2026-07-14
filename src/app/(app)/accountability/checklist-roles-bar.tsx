@@ -18,14 +18,17 @@ export function ChecklistRolesBar({
 }) {
   const [editing, setEditing] = useState(false);
   const [sel, setSel] = useState<string[]>(departments);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const toggle = (d: string) => setSel((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d]));
 
   function save() {
+    setError(null);
     start(async () => {
-      await setChecklistRoles(checklistType, sel);
-      setEditing(false);
+      const res = await setChecklistRoles(checklistType, sel);
+      if (res?.error) setError(res.error);
+      else setEditing(false);
     });
   }
 
@@ -66,6 +69,7 @@ export function ChecklistRolesBar({
           );
         })}
       </div>
+      {error && <p className="text-[12px] text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <Btn small kind="ghost" onClick={() => { setSel(departments); setEditing(false); }}>
           Cancel
