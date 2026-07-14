@@ -1,4 +1,4 @@
-import { Lightbulb, Info } from "lucide-react";
+import { Lightbulb, Info, FileText, ArrowUpRight } from "lucide-react";
 import type { HelpBlock } from "@/lib/help-content";
 import { HelpDiagram } from "./help-diagram";
 
@@ -64,6 +64,20 @@ export function ArticleBody({ blocks }: { blocks: HelpBlock[] }) {
                 <img src={b.src} alt={b.alt} className="rounded-xl border border-line max-w-full" />
                 {b.caption && <figcaption className="text-xs text-muted-2 mt-1.5">{b.caption}</figcaption>}
               </figure>
+            );
+          case "button":
+            return (
+              <div key={i}>
+                <a
+                  href={b.href}
+                  target={b.external ? "_blank" : undefined}
+                  rel={b.external ? "noopener noreferrer" : undefined}
+                  className="inline-flex items-center gap-2 rounded-full bg-brick text-sm font-semibold text-white px-4 py-2.5 shadow-sm hover:bg-brick-dark transition-colors"
+                >
+                  <FileText size={16} /> {b.label}
+                  {b.external && <ArrowUpRight size={15} className="opacity-80" />}
+                </a>
+              </div>
             );
           case "diagram":
             return (
