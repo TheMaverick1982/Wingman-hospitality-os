@@ -513,9 +513,9 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "Each staff member completes their own pre-shift checklist when they work — and managers get a report of who did." },
       { kind: "h", text: "For staff" },
       { kind: "steps", items: [
-        "Open Accountability.",
-        "In \"Your pre-shift checklist\", check off what you've done.",
-        "Click Submit. It shows a green \"done for today\" with the time (you can Update it).",
+        "Open Accountability — everything assigned to you is grouped under \"Your checklists\".",
+        "Tap a checklist to open it and check off what you've done.",
+        "Click Submit. It shows done with the time (you can update it). The header shows how many you've finished today.",
       ] },
       { kind: "h", text: "For managers" },
       { kind: "p", text: "The \"Pre-shift checklist completion\" panel shows who completed today (with the time), plus a 30-day view of each person's last completion and total." },

@@ -17,14 +17,13 @@ import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, ALL_DEPARTMENTS, type Departmen
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { ChecklistRolesBar } from "./checklist-roles-bar";
 import { CustomChecklistsManager } from "./custom-checklists-manager";
-import { MyChecklistCard } from "./my-checklist-card";
 import { PrintChecklistsButton } from "./print-checklists-button";
 import { getChecklistItems } from "./template-actions";
 import { translateTexts } from "@/lib/translate";
-import { MyPreshiftCard } from "./my-preshift-card";
-import { MyLoyaltyCard } from "./my-loyalty-card";
-import { MyServerCard } from "./my-server-card";
+import { MyChecklistsHub, type HubChecklist } from "./my-checklists-hub";
+import { t as tr } from "@/lib/i18n";
 import { PreshiftReport, type TodayCompletion, type RosterRow } from "./preshift-report";
+// (per-checklist staff cards were consolidated into MyChecklistsHub)
 
 // Build the "who completed today / last 30 days" view for a personal checklist
 // from actual completions (shared by pre-shift and FOH loyalty).
@@ -266,6 +265,24 @@ export default async function AccountabilityPage({
   const myServerChecked = myServer?.checked ?? [];
   const myServerCompletedAt = myServer?.updated_at ?? myServer?.created_at ?? null;
 
+  // Everything the viewer personally runs, gathered into one hub. Built-ins use
+  // their localized titles; custom checklists use the owner's title.
+  const hubChecklists: HubChecklist[] = [
+    showPreshiftCard
+      ? { key: "preshift", title: tr(profile.language, "checklist.preshift.title"), items: preShiftItemTexts, done: Boolean(myPreshift), completedChecked: myChecked, completedAt: myCompletedAt }
+      : null,
+    showServerCard
+      ? { key: "server", title: tr(profile.language, "checklist.server.title"), items: serverItemTexts, done: Boolean(myServer), completedChecked: myServerChecked, completedAt: myServerCompletedAt }
+      : null,
+    showLoyaltyCard
+      ? { key: "loyalty", title: tr(profile.language, "checklist.loyalty.title"), items: loyaltyItemTexts, done: Boolean(myLoyalty), completedChecked: myLoyaltyChecked, completedAt: myLoyaltyCompletedAt }
+      : null,
+    ...myCustomLists.map((c) => {
+      const comp = myByType.get(c.id);
+      return { key: c.id, title: c.title, items: c.items, done: Boolean(comp), completedChecked: comp?.checked ?? [], completedAt: comp?.updated_at ?? comp?.created_at ?? null };
+    }),
+  ].filter((x): x is HubChecklist => x !== null);
+
   let todayCompletions: TodayCompletion[] = [];
   let roster: RosterRow[] = [];
   let loyaltyToday: TodayCompletion[] = [];
@@ -388,99 +405,39 @@ export default async function AccountabilityPage({
         <StatTile label="Checklist completion" value={dailyPct !== null ? `${dailyPct}%` : "—"} sub="opening & closing" />
       </div>
 
-      {(showPreshiftCard || canSeeReport) && (
-        <div className={showPreshiftCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-          {showPreshiftCard && (
-            <MyPreshiftCard
-              items={preShiftItemTexts}
-              alreadyDone={Boolean(myPreshift)}
-              completedChecked={myChecked}
-              completedAt={myCompletedAt}
-              lang={profile.language}
-            />
-          )}
-          {canSeeReport && <PreshiftReport today={todayCompletions} roster={roster} />}
-        </div>
-      )}
+      {/* Staff view: one hub for every checklist assigned to the viewer. */}
+      {hubChecklists.length > 0 && <MyChecklistsHub checklists={hubChecklists} lang={profile.language} />}
 
-      {(showServerCard || canSeeReport) && (
-        <div className={showServerCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-          {showServerCard && (
-            <MyServerCard
-              items={serverItemTexts}
-              alreadyDone={Boolean(myServer)}
-              completedChecked={myServerChecked}
-              completedAt={myServerCompletedAt}
-              lang={profile.language}
-            />
-          )}
-          {canSeeReport && (
+      {/* Manager view: a completion report per checklist. */}
+      {canSeeReport && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <PreshiftReport today={todayCompletions} roster={roster} />
+          <PreshiftReport
+            today={serverToday}
+            roster={serverRoster}
+            title="Server checklist acknowledgment"
+            sub="Which servers acknowledged the standard before their shift. Only reflects days they worked."
+            emptyToday="No servers have acknowledged their checklist yet today."
+          />
+          <PreshiftReport
+            today={loyaltyToday}
+            roster={loyaltyRoster}
+            title="FOH loyalty checklist completion"
+            sub="Which front-of-house staff worked their loyalty checklist. Only reflects days they worked."
+            emptyToday="No FOH staff have completed their loyalty checklist yet today."
+          />
+          {customReports.map((r) => (
             <PreshiftReport
-              today={serverToday}
-              roster={serverRoster}
-              title="Server checklist acknowledgment"
-              sub="Which servers acknowledged the standard before their shift. Only reflects days they worked."
-              emptyToday="No servers have acknowledged their checklist yet today."
+              key={r.id}
+              today={r.today}
+              roster={r.roster}
+              title={`${r.title} — completion`}
+              sub="Who completed this checklist. Only reflects days they worked."
+              emptyToday="No one has completed this checklist yet today."
             />
-          )}
+          ))}
         </div>
       )}
-
-      {(showLoyaltyCard || canSeeReport) && (
-        <div className={showLoyaltyCard && canSeeReport ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-          {showLoyaltyCard && (
-            <MyLoyaltyCard
-              items={loyaltyItemTexts}
-              alreadyDone={Boolean(myLoyalty)}
-              completedChecked={myLoyaltyChecked}
-              completedAt={myLoyaltyCompletedAt}
-              lang={profile.language}
-            />
-          )}
-          {canSeeReport && (
-            <PreshiftReport
-              today={loyaltyToday}
-              roster={loyaltyRoster}
-              title="FOH loyalty checklist completion"
-              sub="Which front-of-house staff worked their loyalty checklist. Only reflects days they worked."
-              emptyToday="No FOH staff have completed their loyalty checklist yet today."
-            />
-          )}
-        </div>
-      )}
-
-      {/* Owner-created role checklists: the viewer's own card + (for managers) a
-          completion report per checklist. */}
-      {customLists.map((c) => {
-        const runs = myCustomLists.some((x) => x.id === c.id);
-        const rep = canSeeReport ? customReports.find((r) => r.id === c.id) : undefined;
-        if (!runs && !rep) return null;
-        const comp = myByType.get(c.id);
-        return (
-          <div key={c.id} className={runs && rep ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : ""}>
-            {runs && (
-              <MyChecklistCard
-                checklistId={c.id}
-                title={c.title}
-                items={c.items}
-                alreadyDone={Boolean(comp)}
-                completedChecked={comp?.checked ?? []}
-                completedAt={comp?.updated_at ?? comp?.created_at ?? null}
-                lang={profile.language}
-              />
-            )}
-            {rep && (
-              <PreshiftReport
-                today={rep.today}
-                roster={rep.roster}
-                title={`${c.title} — completion`}
-                sub="Who completed this checklist. Only reflects days they worked."
-                emptyToday="No one has completed this checklist yet today."
-              />
-            )}
-          </div>
-        );
-      })}
 
       {flags.length > 0 ? (
         <Card className="p-5">
