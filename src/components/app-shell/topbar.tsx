@@ -52,7 +52,7 @@ export function Topbar({
   }
 
   return (
-    <div className="sticky top-0 z-20 min-h-16 py-2 lg:h-16 lg:py-0 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex flex-wrap lg:flex-nowrap items-center justify-between px-4 lg:px-8 gap-x-2 gap-y-1">
+    <div className="sticky top-0 z-20 min-h-16 py-2 lg:h-16 lg:py-0 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex flex-wrap lg:flex-nowrap items-center justify-between px-5 lg:px-8 gap-x-2 gap-y-1">
       <div className="flex items-center gap-2 lg:gap-3.5 min-w-0">
         <span className="text-lg font-semibold tracking-[-0.01em] text-ink truncate">{title}</span>
         {(showSwitcher || orgIsMultiLocation) && (

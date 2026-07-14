@@ -9,6 +9,7 @@ import { getLaunchPlan } from "@/lib/launch-plan";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
+import { ScrollReset } from "@/components/app-shell/scroll-reset";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoTour } from "@/components/demo/demo-tour";
@@ -98,7 +99,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userLocationName={profile.locationName}
           language={profile.language}
         />
-        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
+        <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
+          <ScrollReset targetId="app-scroll" />
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6 min-w-0">{children}</div>
         </div>
       </div>

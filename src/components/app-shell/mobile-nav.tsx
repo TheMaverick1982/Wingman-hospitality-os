@@ -25,7 +25,7 @@ export function MobileNav(props: SidebarProps) {
 
   return (
     <>
-      <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-line px-4 h-14">
+      <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-line px-5 h-14">
         <button
           type="button"
           onClick={() => setOpen(true)}
