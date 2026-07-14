@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 
 export type ActionState = { error: string | null };
@@ -50,6 +51,7 @@ ${HOSPITALITY_DOCTRINE}`,
     });
     if (!response.ok) throw new Error(`Anthropic API returned ${response.status}`);
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "report_narrative", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n").trim();
     if (!text) throw new Error("The summary came back empty. Try again.");
     return { error: null, text };

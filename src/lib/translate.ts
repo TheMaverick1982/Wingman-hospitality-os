@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordAiUsage } from "@/lib/ai/usage";
 import type { Lang } from "@/lib/i18n";
 
 // Translates owner-authored content (test questions, training, checklists) into
@@ -14,7 +15,7 @@ function hash(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-async function callTranslator(lang: Lang, texts: string[]): Promise<string[]> {
+async function callTranslator(orgId: string, lang: Lang, texts: string[]): Promise<string[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return texts;
   const target = lang === "es" ? "Spanish (Latin American, as spoken by restaurant staff in the US)" : lang;
@@ -33,6 +34,7 @@ Rules:
   });
   if (!res.ok) return texts;
   const data = await res.json();
+  await recordAiUsage({ orgId, feature: "translation", model: "claude-sonnet-5", usage: data.usage });
   const raw: string = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
   const cleaned = raw.replace(/```json/g, "").replace(/```/g, "").trim();
   const first = cleaned.indexOf("{");
@@ -84,7 +86,7 @@ export async function translateTexts(orgId: string, lang: Lang, texts: string[])
   let fresh: string[] = [];
   if (missTexts.length > 0) {
     try {
-      fresh = await callTranslator(lang, missTexts);
+      fresh = await callTranslator(orgId, lang, missTexts);
     } catch {
       fresh = missTexts;
     }

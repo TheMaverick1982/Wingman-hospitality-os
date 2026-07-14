@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { EXAMPLE_TESTS, type QuestionKind, type TestMode, type TestQuestion, type TestSettings } from "@/lib/tests";
@@ -41,7 +42,7 @@ function readSettings(formData: FormData): TestSettings {
   };
 }
 
-async function callModel(system: string, prompt: string, maxTokens: number): Promise<string> {
+async function callModel(system: string, prompt: string, maxTokens: number, orgId: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Wingman's AI is temporarily unavailable. Please try again in a moment.");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -54,6 +55,7 @@ async function callModel(system: string, prompt: string, maxTokens: number): Pro
     throw new Error(`Anthropic API returned ${res.status}: ${body.slice(0, 200)}`);
   }
   const data = await res.json();
+  await recordAiUsage({ orgId, feature: "test_builder", model: "claude-sonnet-5", usage: data.usage });
   return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
 }
 
@@ -134,7 +136,7 @@ Also give a one-sentence "summary". Respond with ONLY valid JSON, no markdown fe
 ${schema}`;
 
   try {
-    const text = await callModel(TEST_SYSTEM, prompt, 8000);
+    const text = await callModel(TEST_SYSTEM, prompt, 8000, profile.orgId);
     const cleaned = extractJson(text);
     let parsed: { summary?: string; days?: RawDay[] };
     try {
@@ -267,7 +269,7 @@ Respond with ONLY valid JSON, matching exactly:
 ${schema}`;
 
   try {
-    const text = await callModel(TEST_SYSTEM, prompt, 6000);
+    const text = await callModel(TEST_SYSTEM, prompt, 6000, profile.orgId);
     const parsed = JSON.parse(extractJson(text)) as { summary?: string; days?: RawDay[] };
     const days = normalizeDays(parsed.days ?? [], 1, "exam");
     if (days[0]?.questions.length === 0) throw new Error("Couldn't write questions from that training. Try again.");
@@ -318,7 +320,7 @@ ${schema}`;
 
   let days: ProposedDay[];
   try {
-    const text = await callModel(TEST_SYSTEM, prompt, 7000);
+    const text = await callModel(TEST_SYSTEM, prompt, 7000, profile.orgId);
     const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
     days = normalizeDays(parsed.days ?? [], 1, "study_quiz");
     if (!days[0] || days[0].questions.length === 0) throw new Error("Couldn't write questions from that training. Try again.");

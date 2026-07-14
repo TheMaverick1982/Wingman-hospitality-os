@@ -7,6 +7,7 @@ import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type ChecklistType = "daily" | "preshift" | "loyalty" | "server";
 
@@ -90,12 +91,13 @@ function extractJsonArray(text: string): string {
 
 // Parse the model's JSON-array response with friendly errors instead of a raw
 // "Unexpected end of JSON input" when the output is empty or truncated.
-async function parseGeneratedArray(response: Response): Promise<unknown[]> {
+async function parseGeneratedArray(response: Response, orgId: string): Promise<unknown[]> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
   const data = await response.json();
+  await recordAiUsage({ orgId, feature: "checklist_builder", model: "claude-sonnet-5", usage: data.usage });
   const text = (data.content ?? [])
     .filter((b: { type: string }) => b.type === "text")
     .map((b: { text: string }) => b.text)
@@ -178,7 +180,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      items = (await parseGeneratedArray(response)) as string[];
+      items = (await parseGeneratedArray(response, profile.orgId)) as string[];
     } else if (mode === "paste") {
       const pastedText = String(formData.get("pastedText") || "").trim();
       if (!pastedText) return { error: "Paste your existing checklist text first." };
@@ -204,7 +206,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      items = (await parseGeneratedArray(response)) as string[];
+      items = (await parseGeneratedArray(response, profile.orgId)) as string[];
     } else {
       const painPoint = String(formData.get("painPoint") || "").trim();
       const mustHave = String(formData.get("mustHave") || "").trim();
@@ -224,7 +226,7 @@ Respond with ONLY a valid JSON array of strings, no markdown fences, no commenta
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      items = (await parseGeneratedArray(response)) as string[];
+      items = (await parseGeneratedArray(response, profile.orgId)) as string[];
     }
 
     if (!Array.isArray(items) || items.length === 0) {

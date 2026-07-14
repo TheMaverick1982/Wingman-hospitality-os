@@ -3,6 +3,7 @@
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { fallbackQuestions, dropLabel, type DropStage } from "@/lib/retention-coach";
 
@@ -17,7 +18,7 @@ function funnelLines(stages: { fromVisit: number; toVisit: number; retentionPct:
     .join("\n");
 }
 
-async function callModel(system: string, prompt: string, maxTokens: number): Promise<string | null> {
+async function callModel(system: string, prompt: string, maxTokens: number, orgId: string): Promise<string | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
   try {
@@ -28,6 +29,7 @@ async function callModel(system: string, prompt: string, maxTokens: number): Pro
     });
     if (!res.ok) return null;
     const data = await res.json();
+    await recordAiUsage({ orgId, feature: "retention_coach", model: MODEL, usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
@@ -73,7 +75,7 @@ Write exactly 3 diagnostic questions to ask this operator about what happens at 
 
 Return ONLY the 3 questions, one per line, no numbering, no preamble.`;
 
-  const text = await callModel(system, prompt, 400);
+  const text = await callModel(system, prompt, 400, profile.orgId);
   if (!text) return { error: null, questions: fallback };
 
   const questions = text
@@ -129,7 +131,7 @@ Write a tight, specific action plan in markdown to fix this drop-off. Use their 
 3. A short "This week" line with the single first step to take.
 Keep it under 200 words. **Bold** the key phrases. No preamble, no headers beyond what's described.`;
 
-  const text = await callModel(system, prompt, 800);
+  const text = await callModel(system, prompt, 800, profile.orgId);
   if (!text) {
     return {
       error: null,

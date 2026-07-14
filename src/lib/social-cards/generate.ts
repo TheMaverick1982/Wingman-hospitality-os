@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { SOCIAL_BUCKET } from "@/lib/social";
 import { renderSocialCard } from "./render";
 import { effectiveBrief } from "./brief";
@@ -46,6 +47,7 @@ async function callModel(system: string, prompt: string, maxTokens: number): Pro
   });
   if (!res.ok) throw new Error(`Anthropic API returned ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
   const data = await res.json();
+  await recordAiUsage({ orgId: null, feature: "social_generate", model: "claude-sonnet-5", usage: data.usage });
   return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
 }
 

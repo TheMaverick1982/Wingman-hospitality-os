@@ -6,6 +6,7 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type MenuUploadState = { error: string | null; parsedCount?: number };
 
@@ -86,6 +87,7 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
     }
 
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "menu_parse", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)

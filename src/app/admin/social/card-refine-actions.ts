@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { SOCIAL_BUCKET } from "@/lib/social";
 import { renderSocialCard } from "@/lib/social-cards/render";
 import { effectiveBrief } from "@/lib/social-cards/brief";
@@ -75,6 +76,7 @@ Use only the fields for the chosen type (brand→headline; stat→stat+subhead(+
     });
     if (!res.ok) return { error: `AI error ${res.status}.` };
     const data = await res.json();
+    await recordAiUsage({ orgId: null, feature: "social_card_regen", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
     const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
     const obj = JSON.parse(cleaned.slice(cleaned.indexOf("{"), cleaned.lastIndexOf("}") + 1));
