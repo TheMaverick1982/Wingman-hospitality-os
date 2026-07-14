@@ -18,6 +18,7 @@ import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
 import { NotificationSettings } from "./notification-settings";
 import { ApiKeysManager } from "./api-keys-manager";
+import { BillingEmailForm } from "./billing-email-form";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -55,7 +56,7 @@ export default async function SettingsPage() {
   const [{ data: members }, locations, { data: org }, { data: plRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
     getActiveDepartments(),
   ]);
@@ -289,6 +290,7 @@ export default async function SettingsPage() {
               Payment processing is being set up — card management will appear here soon.
             </span>
           )}
+          <BillingEmailForm billingEmail={org?.billing_email ?? null} />
         </>
       )}
       <p className="text-xs text-muted-2 mt-4 pt-4 border-t border-line">

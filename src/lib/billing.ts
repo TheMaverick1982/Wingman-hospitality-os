@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 import { markOrgChurned, markOrgPaid } from "@/lib/crm-sequences";
+import { effectiveMonthlyCents } from "@/lib/pricing";
 
 // Operator alerts (payment failures, closures) go here.
 export const BILLING_OWNER_EMAIL = "brian@brianhardy.com";
@@ -67,6 +68,36 @@ function ownerClosureHtml(orgName: string, days: number): string {
   `);
 }
 
+function money(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+// Branded payment receipt, sent to the account owner(s) and any accounting email
+// on every successful charge.
+function receiptHtml(
+  orgName: string,
+  amountCents: number,
+  opts: { dateLabel: string; brand?: string | null; last4?: string | null; invoiceNumber?: string | null; nextBillLabel?: string | null }
+): string {
+  const name = esc(orgName);
+  const rowStyle = 'style="font-size:14px;color:#525252;padding:6px 0;"';
+  const valStyle = 'style="font-size:14px;color:#1a1a1a;font-weight:600;padding:6px 0;text-align:right;"';
+  const rows = [
+    `<tr><td ${rowStyle}>Amount paid</td><td ${valStyle}>${money(amountCents)}</td></tr>`,
+    `<tr><td ${rowStyle}>Date</td><td ${valStyle}>${esc(opts.dateLabel)}</td></tr>`,
+    opts.last4 ? `<tr><td ${rowStyle}>Payment method</td><td ${valStyle}>${esc(opts.brand ?? "Card")} ····${esc(opts.last4)}</td></tr>` : "",
+    opts.invoiceNumber ? `<tr><td ${rowStyle}>Invoice</td><td ${valStyle}>${esc(opts.invoiceNumber)}</td></tr>` : "",
+    opts.nextBillLabel ? `<tr><td ${rowStyle}>Next billing date</td><td ${valStyle}>${esc(opts.nextBillLabel)}</td></tr>` : "",
+  ].filter(Boolean).join("");
+  return shell(`
+    <h2 style="font-size:20px;margin:0 0 6px;">Payment received — thank you</h2>
+    <p style="font-size:15px;line-height:1.55;color:#525252;margin:0 0 16px;">We've received your Wingman subscription payment for <strong>${name}</strong>. Here's your receipt.</p>
+    <table style="width:100%;border-collapse:collapse;border-top:1px solid #ECECEC;border-bottom:1px solid #ECECEC;margin:0 0 18px;">${rows}</table>
+    <p style="margin:0 0 22px;">${button("View billing & invoices", "https://www.joinwingman.app/settings")}</p>
+    <p style="font-size:12px;line-height:1.5;color:#8a8a8a;">Billed by The Maverick Agency — charges appear on your statement as "The Maverick Agency." Questions? Just reply to this email.</p>
+  `);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -114,7 +145,8 @@ export async function markPastDue(admin: SupabaseClient, orgId: string, orgName:
 export async function markActive(
   admin: SupabaseClient,
   orgId: string,
-  card?: { brand?: string; last4?: string; periodEnd?: string }
+  card?: { brand?: string; last4?: string; periodEnd?: string },
+  receipt?: { amountCents?: number; invoiceNumber?: string; paidAtIso?: string }
 ): Promise<void> {
   await admin
     .from("organizations")
@@ -130,6 +162,54 @@ export async function markActive(
   // A cleared payment moves the linked CRM contact back to Signed Up and stops
   // any running Reactivation win-back.
   await markOrgPaid(admin, orgId);
+  // Send the branded receipt to the owner(s) + any accounting email. Never let a
+  // receipt hiccup fail the payment webhook.
+  await sendPaymentReceipt(admin, orgId, card, receipt).catch(() => {});
+}
+
+// Email a branded receipt for a successful charge. Free accounts and zero-dollar
+// events are skipped. Amount comes from the processor when provided, else falls
+// back to the org's effective monthly price.
+async function sendPaymentReceipt(
+  admin: SupabaseClient,
+  orgId: string,
+  card?: { brand?: string; last4?: string; periodEnd?: string },
+  receipt?: { amountCents?: number; invoiceNumber?: string; paidAtIso?: string }
+): Promise<void> {
+  const { data: orgRow } = await admin
+    .from("organizations")
+    .select("name, is_free_account, billing_email, custom_monthly_cents, custom_addl_location_cents")
+    .eq("id", orgId)
+    .maybeSingle();
+  const org = orgRow as
+    | { name: string; is_free_account: boolean; billing_email: string | null; custom_monthly_cents: number | null; custom_addl_location_cents: number | null }
+    | null;
+  if (!org || org.is_free_account) return;
+
+  let amountCents = receipt?.amountCents;
+  if (amountCents == null) {
+    const { count } = await admin.from("locations").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+    amountCents = await effectiveMonthlyCents(org, count ?? 1);
+  }
+  if (!amountCents || amountCents <= 0) return;
+
+  const recipients = [...new Set([...(await getOrgOwnerEmails(admin, orgId)), org.billing_email].filter(Boolean))] as string[];
+  if (recipients.length === 0) return;
+
+  const fmtDate = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
+
+  await sendEmail({
+    to: recipients,
+    subject: `Wingman receipt — ${money(amountCents)} paid`,
+    html: receiptHtml(org.name, amountCents, {
+      dateLabel: fmtDate(receipt?.paidAtIso) ?? new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+      brand: card?.brand,
+      last4: card?.last4,
+      invoiceNumber: receipt?.invoiceNumber,
+      nextBillLabel: fmtDate(card?.periodEnd),
+    }),
+  });
 }
 
 export async function markCanceled(admin: SupabaseClient, orgId: string): Promise<void> {

@@ -28,13 +28,17 @@ export async function POST(request: NextRequest) {
     orgId?: string;
     orgName?: string;
     card?: { brand?: string; last4?: string; periodEnd?: string };
+    // Receipt details for payment_succeeded (from the processor's payload).
+    amountCents?: number;
+    invoiceNumber?: string;
+    paidAtIso?: string;
   } | null;
 
   if (!event || typeof event !== "object") return NextResponse.json({ error: "Bad payload" }, { status: 400 });
 
   // TODO(provider): the provider identifies the account by its own customer id.
   // Look up the org by provider_customer_id and derive orgId/orgName here.
-  const { type, orgId, orgName, card } = event;
+  const { type, orgId, orgName, card, amountCents, invoiceNumber, paidAtIso } = event;
   if (!orgId) return NextResponse.json({ error: "Missing orgId" }, { status: 400 });
 
   const admin = createAdminClient();
@@ -43,7 +47,7 @@ export async function POST(request: NextRequest) {
       await markPastDue(admin, orgId, orgName ?? "your organization");
       break;
     case "payment_succeeded":
-      await markActive(admin, orgId, card);
+      await markActive(admin, orgId, card, { amountCents, invoiceNumber, paidAtIso });
       // Accrue/advance the affiliate commission for this successful payment.
       await recordReferralPayment(admin, orgId);
       break;

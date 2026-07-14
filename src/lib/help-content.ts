@@ -805,6 +805,8 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Billing lives under Settings → Billing and is only visible to the account owner. Pricing is {{firstPrice}} for your first location plus {{addlPrice}} per additional location, billed monthly." },
       { kind: "note", text: "Billing is handled by The Maverick Agency — charges appear on your statement as \"The Maverick Agency.\"" },
+      { kind: "h", text: "Receipts & accounting email" },
+      { kind: "p", text: "Every successful payment emails a receipt to the account owner(s). To also send receipts and invoices to your bookkeeper, add an email under Settings → Billing → \"Send invoices & receipts to.\" Leave it blank to keep receipts owner-only." },
       { kind: "h", text: "If a payment fails" },
       { kind: "p", text: "You'll be emailed to update your card, and a past-due banner appears in Billing. If the balance stays unpaid for 30 days, the account is suspended per the Terms — so update your card promptly." },
     ],
