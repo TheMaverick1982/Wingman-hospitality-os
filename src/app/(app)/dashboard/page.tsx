@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
@@ -57,6 +58,8 @@ export default async function DashboardPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  // The developer role is API-only — its home is the API access page.
+  if (profile.accessRole === "developer") redirect("/api-access");
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location } = await searchParams;

@@ -1,4 +1,4 @@
-export type AccessRole = "super_admin" | "manager" | "shift_lead" | "staff";
+export type AccessRole = "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
 export type SectionAccess = "full" | "view" | "none";
 
 export type Section =
@@ -25,21 +25,23 @@ export type Section =
 // (dashboard, culture/pre-shift, guest bounce back, recovery, training & tests,
 // accountability), read-only on the design/reference sections (journey, hiring,
 // staff roster, menu, audit), and no back office (growth, reporting, settings).
+// "developer" is an API-only role — it uses a dedicated /api-access page, not
+// these operational sections, so every section is "none" for it.
 const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
-  dashboard: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view" },
-  culture: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view" },
-  bounceback: { super_admin: "full", manager: "full", shift_lead: "full", staff: "none" },
-  recovery: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view" },
-  training: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view" },
-  journey: { super_admin: "full", manager: "full", shift_lead: "view", staff: "view" },
-  accountability: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view" },
-  hiring: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none" },
-  staff: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none" },
-  growth: { super_admin: "full", manager: "full", shift_lead: "none", staff: "none" },
-  menu: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none" },
-  audit: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none" },
-  reporting: { super_admin: "full", manager: "view", shift_lead: "none", staff: "none" },
-  settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none" },
+  dashboard: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  culture: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  bounceback: { super_admin: "full", manager: "full", shift_lead: "full", staff: "none", developer: "none" },
+  recovery: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  training: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  journey: { super_admin: "full", manager: "full", shift_lead: "view", staff: "view", developer: "none" },
+  accountability: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  hiring: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  staff: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  growth: { super_admin: "full", manager: "full", shift_lead: "none", staff: "none", developer: "none" },
+  menu: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  audit: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  reporting: { super_admin: "full", manager: "view", shift_lead: "none", staff: "none", developer: "none" },
+  settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
 
 // Settings stays fixed to the owner -- Manager/Staff access there isn't
@@ -67,7 +69,12 @@ export type PermissionOverrides = Partial<Record<Section, Partial<Record<"manage
 export function getSectionAccess(role: AccessRole, section: Section, overrides?: PermissionOverrides): SectionAccess {
   if (role === "super_admin") return "full";
   if (section === "settings") return SECTION_ACCESS.settings[role];
-  return overrides?.[section]?.[role] ?? SECTION_ACCESS[section][role];
+  // Only manager/shift_lead/staff are editable in the permissions matrix.
+  if (role !== "developer") {
+    const override = overrides?.[section]?.[role];
+    if (override) return override;
+  }
+  return SECTION_ACCESS[section][role];
 }
 
 export function canEditSection(role: AccessRole, section: Section, overrides?: PermissionOverrides): boolean {
@@ -86,4 +93,14 @@ export const ROLE_LABELS: Record<AccessRole, string> = {
   manager: "Manager",
   shift_lead: "Shift Lead",
   staff: "Staff",
+  developer: "Developer",
 };
+
+// Whether a role gets the API-only developer experience (the /api-access page).
+export function isDeveloper(role: AccessRole): boolean {
+  return role === "developer";
+}
+// Who may manage API keys + reach the developer area: the owner and developers.
+export function canManageApi(role: AccessRole): boolean {
+  return role === "super_admin" || role === "developer";
+}

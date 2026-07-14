@@ -22,6 +22,7 @@ import {
   Rocket,
   HelpCircle,
   Lightbulb,
+  PlugZap,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -74,6 +75,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
+  const isDeveloperRole = accessRole === "developer";
   // Managers/shift leads reach Settings for the Notifications section (the page
   // itself hides the owner-only tabs from them).
   const canSeeSettings = accessRole === "super_admin" || accessRole === "manager" || accessRole === "shift_lead";
@@ -119,6 +121,19 @@ export function Sidebar({
           );
         })}
 
+        {/* Developer role: API-only. Its single home is the API access page. */}
+        {isDeveloperRole && (
+          <Link
+            href="/api-access"
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+              pathname.startsWith("/api-access") ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
+            }`}
+          >
+            <PlugZap size={19} strokeWidth={2} className={pathname.startsWith("/api-access") ? "text-white/90" : "text-muted-2"} />
+            API access
+          </Link>
+        )}
+
         <Link
           href="/help"
           className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
@@ -131,7 +146,7 @@ export function Sidebar({
           Help
         </Link>
 
-        {accessRole !== "staff" && (
+        {accessRole !== "staff" && !isDeveloperRole && (
           <Link
             href="/features"
             className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${

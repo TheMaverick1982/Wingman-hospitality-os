@@ -1,0 +1,11 @@
+-- A "developer" access role: an API-only login for an integrator/developer to
+-- set up and verify a POS → Zapier → Wingman integration. It sees only a
+-- dedicated API access page (create/revoke keys + a read-only "data received"
+-- panel) and the developer guide — no operational sections, no settings, no
+-- billing. All of its reads/writes are done server-side via the service-role
+-- client after an app-level role check, so no RLS policy changes are needed.
+--
+-- Must be its own migration: Postgres forbids using a freshly added enum value
+-- in the same transaction as later references (same reason shift_lead got its
+-- own migration in 0079).
+alter type access_role add value if not exists 'developer';

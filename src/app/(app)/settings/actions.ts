@@ -37,7 +37,7 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   const department = String(formData.get("department") || "");
 
   if (!email || !fullName) return { error: "Name and email are required." };
-  if (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin") return { error: "Invalid role." };
+  if (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin" && role !== "developer") return { error: "Invalid role." };
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Choose their job role." };
 
   // Resolve the location scope for manager/staff (Super Admins get everything).
@@ -208,7 +208,7 @@ export async function updateTeamMember(_prev: ActionState, formData: FormData): 
   const userId = String(formData.get("userId") || "");
   const locationId = String(formData.get("locationId") || "");
   const role = String(formData.get("role") || "");
-  if (!userId || (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin")) return { error: "Invalid update." };
+  if (!userId || (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin" && role !== "developer")) return { error: "Invalid update." };
   if (role !== "super_admin" && !locationId) return { error: "A location is required for this role." };
 
   const supabase = await createClient();
@@ -275,7 +275,7 @@ export async function editTeamMember(_prev: ActionState, formData: FormData): Pr
   const role = String(formData.get("role") || "");
   if (!userId) return { error: "Missing member." };
   if (!fullName) return { error: "Name is required." };
-  if (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin") return { error: "Invalid role." };
+  if (role !== "manager" && role !== "shift_lead" && role !== "staff" && role !== "super_admin" && role !== "developer") return { error: "Invalid role." };
 
   const supabase = await createClient();
   const { data: target } = await supabase.from("profiles").select("access_role, org_id").eq("id", userId).single();

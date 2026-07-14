@@ -10,7 +10,7 @@ import { editTeamMember, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
-type Role = "super_admin" | "manager" | "shift_lead" | "staff";
+type Role = "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
 
 export function EditTeamMemberForm({
   member,
@@ -86,6 +86,7 @@ export function EditTeamMemberForm({
                 <option value="shift_lead">Shift Lead (assistant manager)</option>
                 <option value="staff">Staff</option>
                 <option value="super_admin">Super Admin (co-owner — full access)</option>
+                <option value="developer">Developer (API integration only)</option>
               </select>
             </Field>
 

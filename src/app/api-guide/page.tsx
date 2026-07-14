@@ -137,6 +137,12 @@ export default function ApiGuidePage() {
           <li><strong>Hashed at rest</strong> — Wingman stores only a SHA-256 hash, never the key.</li>
           <li><strong>Scoped to one organization</strong> — the org is derived from the key, so a key can only ever read/write that organization&apos;s data.</li>
           <li><strong>Revocable</strong> — revoking a key in Settings stops it working immediately.</li>
+          <li>
+            <strong>Developer login (optional).</strong> Instead of sharing a Super Admin login, the account owner can add
+            you as a <strong>Developer</strong> under Settings → Team &amp; permissions. That gives you an API-only
+            login — create/revoke keys, this guide, and a live &ldquo;data received&rdquo; check — and nothing else in the
+            account.
+          </li>
         </ul>
         <p className="text-sm text-charcoal-2">
           Base URL: <code className="text-xs">{BASE_URL}</code>. All requests must be HTTPS. <code className="text-xs">401</code> means
