@@ -23,7 +23,7 @@ workflows:
       java: 17
     scripts:
       - name: Install dependencies
-        script: npm ci
+        script: npm install --no-audit --no-fund
       - name: Add Android platform
         script: npx cap add android || echo "android platform already present"
       - name: Generate app icons & splash
@@ -50,7 +50,7 @@ workflows:
       cocoapods: default
     scripts:
       - name: Install dependencies
-        script: npm ci
+        script: npm install --no-audit --no-fund
       - name: Add iOS platform
         script: npx cap add ios || echo "ios platform already present"
       - name: Generate app icons & splash
