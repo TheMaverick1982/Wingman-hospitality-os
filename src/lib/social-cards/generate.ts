@@ -171,29 +171,35 @@ Rules:
   for (let i = 0; i < ideas.length && i < slots.length; i++) {
     const idea = ideas[i];
     if (!idea?.card) continue;
-    const scheme = SCHEME_KEYS[i % SCHEME_KEYS.length]; // guaranteed color rotation
+    const scheme = SCHEME_KEYS[i % SCHEME_KEYS.length]; // batch color rotation (Facebook's card)
+    // Instagram gets a DIFFERENT color scheme than Facebook so the two channels
+    // never post an identical image — same content, different look.
+    const igScheme = SCHEME_KEYS[(i + 1) % SCHEME_KEYS.length];
     const spec = toCardSpec(idea.card, scheme);
     if (!spec) continue;
 
-    // Only render/upload a card if a card channel (FB/IG) is selected.
-    let cardPath: string | null = null;
-    if (needCard) {
+    // Render a distinct card per card-channel (FB/IG): same copy, different color
+    // scheme. LinkedIn is text-only, so it needs no card.
+    const renderFor = async (sc: SchemeKey): Promise<string[]> => {
       try {
-        cardPath = await uploadCardPng(await renderSocialCard(spec, 1080));
+        const path = await uploadCardPng(await renderSocialCard({ ...spec, scheme: sc }, 1080));
+        return path ? [path] : [];
       } catch (e) {
         console.error("[social] card render/upload failed", e); // still create the drafts (owner can add art)
-        cardPath = null;
+        return [];
       }
-    }
+    };
+    const fbImg = want.has("facebook") ? await renderFor(scheme) : [];
+    const igImg = want.has("instagram") ? await renderFor(igScheme) : [];
+
     const slot = slots[i];
     const link = typeof idea.link === "string" && idea.link.startsWith("http") ? idea.link : "https://www.joinwingman.app/demo";
-    const img = cardPath ? [cardPath] : [];
     // Compact fingerprint of the card's visible copy — our no-repeat memory.
     const cardText = [spec.headline, spec.stat, spec.subhead, spec.number, spec.intro, spec.title, ...(spec.items ?? [])].filter(Boolean).join(" · ").slice(0, 400);
 
     let made = 0;
-    if (want.has("facebook") && idea.facebook?.caption) { rows.push({ caption: idea.facebook.caption.trim(), link, first_comment: idea.facebook.first_comment?.trim() || null, platforms: ["facebook"], format: "feed", scheduled_at: slot, image_paths: img, card_text: cardText, status: "draft" }); made++; }
-    if (want.has("instagram") && idea.instagram?.caption) { rows.push({ caption: idea.instagram.caption.trim(), link: null, first_comment: idea.instagram.first_comment?.trim() || null, platforms: ["instagram"], format: "feed", scheduled_at: slot, image_paths: img, card_text: cardText, status: "draft" }); made++; }
+    if (want.has("facebook") && idea.facebook?.caption) { rows.push({ caption: idea.facebook.caption.trim(), link, first_comment: idea.facebook.first_comment?.trim() || null, platforms: ["facebook"], format: "feed", scheduled_at: slot, image_paths: fbImg, card_text: cardText, status: "draft" }); made++; }
+    if (want.has("instagram") && idea.instagram?.caption) { rows.push({ caption: idea.instagram.caption.trim(), link: null, first_comment: idea.instagram.first_comment?.trim() || null, platforms: ["instagram"], format: "feed", scheduled_at: slot, image_paths: igImg, card_text: cardText, status: "draft" }); made++; }
     if (want.has("linkedin") && idea.linkedin?.caption) { rows.push({ caption: idea.linkedin.caption.trim(), link, first_comment: idea.linkedin.first_comment?.trim() || null, platforms: ["linkedin"], format: "feed", scheduled_at: slot, image_paths: [], status: "draft" }); made++; }
     if (made > 0) created++;
   }

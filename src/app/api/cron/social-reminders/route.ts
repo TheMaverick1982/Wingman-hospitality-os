@@ -51,6 +51,14 @@ export async function GET(request: NextRequest) {
     // Stories are never auto-published (the API can't add a link sticker) — they
     // always fall through to the reminder to post by hand.
     if (autoPublish && settings && !isAssistedOnly(p.format)) {
+      // Atomic claim so two overlapping cron runs can't publish the same post
+      // twice: only the run whose last_publish_at still matches wins the claim.
+      const prev = p.last_publish_at ?? null;
+      let claim = admin.from("social_posts").update({ last_publish_at: nowIso, updated_at: nowIso }).eq("id", p.id).eq("status", "scheduled");
+      claim = prev === null ? claim.is("last_publish_at", null) : claim.eq("last_publish_at", prev);
+      const { data: claimed } = await claim.select("id").maybeSingle();
+      if (!claimed) continue; // another run already claimed/handled this post
+
       const outcome = await publishAll(p, settings);
       const anyLive = Boolean(outcome.facebook || outcome.instagram || outcome.linkedin);
       const publishedUrls = {
