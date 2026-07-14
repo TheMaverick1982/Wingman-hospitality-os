@@ -29,6 +29,9 @@ const PUBLIC_PREFIXES = [
   "/api/cron",
   "/privacy",
   "/terms",
+  // Public account/data deletion request page — required by Google Play / Apple
+  // to be reachable without a login (reviewers and users open it logged out).
+  "/delete-account",
   "/api-guide",
   // Affiliate program: public marketing + apply + login. The dashboard lives
   // under /affiliates/dashboard and is gated in its own layout (redirects
