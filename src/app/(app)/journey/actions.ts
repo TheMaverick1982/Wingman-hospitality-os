@@ -6,6 +6,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type JourneyState = { error: string | null };
 
@@ -69,7 +70,7 @@ type GeneratedStage = {
 };
 
 // Shared model call — returns the raw text or throws.
-async function callJourneyModel(apiKey: string, system: string, prompt: string, maxTokens: number): Promise<string> {
+async function callJourneyModel(apiKey: string, system: string, prompt: string, maxTokens: number, orgId: string): Promise<string> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
@@ -80,6 +81,7 @@ async function callJourneyModel(apiKey: string, system: string, prompt: string, 
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
   const data = await response.json();
+  await recordAiUsage({ orgId, feature: "journey", model: "claude-sonnet-5", usage: data.usage });
   return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
 }
 
@@ -159,7 +161,7 @@ ${FIRST_TIMER_SPEC}
 Make every line concrete and immediately usable by a real operator. No generic filler.`;
 
   try {
-    const text = await callJourneyModel(apiKey, STAGE_SYSTEM, prompt, 8000);
+    const text = await callJourneyModel(apiKey, STAGE_SYSTEM, prompt, 8000, profile.orgId);
     const cleaned = extractJson(text);
     let parsed: { summary?: string; stages?: GeneratedStage[] };
     try {
@@ -267,7 +269,7 @@ ${JOURNEY_REFINE_SHAPE}`;
     remove?: { id?: string; reason?: string }[];
   };
   try {
-    const text = await callJourneyModel(apiKey, STAGE_SYSTEM, prompt, 4000);
+    const text = await callJourneyModel(apiKey, STAGE_SYSTEM, prompt, 4000, profile.orgId);
     const cleaned = extractJson(text);
     try {
       parsed = JSON.parse(cleaned);
@@ -412,6 +414,7 @@ ${HOSPITALITY_DOCTRINE}`,
     });
     if (!response.ok) throw new Error(`Anthropic API returned ${response.status}`);
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "journey", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
     let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
     const first = cleaned.indexOf("{");

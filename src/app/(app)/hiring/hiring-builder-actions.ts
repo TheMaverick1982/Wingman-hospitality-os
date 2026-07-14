@@ -7,6 +7,7 @@ import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type BuildState = { error: string | null; traits?: GeneratedTrait[]; built?: number };
 
@@ -30,12 +31,13 @@ function extractJsonArray(text: string): string {
 
 // Parse the model's JSON-array response with friendly errors instead of a raw
 // "Unexpected end of JSON input" when the output is empty or truncated.
-async function parseGeneratedArray(response: Response): Promise<unknown[]> {
+async function parseGeneratedArray(response: Response, orgId: string): Promise<unknown[]> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
   const data = await response.json();
+  await recordAiUsage({ orgId, feature: "hiring_criteria", model: "claude-sonnet-5", usage: data.usage });
   const text = (data.content ?? [])
     .filter((b: { type: string }) => b.type === "text")
     .map((b: { text: string }) => b.text)
@@ -115,7 +117,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
+      traits = (await parseGeneratedArray(response, profile.orgId)) as GeneratedTrait[];
     } else if (mode === "paste") {
       const pastedText = String(formData.get("pastedText") || "").trim();
       if (!pastedText) return { error: "Paste your existing interview guide or criteria first." };
@@ -142,7 +144,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
+      traits = (await parseGeneratedArray(response, profile.orgId)) as GeneratedTrait[];
     } else {
       const hardToFill = String(formData.get("hardToFill") || "").trim();
       const pastMiss = String(formData.get("pastMiss") || "").trim();
@@ -165,7 +167,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      traits = (await parseGeneratedArray(response)) as GeneratedTrait[];
+      traits = (await parseGeneratedArray(response, profile.orgId)) as GeneratedTrait[];
     }
 
     if (!Array.isArray(traits) || traits.length === 0) {
@@ -375,6 +377,7 @@ ${REFINE_SHAPE}`;
       throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
     }
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "hiring_refine", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import {
   FIVE_GAPS,
   AUDIT_DOMAINS,
@@ -27,7 +28,8 @@ function readScores(formData: FormData, prefix: string, count: number): number[]
 async function generateActionPlan(
   gapScores: number[],
   domainScores: number[],
-  concept: string
+  concept: string,
+  orgId: string
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return fallbackActionPlan(gapScores);
@@ -69,6 +71,7 @@ Keep it under 180 words. No preamble, no headers beyond what's described.`;
     });
     if (!response.ok) return fallbackActionPlan(gapScores);
     const data = await response.json();
+    await recordAiUsage({ orgId, feature: "audit_action_plan", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
@@ -100,7 +103,7 @@ export async function runAudit(_prev: ActionState, formData: FormData): Promise<
   const domainScores = readScores(formData, "domain", AUDIT_DOMAINS.length);
   const health = healthScore(gapScores);
   const audit = auditScore(domainScores);
-  const actionPlan = await generateActionPlan(gapScores, domainScores, concept);
+  const actionPlan = await generateActionPlan(gapScores, domainScores, concept, profile.orgId);
 
   const supabase = await createClient();
   const { error } = await supabase.from("audits").insert({

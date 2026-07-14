@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type PlaybookArticle = {
   id: string;
@@ -138,6 +139,7 @@ Do NOT use markdown bold, italics, tables, or code fences. Be concrete and speci
       throw new Error(`Anthropic API returned ${response.status}: ${b.slice(0, 200)}`);
     }
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "playbook_draft", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)

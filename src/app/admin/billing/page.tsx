@@ -1,11 +1,15 @@
 import { CreditCard, Tag } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { getPlatformPricing } from "@/lib/pricing";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAiUsageSummary } from "@/lib/admin/ai-usage";
 import { PricingForm } from "./pricing-form";
+import { AiUsageCard } from "./ai-usage-card";
 
 export default async function AdminBillingPage() {
   await requirePlatformSection("billing");
   const pricing = await getPlatformPricing();
+  const aiUsage = await getAiUsageSummary(createAdminClient(), new Date().toISOString());
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -21,6 +25,8 @@ export default async function AdminBillingPage() {
         <p className="text-sm text-muted mb-5">The standard monthly price. Per-organization custom pricing (on each org&rsquo;s page) still overrides this.</p>
         <PricingForm firstDollars={Math.round(pricing.firstCents / 100)} addlDollars={Math.round(pricing.addlCents / 100)} />
       </div>
+
+      <AiUsageCard summary={aiUsage} />
 
       <div className="bg-white border border-line rounded-2xl p-10 text-center">
         <div className="w-12 h-12 rounded-full bg-brick-tint flex items-center justify-center mx-auto mb-5">

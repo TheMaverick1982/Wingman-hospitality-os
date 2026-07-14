@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { consumeAiLimit, ASSISTANT_LIMIT } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { notifySupportNewTicket } from "@/lib/support";
 import {
   ASSISTANT_MODEL,
@@ -31,7 +32,7 @@ function textFrom(content: ContentBlock[]): string {
     .trim();
 }
 
-async function callAnthropic(apiKey: string, system: SystemBlock[], messages: unknown[]) {
+async function callAnthropic(apiKey: string, system: SystemBlock[], messages: unknown[], orgId: string) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -51,7 +52,9 @@ async function callAnthropic(apiKey: string, system: SystemBlock[], messages: un
     const body = await response.text().catch(() => "");
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
-  return (await response.json()) as { stop_reason: string; content: ContentBlock[] };
+  const data = (await response.json()) as { stop_reason: string; content: ContentBlock[]; usage?: { input_tokens?: number; output_tokens?: number } };
+  await recordAiUsage({ orgId, feature: "assistant", model: ASSISTANT_MODEL, usage: data.usage });
+  return data;
 }
 
 type SystemBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
   ];
 
   try {
-    const first = await callAnthropic(apiKey, system, messages);
+    const first = await callAnthropic(apiKey, system, messages, profile.orgId);
 
     // No tool call — return the plain answer.
     if (first.stop_reason !== "tool_use") {
@@ -147,7 +150,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const second = await callAnthropic(apiKey, system, followupMessages);
+    const second = await callAnthropic(apiKey, system, followupMessages, profile.orgId);
     const reply =
       textFrom(second.content) ||
       (reported

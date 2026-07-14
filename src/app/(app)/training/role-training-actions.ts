@@ -7,6 +7,7 @@ import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type BuildState = {
   error: string | null;
@@ -49,12 +50,13 @@ function extractJsonObject(text: string): string {
 
 // Parse the model's JSON response with friendly errors instead of a raw
 // "Unexpected end of JSON input" when the output is empty or truncated.
-async function parseGeneratedResponse(response: Response): Promise<GeneratedProgram> {
+async function parseGeneratedResponse(response: Response, orgId: string): Promise<GeneratedProgram> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
   const data = await response.json();
+  await recordAiUsage({ orgId, feature: "role_training", model: "claude-sonnet-5", usage: data.usage });
   const text = (data.content ?? [])
     .filter((b: { type: string }) => b.type === "text")
     .map((b: { text: string }) => b.text)
@@ -135,7 +137,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
       });
-      generated = await parseGeneratedResponse(response);
+      generated = await parseGeneratedResponse(response, profile.orgId);
     } else if (mode === "paste") {
       const pastedText = String(formData.get("pastedText") || "").trim();
       if (!pastedText) return { error: "Paste your existing training text first." };
@@ -165,7 +167,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      generated = await parseGeneratedResponse(response);
+      generated = await parseGeneratedResponse(response, profile.orgId);
     } else {
       const qa: string[] = [];
       let qi = 0;
@@ -196,7 +198,7 @@ ${RESPONSE_SHAPE}`;
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
       });
-      generated = await parseGeneratedResponse(response);
+      generated = await parseGeneratedResponse(response, profile.orgId);
     }
 
     if (!Array.isArray(generated.hospitality_items) || !Array.isArray(generated.role_items)) {
@@ -409,6 +411,7 @@ ${REFINE_SHAPE}`;
       throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
     }
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "role_training_refine", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)

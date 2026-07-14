@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { captureLead } from "@/app/lead-actions";
 import {
@@ -77,7 +78,9 @@ async function callAnthropic(apiKey: string, system: SystemBlock[], messages: un
     const body = await response.text().catch(() => "");
     throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
   }
-  return (await response.json()) as { stop_reason: string; content: ContentBlock[] };
+  const data = (await response.json()) as { stop_reason: string; content: ContentBlock[]; usage?: { input_tokens?: number; output_tokens?: number } };
+  await recordAiUsage({ orgId: null, feature: "sales_chat", model: SALES_MODEL, usage: data.usage });
+  return data;
 }
 
 export async function POST(request: NextRequest) {

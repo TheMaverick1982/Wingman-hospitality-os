@@ -8,6 +8,7 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { activateDepartment, deactivateDepartment } from "@/lib/roles";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { consumeAiLimit } from "@/lib/rate-limit";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export type WizardState = { error: string | null };
 
@@ -91,6 +92,7 @@ Draw on these principles to shape the culture statement, core values, per-depart
     }
 
     const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "setup_wizard", model: "claude-sonnet-5", usage: data.usage });
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
