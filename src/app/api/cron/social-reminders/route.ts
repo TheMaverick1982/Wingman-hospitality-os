@@ -6,6 +6,7 @@ import { publicImageUrl, IMAGE_RETENTION_DAYS, isAssistedOnly, type SocialPost }
 import { deleteSocialImages } from "@/lib/social-storage";
 import { getSocialSettings } from "@/lib/social-meta";
 import { publishAll, anyConnected } from "@/lib/social-publish";
+import { generateSocialDrafts } from "@/lib/social-cards/generate";
 
 // Social planner cron. Runs hourly:
 //   1. Scheduled posts whose time has arrived: auto-PUBLISH via Meta if the
@@ -120,16 +121,35 @@ export async function GET(request: NextRequest) {
 
       if (low) {
         if (Date.now() - lastAlert >= 7 * 86400000) {
+          // Auto-generate a fresh batch of drafts if the owner opted in; otherwise
+          // just nudge them to plan more. Either way, drafts never auto-publish —
+          // they wait for approval.
+          let generated = 0;
+          if (settings.auto_generate) {
+            try {
+              const res = await generateSocialDrafts(8);
+              generated = res.created;
+            } catch (e) {
+              console.error("[social] auto-generate failed", e);
+            }
+          }
+
           const line = furthest
             ? `Your last scheduled post goes out ${esc(new Date(furthest).toLocaleDateString())} — about ${daysLeft} day${daysLeft === 1 ? "" : "s"} out. You have ${upcomingCount ?? 0} post${(upcomingCount ?? 0) === 1 ? "" : "s"} left in the queue.`
             : `You have no upcoming posts scheduled.`;
-          const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
-            <p style="font-size:16px;font-weight:600;">Time to plan more posts 🗓️</p>
-            <p style="font-size:14px;color:#525252;">${line} Keep the runway ahead of you so nothing goes quiet.</p>
-            <p style="font-size:14px;"><a href="${SITE}/admin/social" style="color:#0a6cff;font-weight:600;">Open the planner</a> to schedule the next batch.</p>
-          </div>`;
+          const html = generated > 0
+            ? `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
+                <p style="font-size:16px;font-weight:600;">${generated} new social drafts are ready for review ✍️</p>
+                <p style="font-size:14px;color:#525252;">Your queue was running low, so Wingman drafted ${generated} fresh post${generated === 1 ? "" : "s"} (Facebook + Instagram cards + LinkedIn text) in your voice. Nothing publishes until you approve.</p>
+                <p style="font-size:14px;"><a href="${SITE}/admin/social" style="color:#0a6cff;font-weight:600;">Review &amp; approve the drafts</a></p>
+              </div>`
+            : `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
+                <p style="font-size:16px;font-weight:600;">Time to plan more posts 🗓️</p>
+                <p style="font-size:14px;color:#525252;">${line} Keep the runway ahead of you so nothing goes quiet.</p>
+                <p style="font-size:14px;"><a href="${SITE}/admin/social" style="color:#0a6cff;font-weight:600;">Open the planner</a> to ${settings.auto_generate ? "generate" : "schedule"} the next batch.</p>
+              </div>`;
           try {
-            await sendEmail({ to: [BILLING_OWNER_EMAIL], subject: "Your scheduled social posts are running low", html });
+            await sendEmail({ to: [BILLING_OWNER_EMAIL], subject: generated > 0 ? `${generated} new social drafts ready to review` : "Your scheduled social posts are running low", html });
             await admin.from("social_settings").update({ content_runway_alert_at: nowIso }).eq("id", 1);
             runwayAlerted = true;
           } catch (e) {
