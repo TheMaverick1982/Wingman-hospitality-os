@@ -1,29 +1,24 @@
 import { ImageResponse } from "next/og";
 import { SCHEMES, type CardSpec, type Scheme } from "./schemes";
 import { planeDataUri } from "./plane";
+import { INTER_500, INTER_700, INTER_900 } from "./fonts-data";
 
 // ── Fonts ───────────────────────────────────────────────────────────────────
-// Inter (matches the existing posting system) — loaded once and cached.
+// Inter, embedded as base64 (see fonts-data.ts) so the fonts are always in the
+// bundle — no runtime file loading that could fail on a serverless function.
+function b64(s: string): ArrayBuffer {
+  const buf = Buffer.from(s, "base64");
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+}
 let fontCache: { name: string; data: ArrayBuffer; weight: 500 | 700 | 900; style: "normal" }[] | null = null;
-async function fonts() {
-  if (fontCache) return fontCache;
-  const load = async (w: 500 | 700 | 900): Promise<ArrayBuffer> => {
-    const url = new URL(`./fonts/Inter-${w}.woff`, import.meta.url);
-    try {
-      return await fetch(url).then((r) => r.arrayBuffer());
-    } catch {
-      const { readFileSync } = await import("fs");
-      const { fileURLToPath } = await import("url");
-      const buf = readFileSync(fileURLToPath(url));
-      return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-    }
-  };
-  const [w500, w700, w900] = await Promise.all([load(500), load(700), load(900)]);
-  fontCache = [
-    { name: "Inter", data: w500, weight: 500, style: "normal" },
-    { name: "Inter", data: w700, weight: 700, style: "normal" },
-    { name: "Inter", data: w900, weight: 900, style: "normal" },
-  ];
+function fonts() {
+  if (!fontCache) {
+    fontCache = [
+      { name: "Inter", data: b64(INTER_500), weight: 500, style: "normal" },
+      { name: "Inter", data: b64(INTER_700), weight: 700, style: "normal" },
+      { name: "Inter", data: b64(INTER_900), weight: 900, style: "normal" },
+    ];
+  }
   return fontCache;
 }
 
@@ -119,7 +114,7 @@ export async function renderSocialCard(spec: CardSpec, size = 1080): Promise<Uin
         {childrenFor(spec, s)}
       </div>
     ),
-    { width: size, height: size, fonts: await fonts() }
+    { width: size, height: size, fonts: fonts() }
   );
   return new Uint8Array(await res.arrayBuffer());
 }
