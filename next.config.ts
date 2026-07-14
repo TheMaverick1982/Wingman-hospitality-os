@@ -49,7 +49,15 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Public customer application forms (/apply/<org-slug>, incl. ?embed=1) must
+      // never be indexed. The page already emits a noindex <meta>; this header is
+      // a second, crawler-proof layer (also covers non-HTML crawlers). We do NOT
+      // robots.txt-disallow /apply — that would stop Google from crawling the page
+      // and reading the noindex, which is counterproductive.
+      { source: "/apply/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+    ];
   },
 };
 
