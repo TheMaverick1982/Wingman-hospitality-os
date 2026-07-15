@@ -134,6 +134,24 @@ export function DirectIntegrations({ configured, connection, sandboxTokenAvailab
         {msg && <p className="text-sm text-[#15803D] mt-3">{msg}</p>}
         {err && <p className="text-sm text-danger mt-3">{err}</p>}
       </div>
+
+      {/* Global Payments (Genius POS) — connector arrives with partner onboarding. */}
+      <div className="rounded-xl border border-line p-4 mt-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0A2540] text-white flex items-center justify-center shrink-0 font-semibold">GP</div>
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold text-ink">Global Payments <span className="text-muted-2 font-normal">(Genius POS)</span></div>
+              <div className="text-[12.5px] text-muted-2">Sync sales → Business Health and customers → Guests, per location</div>
+            </div>
+          </div>
+          <div className="shrink-0">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#9A3412] bg-[#FFF7ED] border border-[#FED7AA] px-2.5 py-1 rounded-full">
+              Onboarding in progress
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
