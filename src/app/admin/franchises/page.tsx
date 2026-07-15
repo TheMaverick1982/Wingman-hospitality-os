@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getGroupBillingSummary } from "@/lib/franchise-billing";
 import { FranchiseAdminClient, type GroupView, type OrgOption, type AdminOption } from "./franchise-admin-client";
 
 export const metadata = { title: "Franchises — Admin" };
@@ -31,13 +32,23 @@ export default async function AdminFranchisesPage() {
     adminsByGroup.set(a.group_id, arr);
   }
 
-  const groupViews: GroupView[] = ((groups ?? []) as { id: string; name: string; billing_mode: string }[]).map((g) => ({
-    id: g.id,
-    name: g.name,
-    billingMode: g.billing_mode,
-    members: membersByGroup.get(g.id) ?? [],
-    admins: adminsByGroup.get(g.id) ?? [],
-  }));
+  const groupRows = (groups ?? []) as { id: string; name: string; billing_mode: string }[];
+  const billingByGroup = new Map(
+    await Promise.all(groupRows.map(async (g) => [g.id, await getGroupBillingSummary(g.id)] as const)),
+  );
+
+  const groupViews: GroupView[] = groupRows.map((g) => {
+    const summary = billingByGroup.get(g.id);
+    return {
+      id: g.id,
+      name: g.name,
+      billingMode: g.billing_mode,
+      members: membersByGroup.get(g.id) ?? [],
+      admins: adminsByGroup.get(g.id) ?? [],
+      totalMonthlyCents: summary?.totalMonthlyCents ?? 0,
+      ownerHasCard: summary?.ownerHasCard ?? false,
+    };
+  });
 
   const orgOptions: OrgOption[] = ((orgs ?? []) as { id: string; name: string; is_demo: boolean; franchise_group_id: string | null }[])
     .filter((o) => !o.is_demo)

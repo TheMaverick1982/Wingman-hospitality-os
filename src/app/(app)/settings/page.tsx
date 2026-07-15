@@ -7,7 +7,7 @@ import { getActiveDepartments } from "@/lib/roles";
 import { getPlatformPricing } from "@/lib/pricing";
 import { isManagerOrAbove } from "@/lib/auth/permissions";
 import type { NotificationKey } from "@/lib/notifications";
-import { CreditCard, Gift, Lock } from "lucide-react";
+import { Building2, CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
 import { BulkInviteButton } from "./bulk-invite-form";
 import { TeamMemberRow, type TeamMember } from "./team-member-row";
@@ -28,6 +28,7 @@ import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
 import { cloverConfigured } from "@/lib/clover";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
+import { getGroupBillingSummary } from "@/lib/franchise-billing";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -65,12 +66,13 @@ export default async function SettingsPage() {
   const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents, billed_by_group").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
     supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getActiveDepartments(),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
+  const billedByGroup = (org as { billed_by_group?: boolean } | null)?.billed_by_group ?? false;
   const isPastDue = (org?.billing_status ?? "free") === "past_due";
   const cardOnFile = org?.card_brand && org?.card_last4 ? `${org.card_brand} •••• ${org.card_last4}` : null;
   const billingPortalUrl = process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "";
@@ -135,6 +137,24 @@ export default async function SettingsPage() {
       }
     : null;
   const gpIsConfigured = gpConfigured();
+
+  // Is this org the billing owner of a CENTRAL franchise group? If so, the card
+  // captured here pays the group roll-up (every franchisee's price), not a
+  // license for this HQ org — so show the card entry even on a comp HQ account.
+  let groupBillingOwner: { name: string; totalMonthlyCents: number; memberCount: number } | null = null;
+  {
+    const { data: ownedGroup } = await admin
+      .from("franchise_groups")
+      .select("id, name, billing_mode")
+      .eq("owner_user_id", profile.userId)
+      .eq("billing_mode", "central")
+      .maybeSingle();
+    const og = ownedGroup as { id: string; name: string } | null;
+    if (og) {
+      const summary = await getGroupBillingSummary(og.id);
+      groupBillingOwner = { name: og.name, totalMonthlyCents: summary?.totalMonthlyCents ?? 0, memberCount: summary?.members.length ?? 0 };
+    }
+  }
 
   const teamContent = (
     <div className="flex flex-col gap-6">
@@ -276,7 +296,56 @@ export default async function SettingsPage() {
         <Lock size={14} className="text-muted-2" />
         <h3 className="font-display text-lg font-semibold text-ink">Billing</h3>
       </div>
-      {isFreeAccount ? (
+      {groupBillingOwner ? (
+        <>
+          {(() => {
+            const rollup = groupBillingOwner.totalMonthlyCents;
+            const corporate = isFreeAccount ? 0 : monthlyTotal * 100; // monthlyTotal is dollars
+            const combined = rollup + corporate;
+            return (
+              <div className="mb-4 rounded-xl border border-line bg-paper px-4 py-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building2 size={16} className="text-brick" />
+                  <span className="text-sm font-semibold text-ink">Franchise group billing — {groupBillingOwner.name}</span>
+                </div>
+                <div className="flex flex-col gap-1.5 text-[13px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted">Franchisee roll-up{groupBillingOwner.memberCount > 0 ? ` · ${groupBillingOwner.memberCount} location${groupBillingOwner.memberCount === 1 ? "" : "s"}` : ""}</span>
+                    <span className="font-semibold text-ink tabular-nums">${(rollup / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}/mo</span>
+                  </div>
+                  {!isFreeAccount && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted">Your corporate locations · {locations.length}</span>
+                      <span className="font-semibold text-ink tabular-nums">${monthlyTotal.toLocaleString("en-US")}/mo</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-line pt-1.5 mt-0.5">
+                    <span className="font-semibold text-ink">Charged to your card</span>
+                    <span className="text-[18px] font-bold text-ink tabular-nums">${(combined / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}<span className="text-[12px] font-medium text-muted-2">/mo</span></span>
+                  </div>
+                </div>
+                <p className="text-[12px] text-muted-2 mt-2 leading-snug">
+                  You cover every franchisee in one monthly charge.
+                  {isFreeAccount
+                    ? " Your HQ account itself is comp'd — add corporate locations from Locations if you operate your own stores (ask your rep to enable paid billing)."
+                    : " Corporate-owned locations you add bill per-location, just like a franchisee."}
+                </p>
+              </div>
+            );
+          })()}
+          {gpIsConfigured ? (
+            <GlobalPaymentsCard
+              configured={gpIsConfigured}
+              isSandbox={gpIsSandbox()}
+              card={billingCard}
+              testCards={GP_TEST_CARDS.map((c) => ({ brand: c.brand, number: c.number, exp: c.exp, cvv: c.cvv }))}
+            />
+          ) : (
+            <span className="text-xs text-muted-2">Payment processing is being set up — the group card entry will appear here soon.</span>
+          )}
+          <BillingEmailForm billingEmail={org?.billing_email ?? null} />
+        </>
+      ) : isFreeAccount ? (
         <>
           <p className="text-sm text-muted mb-4">
             This is a free account — nothing is billed, ever, regardless of how many locations you add. This tab is
@@ -286,6 +355,18 @@ export default async function SettingsPage() {
             <Gift size={16} className="text-[#15803d]" />
             <span className="text-sm font-semibold text-[#15803d]">Free account — no billing</span>
           </div>
+        </>
+      ) : billedByGroup ? (
+        <>
+          <p className="text-sm text-muted mb-4">
+            Your franchise group covers your subscription — the franchisor is billed centrally for all locations in the
+            group, so there&apos;s nothing for you to pay here. You keep full control of everything else in your account.
+          </p>
+          <div className="flex items-center gap-2">
+            <Building2 size={16} className="text-brick" />
+            <span className="text-sm font-semibold text-ink">Billed by your franchise group</span>
+          </div>
+          <BillingEmailForm billingEmail={org?.billing_email ?? null} />
         </>
       ) : (
         <>
