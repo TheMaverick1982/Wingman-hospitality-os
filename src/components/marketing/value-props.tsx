@@ -81,7 +81,7 @@ export function ValueProps() {
       </div>
 
       {/* Partners / community spotlight */}
-      <div className="bg-ink rounded-[28px] p-8 sm:p-12 mt-6 text-white grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
+      <div className="bg-brick rounded-[28px] p-8 sm:p-12 mt-6 text-white grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
         <div>
           <div className="text-[13px] font-semibold tracking-[0.08em] uppercase text-white/60 mb-4">Beyond the four walls</div>
           <h3 className="font-display text-[26px] sm:text-[36px] leading-[1.1] tracking-[-0.02em] font-semibold mb-4 max-w-[520px]">
@@ -99,9 +99,9 @@ export function ValueProps() {
             ))}
           </div>
         </div>
-        <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-7">
+        <div className="rounded-2xl bg-white/12 border border-white/20 p-7">
           <div className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none text-white mb-3">$7k+</div>
-          <p className="text-[15px] text-white/75 leading-[1.5]">
+          <p className="text-[15px] text-white/80 leading-[1.5]">
             A single quarter of booked community events, tracked in real dollars — not a guess. Every
             relationship, measured like the revenue channel it is.
           </p>

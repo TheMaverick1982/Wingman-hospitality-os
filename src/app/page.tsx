@@ -41,6 +41,10 @@ export default async function Home() {
         spacingClassName="pb-20 sm:pb-32"
       />
       <CustomSystem />
+      <InlineCta
+        headline="Your neighborhood is a revenue channel."
+        sub="Turn local businesses into catering, events, and fundraisers — worked like the pipeline it is."
+      />
       <RoleBasedTraining />
       <HowItWorks />
       <InlineCta headline="Ready to set your standard?" sub="Takes minutes to get your team started." />
