@@ -9,6 +9,7 @@ export type NotificationKey =
   | "test_locked"
   | "test_overdue"
   | "test_reminders_staff"
+  | "monthly_training"
   | "partner_followups"
   | "partner_monthly_report";
 
@@ -56,6 +57,13 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     label: "Deadline reminders to staff",
     description: "Before a test's deadline, email the employee a reminder to finish it in time (helpful on multi-day tests).",
     audience: "The staff member taking the test",
+  },
+  {
+    key: "monthly_training",
+    group: "Training & tests",
+    label: "Monthly continuing-education training",
+    description: "On the 1st of each month, re-assign every test marked \"Rotates monthly\" to staff as a fresh attempt, and email them a link — so ongoing hospitality training is a habit.",
+    audience: "Each staff member the training targets",
   },
   {
     key: "partner_followups",

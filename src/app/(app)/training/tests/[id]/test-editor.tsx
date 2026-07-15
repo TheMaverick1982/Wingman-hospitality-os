@@ -199,7 +199,7 @@ export function TestEditor({ testId, settings, days, questions, activeDepartment
         </div>
         {s.mode === "study_quiz" && (
           <label className="inline-flex items-center gap-2 text-[13px] text-charcoal-2">
-            <input type="checkbox" checked={s.rotates_monthly} disabled={!canEdit} onChange={(e) => setS({ ...s, rotates_monthly: e.target.checked })} className="accent-brick" /> Rotates monthly (push a fresh version to all staff each month)
+            <input type="checkbox" checked={s.rotates_monthly} disabled={!canEdit} onChange={(e) => setS({ ...s, rotates_monthly: e.target.checked })} className="accent-brick" /> Continuing education — re-assign this to staff as a fresh attempt on the 1st of every month
           </label>
         )}
         <div className="text-[12.5px] text-muted-2">{MODE_LABEL[s.mode]} · {completionWindowLabel(s.complete_within_amount, s.complete_within_unit)}</div>
