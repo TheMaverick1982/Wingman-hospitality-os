@@ -167,6 +167,74 @@ export async function getActiveCertVersion(): Promise<CertVersion | null> {
   return { id: versionId, contentHash: hash, questionCount: questions.length };
 }
 
+export type RepReport = {
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  needsMoreTraining: boolean;
+  recommendation: string;
+};
+
+// Generate (and cache) an AI coaching report for one rep from their latest
+// completed attempt: overall + section scores, missed questions, and roleplay
+// answers with the AI's per-answer feedback. Returns null if they've never
+// completed a test or the AI is unavailable.
+export async function generateRepReport(userId: string): Promise<RepReport | null> {
+  const admin = createAdminClient();
+  const { data: attempt } = await admin
+    .from("sales_cert_attempts")
+    .select("id, score_pct, section_scores, passed, completed_at")
+    .eq("user_id", userId)
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const a = attempt as { id: string; score_pct: number | null; section_scores: Record<string, number> | null; passed: boolean | null } | null;
+  if (!a) return null;
+
+  const { data: answers } = await admin
+    .from("sales_cert_answers")
+    .select("kind, section, correct, response_text, ai_score, ai_feedback")
+    .eq("attempt_id", a.id);
+  const rows = (answers ?? []) as { kind: string; section: string; correct: boolean | null; response_text: string | null; ai_score: number | null; ai_feedback: string | null }[];
+
+  const payload = {
+    overall: a.score_pct,
+    passed: a.passed,
+    sectionScores: a.section_scores ?? {},
+    quiz: rows.filter((r) => r.kind === "mcq").map((r) => ({ section: r.section, correct: r.correct })),
+    roleplay: rows.filter((r) => r.kind === "roleplay").map((r) => ({ section: r.section, answer: r.response_text, score: r.ai_score, feedback: r.ai_feedback })),
+  };
+
+  const system = `You are a sales manager reviewing a rep's certification results for "Wingman" (hospitality retention SaaS). Write a concise, honest coaching report for the OWNER.
+Return ONLY JSON: {"summary":"2-3 sentences on where the rep stands","strengths":["..."],"gaps":["..."],"needsMoreTraining":true|false,"recommendation":"one concrete next step"}.
+Be specific to the sections and roleplay feedback in the data. needsMoreTraining=true if overall < 80 or any section is weak.`;
+  let report: RepReport;
+  try {
+    const raw = await callClaude(system, `Results JSON:\n${JSON.stringify(payload)}`, GRADE_MODEL, 900, "sales_cert_report");
+    const parsed = JSON.parse(extractJson(raw)) as Partial<RepReport>;
+    report = {
+      summary: String(parsed.summary ?? "").slice(0, 800),
+      strengths: (Array.isArray(parsed.strengths) ? parsed.strengths : []).map(String).slice(0, 6),
+      gaps: (Array.isArray(parsed.gaps) ? parsed.gaps : []).map(String).slice(0, 6),
+      needsMoreTraining: Boolean(parsed.needsMoreTraining),
+      recommendation: String(parsed.recommendation ?? "").slice(0, 500),
+    };
+  } catch {
+    return null;
+  }
+
+  await admin.from("sales_cert_reports").upsert({ user_id: userId, attempt_id: a.id, report, created_at: new Date().toISOString() }, { onConflict: "user_id" });
+  return report;
+}
+
+export async function getRepReport(userId: string): Promise<{ report: RepReport; createdAt: string } | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("sales_cert_reports").select("report, created_at").eq("user_id", userId).maybeSingle();
+  const row = data as { report: RepReport; created_at: string } | null;
+  return row ? { report: row.report, createdAt: row.created_at } : null;
+}
+
 // AI-grade a single roleplay answer. Returns 0-100 + short coaching feedback.
 export async function gradeRoleplay(scenario: string, answer: string): Promise<{ score: number; feedback: string }> {
   if (!answer.trim()) return { score: 0, feedback: "No answer given." };

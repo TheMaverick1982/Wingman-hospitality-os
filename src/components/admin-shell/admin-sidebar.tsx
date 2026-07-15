@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, Ticket, GraduationCap, Wallet, Gauge, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, Ticket, GraduationCap, Wallet, Gauge, UserCog, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
-import type { PlatformSection } from "@/lib/auth/platform";
+import { PLATFORM_SECTIONS, type PlatformSection } from "@/lib/auth/platform";
 
 const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSection }[] = [
   { href: "/admin/organizations", label: "Organizations", icon: Building2, section: "organizations" },
@@ -27,6 +27,8 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSec
 export function AdminSidebar({ fullName, platformAccess }: { fullName: string; platformAccess: string[] }) {
   const pathname = usePathname();
   const nav = NAV.filter((item) => platformAccess.includes(item.section));
+  // Owner-only surfaces: a platform admin with every section granted.
+  const isSuper = PLATFORM_SECTIONS.every((s) => platformAccess.includes(s.key));
 
   return (
     <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
@@ -53,6 +55,17 @@ export function AdminSidebar({ fullName, platformAccess }: { fullName: string; p
             </Link>
           );
         })}
+        {isSuper && (
+          <Link
+            href="/admin/sales-team"
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+              pathname.startsWith("/admin/sales-team") ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
+            }`}
+          >
+            <UserCog size={19} strokeWidth={2} className={pathname.startsWith("/admin/sales-team") ? "text-white/90" : "text-muted-2"} />
+            Sales Team
+          </Link>
+        )}
       </nav>
 
       <div className="mt-auto">
