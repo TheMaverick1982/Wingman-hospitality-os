@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, TrendingUp, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, AlertTriangle, Library, ArrowRight } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getFranchiseRollup, type FranchiseeMetrics } from "@/lib/franchise";
 
@@ -39,6 +40,19 @@ export default async function FranchisePage() {
           </p>
         </div>
       </div>
+
+      {profile.franchiseRole === "admin" && (
+        <Link
+          href="/franchise/library"
+          className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:border-brick transition-colors group shadow-sm"
+        >
+          <Library size={18} className="text-brick shrink-0" />
+          <span className="text-sm text-ink flex-1">
+            <span className="font-semibold">Brand Library</span> — push your training to every franchisee, locked or adaptable.
+          </span>
+          <ArrowRight size={15} className="text-muted-2 group-hover:text-brick transition-colors" />
+        </Link>
+      )}
 
       {/* Brand-wide rollup */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

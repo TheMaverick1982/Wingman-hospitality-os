@@ -4,8 +4,10 @@ How Wingman supports a **franchisor** who wants every **franchisee** on the same
 training, hiring, and standards — while each franchisee runs (and optionally
 pays for) their own account.
 
-Status: **Phase 1 shipped** (group + membership + franchisor oversight console,
-platform-admin provisioned). Phases 2–3 still proposed.
+Status: **Phases 1–2 shipped.** Phase 1 = group + membership + franchisor
+oversight console (platform-admin provisioned). Phase 2 = Brand Library —
+push a training test to every franchisee, locked (DB-trigger enforced) or
+adaptable, with re-push to update. Phase 3 (group billing) still proposed.
 
 **Confirmed decisions:**
 1. **Provisioning** — platform-admin only (Admin → Franchises). Invisible to every

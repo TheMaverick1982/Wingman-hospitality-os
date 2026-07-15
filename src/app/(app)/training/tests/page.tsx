@@ -23,6 +23,7 @@ type TestRow = {
   rotates_monthly: boolean;
   active: boolean;
   created_at: string;
+  brand_locked?: boolean;
 };
 
 export default async function TestsPage() {
@@ -33,7 +34,7 @@ export default async function TestsPage() {
 
   const supabase = await createClient();
   const [{ data: tests }, { data: meta }, { data: qCounts }, { data: assignRows }] = await Promise.all([
-    supabase.from("tests").select("id, title, description, mode, target_departments, day_count, pass_pct, rotates_monthly, active, created_at").order("created_at", { ascending: false }),
+    supabase.from("tests").select("id, title, description, mode, target_departments, day_count, pass_pct, rotates_monthly, active, created_at, brand_locked").order("created_at", { ascending: false }),
     supabase.from("department_meta").select("department"),
     supabase.from("test_questions").select("test_id"),
     canEdit ? supabase.from("test_assignments").select("test_id, status") : Promise.resolve({ data: [] }),
