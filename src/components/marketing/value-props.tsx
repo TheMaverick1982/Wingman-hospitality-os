@@ -79,6 +79,34 @@ export function ValueProps() {
           </p>
         </div>
       </div>
+
+      {/* Partners / community spotlight */}
+      <div className="bg-ink rounded-[28px] p-8 sm:p-12 mt-6 text-white grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
+        <div>
+          <div className="text-[13px] font-semibold tracking-[0.08em] uppercase text-white/60 mb-4">Beyond the four walls</div>
+          <h3 className="font-display text-[26px] sm:text-[36px] leading-[1.1] tracking-[-0.02em] font-semibold mb-4 max-w-[520px]">
+            Turn the businesses around you into steady revenue
+          </h3>
+          <p className="text-[15px] sm:text-lg text-white/82 leading-[1.5] max-w-[540px]">
+            Catering, group lunches, private events, happy hours, and fundraisers are the revenue most
+            restaurants leave on the table. Partners is a built-in CRM for your neighborhood — snap a
+            business card to add a contact, log every touch, and Wingman flags any relationship that&apos;s
+            gone quiet so your team always knows who to call this week.
+          </p>
+          <div className="flex gap-2 mt-8 flex-wrap">
+            {["Scan a business card", "Needs-follow-up alerts", "Quarterly goals", "Monthly hit list"].map((t) => (
+              <span key={t} className="px-3.5 py-1.5 rounded-full bg-white/12 text-[13px] font-semibold text-white/90">{t}</span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-7">
+          <div className="text-5xl sm:text-[64px] font-bold tracking-[-0.03em] leading-none text-white mb-3">$7k+</div>
+          <p className="text-[15px] text-white/75 leading-[1.5]">
+            A single quarter of booked community events, tracked in real dollars — not a guess. Every
+            relationship, measured like the revenue channel it is.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
