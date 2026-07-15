@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, CalendarClock, ArrowRight } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
@@ -62,7 +62,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
       .order("sort_order"),
     signoffsQ,
-    canEdit ? supabase.from("tests").select("id, title, target_departments, day_count").eq("active", true).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    canEdit ? supabase.from("tests").select("id, title, target_departments, day_count, rotates_monthly, mode").eq("active", true).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
     canEdit ? supabase.from("test_questions").select("test_id") : Promise.resolve({ data: [] }),
     getOrgLocations(),
     getStaffMembers(effectiveLocation),
@@ -71,13 +71,20 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // Tests available to hand out via the "Start a test" flow (managers only).
   const qCount = new Map<string, number>();
   for (const r of (testQ ?? []) as { test_id: string }[]) qCount.set(r.test_id, (qCount.get(r.test_id) ?? 0) + 1);
-  const testOptions: TestOption[] = ((testRows ?? []) as { id: string; title: string; target_departments: string[] | null; day_count: number }[]).map((t) => ({
+  const allTestRows = (testRows ?? []) as { id: string; title: string; target_departments: string[] | null; day_count: number; rotates_monthly?: boolean; mode?: string }[];
+  const testOptions: TestOption[] = allTestRows.map((t) => ({
     id: t.id,
     title: t.title,
     target_departments: (t.target_departments ?? []).filter(Boolean),
     day_count: t.day_count,
     questions: qCount.get(t.id) ?? 0,
   }));
+
+  // Continuing-education = learn-then-quiz tests flagged to rotate monthly. Show
+  // whether one exists org-wide (all staff) vs. role-specific, for the banner.
+  const monthlyTests = allTestRows.filter((t) => t.rotates_monthly && t.mode === "study_quiz");
+  const ceHasAllStaff = monthlyTests.some((t) => (t.target_departments ?? []).filter(Boolean).length === 0);
+  const ceRoles = [...new Set(monthlyTests.flatMap((t) => (t.target_departments ?? []).filter(Boolean)))];
 
   // Which roles already have a test generated from their training (guarded on
   // its own so a not-yet-applied source_department migration can't break the
@@ -156,6 +163,47 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </div>
           <div className="shrink-0">
             <StartTestButton tests={testOptions} staff={staff} departments={renderDepts as Department[]} effectiveLocationId={effectiveLocation} />
+          </div>
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="rounded-2xl border border-[#cfe3d0] bg-olive-tint p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-[#15803d] text-white flex items-center justify-center shrink-0">
+              <CalendarClock size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[16px] font-semibold tracking-[-0.01em] text-[#14532d]">Make great hospitality a habit</div>
+              <p className="text-[13.5px] text-[#166534] mt-0.5 max-w-2xl">
+                Guest experience can&apos;t be taught in a two-day program — it&apos;s ongoing. Turn any learn-then-quiz test
+                into an automatic <strong>monthly refresher</strong>: Wingman re-assigns it fresh on the 1st and emails your
+                team. Set one core hospitality refresher for <strong>everyone</strong>, plus optional role-specific modules
+                that only reach that department.
+              </p>
+              {monthlyTests.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  <span className="text-[12px] text-[#166534] font-medium">Running monthly:</span>
+                  {ceHasAllStaff && (
+                    <span className="text-[12px] font-semibold text-[#14532d] bg-white/70 border border-[#cfe3d0] rounded-full px-2.5 py-0.5">All staff</span>
+                  )}
+                  {ceRoles.map((r) => (
+                    <span key={r} className="text-[12px] font-semibold text-[#14532d] bg-white/70 border border-[#cfe3d0] rounded-full px-2.5 py-0.5">{r}</span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[12.5px] text-[#166534] mt-2 font-medium">Not set up yet — build a short refresher and tick &ldquo;Continuing education&rdquo; on it.</div>
+              )}
+            </div>
+            <div className="shrink-0">
+              <Link
+                href="/training/tests"
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-[#15803d] rounded-full px-4 py-2.5 hover:bg-[#166534] transition-colors"
+              >
+                {monthlyTests.length > 0 ? "Manage monthly training" : "Set up continuing education"}
+                <ArrowRight size={14} />
+              </Link>
+            </div>
           </div>
         </div>
       )}
