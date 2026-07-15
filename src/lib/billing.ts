@@ -116,6 +116,9 @@ function cancellationConfirmHtml(orgName: string, periodEndLabel: string | null,
     <h2 style="font-size:20px;margin:0 0 10px;">Your subscription is set to cancel</h2>
     <p style="font-size:15px;line-height:1.55;color:#525252;">We've scheduled cancellation for <strong>${name}</strong>. ${until}</p>
     ${apiDisconnectBlock(hasApi)}
+    <div style="margin:16px 0;padding:12px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;">
+      <p style="font-size:14px;line-height:1.5;color:#166534;margin:0;"><strong>You're locked in at today's rate.</strong> If our pricing rises later, staying keeps the price you have now — coming back would be at the new rate. We hope to see you again if you ever need us.</p>
+    </div>
     <p style="font-size:14px;line-height:1.55;color:#525252;">Changed your mind? You can resume anytime before then from <strong>Settings → Billing</strong>. We'd love to keep helping your team.</p>
     <p style="font-size:13px;line-height:1.5;color:#737373;">Questions, or want to talk it through? Just reply to this email.</p>
   `);

@@ -166,6 +166,53 @@ export async function setOrgBillingMode(orgId: string, paid: boolean): Promise<B
   return { error: null, ok: true };
 }
 
+// Reset an org's billing state to a clean slate — for clearing out sandbox /
+// test data. Removes the stored card + payment token and charge history, and
+// zeroes the billing flags so nothing lingers. Keeps is_free_account as-is
+// (only clears the transactional state around it). Platform-admin only,
+// service-role write (bypasses the billing guard).
+export async function resetOrgBilling(orgId: string): Promise<BillingAdminState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!orgId) return { error: "Missing organization.", ok: false };
+
+  const admin = createAdminClient();
+
+  // Best-effort: revoke the stored token at Global Payments before dropping it.
+  try {
+    const { data: pm } = await admin.from("billing_payment_methods").select("payment_token").eq("org_id", orgId).maybeSingle();
+    const token = (pm as { payment_token?: string } | null)?.payment_token;
+    if (token) {
+      const { gpDeleteStoredCard } = await import("@/lib/global-payments");
+      await gpDeleteStoredCard(token);
+    }
+  } catch {
+    /* removing our records is what matters */
+  }
+
+  await admin.from("billing_charges").delete().eq("org_id", orgId);
+  await admin.from("billing_payment_methods").delete().eq("org_id", orgId);
+
+  const { data: org } = await admin.from("organizations").select("is_free_account").eq("id", orgId).maybeSingle();
+  const isFree = (org as { is_free_account?: boolean } | null)?.is_free_account ?? false;
+  const { error } = await admin
+    .from("organizations")
+    .update({
+      billing_status: isFree ? "free" : "free",
+      card_brand: null,
+      card_last4: null,
+      current_period_end: null,
+      payment_failed_at: null,
+      dunning_last_notified_at: null,
+      cancel_at_period_end: false,
+    })
+    .eq("id", orgId);
+  if (error) return { error: error.message, ok: false };
+
+  revalidatePath(`/admin/organizations/${orgId}`);
+  return { error: null, ok: true };
+}
+
 export async function impersonateUser(targetProfileId: string) {
   const profile = await platformSectionActor("client_login");
   if (!profile) {

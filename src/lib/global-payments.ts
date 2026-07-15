@@ -39,6 +39,11 @@ export function gpConfigured(): boolean {
 export function gpIsSandbox(): boolean {
   return IS_SANDBOX;
 }
+// The API version the browser hosted-fields library must be configured with —
+// it has to match the version our server calls use.
+export function gpApiVersion(): string {
+  return GP_VERSION;
+}
 
 // GP published sandbox test cards, surfaced in the UI so an operator can prove
 // the store→charge loop end-to-end before a real (live) card is ever involved.

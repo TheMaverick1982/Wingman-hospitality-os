@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { sendBillingSetupEmail, setOrgBillingMode } from "../actions";
+import { sendBillingSetupEmail, setOrgBillingMode, resetOrgBilling } from "../actions";
 import { billingBadge } from "@/lib/billing-label";
 
 export function BillingCard({
@@ -19,8 +19,19 @@ export function BillingCard({
 }) {
   const [emailPending, startEmail] = useTransition();
   const [modePending, startMode] = useTransition();
+  const [resetPending, startReset] = useTransition();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function resetBilling() {
+    if (!window.confirm("Reset this org's billing to a clean slate? This removes the card on file, stored token, and charge history, and clears the billing period — for clearing out test data. It does not change Free/Paid.")) return;
+    setError(null);
+    setSent(false);
+    startReset(async () => {
+      const res = await resetOrgBilling(orgId);
+      if (res.error) setError(res.error);
+    });
+  }
 
   function sendSetup() {
     setError(null);
@@ -71,6 +82,14 @@ export function BillingCard({
           className="text-[13px] font-semibold text-charcoal-2 hover:text-ink disabled:opacity-50"
         >
           {modePending ? "…" : isFree ? "Mark as paid" : "Move to free"}
+        </button>
+        <button
+          type="button"
+          onClick={resetBilling}
+          disabled={resetPending}
+          className="text-[13px] font-semibold text-muted-2 hover:text-danger disabled:opacity-50"
+        >
+          {resetPending ? "Resetting…" : "Reset billing (testing)"}
         </button>
         {sent && !error && <span className="text-sm text-olive font-semibold">Email sent.</span>}
         {error && <span className="text-sm text-danger">{error}</span>}

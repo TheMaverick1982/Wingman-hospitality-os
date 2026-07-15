@@ -46,9 +46,11 @@ export function BillingCancel({ canceled, hasApi }: { canceled: boolean; hasApi:
         type="button"
         disabled={pending}
         onClick={() => {
+          const lockNote =
+            "\n\nOne thing to know: you're locked in at your current rate. If our pricing goes up later, coming back would be at the new price — staying keeps the rate you have today. We'd hate to see you go, but we'll be here if you ever want to come back.";
           const msg = hasApi
-            ? "Cancel your Wingman subscription at the end of the current billing period?\n\nYou also have an API integration connected (your POS / Zapier). After cancelling, disconnect it under Settings → API access so it stops sending data."
-            : "Cancel your Wingman subscription at the end of the current billing period? You'll keep access until then.";
+            ? `Cancel your Wingman subscription at the end of the current billing period?${lockNote}\n\nYou also have an API integration connected (your POS / Zapier). After cancelling, disconnect it under Settings → API access so it stops sending data.`
+            : `Cancel your Wingman subscription at the end of the current billing period? You'll keep access until then.${lockNote}`;
           if (!window.confirm(msg)) return;
           setErr(null);
           start(async () => {
