@@ -29,6 +29,12 @@ export async function consumeRateLimit(bucket: string, max: number, windowSecond
 // Sensible defaults, tuned to be invisible to real usage but to stop scripted
 // abuse (e.g. draining the Anthropic budget, or scraping the API to reverse-
 // engineer prompt behavior through outputs).
+// Login brute-force protection. Per-email catches password-guessing on one
+// account; per-IP catches a bot spraying many emails from one source. Tuned so
+// a real person mistyping a few times never notices, but a script gets stopped.
+export const LOGIN_EMAIL_LIMIT = { max: 8, windowSeconds: 300 }; // 8 tries / email / 5 min
+export const LOGIN_IP_LIMIT = { max: 30, windowSeconds: 300 }; // 30 tries / IP / 5 min
+
 export const AI_GENERATION_LIMIT = { max: 40, windowSeconds: 3600 }; // 40 generations / org / hour
 export const API_V1_LIMIT = { max: 120, windowSeconds: 60 }; // 120 requests / key / minute
 export const ASSISTANT_LIMIT = { max: 60, windowSeconds: 3600 }; // 60 assistant messages / org / hour
