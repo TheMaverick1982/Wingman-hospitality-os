@@ -41,6 +41,39 @@ export type PartnerActivity = {
 // (or never touched) a contact shows the orange "Needs Follow-up" badge.
 export const FADING_DAYS = 30;
 
+// Standing per-quarter targets. location_id null = org-wide default.
+export type PartnerGoal = {
+  location_id: string | null;
+  goal_new_contacts: number;
+  goal_events: number;
+  goal_fundraisers: number;
+  goal_active_connections: number;
+};
+
+// Seeded defaults if an owner hasn't set anything yet.
+export const DEFAULT_GOALS = {
+  goal_new_contacts: 20,
+  goal_events: 3,
+  goal_fundraisers: 3,
+  goal_active_connections: 20,
+};
+
+// Resolve the target for a location: its own row, else the org default, else the
+// hard defaults. Pass a map of location_id -> goal and the org-default goal.
+export function resolveGoal(
+  byLocation: Map<string, PartnerGoal>,
+  orgDefault: PartnerGoal | null,
+  locationId: string | null
+): typeof DEFAULT_GOALS {
+  const row = (locationId && byLocation.get(locationId)) || orgDefault;
+  return {
+    goal_new_contacts: row?.goal_new_contacts ?? DEFAULT_GOALS.goal_new_contacts,
+    goal_events: row?.goal_events ?? DEFAULT_GOALS.goal_events,
+    goal_fundraisers: row?.goal_fundraisers ?? DEFAULT_GOALS.goal_fundraisers,
+    goal_active_connections: row?.goal_active_connections ?? DEFAULT_GOALS.goal_active_connections,
+  };
+}
+
 export const ACTIVITY_TYPES: { value: PartnerActivityType; label: string; countsAsEvent?: boolean }[] = [
   { value: "call_text", label: "Called or Texted" },
   { value: "email", label: "Emailed" },
