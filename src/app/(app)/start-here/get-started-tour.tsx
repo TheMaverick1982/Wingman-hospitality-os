@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PlayCircle, X, ArrowLeft, ArrowRight, Sparkles, Heart, Footprints, RotateCcw, GraduationCap, BarChart3, Rocket, type LucideIcon } from "lucide-react";
+import { PlayCircle, X, ArrowLeft, ArrowRight, Sparkles, Heart, Footprints, RotateCcw, GraduationCap, BarChart3, Handshake, PlugZap, Rocket, type LucideIcon } from "lucide-react";
 
 type Step = { icon: LucideIcon; title: string; body: string; href?: string; cta?: string };
 
@@ -45,9 +45,16 @@ const STEPS: Step[] = [
   {
     icon: GraduationCap,
     title: "Training & Accountability",
-    body: "Build role-by-role training and standards, then spot-check that the standard is actually happening on the floor — shift to shift.",
+    body: "Build role-by-role training and standards, then spot-check that the standard is actually happening on the floor. Set up a short monthly Continuing Education refresher so great hospitality stays a habit, not a one-time class.",
     href: "/training",
     cta: "See Training",
+  },
+  {
+    icon: Handshake,
+    title: "Partners & Community",
+    body: "Turn the businesses around you — offices, gyms, schools, non-profits — into steady catering, events, and fundraisers. Log every contact and touch, and Wingman flags a partner going cold before you lose them. (Owners & managers.)",
+    href: "/partners",
+    cta: "See Partners",
   },
   {
     icon: BarChart3,
@@ -55,6 +62,13 @@ const STEPS: Step[] = [
     body: "Watch repeat rate, retention, and your money-layer trends over time — plus a 15-second AI briefing on what moved and the one thing to fix this week.",
     href: "/reporting",
     cta: "See Reporting",
+  },
+  {
+    icon: PlugZap,
+    title: "Connect your POS (optional)",
+    body: "On Square or Clover? Connect it in one click under Settings → API access and your guests and weekly sales flow in automatically — no typing, per location. Totally optional; you can do it anytime.",
+    href: "/settings?tab=api",
+    cta: "Connect a POS",
   },
   {
     icon: Rocket,

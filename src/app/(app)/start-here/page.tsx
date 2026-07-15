@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Circle, ArrowRight, PartyPopper, Plug, AlertCircle, Rocket } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, PartyPopper, Plug, AlertCircle, Rocket, Handshake, CalendarClock } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getLaunchPlan, type LaunchMilestone } from "@/lib/launch-plan";
 import { GetStartedTour } from "./get-started-tour";
@@ -109,24 +110,47 @@ export default async function StartHerePage() {
 
       {/* Optional / advanced — never blocks the launch. */}
       <div className="mt-10">
-        <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-2 mb-2">Optional · Advanced</div>
-        <Link
-          href="/help/api-and-integrations"
-          className="flex items-center gap-4 bg-white border border-dashed border-line rounded-2xl p-5 hover:border-brick transition-colors group"
-        >
-          <Plug size={20} className="text-muted-2 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-semibold text-ink">
-              Connect your POS <span className="text-[12px] font-medium text-muted-2">— optional</span>
-            </div>
-            <p className="text-[13px] text-muted mt-0.5">
-              Have your weekly numbers fill in automatically instead of typing them. Most owners skip this at first — you can hand it to your POS provider or bookkeeper anytime.
-            </p>
-          </div>
-          <ArrowRight size={16} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
-        </Link>
+        <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-2 mb-2">Explore more · Optional</div>
+        <div className="flex flex-col gap-2.5">
+          <ExploreCard
+            href="/settings?tab=api"
+            icon={<Plug size={20} className="text-muted-2 shrink-0" />}
+            title="Connect your POS"
+            body="On Square or Clover? Connect in one click and your guests and weekly sales sync in automatically, per location — no typing. Most owners add this once they're rolling; do it anytime."
+          />
+          <ExploreCard
+            href="/partners"
+            icon={<Handshake size={20} className="text-muted-2 shrink-0" />}
+            title="Grow with Partners & Community"
+            body="Build the businesses around you into catering, events, and fundraisers — log every contact and touch, and Wingman flags a partner going cold before you lose them."
+          />
+          <ExploreCard
+            href="/training/continuing-education"
+            icon={<CalendarClock size={20} className="text-muted-2 shrink-0" />}
+            title="Set up monthly Continuing Education"
+            body="Build a short refresher once and Wingman re-assigns it to your team on the 1st of every month — so great hospitality stays a habit, not a one-time class."
+          />
+        </div>
       </div>
     </div>
+  );
+}
+
+function ExploreCard({ href, icon, title, body }: { href: string; icon: ReactNode; title: string; body: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-4 bg-white border border-dashed border-line rounded-2xl p-5 hover:border-brick transition-colors group"
+    >
+      {icon}
+      <div className="flex-1 min-w-0">
+        <div className="text-[15px] font-semibold text-ink">
+          {title} <span className="text-[12px] font-medium text-muted-2">— optional</span>
+        </div>
+        <p className="text-[13px] text-muted mt-0.5">{body}</p>
+      </div>
+      <ArrowRight size={16} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
+    </Link>
   );
 }
 
