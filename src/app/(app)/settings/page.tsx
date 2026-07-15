@@ -22,6 +22,7 @@ import { BillingEmailForm } from "./billing-email-form";
 import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
+import { TrashPanel } from "./trash-panel";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -318,6 +319,26 @@ export default async function SettingsPage() {
     </div>
   );
 
+  // Trash + audit — soft-deleted records, read via the service-role client since
+  // RLS hides them. Owner-only (this whole branch is already owner-gated).
+  type DelRow = { id: string; name?: string; company_name?: string; deleted_at: string | null; deleted_by: string | null };
+  const [{ data: delGuests }, { data: delPartners }, { data: delStaff }, { data: auditRows }] = await Promise.all([
+    admin.from("guests").select("id, name, deleted_at, deleted_by").eq("org_id", profile.orgId).not("deleted_at", "is", null).order("deleted_at", { ascending: false }),
+    admin.from("partner_contacts").select("id, company_name, deleted_at, deleted_by").eq("org_id", profile.orgId).not("deleted_at", "is", null).order("deleted_at", { ascending: false }),
+    admin.from("staff_members").select("id, name, deleted_at, deleted_by").eq("org_id", profile.orgId).not("deleted_at", "is", null).order("deleted_at", { ascending: false }),
+    admin.from("audit_events").select("action, entity_type, entity_label, actor_name, created_at").eq("org_id", profile.orgId).order("created_at", { ascending: false }).limit(50),
+  ]);
+  const memberName = new Map(allMembers.map((m) => [m.id, m.full_name]));
+  const trashItems = [
+    ...((delGuests ?? []) as DelRow[]).map((g) => ({ entity: "guest" as const, id: g.id, label: g.name ?? "", deletedAt: g.deleted_at, deletedByName: memberName.get(g.deleted_by ?? "") ?? "" })),
+    ...((delPartners ?? []) as DelRow[]).map((p) => ({ entity: "partner" as const, id: p.id, label: p.company_name ?? "", deletedAt: p.deleted_at, deletedByName: memberName.get(p.deleted_by ?? "") ?? "" })),
+    ...((delStaff ?? []) as DelRow[]).map((s) => ({ entity: "staff" as const, id: s.id, label: s.name ?? "", deletedAt: s.deleted_at, deletedByName: memberName.get(s.deleted_by ?? "") ?? "" })),
+  ].sort((a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? ""));
+  const auditData = ((auditRows ?? []) as { action: string; entity_type: string; entity_label: string; actor_name: string; created_at: string }[]).map((a) => ({
+    action: a.action, entityType: a.entity_type, entityLabel: a.entity_label, actorName: a.actor_name, createdAt: a.created_at,
+  }));
+  const trashContent = <TrashPanel items={trashItems} audit={auditData} />;
+
   return (
     <>
       <div>
@@ -333,6 +354,7 @@ export default async function SettingsPage() {
           { key: "notifications", label: "Notifications", content: notificationContent },
           { key: "billing", label: "Billing", content: billingContent },
           { key: "api", label: "API access", content: <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} /> },
+          { key: "trash", label: "Trash", content: trashContent },
         ]}
       />
     </>

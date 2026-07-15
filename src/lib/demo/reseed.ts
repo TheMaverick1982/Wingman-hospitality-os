@@ -227,6 +227,7 @@ const WIPE_TABLES = [
   "partner_activities",
   "partner_goals",
   "partner_contacts",
+  "audit_events",
 ] as const;
 
 // SAFETY GUARD. This mass-delete is destructive — it wipes every tenant table for

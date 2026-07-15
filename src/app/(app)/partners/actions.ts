@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { logAudit } from "@/lib/audit-log";
 import type { PartnerActivityType } from "@/lib/partners";
 
 export type ActionState = { error: string | null };
@@ -78,11 +79,25 @@ export async function saveContact(_prev: ActionState, formData: FormData): Promi
   return { error: null };
 }
 
+// Soft delete — hidden by RLS but recoverable by the owner from Settings → Trash.
 export async function deleteContact(contactId: string) {
   const { profile } = await requirePartnersAccess();
   if (!profile) return;
   const supabase = await createClient();
-  await supabase.from("partner_contacts").delete().eq("id", contactId);
+  const { data: c } = await supabase.from("partner_contacts").select("company_name").eq("id", contactId).maybeSingle();
+  await supabase
+    .from("partner_contacts")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: profile.userId })
+    .eq("id", contactId);
+  await logAudit({
+    orgId: profile.orgId,
+    actorId: profile.userId,
+    actorName: profile.fullName,
+    action: "deleted",
+    entityType: "partner",
+    entityId: contactId,
+    entityLabel: (c as { company_name?: string } | null)?.company_name ?? "",
+  });
   revalidatePath("/partners");
 }
 
