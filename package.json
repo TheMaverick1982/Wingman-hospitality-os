@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "check:migrations": "node scripts/check-migration-safety.mjs",
+    "prebuild": "node scripts/check-migration-safety.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

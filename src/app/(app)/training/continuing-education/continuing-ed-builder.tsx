@@ -20,6 +20,7 @@ function suggestionsFor(aud: string): string[] {
       "Warm greeting within 30 seconds",
       "The 3-touch check-back",
       "One genuine recommendation per visit",
+      "Upselling as hospitality — suggest what the guest will genuinely love, never a pitch",
       "Reading a table's mood",
       "Recovering a mistake gracefully",
       "Making a returning guest feel remembered",

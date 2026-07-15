@@ -33,3 +33,24 @@ So, for every user-facing feature, keep these three in sync in the same change:
 2. **AI doctrine** — `src/lib/ai-doctrine.ts` (the `HOSPITALITY_DOCTRINE` grounding
    the AI), when the feature adds product knowledge the AI should reason from.
 3. **Sales playbook** — `src/lib/sales-playbook.ts` (internal demo enablement).
+
+# Never destroy client data (launch safety)
+
+Client data is sacred. Before shipping anything that touches the database or
+deploys, protect it:
+
+1. **Migrations are additive by default.** Never write `DROP TABLE`, `TRUNCATE`,
+   `DROP DATABASE`, or `DROP SCHEMA` against tenant data. `npm run build` runs
+   `scripts/check-migration-safety.mjs` (also `npm run check:migrations`) and
+   **blocks the build** on those. If one is genuinely required, back up first and
+   annotate the line `-- safety-ok: <reason>` — a deliberate, reviewable choice,
+   never a reflex.
+2. **Prefer soft deletes.** Deleting a guest, partner, or staff member sets
+   `deleted_at` and moves it to the owner-only Trash (Settings → Trash) for
+   restore — with an `audit_events` trail. New user-facing deletes must follow
+   this pattern, never a hard `DELETE`.
+3. **Secrets stay server-side.** Token/credential tables (`square_connections`,
+   `clover_connections`, `billing_payment_methods`, `clover_pending_installs`)
+   are deny-all RLS — never select their tokens to the browser.
+4. **Before launching**, run through `LAUNCH_CHECKLIST.md`. When in doubt about a
+   destructive or irreversible change, stop and confirm with the owner.
