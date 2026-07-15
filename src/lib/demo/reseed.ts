@@ -222,6 +222,11 @@ const WIPE_TABLES = [
   "growth_plans",
   "playbook_articles",
   "report_schedules",
+  // Partners (B2B / Community) — children first.
+  "partner_metrics_snapshots",
+  "partner_activities",
+  "partner_goals",
+  "partner_contacts",
 ] as const;
 
 // SAFETY GUARD. This mass-delete is destructive — it wipes every tenant table for
@@ -811,6 +816,116 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   await admin.from("report_schedules").insert({
     org_id: orgId, frequency: "weekly", sections: ["culture", "guests", "training", "health"],
     recipient_emails: ["owner@lanternvine.com"], created_by: userId,
+  });
+
+  // -------------------------------------------------------------------------
+  // Partners (B2B / Community) — local businesses, a mix of warm and fading
+  // relationships, a few booked events/fundraisers with revenue. Tuned so the
+  // KPI + goal cards and the Needs-Follow-up hit list all show real numbers.
+  // `age` backdates created_at so only some count as "new this quarter"; each
+  // activity's date drives last_activity_at (via the DB trigger) and the
+  // this-quarter counters. Revenue on booked events/fundraisers totals $7,239.
+  // -------------------------------------------------------------------------
+  type SeedActivity = { type: "call_text" | "email" | "meeting" | "event_booked" | "fundraiser_booked"; days: number; revenue?: number; notes?: string };
+  const PARTNERS: { company: string; contact: string; title: string; email: string; phone: string; category: string; loc: number; age: number; address: string; notes: string; acts: SeedActivity[] }[] = [
+    { company: "Halcyon Marketing Group", contact: "Priya Nair", title: "Office Manager", email: "priya@halcyonmktg.com", phone: "(313) 555-0142", category: "Corporate Office", loc: 0, age: 6, address: "120 Woodward Ave, Suite 400", notes: "Met at the Downtown Chamber mixer. 40-person office, always looking for team lunches.", acts: [
+      { type: "meeting", days: 20, notes: "Toured our private room for their quarterly all-hands." },
+      { type: "event_booked", days: 5, revenue: 240000, notes: "Booked catered lunch for 40 — quarterly all-hands." },
+    ] },
+    { company: "Riverside High School", contact: "Coach Dan Whitmore", title: "Athletic Director", email: "dwhitmore@riversideschools.org", phone: "(313) 555-0187", category: "School / University", loc: 1, age: 34, address: "800 Riverside Dr", notes: "Booster club does spirit nights. Big fundraiser potential each season.", acts: [
+      { type: "call_text", days: 18 },
+      { type: "fundraiser_booked", days: 8, revenue: 183900, notes: "Spirit night — 15% of sales to the booster club." },
+    ] },
+    { company: "Cornerstone Community Church", contact: "Pastor Alicia Reed", title: "Events Lead", email: "events@cornerstone.org", phone: "(313) 555-0210", category: "Non-profit", loc: 0, age: 51, address: "45 Grand River Ave", notes: "Hosts a monthly community dinner. Values local partnerships.", acts: [
+      { type: "fundraiser_booked", days: 3, revenue: 90000, notes: "Fundraiser gala dessert sponsorship." },
+    ] },
+    { company: "Peak Performance Gym", contact: "Marco Silva", title: "Owner", email: "marco@peakperformance.fit", phone: "(313) 555-0133", category: "Gym / Studio", loc: 0, age: 12, address: "220 Cass Ave", notes: "Post-workout smoothie/protein crowd. Open to a member perk deal.", acts: [
+      { type: "email", days: 9, notes: "Sent over a member-perk proposal." },
+      { type: "event_booked", days: 10, revenue: 60000, notes: "Catered their trainer appreciation night." },
+    ] },
+    { company: "Downtown Chamber of Commerce", contact: "Janet Cole", title: "Membership Director", email: "jcole@downtownchamber.org", phone: "(313) 555-0166", category: "Chamber of Commerce", loc: 0, age: 60, address: "1 Campus Martius", notes: "Gateway to every business downtown. Host a mixer here.", acts: [
+      { type: "meeting", days: 12, notes: "Pitched hosting the Q4 business mixer at our place." },
+      { type: "event_booked", days: 12, revenue: 150000, notes: "Booked the fall business mixer — happy-hour buyout." },
+    ] },
+    { company: "Lakeside Dental", contact: "Dr. Ruth Kim", title: "Practice Owner", email: "office@lakesidedental.com", phone: "(313) 555-0198", category: "Medical / Dental", loc: 1, age: 40, address: "560 Jefferson Ave", notes: "Staff of 12. Does a monthly team lunch — currently rotating spots.", acts: [
+      { type: "call_text", days: 22, notes: "Left a voicemail about their monthly team lunch." },
+    ] },
+    { company: "Meridian Real Estate", contact: "Tom Bradley", title: "Broker", email: "tom@meridianre.com", phone: "(313) 555-0175", category: "Real Estate", loc: 0, age: 47, address: "88 Monroe St", notes: "Does client closing dinners and open-house catering.", acts: [
+      { type: "email", days: 26, notes: "Intro email + catering menu." },
+    ] },
+    { company: "Brightside Pediatrics", contact: "Nina Alvarez", title: "Office Coordinator", email: "nina@brightsidepeds.com", phone: "(313) 555-0119", category: "Medical / Dental", loc: 1, age: 55, address: "300 Riverside Dr", notes: "Staff appreciation lunches quarterly.", acts: [
+      { type: "call_text", days: 44, notes: "Talked about their next staff appreciation day." },
+    ] },
+    // Fading — 30+ days since last touch (Hit List).
+    { company: "Anchor Financial", contact: "Greg Foltz", title: "Branch Manager", email: "gfoltz@anchorfin.com", phone: "(313) 555-0124", category: "Corporate Office", loc: 0, age: 70, address: "500 Griswold St", notes: "Client-appreciation events a couple times a year.", acts: [
+      { type: "meeting", days: 48, notes: "Discussed catering their client-appreciation happy hour." },
+    ] },
+    { company: "Willowbrook Senior Living", contact: "Carla Jimenez", title: "Activities Director", email: "cjimenez@willowbrook.org", phone: "(313) 555-0155", category: "Non-profit", loc: 1, age: 66, address: "1200 Lakeshore Blvd", notes: "Family nights — big catering orders when they run them.", acts: [
+      { type: "email", days: 52, notes: "Followed up on a family-night catering quote." },
+    ] },
+    { company: "Ignite Coworking", contact: "Dev Patel", title: "Community Manager", email: "dev@ignitecowork.com", phone: "(313) 555-0102", category: "Corporate Office", loc: 0, age: 58, address: "77 W Fort St", notes: "150 members. Does Friday member lunches.", acts: [
+      { type: "call_text", days: 61, notes: "Left a note about a recurring Friday lunch deal." },
+    ] },
+    { company: "Grandview Elementary PTA", contact: "Monica Shaw", title: "PTA President", email: "pta@grandview.org", phone: "(313) 555-0188", category: "School / University", loc: 1, age: 72, address: "410 Grandview Ave", notes: "Restaurant nights are their go-to fundraiser.", acts: [
+      { type: "meeting", days: 70, notes: "Talked through a spring restaurant-night fundraiser." },
+    ] },
+    // Never contacted — brand-new leads (Hit List).
+    { company: "Nova Tech Solutions", contact: "Alan Wu", title: "HR Lead", email: "awu@novatech.io", phone: "(313) 555-0140", category: "Corporate Office", loc: 0, age: 4, address: "1450 Woodward Ave", notes: "New office opening downtown — 60 employees. Cold lead from the chamber list.", acts: [] },
+    { company: "Sunrise Yoga Studio", contact: "Bella Ortiz", title: "Owner", email: "hello@sunriseyoga.com", phone: "(313) 555-0171", category: "Gym / Studio", loc: 1, age: 3, address: "250 Riverside Dr", notes: "Wellness crowd. Could do a smoothie pop-up partnership.", acts: [] },
+    { company: "Harbor Point Hotel", contact: "James Okafor", title: "Guest Services Manager", email: "jokafor@harborpoint.com", phone: "(313) 555-0159", category: "Hotel / Lodging", loc: 1, age: 9, address: "900 Harbor Point", notes: "Refers guests for dinner. Concierge partnership idea.", acts: [] },
+    { company: "Blue Line Fitness", contact: "Tara Nguyen", title: "GM", email: "tara@bluelinefit.com", phone: "(313) 555-0148", category: "Gym / Studio", loc: 0, age: 2, address: "330 Michigan Ave", notes: "Cold lead — walk-in introduction.", acts: [] },
+    { company: "Evergreen Nonprofit Alliance", contact: "Ruth Bell", title: "Development Director", email: "rbell@evergreenalliance.org", phone: "(313) 555-0181", category: "Non-profit", loc: 1, age: 38, address: "150 Jefferson Ave", notes: "Runs three fundraising galas a year.", acts: [
+      { type: "call_text", days: 25, notes: "Great call — interested in a fall fundraiser night." },
+    ] },
+    { company: "Metro Law Partners", contact: "David Osei", title: "Office Administrator", email: "dosei@metrolaw.com", phone: "(313) 555-0193", category: "Corporate Office", loc: 0, age: 15, address: "660 Woodward Ave", notes: "Client lunches + a holiday party each year.", acts: [
+      { type: "email", days: 14, notes: "Sent the holiday-party private-dining packet." },
+    ] },
+  ];
+
+  const partnerContactRows = PARTNERS.map((p) => ({
+    org_id: orgId,
+    location_id: locationIds[p.loc],
+    company_name: p.company,
+    contact_name: p.contact,
+    title: p.title,
+    email: p.email,
+    phone: p.phone,
+    category: p.category,
+    website: "",
+    address: p.address,
+    notes: p.notes,
+    status: "active",
+    created_by: userId,
+    created_at: isoTs(p.age),
+    updated_at: isoTs(p.age),
+  }));
+  const { data: pcRows } = await admin.from("partner_contacts").insert(partnerContactRows).select("id, company_name");
+  const partnerIdByCompany = new Map((pcRows ?? []).map((r) => [r.company_name as string, r.id as string]));
+
+  const partnerActivityRows: Record<string, unknown>[] = [];
+  for (const p of PARTNERS) {
+    const cid = partnerIdByCompany.get(p.company);
+    if (!cid) continue;
+    for (const a of p.acts) {
+      partnerActivityRows.push({
+        org_id: orgId,
+        contact_id: cid,
+        location_id: locationIds[p.loc],
+        activity_date: isoDay(a.days),
+        activity_type: a.type,
+        notes: a.notes ?? "",
+        revenue_cents: a.revenue ?? null,
+        created_by: userId,
+      });
+    }
+  }
+  if (partnerActivityRows.length) await admin.from("partner_activities").insert(partnerActivityRows);
+
+  // Standing goals: the owner's chosen defaults (20 new contacts, 3 events,
+  // 3 fundraisers, 20 active connections per quarter).
+  await admin.from("partner_goals").insert({
+    org_id: orgId, location_id: null,
+    goal_new_contacts: 20, goal_events: 3, goal_fundraisers: 3, goal_active_connections: 20,
   });
 }
 

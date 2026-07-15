@@ -3,7 +3,8 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
-import type { PartnerActivity, PartnerContact } from "@/lib/partners";
+import type { PartnerActivity, PartnerContact, PartnerGoal } from "@/lib/partners";
+import { resolveGoal } from "@/lib/partners";
 import { PartnersClient } from "./partners-client";
 
 export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
@@ -22,7 +23,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   });
 
   const supabase = await createClient();
-  const [{ data: contactRows }, { data: activityRows }, { data: profileRows }, locations] = await Promise.all([
+  const [{ data: contactRows }, { data: activityRows }, { data: profileRows }, { data: goalRows }, locations] = await Promise.all([
     supabase
       .from("partner_contacts")
       .select(
@@ -36,6 +37,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       .order("created_at", { ascending: false })
       .limit(300),
     supabase.from("profiles").select("id, full_name"),
+    supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getOrgLocations(),
   ]);
 
@@ -63,6 +65,28 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
 
   const scopedLocationName = effectiveLocation ? (locations.find((l) => l.id === effectiveLocation)?.name ?? null) : null;
 
+  // Resolve goal targets for the current view. For a single store, its own
+  // (or the org-default) target. In All-Locations mode, sum each visible store's
+  // target so aggregate progress compares against the combined goal.
+  const goals = (goalRows ?? []) as PartnerGoal[];
+  const orgDefaultGoal = goals.find((g) => g.location_id === null) ?? null;
+  const goalByLocation = new Map(goals.filter((g) => g.location_id).map((g) => [g.location_id as string, g]));
+  const targetFor = (locId: string | null) => resolveGoal(goalByLocation, orgDefaultGoal, locId);
+  const goalTargets = effectiveLocation
+    ? targetFor(effectiveLocation)
+    : (assignableLocations.length ? assignableLocations : locations).reduce(
+        (acc, l) => {
+          const g = targetFor(l.id);
+          return {
+            goal_new_contacts: acc.goal_new_contacts + g.goal_new_contacts,
+            goal_events: acc.goal_events + g.goal_events,
+            goal_fundraisers: acc.goal_fundraisers + g.goal_fundraisers,
+            goal_active_connections: acc.goal_active_connections + g.goal_active_connections,
+          };
+        },
+        { goal_new_contacts: 0, goal_events: 0, goal_fundraisers: 0, goal_active_connections: 0 }
+      );
+
   return (
     <PartnersClient
       contacts={scopedContacts}
@@ -86,6 +110,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       canPickOrgWide={profile.accessRole === "super_admin"}
       scopedLocationName={scopedLocationName}
       showLocationBadges={!effectiveLocation}
+      goalTargets={goalTargets}
     />
   );
 }

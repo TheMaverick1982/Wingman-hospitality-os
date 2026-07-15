@@ -61,6 +61,7 @@ export function PartnersClient({
   canPickOrgWide,
   scopedLocationName,
   showLocationBadges,
+  goalTargets,
 }: {
   contacts: PartnerContact[];
   activities: FeedActivity[];
@@ -71,6 +72,7 @@ export function PartnersClient({
   canPickOrgWide: boolean;
   scopedLocationName: string | null;
   showLocationBadges: boolean;
+  goalTargets: { goal_new_contacts: number; goal_events: number; goal_fundraisers: number; goal_active_connections: number };
 }) {
   const [tab, setTab] = useState<"contacts" | "activity">("contacts");
   const [search, setSearch] = useState("");
@@ -105,6 +107,16 @@ export function PartnersClient({
       .filter((a) => a.revenue_cents && a.activity_date >= start)
       .reduce((s, a) => s + (a.revenue_cents ?? 0), 0);
   }, [activities, today]);
+
+  // Quarter-to-date actuals for the goal-progress cards.
+  const quarterActuals = useMemo(() => {
+    const start = quarterStart(today);
+    return {
+      newContacts: contacts.filter((c) => c.created_at.slice(0, 10) >= start).length,
+      events: activities.filter((a) => a.activity_type === "event_booked" && a.activity_date >= start).length,
+      fundraisers: activities.filter((a) => a.activity_type === "fundraiser_booked" && a.activity_date >= start).length,
+    };
+  }, [contacts, activities, today]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -298,7 +310,13 @@ export function PartnersClient({
       {/* KPI cards. The Needs-Follow-up card doubles as a filter toggle. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Total contacts" value={contacts.length} sub="businesses you're tracking" />
-        <StatTile label="Active connections" value={activeCount} sub="touched in the last 30 days" />
+        <StatTile
+          label="Active connections"
+          value={activeCount}
+          sub={`of ${goalTargets.goal_active_connections} target · touched in 30 days`}
+          trend={activeCount >= goalTargets.goal_active_connections && goalTargets.goal_active_connections > 0 ? "On target" : undefined}
+          trendTone="up"
+        />
         <button type="button" onClick={() => setFadingOnly((v) => !v)} className="text-left">
           <StatTile
             label="Needs follow-up"
@@ -309,6 +327,13 @@ export function PartnersClient({
           />
         </button>
         <StatTile label="Revenue this quarter" value={money(quarterRevenue)} sub="booked from partners" />
+      </div>
+
+      {/* Goal progress for the quarter (targets set by the owner in Settings). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <GoalCard label="This quarter's growth" actual={quarterActuals.newContacts} target={goalTargets.goal_new_contacts} unit="new contacts" />
+        <GoalCard label="Community events" actual={quarterActuals.events} target={goalTargets.goal_events} unit="booked" />
+        <GoalCard label="Fundraisers" actual={quarterActuals.fundraisers} target={goalTargets.goal_fundraisers} unit="booked" />
       </div>
 
       {/* Tabs */}
@@ -446,6 +471,27 @@ export function PartnersClient({
         />
       )}
     </>
+  );
+}
+
+function GoalCard({ label, actual, target, unit }: { label: string; actual: number; target: number; unit: string }) {
+  const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : 0;
+  const hit = target > 0 && actual >= target;
+  return (
+    <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[13px] text-muted font-medium">{label}</span>
+        {hit && <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full text-[#15803D] bg-[#E7F6EC]">Goal met</span>}
+      </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[32px] font-semibold tracking-[-0.02em] leading-none text-ink tabular-nums">{actual}</span>
+        <span className="text-[15px] text-muted-2 tabular-nums">/ {target}</span>
+      </div>
+      <div className="text-[13px] text-muted mt-1.5">{unit} this quarter</div>
+      <div className="h-2 rounded-full bg-[#F1F1F1] overflow-hidden mt-3">
+        <div className={`h-full rounded-full ${hit ? "bg-[#16A34A]" : "bg-brick"}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 

@@ -20,6 +20,8 @@ import { NotificationSettings } from "./notification-settings";
 import { ApiKeysManager } from "./api-keys-manager";
 import { BillingEmailForm } from "./billing-email-form";
 import { BillingCancel } from "./billing-cancel";
+import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
+import { PartnersReportEmailForm } from "./partners-report-email-form";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -54,11 +56,12 @@ export default async function SettingsPage() {
   }
 
   const supabase = await createClient();
-  const [{ data: members }, locations, { data: org }, { data: plRows }, activeDepts] = await Promise.all([
+  const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
+    supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getActiveDepartments(),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
@@ -305,6 +308,16 @@ export default async function SettingsPage() {
     </div>
   );
 
+  const goals = (goalRows ?? []) as GoalRow[];
+  const orgDefaultGoal = goals.find((g) => g.location_id === null) ?? null;
+  const goalByLocation = Object.fromEntries(goals.filter((g) => g.location_id).map((g) => [g.location_id as string, g]));
+  const partnersContent = (
+    <div className="flex flex-col gap-6">
+      <PartnerGoalsForm orgDefault={orgDefaultGoal} byLocation={goalByLocation} locations={locations} />
+      <PartnersReportEmailForm reportEmail={org?.partners_report_email ?? null} ownerEmail={profile.email ?? ""} />
+    </div>
+  );
+
   return (
     <>
       <div>
@@ -316,6 +329,7 @@ export default async function SettingsPage() {
         tabs={[
           { key: "team", label: "Team & permissions", content: teamContent },
           { key: "locations", label: "Locations", content: locationsContent },
+          { key: "partners", label: "Partners", content: partnersContent },
           { key: "notifications", label: "Notifications", content: notificationContent },
           { key: "billing", label: "Billing", content: billingContent },
           { key: "api", label: "API access", content: <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} /> },
