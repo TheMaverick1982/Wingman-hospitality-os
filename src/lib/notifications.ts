@@ -8,7 +8,9 @@ export type NotificationKey =
   | "interview_reminders"
   | "test_locked"
   | "test_overdue"
-  | "test_reminders_staff";
+  | "test_reminders_staff"
+  | "partner_followups"
+  | "partner_monthly_report";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -54,6 +56,20 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     label: "Deadline reminders to staff",
     description: "Before a test's deadline, email the employee a reminder to finish it in time (helpful on multi-day tests).",
     audience: "The staff member taking the test",
+  },
+  {
+    key: "partner_followups",
+    group: "Partners",
+    label: "Follow-up task reminders",
+    description: "When a Partners follow-up task comes due, email the manager who scheduled it so a relationship doesn't slip.",
+    audience: "The manager who created the task",
+  },
+  {
+    key: "partner_monthly_report",
+    group: "Partners",
+    label: "Monthly Partners report",
+    description: "On the 1st of each month, email a leadership rollup across all stores, plus each manager their store's metrics and a follow-up hit list.",
+    audience: "Account owner + report email, and each location manager",
   },
 ];
 

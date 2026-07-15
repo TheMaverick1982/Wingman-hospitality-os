@@ -109,10 +109,11 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
     .maybeSingle();
   if (!contact) return { error: "That contact could not be found." };
 
+  const contactLocation = (contact as { location_id: string | null }).location_id;
   const { error } = await supabase.from("partner_activities").insert({
     org_id: profile.orgId,
     contact_id: contactId,
-    location_id: (contact as { location_id: string | null }).location_id,
+    location_id: contactLocation,
     activity_date: dateOk ? activityDate : new Date().toISOString().slice(0, 10),
     activity_type: activityType,
     notes: String(formData.get("notes") || "").trim().slice(0, 4000),
@@ -120,6 +121,23 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
     created_by: profile.userId,
   });
   if (error) return { error: error.message };
+
+  // Optional follow-up task → its own row; a daily cron emails the assignee
+  // (the creator) when it comes due.
+  if (formData.get("create_followup") === "on") {
+    const followupDate = String(formData.get("followup_date") || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(followupDate)) {
+      await supabase.from("partner_follow_ups").insert({
+        org_id: profile.orgId,
+        contact_id: contactId,
+        location_id: contactLocation,
+        assigned_to: profile.userId,
+        due_date: followupDate,
+        notes: String(formData.get("followup_notes") || "").trim().slice(0, 2000),
+        created_by: profile.userId,
+      });
+    }
+  }
 
   revalidatePath("/partners");
   return { error: null };

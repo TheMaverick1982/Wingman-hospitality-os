@@ -649,6 +649,39 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Connecting your POS", href: "/help/api-and-integrations" }],
   },
   {
+    slug: "partners",
+    title: "Partners & community",
+    summary: "Track the local businesses around each store — and turn catering, events, and fundraisers into a measured habit instead of luck.",
+    categoryId: "growth",
+    keywords: ["partners", "b2b", "community", "catering", "events", "fundraisers", "happy hour", "chamber", "local business", "outreach", "follow up", "fading", "goals", "hit list", "scan card", "business card", "relationships"],
+    body: [
+      { kind: "p", text: "Partners is a lightweight relationship CRM built into Wingman. Where Guest Bounce Back wins back guests, Partners helps you build relationships with the businesses around you — offices, schools, gyms, non-profits, the chamber — so catering, group lunches, private events, happy-hour buyouts, and fundraisers become a repeatable, measured habit." },
+      { kind: "image", src: "/help/partners.png", alt: "The Partners screen showing KPI cards, quarterly goal progress, and a list of contacts with Needs Follow-up badges.", caption: "Partners — your connections at a glance, with who's fading and how you're tracking to goal." },
+      { kind: "note", text: "Partners is for owners and managers. Managers see the store(s) they're assigned to; owners see every location. Staff don't see it at all." },
+      { kind: "h", text: "Add your contacts" },
+      { kind: "steps", items: [
+        "Open Partners and tap \"Add Contact\" — enter the business, who you deal with, how to reach them, a category, and a note on how you met.",
+        "Or tap \"Scan Card\": snap a photo of a business card and Wingman reads the details off it and pre-fills the form for you to confirm. The photo is used only to read the card — it's never stored.",
+        "Managers file each contact under their store; owners can also mark one \"Org-wide.\"",
+      ] },
+      { kind: "h", text: "Log every touch" },
+      { kind: "p", text: "Tap \"Log Activity\" (or the quick call/text icon on any row) to record a call, email, meeting, or a booked event/fundraiser. Booked events and fundraisers can carry the actual revenue they brought in — enter it once the event happens. Every touch resets that contact's follow-up clock." },
+      { kind: "h", text: "Never let a relationship go cold" },
+      { kind: "list", items: [
+        "Active connections are ones you've touched in the last 30 days. Anything 30+ days quiet — or never contacted — gets an orange \"Needs Follow-up\" badge.",
+        "The list sorts \"Needs Follow-up First\" by default, so the relationships slipping away are always at the top. Tap the Needs Follow-up card to filter to just those.",
+        "When you log an activity, tick \"Create a follow-up task?\" to schedule a reminder — Wingman emails you that morning so you circle back.",
+      ] },
+      { kind: "h", text: "Set goals (owner)" },
+      { kind: "p", text: "Under Settings → Partners, the account owner sets each store's quarterly targets — new contacts, community events, fundraisers, and how many connections to keep warm. Set one default for all stores and override any store that's different. The goal-progress cards on the Partners page fill against these." },
+      { kind: "image", src: "/help/partners-goals.png", alt: "The Partners goals editor in Settings, with a default row and per-store overrides.", caption: "Settings → Partners — quarterly goals, with an all-stores default and per-store overrides." },
+      { kind: "h", text: "The monthly report" },
+      { kind: "p", text: "On the 1st of each month (8am in each store's timezone), Wingman emails a leadership rollup across all stores to the owner and your report email, and sends each manager their store's metrics plus a \"hit list\" of the fading contacts to call that week. Set the report email under Settings → Partners; set each store's timezone under Settings → Locations. You can turn either email off under Settings → Notifications." },
+      { kind: "tip", text: "The fastest way to work Partners: open it, read the top of the list (your stalest relationships), and knock out a few quick call/text logs. That single habit is what turns local businesses into steady revenue." },
+    ],
+    links: [{ label: "Guest Bounce Back", href: "/help/guest-bounce-back" }],
+  },
+  {
     slug: "reporting",
     title: "Reporting",
     summary: "Every section's numbers in one view, over the date range you pick.",
@@ -805,6 +838,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["billing", "payment", "card", "statement", "the maverick agency", "past due", "invoice"],
     body: [
       { kind: "p", text: "Billing lives under Settings → Billing and is only visible to the account owner. Pricing is {{firstPrice}} for your first location plus {{addlPrice}} per additional location, billed monthly." },
+      { kind: "image", src: "/help/billing.png", alt: "The Billing settings screen showing the card on file, the accounting-email field, and the cancel option.", caption: "Settings → Billing — your card, accounting email, and cancel/resume, owner-only." },
       { kind: "note", text: "Billing is handled by The Maverick Agency — charges appear on your statement as \"The Maverick Agency.\"" },
       { kind: "h", text: "Receipts & accounting email" },
       { kind: "p", text: "Every successful payment emails a receipt to the account owner(s). To also send receipts and invoices to your bookkeeper, add an email under Settings → Billing → \"Send invoices & receipts to.\" Leave it blank to keep receipts owner-only." },
@@ -823,6 +857,7 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Wingman has a small API so your POS or a Zapier automation can keep it in sync — for example, pushing weekly numbers into the Business Health card and Revenue Growth Planner, syncing guests, or updating the menu." },
       { kind: "button", label: "Open the Developer Guide", href: "/api-guide", external: true },
+      { kind: "image", src: "/help/api-access.png", alt: "The API access screen showing API keys and the Developer Guide button.", caption: "Settings → API access — create keys and open the Developer Guide." },
       { kind: "diagram", name: "pos-sync", caption: "Your POS or a Zap pushes data through the API into each Wingman tool." },
       { kind: "steps", items: [
         "Go to Settings → API access (Super Admin only).",

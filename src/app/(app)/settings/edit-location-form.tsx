@@ -9,7 +9,18 @@ import { updateLocation, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
-type LocationDetails = { id: string; name: string; address: string; phone: string; email: string };
+// Common US timezones (plus a couple of others) for the store's report time.
+const TIMEZONES = [
+  ["America/New_York", "Eastern (New York)"],
+  ["America/Chicago", "Central (Chicago)"],
+  ["America/Denver", "Mountain (Denver)"],
+  ["America/Phoenix", "Mountain – no DST (Phoenix)"],
+  ["America/Los_Angeles", "Pacific (Los Angeles)"],
+  ["America/Anchorage", "Alaska (Anchorage)"],
+  ["Pacific/Honolulu", "Hawaii (Honolulu)"],
+] as const;
+
+type LocationDetails = { id: string; name: string; address: string; phone: string; email: string; timezone: string };
 
 export function EditLocationForm({ location }: { location: LocationDetails }) {
   const [open, setOpen] = useState(false);
@@ -41,6 +52,15 @@ export function EditLocationForm({ location }: { location: LocationDetails }) {
               </Field>
               <Field label="Phone">
                 <input name="phone" type="tel" defaultValue={location.phone} className={inputClass} />
+              </Field>
+              <Field label="Timezone (for reports)">
+                <select name="timezone" defaultValue={location.timezone || "America/New_York"} className={inputClass}>
+                  {TIMEZONES.map(([v, label]) => (
+                    <option key={v} value={v}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </Field>
             </div>
 
