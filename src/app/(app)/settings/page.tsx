@@ -25,6 +25,8 @@ import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
 import { DirectIntegrations, type SquareConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
+import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
+import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -115,6 +117,23 @@ export default async function SettingsPage() {
   const firstD = Math.round((orgPricing?.plan_first_cents ?? pricing.firstCents) / 100);
   const addlD = Math.round((orgPricing?.custom_addl_location_cents ?? orgPricing?.plan_addl_cents ?? pricing.addlCents) / 100);
   const monthlyTotal = locations.length > 0 ? firstD + (locations.length - 1) * addlD : 0;
+
+  // Card on file for subscription billing (Global Payments). Safe columns only —
+  // the stored payment token is never selected to the browser.
+  const { data: pmRow } = await admin
+    .from("billing_payment_methods")
+    .select("card_brand, card_last4, card_exp_month, card_exp_year")
+    .eq("org_id", profile.orgId)
+    .maybeSingle();
+  const billingCard: BillingCardInfo = pmRow
+    ? {
+        brand: (pmRow as { card_brand: string | null }).card_brand,
+        last4: (pmRow as { card_last4: string | null }).card_last4,
+        expMonth: (pmRow as { card_exp_month: number | null }).card_exp_month,
+        expYear: (pmRow as { card_exp_year: number | null }).card_exp_year,
+      }
+    : null;
+  const gpIsConfigured = gpConfigured();
 
   const teamContent = (
     <div className="flex flex-col gap-6">
@@ -283,23 +302,34 @@ export default async function SettingsPage() {
               owner.
             </p>
           )}
-          <div className="flex items-center gap-2 mb-4">
-            <CreditCard size={16} className={cardOnFile ? "text-ink" : "text-muted"} />
-            <span className={cardOnFile ? "text-sm text-ink" : "text-sm text-muted"}>
-              {cardOnFile ?? "No payment method on file"}
-            </span>
-          </div>
-          {billingPortalUrl ? (
-            <a
-              href={billingPortalUrl}
-              className="inline-flex items-center rounded-lg bg-brick text-white text-sm font-semibold px-4 py-2 hover:opacity-90"
-            >
-              Update payment method
-            </a>
+          {gpIsConfigured ? (
+            <GlobalPaymentsCard
+              configured={gpIsConfigured}
+              isSandbox={gpIsSandbox()}
+              card={billingCard}
+              testCards={GP_TEST_CARDS.map((c) => ({ brand: c.brand, number: c.number, exp: c.exp, cvv: c.cvv }))}
+            />
           ) : (
-            <span className="text-xs text-muted-2">
-              Payment processing is being set up — card management will appear here soon.
-            </span>
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard size={16} className={cardOnFile ? "text-ink" : "text-muted"} />
+                <span className={cardOnFile ? "text-sm text-ink" : "text-sm text-muted"}>
+                  {cardOnFile ?? "No payment method on file"}
+                </span>
+              </div>
+              {billingPortalUrl ? (
+                <a
+                  href={billingPortalUrl}
+                  className="inline-flex items-center rounded-lg bg-brick text-white text-sm font-semibold px-4 py-2 hover:opacity-90"
+                >
+                  Update payment method
+                </a>
+              ) : (
+                <span className="text-xs text-muted-2">
+                  Payment processing is being set up — card management will appear here soon.
+                </span>
+              )}
+            </>
           )}
           <BillingEmailForm billingEmail={org?.billing_email ?? null} />
           <BillingCancel

@@ -13,6 +13,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/cron/billing-charge",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/cron/support-cleanup",
       "schedule": "0 5 * * *"
     },
