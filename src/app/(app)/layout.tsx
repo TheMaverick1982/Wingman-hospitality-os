@@ -15,6 +15,7 @@ import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoTour } from "@/components/demo/demo-tour";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { FirstLoginLanguage } from "@/components/app-shell/first-login-language";
+import { CloverFinalize } from "@/components/app-shell/clover-finalize";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -38,6 +39,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const cookieStore = await cookies();
   const isImpersonating = Boolean(cookieStore.get("wingman_impersonator_refresh")?.value);
+  // A Clover App-Market install waiting to be linked to this org after sign-in.
+  const hasPendingClover = Boolean(cookieStore.get("clover_pending")?.value);
 
   // Which locations this member can switch between in the top bar.
   const canSpanLocations = isSuperAdmin || profile.allLocations || profile.accessibleLocationIds.length > 0;
@@ -107,6 +110,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AssistantWidget />
       {profile.isDemoSandbox && <DemoTour email={profile.demoLeadEmail} />}
       {!profile.languageChosen && <FirstLoginLanguage />}
+      {hasPendingClover && <CloverFinalize />}
     </div>
   );
 }
