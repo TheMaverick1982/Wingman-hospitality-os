@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown, Eye } from "lucide-react";
+import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown, Eye, Lock } from "lucide-react";
 import type { Department } from "@/lib/constants";
 import { MODE_LABEL } from "@/lib/tests";
 import { proposeTest, proposeTestFromTraining, applyTest, createExampleTest, deleteTest, duplicateTest, setTestArchived, type ProposeState, type ProposedDay } from "./actions";
@@ -24,6 +24,7 @@ type TestListRow = {
   questions: number;
   assigned: number;
   passed: number;
+  brand_locked?: boolean;
 };
 
 function QuestionPreview({ q }: { q: ProposedDay["questions"][number] }) {
@@ -283,15 +284,22 @@ export function TestsClient({ tests, archived = [], activeDepartments, canEdit }
                   <span className="text-[11.5px] font-semibold text-charcoal-2 bg-paper rounded-full px-2.5 py-0.5">Pass {t.pass_pct}%</span>
                   <span className="text-[11.5px] font-semibold text-charcoal-2 bg-paper rounded-full px-2.5 py-0.5">{t.target_departments.length ? t.target_departments.join(", ") : "All roles"}</span>
                   {t.rotates_monthly && <span className="text-[11.5px] font-semibold text-[#B45309] bg-[#FDF3E1] rounded-full px-2.5 py-0.5">Monthly</span>}
+                  {t.brand_locked && <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-ink bg-paper border border-line rounded-full px-2.5 py-0.5"><Lock size={11} /> Brand standard</span>}
                 </div>
                 {canEdit && (
                   <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-line">
                     <span className="text-[12.5px] text-muted">{t.assigned > 0 ? `${t.passed}/${t.assigned} passed` : "Not assigned yet"}</span>
                     <div className="flex items-center gap-2.5">
-                      <button onClick={() => { const name = prompt("Name for the copy", `${t.title} (copy)`); if (name === null) return; startApply(async () => { await duplicateTest(t.id, name || undefined); router.refresh(); }); }} title="Duplicate" className="text-muted-2 hover:text-brick"><Copy size={14} /></button>
-                      <button onClick={() => startApply(async () => { await setTestArchived(t.id, true); router.refresh(); })} title="Archive" className="text-muted-2 hover:text-brick"><Archive size={14} /></button>
+                      {t.brand_locked ? (
+                        <span className="text-[12px] text-muted-2 mr-1">Set by your franchisor — assign it, but it can&apos;t be edited.</span>
+                      ) : (
+                        <>
+                          <button onClick={() => { const name = prompt("Name for the copy", `${t.title} (copy)`); if (name === null) return; startApply(async () => { await duplicateTest(t.id, name || undefined); router.refresh(); }); }} title="Duplicate" className="text-muted-2 hover:text-brick"><Copy size={14} /></button>
+                          <button onClick={() => startApply(async () => { await setTestArchived(t.id, true); router.refresh(); })} title="Archive" className="text-muted-2 hover:text-brick"><Archive size={14} /></button>
+                          <Link href={`/training/tests/${t.id}`} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit</Link>
+                        </>
+                      )}
                       <Link href={`/training/tests/${t.id}/preview`} title="Preview as staff see it" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 hover:text-brick"><Eye size={13} /> Preview</Link>
-                      <Link href={`/training/tests/${t.id}`} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">Edit</Link>
                       <Link href={`/training/tests/${t.id}/assign`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors">
                         <Users size={13} /> Assign &amp; results
                       </Link>
