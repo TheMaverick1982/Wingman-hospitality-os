@@ -163,6 +163,21 @@ export default async function SalesTrainingPage() {
         <span className="text-brick text-sm font-semibold shrink-0 group-hover:translate-y-0.5 transition-transform">Jump to primer ↓</span>
       </a>
 
+      {/* Certification CTA */}
+      <a
+        href="/admin/sales-training/certification"
+        className="group flex items-center justify-between gap-4 bg-ink text-white rounded-2xl px-6 py-4 hover:opacity-95 transition-opacity"
+      >
+        <div className="min-w-0">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#4D97FF] mb-0.5">Prove it</div>
+          <div className="text-[15px] font-semibold">Take the certification test</div>
+          <div className="text-[13px] text-white/70 mt-0.5">
+            An AI-generated quiz + live roleplay drawn from everything below. Updates itself whenever this training changes.
+          </div>
+        </div>
+        <span className="text-[#4D97FF] text-sm font-semibold shrink-0 group-hover:translate-x-0.5 transition-transform">Start →</span>
+      </a>
+
       {/* Golden rules */}
       <section className="flex flex-col gap-4">
         <SectionHeading eyebrow="The mindset" title="Five rules for every demo" />
