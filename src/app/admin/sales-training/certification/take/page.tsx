@@ -13,14 +13,13 @@ export default async function TakeCertPage() {
   const profile = await getCurrentProfile();
   if (!profile?.isPlatformAdmin) redirect("/dashboard");
 
-  const version = await getActiveCertVersion();
+  const { version, error } = await getActiveCertVersion();
   if (!version) {
     return (
       <div className="max-w-xl bg-white border border-line rounded-2xl p-6 shadow-sm">
         <h1 className="text-lg font-bold text-ink mb-1">Test not ready</h1>
-        <p className="text-sm text-muted">
-          The certification couldn&apos;t be generated right now (the AI may not be configured, or it hit a hiccup). Try again in a moment.
-        </p>
+        <p className="text-sm text-muted">{error ?? "The certification couldn't be generated right now. Try again in a moment."}</p>
+        <Link href="/admin/sales-training/certification/take" className="inline-block mt-4 mr-4 text-white bg-brick rounded-full px-4 py-2 font-semibold text-sm">Try again</Link>
         <Link href="/admin/sales-training/certification" className="inline-block mt-4 text-brick font-semibold text-sm">← Back</Link>
       </div>
     );
