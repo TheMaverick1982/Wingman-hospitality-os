@@ -200,9 +200,15 @@ the new counters start.
 
 ## 10. Ties into existing systems
 
-- **Scheduled reminders / `send-scheduled-reminders` cron** — follow-up tasks are
-  reminders with a `partner_contact_id` reference; flow through the existing daily
-  cron into the manager's task list. No new delivery infra.
+- **Follow-up tasks / reminders** — NOTE (found during build): there is no single
+  generic "scheduled-reminders" table or `send-scheduled-reminders` cron. The
+  codebase uses a **per-feature cron** pattern (each under `src/app/api/cron/*`:
+  interview-reminders, test-reminders, commission-reminders, …) plus the shared
+  `notifications.ts` on/off registry and `sendEmail`. So follow-up tasks will get
+  a dedicated `partner_follow_ups` table + a `partners-followups` cron that emails
+  the assigned manager when one is due — same shape as every other reminder here.
+  Built in PR 2/3 (see revised build order). Small deviation from the plan's
+  wording, same outcome.
 - **Bounce Back patterns** — KPI grid, responsive list/card layout, mobile
   ordering fix, activity-logging muscle memory reused wholesale.
 - **Admin CRM (`/admin/crm`)** — that's the *platform* pipeline (Wingman → restaurants).
