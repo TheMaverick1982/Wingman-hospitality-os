@@ -199,7 +199,7 @@ export default async function SettingsPage() {
                 </span>
               )}
               <EditLocationForm
-                location={{ id: l.id, name: l.name, address: l.address ?? "", phone: l.phone ?? "", email: l.email ?? "" }}
+                location={{ id: l.id, name: l.name, address: l.address ?? "", phone: l.phone ?? "", email: l.email ?? "", timezone: l.timezone ?? "America/New_York" }}
               />
               {locations.length > 1 && <DeleteLocationButton locationId={l.id} locationName={l.name} />}
             </div>

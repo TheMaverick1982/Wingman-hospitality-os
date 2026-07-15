@@ -51,6 +51,14 @@
     {
       "path": "/api/cron/test-reminders",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/partner-followups",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/partner-monthly-report",
+      "schedule": "0 * 1 * *"
     }
   ]
 }

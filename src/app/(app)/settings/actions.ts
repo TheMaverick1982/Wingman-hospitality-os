@@ -387,12 +387,25 @@ export async function updateLocation(_prev: ActionState, formData: FormData): Pr
   const address = String(formData.get("address") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const email = String(formData.get("email") || "").trim();
+  // Timezone drives when this store's monthly Partners report is sent (8am
+  // local). Validated against the runtime's tz database; unknown values are
+  // ignored so a bad value can't break the save.
+  const tzRaw = String(formData.get("timezone") || "").trim();
+  let timezone: string | null = null;
+  if (tzRaw) {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: tzRaw });
+      timezone = tzRaw;
+    } catch {
+      timezone = null;
+    }
+  }
 
   const supabase = await createClient();
   // Only these fields are updatable, and only within the caller's own org.
   const { error } = await supabase
     .from("locations")
-    .update({ name, address, phone, email })
+    .update({ name, address, phone, email, ...(timezone ? { timezone } : {}) })
     .eq("id", id)
     .eq("org_id", profile.orgId);
   if (error) return { error: error.message };

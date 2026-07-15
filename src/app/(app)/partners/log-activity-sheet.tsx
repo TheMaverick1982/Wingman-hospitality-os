@@ -25,7 +25,10 @@ export function LogActivitySheet({
   const [state, formAction, pending] = useActionState(logActivity, initialState);
   useCloseOnSuccess(pending, state.error, onClose);
   const [type, setType] = useState<PartnerActivityType>("call_text");
+  const [followUp, setFollowUp] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
+  // Default a follow-up two weeks out.
+  const inTwoWeeks = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
   const isEvent = type === "event_booked" || type === "fundraiser_booked";
 
   // Close on Escape for keyboard users.
@@ -114,6 +117,32 @@ export function LogActivitySheet({
               className={inputClass}
             />
           </label>
+
+          <div className="rounded-xl border border-line p-3.5">
+            <label className="flex items-center gap-2.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                name="create_followup"
+                checked={followUp}
+                onChange={(e) => setFollowUp(e.target.checked)}
+                className="accent-brick w-4 h-4"
+              />
+              <span className="font-semibold text-ink">Create a follow-up task?</span>
+            </label>
+            {followUp && (
+              <div className="mt-3 flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-ink">Remind me on</span>
+                  <input type="date" name="followup_date" defaultValue={inTwoWeeks} className={inputClass} />
+                </label>
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-ink">Task note</span>
+                  <input name="followup_notes" placeholder="e.g. Confirm the catering headcount" className={inputClass} />
+                </label>
+                <p className="text-xs text-muted-2">We&apos;ll email you a reminder that morning.</p>
+              </div>
+            )}
+          </div>
 
           {state.error && <p className="text-sm text-brick">{state.error}</p>}
           <div className="flex justify-end gap-2 mt-1">
