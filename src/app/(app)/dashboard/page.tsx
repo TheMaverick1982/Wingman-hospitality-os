@@ -75,9 +75,10 @@ export default async function DashboardPage({
   });
 
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
-  // Momentum is about ongoing usage, so it's only meaningful (and only shown)
-  // once the account is set up — during setup, Start Here drives the habits.
-  const momentum = isSuperAdmin && onboarding?.allDone ? await getMomentum(effectiveLocation) : null;
+  // Momentum drives the "this week" verdict's next-move even before setup is
+  // finished; the full Momentum CARD is still held back until setup is done
+  // (during setup, Start Here drives the habits).
+  const momentum = isSuperAdmin ? await getMomentum(effectiveLocation) : null;
   const weeklyMoves = isSuperAdmin && onboarding?.allDone ? await getWeeklyMoves() : null;
   const supabase = await createClient();
 
@@ -369,11 +370,11 @@ export default async function DashboardPage({
         </Link>
       )}
 
-      {!isEmptyDashboard && momentum && stageCounts.total > 0 && trend && (
+      {!isEmptyDashboard && stageCounts.total > 0 && trend && (
         <WeekVerdict repeatRate={trend.repeatNow} repeatDelta={trend.repeatDelta} momentum={momentum} />
       )}
 
-      {momentum && <MomentumCard momentum={momentum} />}
+      {momentum && onboarding?.allDone && <MomentumCard momentum={momentum} />}
 
       {weeklyMoves && (
         <WeeklyMovesCard
