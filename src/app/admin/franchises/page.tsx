@@ -12,7 +12,7 @@ export default async function AdminFranchisesPage() {
 
   const admin = createAdminClient();
   const [{ data: groups }, { data: memberships }, { data: admins }, { data: orgs }, { data: supers }] = await Promise.all([
-    admin.from("franchise_groups").select("id, name, billing_mode").order("created_at", { ascending: false }),
+    admin.from("franchise_groups").select("id, name, billing_mode, archived_at").order("created_at", { ascending: false }),
     admin.from("franchise_memberships").select("group_id, org_id, organizations(name)").eq("status", "active"),
     admin.from("franchise_admins").select("group_id, user_id, role, profiles(full_name)"),
     admin.from("organizations").select("id, name, is_demo, franchise_group_id").order("name"),
@@ -32,7 +32,7 @@ export default async function AdminFranchisesPage() {
     adminsByGroup.set(a.group_id, arr);
   }
 
-  const groupRows = (groups ?? []) as { id: string; name: string; billing_mode: string }[];
+  const groupRows = (groups ?? []) as { id: string; name: string; billing_mode: string; archived_at: string | null }[];
   const billingByGroup = new Map(
     await Promise.all(groupRows.map(async (g) => [g.id, await getGroupBillingSummary(g.id)] as const)),
   );
@@ -43,6 +43,7 @@ export default async function AdminFranchisesPage() {
       id: g.id,
       name: g.name,
       billingMode: g.billing_mode,
+      archived: Boolean(g.archived_at),
       members: membersByGroup.get(g.id) ?? [],
       admins: adminsByGroup.get(g.id) ?? [],
       totalMonthlyCents: summary?.totalMonthlyCents ?? 0,

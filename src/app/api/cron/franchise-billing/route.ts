@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
   const nowIso = new Date().toISOString();
   const month = nowIso.slice(0, 7); // YYYY-MM
 
-  const { data: groups } = await admin.from("franchise_groups").select("id, name").eq("billing_mode", "central");
+  // Active central groups only — archived (soft-cancelled) groups are not charged.
+  const { data: groups } = await admin.from("franchise_groups").select("id, name").eq("billing_mode", "central").is("archived_at", null);
   const results: string[] = [];
 
   for (const g of (groups ?? []) as { id: string; name: string }[]) {
