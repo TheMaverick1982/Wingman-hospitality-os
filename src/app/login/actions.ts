@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isDemoEmail } from "@/lib/demo/constants";
 import { ensureDemoUser, reseedDemoOrg } from "@/lib/demo/reseed";
 import { consumeRateLimit, LOGIN_EMAIL_LIMIT, LOGIN_IP_LIMIT } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export type LoginState = { error: string | null };
 
@@ -27,6 +28,11 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     : await consumeRateLimit(`login-email:${email.toLowerCase()}`, LOGIN_EMAIL_LIMIT.max, LOGIN_EMAIL_LIMIT.windowSeconds);
   if (!ipOk || !emailOk) {
     return { error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
+  // Bot check (fails open when TURNSTILE_SECRET_KEY isn't configured).
+  if (!(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null, ip))) {
+    return { error: "Couldn't verify you're human — please try again." };
   }
 
   const supabase = await createClient();
