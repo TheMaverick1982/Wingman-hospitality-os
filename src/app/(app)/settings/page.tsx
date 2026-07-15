@@ -62,7 +62,7 @@ export default async function SettingsPage() {
   const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
     getOrgLocations(),
-    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email").single(),
+    supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
     supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getActiveDepartments(),
@@ -108,8 +108,12 @@ export default async function SettingsPage() {
     staffCountByLocation.set(m.location_id, (staffCountByLocation.get(m.location_id) ?? 0) + 1);
   }
   const pricing = await getPlatformPricing();
-  const firstD = Math.round(pricing.firstCents / 100);
-  const addlD = Math.round(pricing.addlCents / 100);
+  // Show the customer the rate they're actually on. Existing orgs are locked to
+  // the price they signed up at (grandfathered); only never-locked orgs follow
+  // the live platform price. A per-org negotiated additional rate still applies.
+  const orgPricing = org as { custom_addl_location_cents: number | null; plan_first_cents: number | null; plan_addl_cents: number | null } | null;
+  const firstD = Math.round((orgPricing?.plan_first_cents ?? pricing.firstCents) / 100);
+  const addlD = Math.round((orgPricing?.custom_addl_location_cents ?? orgPricing?.plan_addl_cents ?? pricing.addlCents) / 100);
   const monthlyTotal = locations.length > 0 ? firstD + (locations.length - 1) * addlD : 0;
 
   const teamContent = (

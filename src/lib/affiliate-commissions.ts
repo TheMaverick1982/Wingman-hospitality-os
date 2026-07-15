@@ -22,9 +22,12 @@ function monthStartISO(d = new Date()): string {
 export async function monthlySubscriptionCents(admin: SupabaseClient, orgId: string): Promise<number> {
   const [{ count }, { data: org }] = await Promise.all([
     admin.from("locations").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-    admin.from("organizations").select("custom_monthly_cents, custom_addl_location_cents").eq("id", orgId).maybeSingle(),
+    admin.from("organizations").select("custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents").eq("id", orgId).maybeSingle(),
   ]);
-  return effectiveMonthlyCents(org as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null } | null, count ?? 1);
+  return effectiveMonthlyCents(
+    org as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; plan_first_cents: number | null; plan_addl_cents: number | null } | null,
+    count ?? 1,
+  );
 }
 
 // Record one successful payment for a referred org: approve the previously-held

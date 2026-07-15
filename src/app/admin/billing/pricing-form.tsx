@@ -28,6 +28,13 @@ export function PricingForm({ firstDollars, addlDollars }: { firstDollars: numbe
         </div>
       </div>
       <p className="text-[12.5px] text-muted-2">This updates the price everywhere it shows — the pricing page, calculator, billing, help, and sales materials.</p>
+      <div className="rounded-xl bg-olive/5 border border-olive/20 px-3.5 py-3">
+        <p className="text-[12.5px] leading-relaxed text-charcoal-2">
+          <span className="font-semibold text-ink">Existing customers are protected.</span> Changing these rates only
+          affects <span className="font-semibold text-ink">new signups</span> from here on. Every current organization
+          is locked to the price it signed up at, so no one already paying you gets re-priced.
+        </p>
+      </div>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark disabled:opacity-50">
           {pending ? "Saving…" : "Save pricing"}
