@@ -351,6 +351,7 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Continuing education — training that repeats every month" },
       { kind: "p", text: "Great hospitality is a habit, not a one-time program. On the Training page, the \"Make great hospitality a habit\" banner opens a dedicated Continuing Education area for building short monthly refreshers." },
+      { kind: "image", src: "/help/continuing-education.png", alt: "The Continuing Education builder showing the audience picker, role-aware idea chips, sharpening questions, and the monthly frequency banner.", caption: "Continuing Education — build a monthly refresher with AI, for all staff or a specific role." },
       { kind: "steps", items: [
         "Click \"Set up continuing education\" on the Training page.",
         "Use \"Build a monthly refresher with AI\": pick who it's for (all staff for the shared hospitality standard, or a specific role for department add-ons like drink specs or plating), answer a couple of quick questions, and tap the role-aware idea chips to spark it.",
