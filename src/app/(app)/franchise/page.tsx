@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, TrendingUp, ShieldCheck, AlertTriangle, Library, ArrowRight } from "lucide-react";
+import { Building2, TrendingUp, ShieldCheck, AlertTriangle, Library, ArrowRight, CreditCard } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getFranchiseRollup, type FranchiseeMetrics } from "@/lib/franchise";
+import { getGroupBillingSummary } from "@/lib/franchise-billing";
 
 export const metadata = { title: "Franchise oversight — Wingman" };
 
@@ -22,6 +23,10 @@ export default async function FranchisePage() {
   if (!rollup) redirect("/dashboard");
 
   const { group, members, totals } = rollup;
+  // Billing visibility is admin-only (viewers see compliance, not money).
+  const billing = profile.franchiseRole === "admin" ? await getGroupBillingSummary(profile.franchiseGroupId) : null;
+  const billStatus = new Map((billing?.members ?? []).map((m) => [m.orgId, m]));
+  const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
   return (
     <>
@@ -106,9 +111,58 @@ export default async function FranchisePage() {
         </div>
       </div>
 
+      {/* Billing (admin only) */}
+      {billing && (
+        <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-line flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <CreditCard size={16} className="text-brick" />
+              <div>
+                <div className="text-[15px] font-semibold text-ink">Billing</div>
+                <div className="text-[12.5px] text-muted-2">
+                  {billing.mode === "central"
+                    ? "Franchisor pays for all — one rolled-up charge each month."
+                    : "Each franchisee pays their own card. You see status, not their card."}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-2">
+                {billing.mode === "central" ? "Your monthly charge" : "Combined across the brand"}
+              </div>
+              <div className="text-[22px] font-bold text-ink tabular-nums leading-tight">{money(billing.totalMonthlyCents)}<span className="text-[12px] font-medium text-muted-2">/mo</span></div>
+            </div>
+          </div>
+          {billing.mode === "central" && !billing.ownerHasCard && (
+            <div className="px-6 py-3 bg-gold-tint border-b border-[#F0D9A8] text-[13px] text-[#8a5a00]">
+              Add a card on your own <Link href="/settings" className="underline font-semibold">Settings → Billing</Link> to activate the group charge — until then nothing is billed.
+            </div>
+          )}
+          <div className="divide-y divide-line">
+            {billing.members.map((m) => {
+              const cancel = m.billingStatus === "canceled";
+              const past = m.billingStatus === "past_due";
+              return (
+                <div key={m.orgId} className="flex items-center justify-between gap-3 px-6 py-3">
+                  <span className="text-[14px] text-ink truncate">{m.name}</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[13.5px] font-semibold text-ink tabular-nums">{m.isFree ? "Free" : `${money(m.monthlyCents)}/mo`}</span>
+                    {billing.mode === "distributed" && !m.isFree && (
+                      <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${past ? "text-[#B42318] bg-[#FDECEA]" : cancel ? "text-muted-2 bg-paper" : "text-[#15803d] bg-[#E7F6EC]"}`}>
+                        {past ? "Past due" : cancel ? "Canceling" : "Active"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <p className="text-[12px] text-muted-2">
-        Phase 1 — oversight. Brand-standard training/hiring push-down and group billing are coming next
-        (see the roadmap). Franchisees keep full control of their own account.
+        Oversight, brand-standard push-down, and group billing. Franchisees keep full control of their own account —
+        their guest contact details never leave their org.
       </p>
     </>
   );

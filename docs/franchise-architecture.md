@@ -4,10 +4,16 @@ How Wingman supports a **franchisor** who wants every **franchisee** on the same
 training, hiring, and standards — while each franchisee runs (and optionally
 pays for) their own account.
 
-Status: **Phases 1–2 shipped.** Phase 1 = group + membership + franchisor
+Status: **Phases 1–3 shipped.** Phase 1 = group + membership + franchisor
 oversight console (platform-admin provisioned). Phase 2 = Brand Library —
 push a training test to every franchisee, locked (DB-trigger enforced) or
-adaptable, with re-push to update. Phase 3 (group billing) still proposed.
+adaptable, with re-push to update. Phase 3 = group billing — distributed
+(each franchisee pays their own card) or central (`billed_by_group` skips the
+per-org charge; one rolled-up charge to the group owner's card via the
+`franchise-billing` cron). Also: **Invite a franchisor** provisions a brand-new
+franchisor's comp HQ login (no license purchase), and a franchisor who runs
+**corporate-owned locations** can flip their HQ to a paying account that bills
+those per-location on top of the franchisee roll-up.
 
 **Confirmed decisions:**
 1. **Provisioning** — platform-admin only (Admin → Franchises). Invisible to every

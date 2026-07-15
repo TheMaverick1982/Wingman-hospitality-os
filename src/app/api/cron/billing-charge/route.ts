@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     try {
       const { data: orgRow } = await admin
         .from("organizations")
-        .select("name, is_free_account, billing_status, current_period_end, custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents")
+        .select("name, is_free_account, billing_status, current_period_end, custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents, billed_by_group")
         .eq("id", orgId)
         .maybeSingle();
       const org = orgRow as
@@ -50,9 +50,12 @@ export async function GET(request: NextRequest) {
             custom_addl_location_cents: number | null;
             plan_first_cents: number | null;
             plan_addl_cents: number | null;
+            billed_by_group: boolean;
           }
         | null;
       if (!org || org.is_free_account) { results.push(`skip-free:${orgId}`); continue; }
+      // Covered by a central franchise group — charged as part of the group roll-up, not individually.
+      if (org.billed_by_group) { results.push(`skip-group:${orgId}`); continue; }
       if (org.billing_status === "canceled") { results.push(`skip-canceled:${orgId}`); continue; }
       // Not due yet.
       if (org.current_period_end && org.current_period_end > nowIso) { results.push(`not-due:${orgId}`); continue; }

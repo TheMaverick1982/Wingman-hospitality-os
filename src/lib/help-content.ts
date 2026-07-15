@@ -32,7 +32,8 @@ export type HelpIcon =
   | "clipboard"
   | "trending"
   | "plug"
-  | "settings";
+  | "settings"
+  | "building";
 
 export type HelpCategory = { id: string; title: string; description: string; icon: HelpIcon };
 
@@ -54,6 +55,7 @@ export const CATEGORIES: HelpCategory[] = [
   { id: "growth", title: "Growth & menu", description: "Revenue planning and menu engineering.", icon: "layout" },
   { id: "admin", title: "Account & settings", description: "Team, locations, billing, and your login.", icon: "settings" },
   { id: "integrations", title: "Integrations & API", description: "Connect your POS and automations.", icon: "plug" },
+  { id: "franchise", title: "Franchise", description: "For multi-unit brands: oversight, brand standards, and group billing.", icon: "building" },
 ];
 
 export const ARTICLES: HelpArticle[] = [
@@ -963,6 +965,33 @@ export const ARTICLES: HelpArticle[] = [
         "If an account exists, you'll get a reset link by email. Open it and set a new password.",
       ] },
       { kind: "note", text: "For security we show the same message whether or not the email has an account, so the page can't be used to discover who has one." },
+    ],
+  },
+  {
+    slug: "franchise-overview",
+    title: "Franchise groups: oversight, brand standards & billing",
+    summary: "How a multi-unit brand keeps every location on one standard — and who pays.",
+    categoryId: "franchise",
+    keywords: ["franchise", "franchisee", "franchisor", "group", "brand standard", "multi-unit", "oversight", "roll-up", "central billing", "corporate locations", "brand library"],
+    body: [
+      { kind: "p", text: "The Franchise tier sits one level above a normal account. A franchisor (the brand) links each franchisee's account into a group, sets the brand standard once, and sees how every location is holding it — while each franchisee keeps full control of their own account, team, and guests." },
+      { kind: "h", text: "Who sees what" },
+      { kind: "list", items: [
+        "Franchisor: a group console with each franchisee's compliance and outcomes — repeat rate, audit health, spot-check and sign-off cadence — plus a brand-wide roll-up and a 'needs attention' list.",
+        "Privacy: the franchisor sees compliance and aggregates only. A franchisee's raw guest contact details never leave their own account.",
+        "Franchisee: everything works exactly as a standalone account. The only difference is any brand-standard content the franchisor has pushed down.",
+      ] },
+      { kind: "h", text: "Brand standards (the Brand Library)" },
+      { kind: "p", text: "The franchisor authors training in their own account and pushes it to every franchisee — either Locked (a brand standard the franchisee uses but can't edit) or Adaptable (a starting point they can localize). Locked content shows a 'Brand standard' badge, and re-pushing publishes updates to everyone." },
+      { kind: "h", text: "Billing — two ways" },
+      { kind: "list", items: [
+        "Distributed — each franchisee pays their own card. The franchisor just gets visibility. This is the default and needs nothing extra.",
+        "Central — the franchisor pays for all: franchisees aren't charged individually, and one rolled-up monthly charge (the sum of every franchisee's price) goes to the franchisor's card.",
+      ] },
+      { kind: "note", text: "Switching a group to Central shows each franchisee a 'Billed by your franchise group' note in Settings → Billing — nothing is charged to them." },
+      { kind: "h", text: "If the franchisor also runs corporate stores" },
+      { kind: "p", text: "A franchisor who operates their own corporate-owned locations can pay for those directly, per-location, just like a franchisee — on top of any franchisee roll-up they cover. Both land on the same card as separate line items, shown in their Settings → Billing." },
+      { kind: "tip", text: "Franchise groups are set up for you by the Wingman team — including provisioning a brand-new franchisor who's never bought a license. Ask your rep to get your group started." },
     ],
   },
 ];
