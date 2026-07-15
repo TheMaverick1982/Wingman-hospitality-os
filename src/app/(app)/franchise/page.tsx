@@ -4,6 +4,7 @@ import { Building2, TrendingUp, ShieldCheck, AlertTriangle, Library, ArrowRight,
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getFranchiseRollup, type FranchiseeMetrics } from "@/lib/franchise";
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
+import { InviteFranchisee } from "./invite-franchisee";
 
 export const metadata = { title: "Franchise oversight — Wingman" };
 
@@ -47,16 +48,19 @@ export default async function FranchisePage() {
       </div>
 
       {profile.franchiseRole === "admin" && (
-        <Link
-          href="/franchise/library"
-          className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:border-brick transition-colors group shadow-sm"
-        >
-          <Library size={18} className="text-brick shrink-0" />
-          <span className="text-sm text-ink flex-1">
-            <span className="font-semibold">Brand Library</span> — push your training to every franchisee, locked or adaptable.
-          </span>
-          <ArrowRight size={15} className="text-muted-2 group-hover:text-brick transition-colors" />
-        </Link>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link
+            href="/franchise/library"
+            className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:border-brick transition-colors group shadow-sm"
+          >
+            <Library size={18} className="text-brick shrink-0" />
+            <span className="text-sm text-ink flex-1">
+              <span className="font-semibold">Brand Library</span> — push your training to every franchisee, locked or adaptable.
+            </span>
+            <ArrowRight size={15} className="text-muted-2 group-hover:text-brick transition-colors" />
+          </Link>
+          <InviteFranchisee />
+        </div>
       )}
 
       {/* Brand-wide rollup */}
