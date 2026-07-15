@@ -229,6 +229,7 @@ const WIPE_TABLES = [
   "partner_contacts",
   "audit_events",
   "square_connections",
+  "clover_connections",
   "billing_charges",
   "billing_payment_methods",
 ] as const;

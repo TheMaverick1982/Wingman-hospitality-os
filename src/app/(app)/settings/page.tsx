@@ -23,8 +23,9 @@ import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
-import { DirectIntegrations, type SquareConnection } from "./square-card";
+import { DirectIntegrations, type SquareConnection, type CloverConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
+import { cloverConfigured } from "@/lib/clover";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import type { ApiKeyRow } from "./api-actions";
@@ -395,6 +396,27 @@ export default async function SettingsPage() {
   const squareIsConfigured = squareConfigured();
   const squareSandboxToken = squareSandboxTokenAvailable();
 
+  // Clover connections (safe columns only — tokens are never selected).
+  const { data: cloverRows } = await admin
+    .from("clover_connections")
+    .select("merchant_id, merchant_name, connected_at, last_sync_at, last_sync_status")
+    .eq("org_id", profile.orgId)
+    .order("connected_at", { ascending: true });
+  const cloverConnections: CloverConnection[] = ((cloverRows ?? []) as {
+    merchant_id: string;
+    merchant_name: string;
+    connected_at: string;
+    last_sync_at: string | null;
+    last_sync_status: string | null;
+  }[]).map((c) => ({
+    merchantId: c.merchant_id,
+    merchantName: c.merchant_name ?? "",
+    connectedAt: c.connected_at,
+    lastSyncAt: c.last_sync_at ?? null,
+    lastSyncStatus: c.last_sync_status ?? null,
+  }));
+  const cloverIsConfigured = cloverConfigured();
+
   return (
     <>
       <div>
@@ -411,7 +433,13 @@ export default async function SettingsPage() {
           { key: "billing", label: "Billing", content: billingContent },
           { key: "api", label: "API access", content: (
             <div className="flex flex-col gap-6">
-              <DirectIntegrations configured={squareIsConfigured} connection={squareConnection} sandboxTokenAvailable={squareSandboxToken} />
+              <DirectIntegrations
+                configured={squareIsConfigured}
+                connection={squareConnection}
+                sandboxTokenAvailable={squareSandboxToken}
+                cloverConfigured={cloverIsConfigured}
+                cloverConnections={cloverConnections}
+              />
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>
           ) },
