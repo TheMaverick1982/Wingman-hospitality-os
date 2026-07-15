@@ -15,6 +15,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   UtensilsCrossed,
+  Handshake,
   Wand2,
   BarChart3,
   Settings,
@@ -41,6 +42,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[]
   { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
   { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
   { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
+  { href: "/partners", label: "Partners", icon: Handshake, section: "partners" },
   { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
   { href: "/staff", label: "Staff", icon: Users, section: "staff" },
 ];

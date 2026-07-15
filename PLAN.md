@@ -28,21 +28,20 @@ Uses the existing 3-tier `access_role` model (`super_admin` / `manager` /
 | **manager** | Scoped to the location(s) they're assigned to. A manager can oversee **multiple stores**. Sees and works only their assigned locations' contacts/activities. Receives a monthly Hit List for each store they own. |
 | **staff** (and `shift_lead`) | **No access.** Hidden in nav, blocked at the data layer. |
 
-**Multi-location managers:** the current schema ties a manager to a single
-`profiles.location_id` (their "home" store). Since it's common for one manager to
-oversee several stores, we add a **`manager_locations`** join table (see §3) that
-grants a manager access to additional locations. Their effective location set =
-`profiles.location_id` ∪ `manager_locations` rows. The owner assigns these in the
-team/people settings.
+**Multi-location managers (reuses existing infra):** the app already supports
+managers who oversee several stores — `profiles.all_locations`, the
+`profile_locations` join table, and the `can_access_location()` RLS helper (which
+already checks super_admin ∪ all_locations ∪ home `location_id` ∪
+`profile_locations`). The owner already assigns a manager to "All" or "Specific
+locations" in the team invite/edit forms (backed by `assign_team_member_profile`).
+So Partners needs **no new access table** — every Partners query just gates on
+`can_access_location(location_id)` and inherits full multi-location support.
 
 Enforced in two places so it can't leak:
-1. **Nav** hides the module for staff/shift_lead.
-2. **Supabase RLS** on every Partners table scopes to org, and for a manager to
-   their **assigned-location set** (home `location_id` + `manager_locations`);
-   `super_admin` bypasses the location filter and sees the full org. Owner "see
-   everything" is a database-level rule, not a UI toggle. RLS uses a
-   `manager_can_access_location(location_id)` helper so the same check is reused
-   everywhere.
+1. **Nav** hides the module for staff/shift_lead (via the permissions matrix).
+2. **Supabase RLS** on every Partners table scopes to org +
+   `can_access_location(location_id)`; `super_admin` bypasses the location filter
+   and sees the full org. Owner "see everything" is a database-level rule.
 
 ## 3. Data model (migration 0100)
 
@@ -78,14 +77,9 @@ Per (location, year, quarter) targets: `goal_new_contacts`, `goal_events`,
 `goal_fundraisers`, `goal_active_connections`. Org-wide default + per-location
 override (only stores that differ get a row). Authored by super_admin.
 
-### `manager_locations` (multi-store managers)
-Join table granting a manager access to stores beyond their home
-`profiles.location_id`: `id`, `organization_id`, `profile_id` (the manager),
-`location_id`, `created_at`, unique on (`profile_id`, `location_id`). A
-manager's effective location set = home `location_id` ∪ these rows. Backs the
-`manager_can_access_location()` RLS helper. Owner-managed in team/people
-settings. (General-purpose, but introduced with Partners since it's the first
-feature that needs it.)
+> **Multi-store managers:** no new table — reuses the existing
+> `profile_locations` + `all_locations` + `can_access_location()` infrastructure
+> and the team invite/edit "Specific locations" UI (see §2).
 
 ### `partner_metrics_snapshots`
 Frozen per (location, year, quarter): `total_contacts`, `new_contacts`,
@@ -136,8 +130,16 @@ way to create a `partner_contacts` row.
   schema returning `{ company_name, contact_name, title, email, phone, website,
   address }`, mapped onto `partner_contacts`. Reuses the existing Anthropic
   integration — no new OCR vendor, no new infra. ~pennies per scan.
-- **Confirm:** never saves blind; extracted fields pre-fill the Add Contact form
-  so a human always approves.
+- **No file retention:** the photo is sent to Claude for extraction only and is
+  **never stored** — not in Supabase storage, not on disk. It lives in memory
+  for the single extraction request and is discarded. Only the parsed text
+  fields persist.
+- **Mandatory confirm:** the scan **never auto-populates**. Extracted fields open
+  the Add Contact form pre-filled; the manager reviews/edits and must explicitly
+  Save before anything is written.
+- **"How you met" note:** the confirm form includes a short note field ("How you
+  met / context") that saves into the contact's `notes` — captures the human
+  detail (met at chamber mixer, referred by X) right when the card is scanned.
 
 ## 6. Goals — set by the Account Owner in Settings
 
@@ -228,11 +230,11 @@ the new counters start.
 Grouped into ~4 PRs so each merges clean and Vercel deploys in reviewable chunks.
 
 **PR 1 — Foundation & Contacts**
-1. Migration 0100: 4 Partners tables + `manager_locations` join table +
-   `last_activity_at` trigger + `manager_can_access_location()` helper + RLS
-   (org + manager multi-location scope; super_admin full org).
+1. Migration 0100: 4 Partners tables + `last_activity_at` trigger + RLS
+   (org + `can_access_location()`; super_admin full org). Multi-store manager
+   access reuses existing `profile_locations` — no new access table.
 2. Nav entry (role-gated: super_admin + manager; hidden from staff/shift_lead).
-   Owner UI to assign a manager to multiple stores (team/people settings).
+   Owner already assigns managers to multiple stores via existing team settings.
 3. Contacts tab: list, add/edit, location scoping, KPI cards.
 4. Log-Activity slide-out + `last_activity_at` denormalization + quick Log Call/Text.
 

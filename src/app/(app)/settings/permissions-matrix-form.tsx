@@ -20,6 +20,7 @@ const SECTION_LABELS: Record<Section, string> = {
   growth: "Revenue Growth Planner",
   menu: "Menu Engineering",
   audit: "Standout Audit",
+  partners: "Partners",
   reporting: "Reporting",
   settings: "Settings",
 };
