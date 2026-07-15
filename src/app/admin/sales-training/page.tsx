@@ -20,6 +20,7 @@ import {
   REFRAMES,
   NEVER_DO,
   CLOSE_CHECKLIST,
+  SYSTEM_REFERENCE,
   COMP_PLAN,
   COMP_RULES,
   AFFILIATE_CONTEXT,
@@ -361,6 +362,19 @@ export default async function SalesTrainingPage() {
           </ul>
         </section>
       </div>
+
+      {/* Know the system — feature reference for questions */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Know the system" title="Feature reference — for questions" sub="Not selling points — system details you should be able to answer when a prospect asks “does it do X?”. We add operational features here as they ship." />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {SYSTEM_REFERENCE.map((s) => (
+            <div key={s.name} className="bg-white border border-line rounded-2xl p-5">
+              <div className="text-[15px] font-semibold text-ink">{s.name}</div>
+              <div className="text-[13.5px] text-charcoal-2 mt-1.5 leading-[1.5]">{s.detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* How you're paid */}
       <section className="flex flex-col gap-4">
