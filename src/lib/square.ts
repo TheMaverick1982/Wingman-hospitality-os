@@ -35,6 +35,16 @@ export function squareConfigured(): boolean {
   return Boolean(SQUARE_APP_ID && SQUARE_APP_SECRET);
 }
 
+// A sandbox test-merchant access token, for validating the sync directly when
+// the browser OAuth flow isn't available (e.g. Square's sandbox authorize page
+// is down). Only ever honored outside production.
+export function squareSandboxTokenAvailable(): boolean {
+  return !IS_SANDBOX ? false : Boolean((process.env.SQUARE_ACCESS_TOKEN ?? "").trim());
+}
+export function squareSandboxToken(): string {
+  return (process.env.SQUARE_ACCESS_TOKEN ?? "").trim();
+}
+
 export function squareAuthorizeUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: SQUARE_APP_ID,

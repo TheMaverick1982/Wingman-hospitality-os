@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { PlugZap, RefreshCw, Check } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
-import { disconnectSquare, syncSquareNow } from "./square-actions";
+import { disconnectSquare, syncSquareNow, connectSquareSandboxToken } from "./square-actions";
 
 export type SquareConnection = {
   merchantId: string;
@@ -24,7 +24,7 @@ function money(cents: number): string {
 
 // Direct POS integrations. Square today; Clover / Toast / Global Payments will
 // appear here as more rows as each connector ships.
-export function DirectIntegrations({ configured, connection }: { configured: boolean; connection: SquareConnection | null }) {
+export function DirectIntegrations({ configured, connection, sandboxTokenAvailable }: { configured: boolean; connection: SquareConnection | null; sandboxTokenAvailable?: boolean }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -93,12 +93,31 @@ export function DirectIntegrations({ configured, connection }: { configured: boo
                 </button>
               </div>
             ) : (
-              <a
-                href="/api/integrations/square/connect"
-                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors"
-              >
-                <PlugZap size={14} /> Connect Square
-              </a>
+              <div className="flex flex-col items-end gap-1.5">
+                <a
+                  href="/api/integrations/square/connect"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors"
+                >
+                  <PlugZap size={14} /> Connect Square
+                </a>
+                {sandboxTokenAvailable && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setErr(null); setMsg(null);
+                      start(async () => {
+                        const res = await connectSquareSandboxToken();
+                        if (res.error) setErr(res.error);
+                        else setMsg(`Connected via sandbox token — ${res.guests} new guest${res.guests === 1 ? "" : "s"}, ${money(res.salesCents)} in sales.`);
+                      });
+                    }}
+                    className="text-[12px] font-medium text-muted-2 hover:text-ink disabled:opacity-50"
+                  >
+                    {pending ? "Testing…" : "Test with sandbox token"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

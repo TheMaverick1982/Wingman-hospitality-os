@@ -24,7 +24,7 @@ import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
 import { DirectIntegrations, type SquareConnection } from "./square-card";
-import { squareConfigured } from "@/lib/square";
+import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -359,6 +359,7 @@ export default async function SettingsPage() {
       }
     : null;
   const squareIsConfigured = squareConfigured();
+  const squareSandboxToken = squareSandboxTokenAvailable();
 
   return (
     <>
@@ -376,7 +377,7 @@ export default async function SettingsPage() {
           { key: "billing", label: "Billing", content: billingContent },
           { key: "api", label: "API access", content: (
             <div className="flex flex-col gap-6">
-              <DirectIntegrations configured={squareIsConfigured} connection={squareConnection} />
+              <DirectIntegrations configured={squareIsConfigured} connection={squareConnection} sandboxTokenAvailable={squareSandboxToken} />
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>
           ) },
