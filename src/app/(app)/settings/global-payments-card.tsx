@@ -5,6 +5,7 @@ import { CreditCard, Check, Loader2, Beaker, Trash2 } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
 import { saveTestCard, chargeNow, removeBillingCard } from "./global-payments-actions";
+import { GpHostedFields } from "./gp-hosted-fields";
 
 export type BillingCardInfo = { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null } | null;
 export type TestCard = { brand: string; number: string; exp: string; cvv: string };
@@ -137,12 +138,14 @@ export function GlobalPaymentsCard({
               <Check size={13} /> Test card saved as your card on file.
             </p>
           )}
+
+          <div className="mt-4 pt-4 border-t border-dashed border-line">
+            <p className="text-[12px] text-muted-2 mb-2">Or test the real secure card form customers will use:</p>
+            <GpHostedFields />
+          </div>
         </div>
       ) : (
-        <p className="text-xs text-muted-2">
-          Enter your card securely below — powered by Global Payments. Your card details go straight to the processor and
-          never touch our servers.
-        </p>
+        <GpHostedFields />
       )}
     </div>
   );
