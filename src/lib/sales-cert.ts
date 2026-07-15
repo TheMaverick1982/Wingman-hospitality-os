@@ -22,7 +22,9 @@ import {
 } from "@/lib/sales-playbook";
 
 export const CERT_PASS_PCT = 80;
-const GEN_MODEL = "claude-opus-4-8";
+// Sonnet is fast + capable enough for writing quiz questions, and keeps
+// generation well under the serverless time limit (opus was slower).
+const GEN_MODEL = "claude-sonnet-5";
 const GRADE_MODEL = "claude-sonnet-5";
 // Platform-staff feature — usage is recorded against this pseudo-org bucket.
 const CERT_ORG = "platform";
@@ -95,7 +97,7 @@ Rules:
 - Roleplay prompts: short, realistic, force the rep to demonstrate a specific skill from the playbook.
 - No markdown, no commentary — JSON only.`;
   const prompt = `Here is the current sales playbook. Write the test from it.\n\n${playbookCorpus()}`;
-  const raw = await callClaude(system, prompt, GEN_MODEL, 8000, "sales_cert_generate");
+  const raw = await callClaude(system, prompt, GEN_MODEL, 6000, "sales_cert_generate");
   const parsed = JSON.parse(extractJson(raw)) as { mcq?: unknown[]; roleplay?: unknown[] };
   const out: GenQuestion[] = [];
   for (const m of (parsed.mcq ?? []) as Record<string, unknown>[]) {
@@ -124,33 +126,39 @@ function normalizeSection(s: string): string {
 }
 
 export type CertVersion = { id: string; contentHash: string; questionCount: number };
+export type CertVersionResult = { version: CertVersion | null; error: string | null };
 
 // Get the active test version for the current playbook, generating + persisting a
 // new one if the content has changed since the last generation. Serialized-ish:
-// a duplicate hash just returns the existing row.
-export async function getActiveCertVersion(): Promise<CertVersion | null> {
+// a duplicate hash just returns the existing row. Returns a reason on failure so
+// the UI can tell "AI not configured" from a transient hiccup.
+export async function getActiveCertVersion(): Promise<CertVersionResult> {
   const admin = createAdminClient();
   const hash = corpusHash();
   const { data: existing } = await admin.from("sales_cert_versions").select("id, content_hash, question_count").eq("content_hash", hash).maybeSingle();
   if (existing) {
     const e = existing as { id: string; content_hash: string; question_count: number };
-    return { id: e.id, contentHash: e.content_hash, questionCount: e.question_count };
+    return { version: { id: e.id, contentHash: e.content_hash, questionCount: e.question_count }, error: null };
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { version: null, error: "The test generator isn't configured yet — add ANTHROPIC_API_KEY in the environment, then try again." };
   }
 
   let questions: GenQuestion[];
   try {
     questions = await generateQuestions();
-  } catch {
-    return null;
+  } catch (e) {
+    return { version: null, error: e instanceof Error ? e.message : "The test couldn't be generated." };
   }
 
   const { data: ver, error } = await admin.from("sales_cert_versions").insert({ content_hash: hash, question_count: questions.length }).select("id").single();
   if (error || !ver) {
     // Another request may have created it — return whatever's there now.
     const { data: race } = await admin.from("sales_cert_versions").select("id, content_hash, question_count").eq("content_hash", hash).maybeSingle();
-    if (!race) return null;
+    if (!race) return { version: null, error: "Couldn't save the generated test." };
     const r = race as { id: string; content_hash: string; question_count: number };
-    return { id: r.id, contentHash: r.content_hash, questionCount: r.question_count };
+    return { version: { id: r.id, contentHash: r.content_hash, questionCount: r.question_count }, error: null };
   }
   const versionId = (ver as { id: string }).id;
   const rows = questions.map((q, i) => ({
@@ -164,7 +172,7 @@ export async function getActiveCertVersion(): Promise<CertVersion | null> {
     sort_order: i,
   }));
   await admin.from("sales_cert_questions").insert(rows);
-  return { id: versionId, contentHash: hash, questionCount: questions.length };
+  return { version: { id: versionId, contentHash: hash, questionCount: questions.length }, error: null };
 }
 
 export type RepReport = {
