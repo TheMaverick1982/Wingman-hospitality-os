@@ -17,9 +17,13 @@ export const SQUARE_APP_ID = process.env.SQUARE_APPLICATION_ID ?? "";
 const SQUARE_APP_SECRET = process.env.SQUARE_APPLICATION_SECRET ?? "";
 
 // The OAuth callback must exactly match what's registered in the Square app.
+// Trim aggressively — a stray trailing newline/space in the env var (a common
+// paste error) would otherwise corrupt the redirect_uri and break the flow.
 export function squareRedirectUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").replace(/\/$/, "");
-  return process.env.SQUARE_REDIRECT_URL ?? `${base}/api/integrations/square/callback`;
+  const override = (process.env.SQUARE_REDIRECT_URL ?? "").trim();
+  if (override) return override;
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").trim().replace(/\/+$/, "");
+  return `${base}/api/integrations/square/callback`;
 }
 
 export function squareConfigured(): boolean {
