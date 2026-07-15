@@ -26,6 +26,30 @@ export async function createFranchiseGroup(_prev: FranchiseActionState, formData
   return { error: null, ok: true };
 }
 
+// Archive a franchise group (soft-cancel). Keeps every relationship intact so it
+// can be restored, but hides it from the active lists and stops the central
+// roll-up charge (the billing cron skips archived groups). Platform-admin only.
+export async function archiveFranchiseGroup(groupId: string): Promise<FranchiseActionState> {
+  if (!(await requirePlatformAdmin())) return { error: "Not authorized." };
+  if (!groupId) return { error: "Missing group." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("franchise_groups").update({ archived_at: new Date().toISOString() }).eq("id", groupId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/franchises");
+  return { error: null, ok: true };
+}
+
+// Restore an archived group back to active exactly as it was.
+export async function restoreFranchiseGroup(groupId: string): Promise<FranchiseActionState> {
+  if (!(await requirePlatformAdmin())) return { error: "Not authorized." };
+  if (!groupId) return { error: "Missing group." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("franchise_groups").update({ archived_at: null }).eq("id", groupId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/franchises");
+  return { error: null, ok: true };
+}
+
 // Delete a franchise group cleanly. Franchisee ACCOUNTS are never deleted — they
 // are only detached: their billing flag is reset so they bill for themselves
 // again, and any brand-standard content pushed to them is unlocked so they keep

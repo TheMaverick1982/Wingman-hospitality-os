@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { Building2, Plus, X, UserPlus, Mail, Trash2 } from "lucide-react";
+import { Building2, Plus, X, UserPlus, Mail, Trash2, Archive, RotateCcw } from "lucide-react";
 import {
   createFranchiseGroup,
   addFranchiseMember,
@@ -11,6 +11,8 @@ import {
   changeGroupBillingMode,
   inviteFranchisor,
   deleteFranchiseGroup,
+  archiveFranchiseGroup,
+  restoreFranchiseGroup,
   type FranchiseActionState,
 } from "./actions";
 
@@ -18,6 +20,7 @@ export type GroupView = {
   id: string;
   name: string;
   billingMode: string;
+  archived: boolean;
   members: { orgId: string; name: string }[];
   admins: { userId: string; name: string; role: string }[];
   totalMonthlyCents: number;
@@ -60,11 +63,83 @@ export function FranchiseAdminClient({ groups, orgOptions, adminOptions }: { gro
         </form>
       </div>
 
-      {groups.length === 0 ? (
-        <div className="text-sm text-muted-2">No franchise groups yet.</div>
-      ) : (
-        groups.map((g) => <GroupCard key={g.id} group={g} orgOptions={orgOptions} adminOptions={adminOptions} />)
-      )}
+      {(() => {
+        const active = groups.filter((g) => !g.archived);
+        const archived = groups.filter((g) => g.archived);
+        return (
+          <>
+            {groups.length === 0 ? (
+              <div className="text-sm text-muted-2">No franchise groups yet.</div>
+            ) : (
+              active.map((g) => <GroupCard key={g.id} group={g} orgOptions={orgOptions} adminOptions={adminOptions} />)
+            )}
+            {active.length === 0 && archived.length > 0 && (
+              <div className="text-sm text-muted-2">No active franchise groups.</div>
+            )}
+
+            {archived.length > 0 && (
+              <div className="mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Archive size={15} className="text-muted-2" />
+                  <h2 className="text-[15px] font-semibold text-ink">Archived ({archived.length})</h2>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {archived.map((g) => <ArchivedGroupCard key={g.id} group={g} />)}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
+// Compact card for an archived (soft-cancelled) group — history + relationships
+// are kept; only Restore and permanent Delete are offered.
+function ArchivedGroupCard({ group }: { group: GroupView }) {
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const run = (fn: () => Promise<FranchiseActionState>) => {
+    setErr(null);
+    start(async () => {
+      const r = await fn();
+      if (r.error) setErr(r.error);
+    });
+  };
+  return (
+    <div className="bg-paper border border-line rounded-2xl px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[15px] font-semibold text-muted truncate">{group.name}</h3>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-2 bg-white border border-line px-2 py-0.5 rounded-full">Archived</span>
+        </div>
+        <div className="text-[12.5px] text-muted-2 mt-0.5">
+          {group.members.length} franchisee{group.members.length === 1 ? "" : "s"} kept · billing paused · restore anytime
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run(() => restoreFranchiseGroup(group.id))}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brick text-white px-3 py-2 text-[13px] font-semibold hover:bg-brick-dark disabled:opacity-50"
+        >
+          <RotateCcw size={14} /> {pending ? "Restoring…" : "Restore"}
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            if (!window.confirm(`Permanently delete "${group.name}"? Franchisee accounts are kept and detached; this removes the group for good.`)) return;
+            run(() => deleteFranchiseGroup(group.id));
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-semibold text-muted-2 hover:text-danger hover:border-danger disabled:opacity-50"
+        >
+          <Trash2 size={14} /> Delete
+        </button>
+      </div>
+      {err && <p className="text-[13px] text-danger w-full">{err}</p>}
     </div>
   );
 }
@@ -120,8 +195,17 @@ function GroupCard({ group, orgOptions, adminOptions }: { group: GroupView; orgO
           <button
             type="button"
             disabled={pending}
+            onClick={() => run(() => archiveFranchiseGroup(group.id))}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-semibold text-muted-2 hover:text-ink disabled:opacity-50"
+            title="Soft-cancel: keep history + relationships, pause billing, restore anytime"
+          >
+            <Archive size={14} /> Archive
+          </button>
+          <button
+            type="button"
+            disabled={pending}
             onClick={() => {
-              if (!window.confirm(`Delete "${group.name}"? Franchisee accounts are kept and detached (they bill for themselves again and keep any pushed content). This only removes the group.`)) return;
+              if (!window.confirm(`Delete "${group.name}"? Franchisee accounts are kept and detached (they bill for themselves again and keep any pushed content). This only removes the group.\n\nTip: use Archive instead if the franchise may come back.`)) return;
               run(() => deleteFranchiseGroup(group.id));
             }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-semibold text-muted-2 hover:text-danger hover:border-danger disabled:opacity-50"
