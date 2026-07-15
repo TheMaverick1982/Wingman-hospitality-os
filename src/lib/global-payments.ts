@@ -73,10 +73,19 @@ export async function gpAccessToken(permissions?: string[]): Promise<string> {
     body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(`GP accesstoken ${res.status}: ${JSON.stringify(data).slice(0, 240)}`);
+  if (!res.ok) throw new Error(`GP accesstoken ${res.status}: ${JSON.stringify(data).slice(0, 240)} [${gpCredDiagnostic()}]`);
   const token = String(data.token ?? "");
   if (!token) throw new Error("GP accesstoken returned no token.");
   return token;
+}
+
+// Non-secret diagnostic for debugging a rejected accesstoken. Reveals ONLY the
+// masked app_id (first 6 + last 4), the credential lengths, the environment, and
+// the base URL — never the app_key or the computed secret. Lets us eyeball a
+// swapped/truncated/wrong-environment credential from the error message alone.
+function gpCredDiagnostic(): string {
+  const mask = (s: string) => (s.length <= 10 ? `len${s.length}` : `${s.slice(0, 6)}…${s.slice(-4)} len${s.length}`);
+  return `env=${GP_ENV} base=${GP_API_BASE} app_id=${mask(GP_APP_ID)} app_key=${mask(GP_APP_KEY)} v=${GP_VERSION}`;
 }
 
 // A browser-scoped token (tokenize only — cannot move money) for hosted fields
