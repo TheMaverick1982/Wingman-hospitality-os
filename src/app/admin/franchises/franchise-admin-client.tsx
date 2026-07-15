@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { Building2, Plus, X, UserPlus, Mail } from "lucide-react";
+import { Building2, Plus, X, UserPlus, Mail, Trash2 } from "lucide-react";
 import {
   createFranchiseGroup,
   addFranchiseMember,
@@ -10,6 +10,7 @@ import {
   removeFranchiseAdmin,
   changeGroupBillingMode,
   inviteFranchisor,
+  deleteFranchiseGroup,
   type FranchiseActionState,
 } from "./actions";
 
@@ -116,6 +117,17 @@ function GroupCard({ group, orgOptions, adminOptions }: { group: GroupView; orgO
             <option value="distributed">Each franchisee pays</option>
             <option value="central">Franchisor pays all</option>
           </select>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (!window.confirm(`Delete "${group.name}"? Franchisee accounts are kept and detached (they bill for themselves again and keep any pushed content). This only removes the group.`)) return;
+              run(() => deleteFranchiseGroup(group.id));
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-semibold text-muted-2 hover:text-danger hover:border-danger disabled:opacity-50"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
         </div>
       </div>
       {isCentral && !group.ownerHasCard && (
