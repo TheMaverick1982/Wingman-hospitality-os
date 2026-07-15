@@ -892,7 +892,8 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Wingman has a small API so your POS or a Zapier automation can keep it in sync — for example, pushing weekly numbers into the Business Health card and Revenue Growth Planner, syncing guests, or updating the menu." },
       { kind: "h", text: "Connect your POS directly (no code)" },
-      { kind: "p", text: "If you use Square, connect it in one click — no API key or Zapier needed. Go to Settings → API access → Direct integrations and click Connect Square, then approve access on Square's screen. Wingman keeps things in sync from then on." },
+      { kind: "p", text: "If you use Square or Clover, connect it in one click — no API key or Zapier needed. Go to Settings → API access → Direct integrations and click Connect, then approve access on your POS's screen. Wingman keeps things in sync from then on." },
+      { kind: "note", text: "Clover note: each Clover store is its own merchant, so multi-location operators connect each store with \"Connect another\" — name your Wingman locations to match your Clover store names and each store's sales land on that location." },
       { kind: "list", items: [
         "Customers → Guests — your Square customers flow into Guest Bounce Back (new ones only, matched by email/phone so nobody doubles up).",
         "Sales → Business Health — the last 7 days of Square sales post to your weekly Business Health card.",
