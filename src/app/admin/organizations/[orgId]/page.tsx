@@ -26,7 +26,7 @@ export default async function AdminOrganizationDetailPage({
 
   const { data: org } = await admin
     .from("organizations")
-    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4, coupon_code, trial_ends_at, referred_by_affiliate_id")
+    .select("id, name, created_at, custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents, pricing_note, is_free_account, billing_status, card_brand, card_last4, coupon_code, trial_ends_at, referred_by_affiliate_id")
     .eq("id", orgId)
     .eq("is_platform", false)
     .maybeSingle();
@@ -66,7 +66,13 @@ export default async function AdminOrganizationDetailPage({
   const setupPct = setup.total > 0 ? Math.round((setup.doneCount / setup.total) * 100) : 0;
 
   const billing = org as unknown as { is_free_account: boolean; billing_status: string; card_brand: string | null; card_last4: string | null };
-  const pricing = org as unknown as { custom_monthly_cents: number | null; custom_addl_location_cents: number | null; pricing_note: string | null };
+  const pricing = org as unknown as {
+    custom_monthly_cents: number | null;
+    custom_addl_location_cents: number | null;
+    plan_first_cents: number | null;
+    plan_addl_cents: number | null;
+    pricing_note: string | null;
+  };
   const locCount = (locations ?? []).length || 1;
   const platformPricing = await getPlatformPricing();
   const effCents = await effectiveMonthlyCents(pricing, locCount);
@@ -80,12 +86,16 @@ export default async function AdminOrganizationDetailPage({
   if (kind === "flat") {
     effectiveLabel = `${dollars(effCents)}/mo · ${kindLabel} (flat — ignores location count)`;
   } else {
-    const addlRate = pricing.custom_addl_location_cents ?? platformPricing.addlCents;
+    // Standard orgs are grandfathered onto the rate locked at signup; only fall
+    // back to the live platform price for never-locked (free/demo) orgs.
+    const baseRate = pricing.plan_first_cents ?? platformPricing.firstCents;
+    const addlRate = pricing.custom_addl_location_cents ?? pricing.plan_addl_cents ?? platformPricing.addlCents;
+    const grandfathered = pricing.plan_first_cents != null && pricing.plan_first_cents !== platformPricing.firstCents;
     const breakdown =
-      `${dollars(platformPricing.firstCents)} base` +
+      `${dollars(baseRate)} base` +
       (extra > 0 ? ` + ${extra} × ${dollars(addlRate)}/location` : "") +
       ` = ${dollars(effCents)}/mo`;
-    effectiveLabel = `${breakdown} · ${kindLabel}`;
+    effectiveLabel = `${breakdown} · ${kindLabel}${grandfathered ? ` · grandfathered (current list ${dollars(platformPricing.firstCents)})` : ""}`;
   }
 
   return (

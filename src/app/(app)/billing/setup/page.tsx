@@ -15,7 +15,7 @@ export default async function BillingSetupPage() {
 
   const supabase = await createClient();
   const [{ data: org }, { count: locationCount }] = await Promise.all([
-    supabase.from("organizations").select("name, is_free_account, billing_status, custom_monthly_cents, custom_addl_location_cents, card_brand, card_last4").eq("id", profile.orgId).maybeSingle(),
+    supabase.from("organizations").select("name, is_free_account, billing_status, custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents, card_brand, card_last4").eq("id", profile.orgId).maybeSingle(),
     supabase.from("locations").select("id", { count: "exact", head: true }).eq("org_id", profile.orgId),
   ]);
 
@@ -25,6 +25,8 @@ export default async function BillingSetupPage() {
     billing_status: string;
     custom_monthly_cents: number | null;
     custom_addl_location_cents: number | null;
+    plan_first_cents: number | null;
+    plan_addl_cents: number | null;
     card_brand: string | null;
     card_last4: string | null;
   } | null;

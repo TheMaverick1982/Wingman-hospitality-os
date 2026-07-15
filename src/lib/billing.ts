@@ -209,11 +209,19 @@ async function sendPaymentReceipt(
 ): Promise<void> {
   const { data: orgRow } = await admin
     .from("organizations")
-    .select("name, is_free_account, billing_email, custom_monthly_cents, custom_addl_location_cents")
+    .select("name, is_free_account, billing_email, custom_monthly_cents, custom_addl_location_cents, plan_first_cents, plan_addl_cents")
     .eq("id", orgId)
     .maybeSingle();
   const org = orgRow as
-    | { name: string; is_free_account: boolean; billing_email: string | null; custom_monthly_cents: number | null; custom_addl_location_cents: number | null }
+    | {
+        name: string;
+        is_free_account: boolean;
+        billing_email: string | null;
+        custom_monthly_cents: number | null;
+        custom_addl_location_cents: number | null;
+        plan_first_cents: number | null;
+        plan_addl_cents: number | null;
+      }
     | null;
   if (!org || org.is_free_account) return;
 

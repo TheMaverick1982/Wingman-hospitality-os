@@ -30,15 +30,25 @@ export const getPlatformPricing = cache(async (): Promise<PlatformPricing> => {
 export type PricingOverrides = {
   custom_monthly_cents?: number | null;
   custom_addl_location_cents?: number | null;
+  // Rates locked onto the org at signup so a later platform price change never
+  // re-prices an existing customer. NULL = follow the live platform price.
+  plan_first_cents?: number | null;
+  plan_addl_cents?: number | null;
 };
 
 // Pure calculation given explicit rates (used by callers that already have the
 // platform pricing in hand).
+//
+// Precedence: a flat negotiated price wins outright; otherwise the standard
+// math uses the org's LOCKED rates when present (grandfathering), falling back
+// to live platform pricing only for orgs that were never locked (free/demo). A
+// per-org negotiated additional-location rate still overrides the locked one.
 export function monthlyCentsFor(pricing: PlatformPricing, overrides: PricingOverrides | null | undefined, locations: number): number {
   const n = Math.max(1, locations);
   if (overrides?.custom_monthly_cents != null) return overrides.custom_monthly_cents;
-  const addl = overrides?.custom_addl_location_cents ?? pricing.addlCents;
-  return pricing.firstCents + addl * (n - 1);
+  const first = overrides?.plan_first_cents ?? pricing.firstCents;
+  const addl = overrides?.custom_addl_location_cents ?? overrides?.plan_addl_cents ?? pricing.addlCents;
+  return first + addl * (n - 1);
 }
 
 // The effective monthly price in cents, reading the current platform pricing.
