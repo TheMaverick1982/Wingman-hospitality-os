@@ -23,6 +23,8 @@ import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
+import { DirectIntegrations, type SquareConnection } from "./square-card";
+import { squareConfigured } from "@/lib/square";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -339,6 +341,25 @@ export default async function SettingsPage() {
   }));
   const trashContent = <TrashPanel items={trashItems} audit={auditData} />;
 
+  // Square connection status (safe columns only — the token is never selected).
+  const { data: sqRow } = await admin
+    .from("square_connections")
+    .select("merchant_id, connected_at, last_sync_at, last_sync_status, last_sync_guests, last_sync_sales_cents")
+    .eq("org_id", profile.orgId)
+    .maybeSingle();
+  const sq = sqRow as { merchant_id: string; connected_at: string; last_sync_at: string | null; last_sync_status: string | null; last_sync_guests: number; last_sync_sales_cents: number } | null;
+  const squareConnection: SquareConnection | null = sq
+    ? {
+        merchantId: sq.merchant_id ?? "",
+        connectedAt: sq.connected_at,
+        lastSyncAt: sq.last_sync_at ?? null,
+        lastSyncStatus: sq.last_sync_status ?? null,
+        lastSyncGuests: sq.last_sync_guests ?? 0,
+        lastSyncSalesCents: sq.last_sync_sales_cents ?? 0,
+      }
+    : null;
+  const squareIsConfigured = squareConfigured();
+
   return (
     <>
       <div>
@@ -353,7 +374,12 @@ export default async function SettingsPage() {
           { key: "partners", label: "Partners", content: partnersContent },
           { key: "notifications", label: "Notifications", content: notificationContent },
           { key: "billing", label: "Billing", content: billingContent },
-          { key: "api", label: "API access", content: <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} /> },
+          { key: "api", label: "API access", content: (
+            <div className="flex flex-col gap-6">
+              <DirectIntegrations configured={squareIsConfigured} connection={squareConnection} />
+              <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
+            </div>
+          ) },
           { key: "trash", label: "Trash", content: trashContent },
         ]}
       />
