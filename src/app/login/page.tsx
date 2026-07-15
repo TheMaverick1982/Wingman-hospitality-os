@@ -6,6 +6,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { login, type LoginState } from "./actions";
 
 const initialState: LoginState = { error: null };
@@ -48,6 +49,9 @@ export default function LoginPage() {
                 <Link href="/forgot-password" className="text-sm font-medium text-brick">
                   Forgot password?
                 </Link>
+              </div>
+              <div className="mt-1">
+                <TurnstileWidget />
               </div>
               {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
               <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
