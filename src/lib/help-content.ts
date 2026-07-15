@@ -899,7 +899,7 @@ export const ARTICLES: HelpArticle[] = [
         "Multi-location — name your Wingman locations to match your Square location names and each store's sales land on that store; anything unmatched rolls up account-wide.",
       ] },
       { kind: "p", text: "It syncs once a day automatically, or hit \"Sync now\" on the Square card anytime. Disconnect from the same place to stop. Only the account owner can connect or disconnect an integration." },
-      { kind: "note", text: "More POS platforms (Clover, Toast, and others) are being added as direct connections — they'll appear in the same Direct integrations list, with per-location data wherever your store names line up." },
+      { kind: "note", text: "More POS platforms are being added as direct connections — Global Payments (Genius POS), Clover, and Toast — and will appear in the same Direct integrations list, with per-location data wherever your store names line up." },
       { kind: "button", label: "Open the Developer Guide", href: "/api-guide", external: true },
       { kind: "image", src: "/help/api-access.png", alt: "The API access screen showing API keys and the Developer Guide button.", caption: "Settings → API access — create keys and open the Developer Guide." },
       { kind: "diagram", name: "pos-sync", caption: "Your POS or a Zap pushes data through the API into each Wingman tool." },
