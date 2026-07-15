@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoEmail } from "@/lib/demo/constants";
 import { ensureDemoUser, reseedDemoOrg } from "@/lib/demo/reseed";
+import { consumeRateLimit, LOGIN_EMAIL_LIMIT, LOGIN_IP_LIMIT } from "@/lib/rate-limit";
 
 export type LoginState = { error: string | null };
 
@@ -13,6 +15,18 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  // Brute-force throttle (fail-open). Cap attempts per IP, and per email — but
+  // exempt the shared demo account, which many people sign into at once. The
+  // limiter is abuse protection; auth + RLS remain the real security boundary.
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ipOk = await consumeRateLimit(`login-ip:${ip}`, LOGIN_IP_LIMIT.max, LOGIN_IP_LIMIT.windowSeconds);
+  const emailOk = isDemoEmail(email)
+    ? true
+    : await consumeRateLimit(`login-email:${email.toLowerCase()}`, LOGIN_EMAIL_LIMIT.max, LOGIN_EMAIL_LIMIT.windowSeconds);
+  if (!ipOk || !emailOk) {
+    return { error: "Too many attempts. Please wait a few minutes and try again." };
   }
 
   const supabase = await createClient();
