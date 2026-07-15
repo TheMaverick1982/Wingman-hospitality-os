@@ -14,6 +14,7 @@ export type Section =
   | "growth"
   | "menu"
   | "audit"
+  | "partners"
   | "reporting"
   | "settings";
 
@@ -40,6 +41,9 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   growth: { super_admin: "full", manager: "full", shift_lead: "none", staff: "none", developer: "none" },
   menu: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
   audit: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  // Partners (B2B / Community) is an owner+manager relationship tool. Shift leads
+  // and staff get no access — matched by the RLS gate on ('super_admin','manager').
+  partners: { super_admin: "full", manager: "full", shift_lead: "none", staff: "none", developer: "none" },
   reporting: { super_admin: "full", manager: "view", shift_lead: "none", staff: "none", developer: "none" },
   settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
