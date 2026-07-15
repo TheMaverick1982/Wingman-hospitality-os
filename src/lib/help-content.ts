@@ -991,7 +991,9 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "note", text: "Switching a group to Central shows each franchisee a 'Billed by your franchise group' note in Settings → Billing — nothing is charged to them." },
       { kind: "h", text: "If the franchisor also runs corporate stores" },
       { kind: "p", text: "A franchisor who operates their own corporate-owned locations can pay for those directly, per-location, just like a franchisee — on top of any franchisee roll-up they cover. Both land on the same card as separate line items, shown in their Settings → Billing." },
-      { kind: "tip", text: "Franchise groups are set up for you by the Wingman team — including provisioning a brand-new franchisor who's never bought a license. Ask your rep to get your group started." },
+      { kind: "h", text: "Adding franchisees" },
+      { kind: "p", text: "Once your group is set up, the franchisor can add franchisees themselves: from the Franchise console, use \"Add a franchisee\" and enter their owner's name and email. They get an email to create their account — a full standalone account, pre-loaded with the starter playbook — and it automatically joins your group with your brand standards, oversight, and billing mode. Each franchisee then invites their own managers and staff from Settings → Team." },
+      { kind: "tip", text: "Franchise groups themselves are set up by the Wingman team — including provisioning a brand-new franchisor who's never bought a license. Ask your rep to get your group started; after that, adding franchisees is self-service." },
     ],
   },
 ];

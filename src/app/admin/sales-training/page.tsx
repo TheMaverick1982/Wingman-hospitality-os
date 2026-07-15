@@ -21,6 +21,7 @@ import {
   NEVER_DO,
   CLOSE_CHECKLIST,
   SYSTEM_REFERENCE,
+  FRANCHISE_PLAYBOOK,
   COMP_PLAN,
   COMP_RULES,
   AFFILIATE_CONTEXT,
@@ -379,6 +380,40 @@ export default async function SalesTrainingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Franchise plan — every function + option */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading eyebrow="Selling the franchise plan" title="Franchise: functions & options" sub="The full picture for demoing the tier to a franchisor or multi-unit brand — how it's set up, what they see, how content and billing work, and the talk track." />
+        <div className="bg-white border border-line rounded-2xl p-6">
+          <p className="text-[14px] text-charcoal-2 leading-[1.55]">{FRANCHISE_PLAYBOOK.summary}</p>
+          <p className="text-[13px] text-muted mt-2"><span className="font-semibold text-brick">Who it's for: </span>{FRANCHISE_PLAYBOOK.whoFor}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+            {FRANCHISE_PLAYBOOK.topics.map((t) => (
+              <div key={t.heading}>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-brick mb-2">{t.heading}</div>
+                <div className="flex flex-col gap-2.5">
+                  {t.items.map((it) => (
+                    <div key={it.title} className="border border-line rounded-xl p-3.5">
+                      <div className="text-[14px] font-semibold text-ink">{it.title}</div>
+                      <div className="text-[13px] text-charcoal-2 mt-1 leading-[1.5]">{it.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 border-t border-[#F5F5F5] pt-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-brick mb-2">Talk track</div>
+            <ol className="list-decimal pl-5 flex flex-col gap-1.5">
+              {FRANCHISE_PLAYBOOK.talkTrack.map((line, i) => (
+                <li key={i} className="text-[13.5px] text-charcoal-2 leading-[1.5]">{line}</li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>

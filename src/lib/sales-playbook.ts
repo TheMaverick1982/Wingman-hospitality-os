@@ -56,6 +56,65 @@ export const SYSTEM_REFERENCE: SystemNote[] = [
   { name: "Price lock (grandfathering)", detail: "A customer's price is locked to what they signed up at. If we raise (or lower) list pricing later, it only affects NEW signups — existing customers are never re-priced. Useful to reassure an early customer that signing now protects their rate, and to answer 'what if your price goes up?' — it won't, for them." },
 ];
 
+// Full franchise-plan reference — every function + option, for demoing the tier
+// to a multi-unit brand or franchisor. Rendered as its own card in Sales Training.
+export type FranchiseFeature = { title: string; detail: string };
+export type FranchiseTopic = { heading: string; items: FranchiseFeature[] };
+
+export const FRANCHISE_PLAYBOOK: { summary: string; whoFor: string; topics: FranchiseTopic[]; talkTrack: string[] } = {
+  summary:
+    "Wingman's franchise tier adds one level above a normal account: a franchise GROUP that links each franchisee's own account under a franchisor. The franchisor sets one brand standard, sees brand-wide compliance, and chooses how billing works — while every franchisee keeps a full, standalone account (their own team, guests, and control).",
+  whoFor:
+    "Franchisors and multi-unit brands who want every location on the same training/hiring/standards, one oversight view, and flexible billing. Also fits a corporate group that owns several stores and wants HQ-level rollup.",
+  topics: [
+    {
+      heading: "Getting started (who sets up what)",
+      items: [
+        { title: "Franchisor is provisioned by us", detail: "A platform admin creates the group and uses 'Invite a franchisor' — spins up the franchisor's brand-HQ login with NO license purchase (normal signup requires buying one). They become the group's billing owner + admin. No contact fields to fill: their name/email come from the invite." },
+        { title: "Franchisor invites their own franchisees (self-service)", detail: "From the franchisor's console, 'Add a franchisee' takes a name + email → the franchisee gets a set-password email and a full account, pre-loaded with the starter playbook, auto-joined to the group with the group's billing mode. The franchisor doesn't wait on us for each location." },
+        { title: "Franchisees add their own team", detail: "Each franchisee owner invites their own managers, shift leads, and staff exactly like any Wingman customer (Settings → Team). Their staff never see other franchisees." },
+      ],
+    },
+    {
+      heading: "Oversight (what the franchisor sees)",
+      items: [
+        { title: "Group console + rollup", detail: "A franchisor-only console shows brand-wide averages (repeat rate, audit health, spot-check/sign-off cadence) plus a per-franchisee hit list, worst-first, so they coach the locations that are slipping." },
+        { title: "Privacy-safe by design", detail: "The franchisor sees compliance and aggregates ONLY — never a franchisee's raw guest contact list. Guest PII stays with the franchisee that owns it (compliance-friendly). Lead with this when a brand asks about data." },
+      ],
+    },
+    {
+      heading: "Brand standards (push down & lock)",
+      items: [
+        { title: "Brand Library", detail: "The franchisor authors training in their own account, then pushes it to every franchisee from Franchise → Brand Library. Because a test lives at the account level, it applies to all of that franchisee's locations." },
+        { title: "Locked vs Adaptable", detail: "Locked = a brand standard the franchisee can use but can't edit (enforced at the database, not just the UI). Adaptable = a starting point they can localize. Locked content shows a 'Brand standard' badge; re-pushing publishes updates to everyone." },
+      ],
+    },
+    {
+      heading: "Billing options",
+      items: [
+        { title: "Distributed", detail: "Each franchisee pays their own card; the franchisor just gets visibility. Default, no extra setup." },
+        { title: "Central", detail: "The franchisor pays for all — franchisees aren't charged individually, and one rolled-up monthly charge (the sum of every franchisee's price) hits the franchisor's card. Franchisees see a 'Billed by your franchise group' note." },
+        { title: "Corporate-owned locations", detail: "A franchisor who also runs their own corporate stores can pay for those per-location, just like a franchisee, ON TOP of the franchisee roll-up — same card, separate line items." },
+        { title: "Price lock still applies", detail: "Every franchisee's price is grandfathered to what they signed up at, same as any customer." },
+      ],
+    },
+    {
+      heading: "Lifecycle & safety",
+      items: [
+        { title: "Archive (soft-cancel)", detail: "If a franchise cancels, the group can be Archived — history and relationships are kept, billing pauses, and it's restorable anytime. Nothing is lost." },
+        { title: "Delete is safe", detail: "Permanent delete never removes a franchisee's account — it only detaches them (they bill for themselves again and keep editable copies of any pushed content), then removes the group." },
+      ],
+    },
+  ],
+  talkTrack: [
+    "Open on the pain: \"How do you know every location is actually running your standard — not just the ones you visit?\"",
+    "Show the group console rollup + hit list: one screen, every location's compliance, worst-first.",
+    "Push a brand-standard training live in the demo and point out it's locked — same training, every location, can't be watered down.",
+    "Handle the data question proactively: the franchisor sees compliance, never a franchisee's guest list.",
+    "Close on billing fit: \"Do you want each owner to pay, or do you cover it centrally?\" — Wingman does either, and you can switch.",
+  ],
+};
+
 export const GOLDEN_RULES: string[] = [
   "You're a guide, not a closer. Your job is to help the operator see their own problem clearly — Wingman is just how they solve it.",
   "These are loose scripts. Never read them word-for-word. Use your own voice; the words below are only there to keep you pointed the right way.",
