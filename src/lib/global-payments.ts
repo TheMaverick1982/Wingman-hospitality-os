@@ -57,7 +57,16 @@ function sha512Hex(input: string): string {
   return createHash("sha512").update(input, "utf8").digest("hex");
 }
 
-export async function gpAccessToken(permissions?: string[]): Promise<string> {
+// One of the app's provisioned merchant accounts, as returned in the access
+// token's scope. Each has a permission set — the transaction-processing account
+// carries TRN_* permissions, the tokenization account carries PMT_*.
+export type GpAccount = { id: string; name: string; permissions: string[] };
+export type GpAuth = { token: string; accounts: GpAccount[] };
+
+// Authenticate and return the bearer token PLUS the app's account list, so
+// callers can pick the right account for a request (GP's /transactions requires
+// naming the transaction-processing account explicitly).
+export async function gpAuth(permissions?: string[]): Promise<GpAuth> {
   if (!gpConfigured()) throw new Error("Global Payments is not configured (set GP_APP_ID and GP_APP_KEY).");
   const nonce = new Date().toISOString();
   const body: Record<string, unknown> = {
@@ -76,7 +85,29 @@ export async function gpAccessToken(permissions?: string[]): Promise<string> {
   if (!res.ok) throw new Error(`GP accesstoken ${res.status}: ${JSON.stringify(data).slice(0, 240)} [${gpCredDiagnostic()}]`);
   const token = String(data.token ?? "");
   if (!token) throw new Error("GP accesstoken returned no token.");
-  return token;
+  const scope = (data.scope ?? {}) as { accounts?: unknown };
+  const accounts: GpAccount[] = Array.isArray(scope.accounts)
+    ? (scope.accounts as Record<string, unknown>[]).map((a) => ({
+        id: String(a.id ?? ""),
+        name: String(a.name ?? ""),
+        permissions: Array.isArray(a.permissions) ? (a.permissions as unknown[]).map(String) : [],
+      }))
+    : [];
+  return { token, accounts };
+}
+
+export async function gpAccessToken(permissions?: string[]): Promise<string> {
+  return (await gpAuth(permissions)).token;
+}
+
+// Resolve which merchant account to name on a request. An explicit
+// GP_ACCOUNT_NAME env always wins; otherwise pick the account whose permissions
+// start with the wanted prefix (TRN_ = transaction processing, PMT_ =
+// tokenization), falling back to the first account GP returned.
+function accountNameFor(accounts: GpAccount[], prefix: "TRN_" | "PMT_"): string | undefined {
+  if (GP_ACCOUNT_NAME) return GP_ACCOUNT_NAME;
+  const match = accounts.find((a) => a.permissions.some((p) => p.startsWith(prefix)));
+  return (match ?? accounts[0])?.name || undefined;
 }
 
 // Non-secret diagnostic for debugging a rejected accesstoken. Reveals ONLY the
@@ -197,7 +228,7 @@ export type ChargeResult = {
 
 // Charge a stored payment token for a subscription payment. Amount is in cents.
 export async function gpChargeStored(input: { token: string; amountCents: number; reference: string; currency?: string }): Promise<ChargeResult> {
-  const token = await gpAccessToken();
+  const { token, accounts } = await gpAuth();
   const body: Record<string, unknown> = {
     type: "SALE",
     channel: "CNP", // card-not-present (a stored recurring charge)
@@ -208,7 +239,10 @@ export async function gpChargeStored(input: { token: string; amountCents: number
     reference: input.reference,
     payment_method: { entry_mode: "ECOM", id: input.token },
   };
-  if (GP_ACCOUNT_NAME) body.account_name = GP_ACCOUNT_NAME;
+  // /transactions requires naming the transaction-processing account (40007 if
+  // omitted). Resolve it from the app's accounts (env override wins).
+  const acct = accountNameFor(accounts, "TRN_");
+  if (acct) body.account_name = acct;
   const d = await gpPost<{ id?: string; status?: string; payment_method?: { result?: string; card?: { brand?: string; masked_number_last4?: string } } }>(
     "/transactions",
     token,
