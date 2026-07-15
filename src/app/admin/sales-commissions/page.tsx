@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatCents, formatDate, isDue, totalsFor, type SalesCommission } from "@/lib/sales-commissions";
+import { commissionsForRep, formatCents, formatDate, isDue, totalsFor, type SalesCommission } from "@/lib/sales-commissions";
 import { CommissionForm } from "./commission-form";
 import { PayableDate } from "./payable-date";
+import { ClaimForm } from "../sales-training/claim-form";
 import { markPaid, markOwed, voidCommission, deleteCommission, markAllPaidForRep, approveCommission, denyCommission } from "./actions";
 
 export const metadata: Metadata = { title: "Sales Commissions · Admin" };
@@ -19,17 +20,21 @@ const STATUS_STYLE: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = { pending: "Pending", owed: "Owed", paid: "Paid", denied: "Denied", void: "Void" };
 
 export default async function SalesCommissionsPage() {
-  await requirePlatformSection("commissions");
+  const profile = await requirePlatformSection("commissions");
   const admin = createAdminClient();
 
-  const [{ data: staff }, { data: orgs }, { data: commissions }] = await Promise.all([
+  const [{ data: staff }, { data: orgs }, { data: commissions }, myCommissions] = await Promise.all([
     admin.from("profiles").select("id, full_name").eq("is_platform_admin", true).order("full_name"),
     admin.from("organizations").select("id, name").order("name"),
     admin
       .from("sales_commissions")
       .select("id, rep_profile_id, org_id, kind, label, amount_cents, status, note, created_at, paid_at, payable_on")
       .order("created_at", { ascending: false }),
+    commissionsForRep(admin, profile.userId),
   ]);
+  const myTotals = totalsFor(myCommissions);
+  const myPending = myCommissions.filter((c) => c.status === "pending").length;
+  const myRecent = myCommissions.filter((c) => c.status !== "void").slice(0, 6);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -68,9 +73,58 @@ export default async function SalesCommissionsPage() {
       <div>
         <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Sales Commissions</h1>
         <p className="text-sm text-muted mt-1 max-w-2xl">
-          Record what each rep earned and mark it paid. Reps see their own balance in the Sales Training section, so the
+          Record what each rep earned and mark it paid. Reps claim and track their own balance right here, so the
           numbers always match. Standard plan: $125 per location activated + 5% of monthly revenue for six months.
         </p>
+      </div>
+
+      {/* Your commissions — the viewer's own balance, claim button, and history. */}
+      <div className="bg-white border border-line rounded-2xl p-6 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[15px] font-semibold text-ink">Your commissions</div>
+            {myPending > 0 && (
+              <div className="text-[12.5px] text-[#B45309] mt-0.5">{myPending} claim{myPending === 1 ? "" : "s"} awaiting the owner&rsquo;s approval</div>
+            )}
+          </div>
+          <div className="flex gap-6">
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#B45309]">Owed to you</div>
+              <div className="text-[22px] font-bold text-[#B45309] tabular-nums">{formatCents(myTotals.owedCents)}</div>
+            </div>
+            <div>
+              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive">Paid to date</div>
+              <div className="text-[22px] font-bold text-olive tabular-nums">{formatCents(myTotals.paidCents)}</div>
+            </div>
+          </div>
+        </div>
+
+        <ClaimForm orgs={orgList} />
+
+        {myRecent.length > 0 && (
+          <div className="border-t border-[#F5F5F5] pt-3 flex flex-col gap-2.5">
+            {myRecent.map((c) => {
+              const timing =
+                c.status === "paid" && c.paid_at
+                  ? `Paid ${new Date(c.paid_at).toLocaleDateString()}`
+                  : c.status === "owed" || c.status === "pending"
+                    ? `Expected ${formatDate(c.payable_on)}`
+                    : null;
+              return (
+                <div key={c.id} className="flex items-center justify-between gap-3 text-[13.5px]">
+                  <span className="min-w-0">
+                    <span className="text-charcoal-2 block truncate">{c.label}</span>
+                    {timing && <span className="text-[12px] text-muted-2">{timing}</span>}
+                  </span>
+                  <span className="flex items-center gap-3 shrink-0">
+                    <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
+                    <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[c.status]}`}>{STATUS_LABEL[c.status]}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {grandOwed > 0 && (

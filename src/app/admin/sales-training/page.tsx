@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformPricing, dollars } from "@/lib/pricing";
-import { commissionsForRep, formatCents, formatDate, totalsFor, type CommissionStatus } from "@/lib/sales-commissions";
 import { listDemoTargets } from "@/lib/sales-reps";
-import { ClaimForm } from "./claim-form";
 import { DemoLauncher } from "./demo-launcher";
 import {
   PRODUCT_ONE_LINER,
@@ -31,14 +28,6 @@ export const metadata: Metadata = { title: "Sales Training · Admin" };
 // The "Run a live demo" action provisions a fresh private sandbox — give it room.
 export const maxDuration = 60;
 
-const STATUS_BADGE: Record<CommissionStatus, { label: string; className: string }> = {
-  pending: { label: "Pending approval", className: "text-[#B45309] bg-gold-tint" },
-  owed: { label: "Owed", className: "text-[#B45309] bg-gold-tint" },
-  paid: { label: "Paid", className: "text-olive bg-olive-tint" },
-  denied: { label: "Denied", className: "text-muted bg-paper" },
-  void: { label: "Void", className: "text-muted bg-paper" },
-};
-
 function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
   return (
     <div>
@@ -55,17 +44,7 @@ export default async function SalesTrainingPage() {
   const pricing = await getPlatformPricing();
   const priceSub = (s: string) => s.replaceAll("{{firstPrice}}", dollars(pricing.firstCents)).replaceAll("{{addlPrice}}", dollars(pricing.addlCents));
 
-  const admin = createAdminClient();
-  const [myCommissions, { data: orgRows }, demoTargets] = await Promise.all([
-    commissionsForRep(admin, profile.userId),
-    admin.from("organizations").select("id, name").order("name"),
-    listDemoTargets(profile.userId),
-  ]);
-  const orgs = (orgRows ?? []) as { id: string; name: string }[];
-  const myTotals = totalsFor(myCommissions);
-  const pendingCount = myCommissions.filter((c) => c.status === "pending").length;
-  const recent = myCommissions.filter((c) => c.status !== "void").slice(0, 6);
-  const hasActivity = myCommissions.some((c) => c.status !== "void");
+  const demoTargets = await listDemoTargets(profile.userId);
 
   return (
     <div className="flex flex-col gap-10 pb-10">
@@ -80,59 +59,6 @@ export default async function SalesTrainingPage() {
         </div>
         <div className="shrink-0">
           <DemoLauncher targets={demoTargets} />
-        </div>
-      </div>
-
-      {/* Your commissions — balance, claim button, and your claim history */}
-      <div className="bg-white border border-line rounded-2xl p-6 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-[15px] font-semibold text-ink">Your commissions</div>
-            {pendingCount > 0 && (
-              <div className="text-[12.5px] text-[#B45309] mt-0.5">{pendingCount} claim{pendingCount === 1 ? "" : "s"} awaiting the owner&rsquo;s approval</div>
-            )}
-          </div>
-          <div className="flex gap-6">
-            <div>
-              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[#B45309]">Owed to you</div>
-              <div className="text-[22px] font-bold text-[#B45309] tabular-nums">{formatCents(myTotals.owedCents)}</div>
-            </div>
-            <div>
-              <div className="text-[11.5px] font-semibold uppercase tracking-wide text-olive">Paid to date</div>
-              <div className="text-[22px] font-bold text-olive tabular-nums">{formatCents(myTotals.paidCents)}</div>
-            </div>
-          </div>
-        </div>
-
-        <ClaimForm orgs={orgs} />
-
-        {hasActivity && (
-          <div className="border-t border-[#F5F5F5] pt-3 flex flex-col gap-2.5">
-            {recent.map((c) => {
-              const badge = STATUS_BADGE[c.status];
-              const timing =
-                c.status === "paid" && c.paid_at
-                  ? `Paid ${new Date(c.paid_at).toLocaleDateString()}`
-                  : c.status === "owed" || c.status === "pending"
-                    ? `Expected ${formatDate(c.payable_on)}`
-                    : null;
-              return (
-                <div key={c.id} className="flex items-center justify-between gap-3 text-[13.5px]">
-                  <span className="min-w-0">
-                    <span className="text-charcoal-2 block truncate">{c.label}</span>
-                    {timing && <span className="text-[12px] text-muted-2">{timing}</span>}
-                  </span>
-                  <span className="flex items-center gap-3 shrink-0">
-                    <span className="font-semibold text-ink tabular-nums">{formatCents(c.amount_cents)}</span>
-                    <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${badge.className}`}>{badge.label}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div className="text-[12px] text-muted-2">
-          Only the owner can approve a claim, mark it paid, or change an amount — so these always match what they see. Questions on a line item? Ask them directly.
         </div>
       </div>
 
