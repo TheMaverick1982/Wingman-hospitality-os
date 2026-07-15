@@ -144,41 +144,23 @@ export default async function SalesTrainingPage() {
         </p>
       </div>
 
-      {/* Product primer */}
-      <section className="flex flex-col gap-5">
-        <SectionHeading eyebrow="Start here — know the product" title="What you're selling" sub="Before you demo anything, you should be able to explain Wingman in a sentence and know why an operator should care." />
-        <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-6">
-          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">In one line</div>
-          <p className="text-[18px] font-semibold text-ink leading-[1.4]">{PRODUCT_ONE_LINER}</p>
-        </div>
-
-        <div className="bg-white border border-line rounded-2xl p-6">
-          <div className="text-[15px] font-semibold text-ink mb-3">Why it matters</div>
-          <ul className="flex flex-col gap-2.5">
-            {WHY_IT_MATTERS.map((w, i) => (
-              <li key={i} className="flex gap-3 text-[14px] text-charcoal-2 leading-[1.5]">
-                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brick shrink-0" />
-                <span>{w}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <div className="text-[15px] font-semibold text-ink mb-3">What each part does (and the problem it solves)</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {PRODUCT_TOUR.map((a) => (
-              <div key={a.name} className="bg-white border border-line rounded-2xl p-5">
-                <div className="text-[15px] font-semibold text-ink">{a.name}</div>
-                <div className="text-[13.5px] text-charcoal-2 mt-1.5">{a.what}</div>
-                <div className="text-[13px] text-muted mt-2 border-t border-[#F5F5F5] pt-2">
-                  <span className="font-semibold text-brick">Solves: </span>{a.problem}
-                </div>
-              </div>
-            ))}
+      {/* New reps: jump to the product primer at the bottom. Daily users live
+          in the working sections below; the full "what you're selling" primer
+          moved to the end. */}
+      <a
+        href="#learn-the-product"
+        className="group flex items-center justify-between gap-4 bg-brick-tint/40 border border-brick/20 rounded-2xl px-6 py-4 hover:bg-brick-tint/70 transition-colors"
+      >
+        <div className="min-w-0">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-0.5">New here?</div>
+          <div className="text-[15px] font-semibold text-ink">Start by learning the product</div>
+          <div className="text-[13px] text-muted mt-0.5">
+            The one-liner, why it matters, and what every part does. Read the primer at the bottom first — then the
+            sections below are where your day-to-day lives.
           </div>
         </div>
-      </section>
+        <span className="text-brick text-sm font-semibold shrink-0 group-hover:translate-y-0.5 transition-transform">Jump to primer ↓</span>
+      </a>
 
       {/* Golden rules */}
       <section className="flex flex-col gap-4">
@@ -362,6 +344,44 @@ export default async function SalesTrainingPage() {
           </ul>
         </section>
       </div>
+
+      {/* Product primer — the "learn the product" reference, anchored so the
+          top "Start here" link jumps here. Lives at the bottom so daily users
+          hit their working sections first. */}
+      <section id="learn-the-product" className="flex flex-col gap-5 scroll-mt-6">
+        <SectionHeading eyebrow="Start here — know the product" title="What you're selling" sub="Before you demo anything, you should be able to explain Wingman in a sentence and know why an operator should care." />
+        <div className="bg-brick-tint/40 border border-brick/20 rounded-2xl p-6">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-brick mb-1.5">In one line</div>
+          <p className="text-[18px] font-semibold text-ink leading-[1.4]">{PRODUCT_ONE_LINER}</p>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6">
+          <div className="text-[15px] font-semibold text-ink mb-3">Why it matters</div>
+          <ul className="flex flex-col gap-2.5">
+            {WHY_IT_MATTERS.map((w, i) => (
+              <li key={i} className="flex gap-3 text-[14px] text-charcoal-2 leading-[1.5]">
+                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brick shrink-0" />
+                <span>{w}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <div className="text-[15px] font-semibold text-ink mb-3">What each part does (and the problem it solves)</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {PRODUCT_TOUR.map((a) => (
+              <div key={a.name} className="bg-white border border-line rounded-2xl p-5">
+                <div className="text-[15px] font-semibold text-ink">{a.name}</div>
+                <div className="text-[13.5px] text-charcoal-2 mt-1.5">{a.what}</div>
+                <div className="text-[13px] text-muted mt-2 border-t border-[#F5F5F5] pt-2">
+                  <span className="font-semibold text-brick">Solves: </span>{a.problem}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Know the system — feature reference for questions */}
       <section className="flex flex-col gap-4">
