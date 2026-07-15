@@ -26,6 +26,33 @@ export async function createFranchiseGroup(_prev: FranchiseActionState, formData
   return { error: null, ok: true };
 }
 
+// Delete a franchise group cleanly. Franchisee ACCOUNTS are never deleted — they
+// are only detached: their billing flag is reset so they bill for themselves
+// again, and any brand-standard content pushed to them is unlocked so they keep
+// full control of their own copies. Then the group + its memberships/admins/
+// brand links are removed. Platform-admin only.
+export async function deleteFranchiseGroup(groupId: string): Promise<FranchiseActionState> {
+  if (!(await requirePlatformAdmin())) return { error: "Not authorized." };
+  if (!groupId) return { error: "Missing group." };
+  const admin = createAdminClient();
+
+  // Detach every member org: no longer in a group, and bills for itself again.
+  await admin.from("organizations").update({ franchise_group_id: null, billed_by_group: false }).eq("franchise_group_id", groupId);
+  // Unlock any brand-standard content pushed from this group so franchisees keep
+  // editable copies (the lock trigger would otherwise block them forever).
+  await admin.from("tests").update({ brand_locked: false, brand_group_id: null }).eq("brand_group_id", groupId);
+
+  // Remove the group's relationship rows, then the group itself.
+  await admin.from("brand_content_links").delete().eq("group_id", groupId);
+  await admin.from("franchise_memberships").delete().eq("group_id", groupId);
+  await admin.from("franchise_admins").delete().eq("group_id", groupId);
+  const { error } = await admin.from("franchise_groups").delete().eq("id", groupId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/franchises");
+  return { error: null, ok: true };
+}
+
 export async function addFranchiseMember(groupId: string, orgId: string): Promise<FranchiseActionState> {
   if (!(await requirePlatformAdmin())) return { error: "Not authorized." };
   if (!groupId || !orgId) return { error: "Pick an organization." };
