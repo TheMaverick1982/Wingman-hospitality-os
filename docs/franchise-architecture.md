@@ -4,8 +4,19 @@ How Wingman supports a **franchisor** who wants every **franchisee** on the same
 training, hiring, and standards — while each franchisee runs (and optionally
 pays for) their own account.
 
-Status: **proposal for review.** No code yet. This documents the model, the
-data/roles/RLS design, the billing options, and a phased build plan.
+Status: **Phase 1 shipped** (group + membership + franchisor oversight console,
+platform-admin provisioned). Phases 2–3 still proposed.
+
+**Confirmed decisions:**
+1. **Provisioning** — platform-admin only (Admin → Franchises). Invisible to every
+   normal customer; the franchise console/nav only appears for franchise admins.
+2. **Visibility** — franchisor sees **compliance + aggregates only** (repeat rate,
+   audit health, spot-check / sign-off cadence). **Raw guest contact info stays
+   with the franchisee owner** — never exposed to the franchisor (compliance-safe).
+3. **Billing** — two options at group setup: **each franchisee pays their own**
+   (distributed) or **franchisor pays for all** (central). Hybrid deferred.
+4. **Autonomy** — brand content is locked; franchisees may add their own local
+   content on top. No lock-bypass, so no harm vector.
 
 ---
 

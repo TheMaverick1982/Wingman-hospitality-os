@@ -14,6 +14,7 @@ type SidebarProps = {
   fallbackLocationName: string;
   fallbackRepeatRate: number;
   isPlatformAdmin?: boolean;
+  isFranchiseAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
 };

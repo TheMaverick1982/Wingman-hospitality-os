@@ -8,6 +8,7 @@ import type { PlatformSection } from "@/lib/auth/platform";
 
 const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSection }[] = [
   { href: "/admin/organizations", label: "Organizations", icon: Building2, section: "organizations" },
+  { href: "/admin/franchises", label: "Franchises", icon: Building2, section: "organizations" },
   { href: "/admin/crm", label: "CRM", icon: Contact, section: "crm" },
   { href: "/admin/support", label: "Support", icon: LifeBuoy, section: "support" },
   { href: "/admin/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
