@@ -834,6 +834,26 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Reporting", href: "/help/reporting" }, { label: "Tests & exams", href: "/help/tests-and-exams" }],
   },
   {
+    slug: "trash-and-recovery",
+    title: "Recovering deleted records (Trash)",
+    summary: "Deleting a guest, partner, or staff member is reversible — restore it from Trash, or see who deleted what.",
+    categoryId: "admin",
+    keywords: ["trash", "delete", "deleted", "restore", "recover", "undo", "audit", "audit log", "backup", "recovery", "accidental", "employee"],
+    body: [
+      { kind: "p", text: "Deleting a guest, a partner contact, or a staff member doesn't destroy it — it moves to Trash, where the account owner can restore it. So an accidental (or malicious) deletion is fully recoverable, without a support ticket." },
+      { kind: "steps", items: [
+        "Go to Settings → Trash (owner only).",
+        "Find the record — each shows what it was, when it was deleted, and who deleted it.",
+        "Click Restore to bring it back exactly as it was, or Delete forever to remove it permanently.",
+      ] },
+      { kind: "h", text: "The activity log" },
+      { kind: "p", text: "The same tab shows a Recent activity log — every delete, restore, and permanent removal, with who did it and when. It's your record if you ever need to see what a team member changed." },
+      { kind: "note", text: "Only the account owner can see and act on Trash — a manager or staff member can delete a record (which is logged), but can't empty the Trash or hide their tracks." },
+      { kind: "tip", text: "Trash covers your day-to-day \"someone deleted something\" needs. Your whole account is also backed up at the database level as a separate safety net for larger issues." },
+    ],
+    links: [{ label: "Team & permissions", href: "/help/team-and-permissions" }],
+  },
+  {
     slug: "billing",
     title: "Billing",
     summary: "How billing works, statement descriptor, and what happens if a payment fails.",
