@@ -41,16 +41,19 @@ export function ContactModal({
 }) {
   const [state, formAction, pending] = useActionState(saveContact, initialState);
   useCloseOnSuccess(pending, state.error, onClose);
+  // A contact with no id is a new record (e.g. pre-filled from a card scan);
+  // only an existing id means we're editing.
+  const isEdit = !!contact?.id;
 
   return (
     <Modal
-      title={contact ? "Update contact" : "Add contact"}
+      title={isEdit ? "Update contact" : "Add contact"}
       sub="A local business or person you're building a relationship with — for catering, events, fundraisers, and group visits."
       onClose={onClose}
       wide
     >
       <form action={formAction}>
-        {contact && <input type="hidden" name="contactId" value={contact.id} />}
+        {isEdit && <input type="hidden" name="contactId" value={contact!.id} />}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <label className="flex flex-col gap-1.5 text-sm">

@@ -18,6 +18,7 @@ import {
 } from "@/lib/partners";
 import { ContactModal, type ContactFormValue } from "./contact-modal";
 import { LogActivitySheet } from "./log-activity-sheet";
+import { ScanCardButton } from "./scan-card-button";
 import { deleteContact, quickLogCallText } from "./actions";
 
 type FeedActivity = {
@@ -283,6 +284,7 @@ export function PartnersClient({
         </div>
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <ScanCardButton defaultLocationId={defaultLocationId} onScanned={(c) => setModalContact(c)} />
             <Btn kind="ghost" icon={MessageSquarePlus} onClick={() => setSheet({ open: true, preselect: null })}>
               Log Activity
             </Btn>
