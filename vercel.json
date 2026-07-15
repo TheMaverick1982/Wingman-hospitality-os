@@ -25,6 +25,14 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/toast-sync",
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/cron/lightspeed-sync",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/support-cleanup",
       "schedule": "0 5 * * *"
     },

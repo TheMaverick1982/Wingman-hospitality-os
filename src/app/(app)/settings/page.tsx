@@ -23,9 +23,11 @@ import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
-import { DirectIntegrations, type SquareConnection, type CloverConnection } from "./square-card";
+import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
 import { cloverConfigured } from "@/lib/clover";
+import { toastConfigured } from "@/lib/toast";
+import { lightspeedConfigured } from "@/lib/lightspeed";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
@@ -498,6 +500,48 @@ export default async function SettingsPage() {
   }));
   const cloverIsConfigured = cloverConfigured();
 
+  // Toast connections (safe columns only — no secrets stored for Toast anyway).
+  const { data: toastRows } = await admin
+    .from("toast_connections")
+    .select("restaurant_guid, restaurant_name, connected_at, last_sync_at, last_sync_status")
+    .eq("org_id", profile.orgId)
+    .order("connected_at", { ascending: true });
+  const toastConnections: ToastConnection[] = ((toastRows ?? []) as {
+    restaurant_guid: string;
+    restaurant_name: string;
+    connected_at: string;
+    last_sync_at: string | null;
+    last_sync_status: string | null;
+  }[]).map((c) => ({
+    restaurantGuid: c.restaurant_guid,
+    restaurantName: c.restaurant_name ?? "",
+    connectedAt: c.connected_at,
+    lastSyncAt: c.last_sync_at ?? null,
+    lastSyncStatus: c.last_sync_status ?? null,
+  }));
+  const toastIsConfigured = toastConfigured();
+
+  // Lightspeed connections (safe columns only — tokens are never selected).
+  const { data: lightspeedRows } = await admin
+    .from("lightspeed_connections")
+    .select("account_id, account_name, connected_at, last_sync_at, last_sync_status")
+    .eq("org_id", profile.orgId)
+    .order("connected_at", { ascending: true });
+  const lightspeedConnections: LightspeedConnection[] = ((lightspeedRows ?? []) as {
+    account_id: string;
+    account_name: string;
+    connected_at: string;
+    last_sync_at: string | null;
+    last_sync_status: string | null;
+  }[]).map((c) => ({
+    accountId: c.account_id,
+    accountName: c.account_name ?? "",
+    connectedAt: c.connected_at,
+    lastSyncAt: c.last_sync_at ?? null,
+    lastSyncStatus: c.last_sync_status ?? null,
+  }));
+  const lightspeedIsConfigured = lightspeedConfigured();
+
   return (
     <>
       <div>
@@ -520,6 +564,10 @@ export default async function SettingsPage() {
                 sandboxTokenAvailable={squareSandboxToken}
                 cloverConfigured={cloverIsConfigured}
                 cloverConnections={cloverConnections}
+                toastConfigured={toastIsConfigured}
+                toastConnections={toastConnections}
+                lightspeedConfigured={lightspeedIsConfigured}
+                lightspeedConnections={lightspeedConnections}
               />
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>
