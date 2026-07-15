@@ -197,7 +197,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
             </div>
             <div className="shrink-0">
               <Link
-                href="/training/tests"
+                href="/training/continuing-education"
                 className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-[#15803d] rounded-full px-4 py-2.5 hover:bg-[#166534] transition-colors"
               >
                 {monthlyTests.length > 0 ? "Manage monthly training" : "Set up continuing education"}
