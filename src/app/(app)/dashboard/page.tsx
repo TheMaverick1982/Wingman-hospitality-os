@@ -23,6 +23,9 @@ import { WeeklyMovesCard } from "./weekly-moves-card";
 import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { WeekVerdict } from "@/components/dashboard/week-verdict";
+import { weeklyBuckets, thisVsLast, repeatRateSeries, repeatRateAsOf } from "@/lib/dashboard-trends";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ArrowUpRight, ArrowRight, ClipboardCheck, Rocket, Sparkle, TrendingUp } from "lucide-react";
 
@@ -183,6 +186,48 @@ export default async function DashboardPage({
   const guestsAwaitingFollowUp = scopedGuests.filter((g) => stageOf(g.guest_visits) === 1).length;
   const returningGuestCount = scopedGuests.filter((g) => stageOf(g.guest_visits) >= 2).length;
 
+  // First-run: no guests, spot-checks, sign-offs, or culture moments yet. In that
+  // state we show an inviting "here's what this looks like" preview instead of a
+  // wall of zeros. Any real data flips the dashboard to live numbers + trends.
+  const isEmptyDashboard =
+    stageCounts.total === 0 && spotChecks.length === 0 && (signoffsThisWeek ?? 0) === 0 && (cultureMomentsThisQtr ?? 0) === 0;
+
+  // KPI trends (real, week-over-week). Skipped for the empty state. Weekly series
+  // for the countable KPIs come from a light date-only fetch; the repeat-rate
+  // trend is recomputed from the guest visits already in memory.
+  const TREND_WEEKS = 6;
+  const WEEK_MS = 7 * 86400000;
+  const nowMs = Date.now();
+  let trend: null | {
+    repeatNow: number;
+    repeatDelta: number;
+    repeatSeries: number[];
+    spot: { value: number; delta: number; series: number[] };
+    signoff: { value: number; delta: number; series: number[] };
+    culture: { value: number; delta: number; series: number[] };
+  } = null;
+  if (!isEmptyDashboard) {
+    const sinceIso = new Date(nowMs - TREND_WEEKS * WEEK_MS).toISOString().slice(0, 10);
+    const col = (rows: unknown[] | null | undefined) => ((rows ?? []) as { occurred_on: string }[]).map((r) => r.occurred_on);
+    const [spotDates, signoffDates, cultureDates] = await Promise.all([
+      scoped(supabase.from("spot_checks").select("occurred_on").gte("occurred_on", sinceIso).limit(3000), effectiveLocation),
+      scoped(supabase.from("training_signoffs").select("occurred_on").gte("occurred_on", sinceIso).limit(3000), effectiveLocation),
+      supabase.from("culture_moments").select("occurred_on").gte("occurred_on", sinceIso).limit(3000),
+    ]);
+    const spotBuckets = weeklyBuckets(col(spotDates.data), nowMs, TREND_WEEKS);
+    const signoffBuckets = weeklyBuckets(col(signoffDates.data), nowMs, TREND_WEEKS);
+    const cultureBuckets = weeklyBuckets(col(cultureDates.data), nowMs, TREND_WEEKS);
+    const repeatNow = stageCounts.pct[1] || 0;
+    trend = {
+      repeatNow,
+      repeatDelta: repeatNow - repeatRateAsOf(scopedGuests, nowMs - WEEK_MS),
+      repeatSeries: repeatRateSeries(scopedGuests, nowMs, TREND_WEEKS),
+      spot: { value: spotChecks.length, delta: thisVsLast(spotBuckets).delta, series: spotBuckets },
+      signoff: { value: signoffsThisWeek ?? 0, delta: thisVsLast(signoffBuckets).delta, series: signoffBuckets },
+      culture: { value: cultureMomentsThisQtr ?? 0, delta: thisVsLast(cultureBuckets).delta, series: cultureBuckets },
+    };
+  }
+
   const bhMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const bhMetrics = bh
     ? (() => {
@@ -324,6 +369,10 @@ export default async function DashboardPage({
         </Link>
       )}
 
+      {!isEmptyDashboard && momentum && stageCounts.total > 0 && trend && (
+        <WeekVerdict repeatRate={trend.repeatNow} repeatDelta={trend.repeatDelta} momentum={momentum} />
+      )}
+
       {momentum && <MomentumCard momentum={momentum} />}
 
       {weeklyMoves && (
@@ -367,38 +416,26 @@ export default async function DashboardPage({
         </Link>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-tour="kpis">
-        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] text-muted font-medium">Repeat rate</span>
+      {isEmptyDashboard ? (
+        <div data-tour="kpis">
+          <p className="text-[12.5px] text-muted-2 mb-2.5">
+            A preview of what you&rsquo;ll see here — your real numbers fill in as your team logs shifts.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <KpiCard sample label="Repeat rate" value="38%" sub="back for visit 2" delta={4} deltaUnit="pt" series={[28, 30, 29, 33, 35, 38]} />
+            <KpiCard sample label="Spot-checks logged" value="12" sub="across all departments" delta={3} series={[1, 2, 2, 3, 2, 3]} />
+            <KpiCard sample label="Sign-offs this week" value="9" sub="logged in the last 7 days" delta={2} series={[3, 4, 5, 4, 7, 9]} />
+            <KpiCard sample label="Culture moments" value="7" sub="recognized this quarter" delta={5} series={[0, 1, 2, 3, 5, 7]} />
           </div>
-          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">
-            {stageCounts.pct[1] || 0}%
-          </div>
-          <div className="text-[13px] text-muted mt-2.5">back for visit 2</div>
         </div>
-        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] text-muted font-medium">Spot-checks logged</span>
-          </div>
-          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{spotChecks.length}</div>
-          <div className="text-[13px] text-muted mt-2.5">across all departments</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-tour="kpis">
+          <KpiCard label="Repeat rate" value={`${trend?.repeatNow ?? stageCounts.pct[1] ?? 0}%`} sub="back for visit 2" delta={trend?.repeatDelta} deltaUnit="pt" series={trend?.repeatSeries} />
+          <KpiCard label="Spot-checks logged" value={String(spotChecks.length)} sub="across all departments" delta={trend?.spot.delta} series={trend?.spot.series} />
+          <KpiCard label="Sign-offs this week" value={String(signoffsThisWeek ?? 0)} sub="logged in the last 7 days" delta={trend?.signoff.delta} series={trend?.signoff.series} />
+          <KpiCard label="Culture moments" value={String(cultureMomentsThisQtr ?? 0)} sub="recognized this quarter" delta={trend?.culture.delta} series={trend?.culture.series} />
         </div>
-        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] text-muted font-medium">Sign-offs this week</span>
-          </div>
-          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{signoffsThisWeek ?? 0}</div>
-          <div className="text-[13px] text-muted mt-2.5">logged in the last 7 days</div>
-        </div>
-        <div className="bg-white border border-line rounded-2xl p-[22px] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] text-muted font-medium">Culture moments</span>
-          </div>
-          <div className="text-[38px] font-semibold tracking-[-0.02em] leading-none text-ink">{cultureMomentsThisQtr ?? 0}</div>
-          <div className="text-[13px] text-muted mt-2.5">recognized this quarter</div>
-        </div>
-      </div>
+      )}
 
       {programRevenue.billedVisits > 0 && (
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
