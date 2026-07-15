@@ -17,13 +17,18 @@ export const SQUARE_APP_ID = process.env.SQUARE_APPLICATION_ID ?? "";
 const SQUARE_APP_SECRET = process.env.SQUARE_APPLICATION_SECRET ?? "";
 
 // The OAuth callback must exactly match what's registered in the Square app.
-// Trim aggressively — a stray trailing newline/space in the env var (a common
-// paste error) would otherwise corrupt the redirect_uri and break the flow.
+// Bulletproof against a mangled env var (a common paste error doubled the URL
+// and added newlines): strip ALL whitespace, and only trust the override if it
+// is a single clean callback URL — otherwise fall back to the known-good
+// production URL. The app lives at joinwingman.app, so that default is correct.
+const DEFAULT_SQUARE_REDIRECT = "https://joinwingman.app/api/integrations/square/callback";
 export function squareRedirectUrl(): string {
-  const override = (process.env.SQUARE_REDIRECT_URL ?? "").trim();
-  if (override) return override;
-  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").trim().replace(/\/+$/, "");
-  return `${base}/api/integrations/square/callback`;
+  const raw = (process.env.SQUARE_REDIRECT_URL ?? "").replace(/\s+/g, "");
+  const oneHttps = (raw.match(/https:\/\//g) ?? []).length === 1;
+  if (oneHttps && /^https:\/\/[a-z0-9.-]+\/api\/integrations\/square\/callback$/i.test(raw)) {
+    return raw;
+  }
+  return DEFAULT_SQUARE_REDIRECT;
 }
 
 export function squareConfigured(): boolean {
