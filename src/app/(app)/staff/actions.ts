@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { logAudit } from "@/lib/audit-log";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { sendLoginInvite, type LoginAccessRole } from "@/lib/invite";
 
@@ -146,9 +147,26 @@ export async function updateStaffContact(
   revalidatePath(`/staff/${id}`);
 }
 
+// Soft delete — hidden by RLS but recoverable by the owner from Settings → Trash.
 export async function deleteStaffMember(id: string) {
+  const profile = await getCurrentProfile();
   const supabase = await createClient();
-  await supabase.from("staff_members").delete().eq("id", id);
+  const { data: s } = await supabase.from("staff_members").select("name").eq("id", id).maybeSingle();
+  await supabase
+    .from("staff_members")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: profile?.userId ?? null })
+    .eq("id", id);
+  if (profile) {
+    await logAudit({
+      orgId: profile.orgId,
+      actorId: profile.userId,
+      actorName: profile.fullName,
+      action: "deleted",
+      entityType: "staff",
+      entityId: id,
+      entityLabel: (s as { name?: string } | null)?.name ?? "",
+    });
+  }
   revalidatePath("/staff");
 }
 

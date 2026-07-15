@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/profile";
+import { logAudit } from "@/lib/audit-log";
 
 export type ActionState = { error: string | null };
 
@@ -146,9 +148,27 @@ export async function importGuests(rows: ImportRow[], fallbackLocationId: string
   return { error: null, imported: ids.length, skipped };
 }
 
+// Soft delete — the guest is hidden (RLS filters deleted_at) but recoverable by
+// the owner from Settings → Trash. The action is recorded to the audit log.
 export async function deleteGuest(guestId: string) {
+  const profile = await getCurrentProfile();
   const supabase = await createClient();
-  await supabase.from("guests").delete().eq("id", guestId);
+  const { data: g } = await supabase.from("guests").select("name").eq("id", guestId).maybeSingle();
+  await supabase
+    .from("guests")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: profile?.userId ?? null })
+    .eq("id", guestId);
+  if (profile) {
+    await logAudit({
+      orgId: profile.orgId,
+      actorId: profile.userId,
+      actorName: profile.fullName,
+      action: "deleted",
+      entityType: "guest",
+      entityId: guestId,
+      entityLabel: (g as { name?: string } | null)?.name ?? "",
+    });
+  }
   revalidatePath("/bounceback");
   revalidatePath("/dashboard");
 }
