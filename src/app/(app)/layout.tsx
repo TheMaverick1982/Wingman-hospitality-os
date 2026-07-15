@@ -79,6 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         fallbackLocationName={fallbackLocationName}
         fallbackRepeatRate={fallbackRepeatRate}
         isPlatformAdmin={profile.isPlatformAdmin}
+        isFranchiseAdmin={!!profile.franchiseGroupId}
         permissionOverrides={profile.permissionOverrides}
         showStartHere={!!launch && !launch.allDone}
       />
@@ -92,6 +93,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           fallbackLocationName={fallbackLocationName}
           fallbackRepeatRate={fallbackRepeatRate}
           isPlatformAdmin={profile.isPlatformAdmin}
+          isFranchiseAdmin={!!profile.franchiseGroupId}
           permissionOverrides={profile.permissionOverrides}
           showStartHere={!!launch && !launch.allDone}
         />

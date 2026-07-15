@@ -20,6 +20,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  Building2,
   Rocket,
   HelpCircle,
   Lightbulb,
@@ -61,6 +62,7 @@ export function Sidebar({
   fallbackLocationName,
   fallbackRepeatRate,
   isPlatformAdmin,
+  isFranchiseAdmin,
   permissionOverrides,
   showStartHere,
   variant = "desktop",
@@ -71,6 +73,7 @@ export function Sidebar({
   fallbackLocationName: string;
   fallbackRepeatRate: number;
   isPlatformAdmin?: boolean;
+  isFranchiseAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
   variant?: "desktop" | "drawer";
@@ -195,6 +198,15 @@ export function Sidebar({
       </nav>
 
       <div className="mt-auto shrink-0 pt-3">
+        {isFranchiseAdmin && (
+          <Link
+            href="/franchise"
+            className="flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm font-medium text-charcoal-2 hover:bg-paper transition-colors mb-1"
+          >
+            <Building2 size={19} strokeWidth={2} className="text-muted-2" />
+            Franchise oversight
+          </Link>
+        )}
         {isPlatformAdmin && (
           <Link
             href="/admin/organizations"

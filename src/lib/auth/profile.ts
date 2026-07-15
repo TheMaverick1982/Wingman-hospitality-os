@@ -30,6 +30,10 @@ export type CurrentProfile = {
   // until they've picked one, which triggers the first-login language prompt.
   language: Lang;
   languageChosen: boolean;
+  // Franchise: set when this user is a franchisor admin over a franchise group.
+  // Gates the franchisor console + nav. Null for everyone else (the vast majority).
+  franchiseGroupId: string | null;
+  franchiseRole: "admin" | "viewer" | null;
 };
 
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
@@ -47,7 +51,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (!user) return null;
 
   const admin = createAdminClient();
-  const [{ data }, { data: locRows }, { data: langRow }] = await Promise.all([
+  const [{ data }, { data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
     admin
       .from("profiles")
       .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo, demo_expires_at)")
@@ -58,8 +62,11 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     // adding the column hasn't landed yet, a missing column can't break login —
     // it just degrades to English with no first-login prompt.
     admin.from("profiles").select("preferred_language").eq("id", user.id).maybeSingle(),
+    // Franchise admin membership (guarded — pre-migration must not break login).
+    admin.from("franchise_admins").select("group_id, role").eq("user_id", user.id).maybeSingle(),
   ]);
   const preferredLanguage = (langRow as { preferred_language?: string | null } | null)?.preferred_language ?? null;
+  const franchiseRow = (franchiseAdminRow as { group_id: string; role: "admin" | "viewer" } | null) ?? null;
 
   if (!data) return null;
   // `Database` is a loose placeholder type today, so postgrest-js can't infer
@@ -95,5 +102,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     demoLeadEmail: (user.user_metadata?.lead_email as string | null) ?? null,
     language: normalizeLang(preferredLanguage),
     languageChosen: preferredLanguage != null,
+    franchiseGroupId: franchiseRow?.group_id ?? null,
+    franchiseRole: franchiseRow?.role ?? null,
   };
 }
