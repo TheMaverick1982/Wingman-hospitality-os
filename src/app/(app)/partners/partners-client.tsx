@@ -278,6 +278,39 @@ export function PartnersClient({
     </div>
   );
 
+  // KPI + goal cards, rendered in two positions: before the tabs on desktop,
+  // and below the contact list on mobile (so search + follow-up + contacts are
+  // reachable first on a phone — same idea as Guest Bounce Back).
+  const metricCards = (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile label="Total contacts" value={contacts.length} sub="businesses you're tracking" />
+        <StatTile
+          label="Active connections"
+          value={activeCount}
+          sub={`of ${goalTargets.goal_active_connections} target · touched in 30 days`}
+          trend={activeCount >= goalTargets.goal_active_connections && goalTargets.goal_active_connections > 0 ? "On target" : undefined}
+          trendTone="up"
+        />
+        <button type="button" onClick={() => setFadingOnly((v) => !v)} className="text-left">
+          <StatTile
+            label="Needs follow-up"
+            value={fadingCount}
+            sub={fadingOnly ? "Showing these — tap to clear" : "30+ days quiet or never — tap to filter"}
+            trend={fadingCount > 0 ? "Follow up" : undefined}
+            trendTone="down"
+          />
+        </button>
+        <StatTile label="Revenue this quarter" value={money(quarterRevenue)} sub="booked from partners" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <GoalCard label="This quarter's growth" actual={quarterActuals.newContacts} target={goalTargets.goal_new_contacts} unit="new contacts" />
+        <GoalCard label="Community events" actual={quarterActuals.events} target={goalTargets.goal_events} unit="booked" />
+        <GoalCard label="Fundraisers" actual={quarterActuals.fundraisers} target={goalTargets.goal_fundraisers} unit="booked" />
+      </div>
+    </>
+  );
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -307,34 +340,8 @@ export function PartnersClient({
         )}
       </div>
 
-      {/* KPI cards. The Needs-Follow-up card doubles as a filter toggle. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatTile label="Total contacts" value={contacts.length} sub="businesses you're tracking" />
-        <StatTile
-          label="Active connections"
-          value={activeCount}
-          sub={`of ${goalTargets.goal_active_connections} target · touched in 30 days`}
-          trend={activeCount >= goalTargets.goal_active_connections && goalTargets.goal_active_connections > 0 ? "On target" : undefined}
-          trendTone="up"
-        />
-        <button type="button" onClick={() => setFadingOnly((v) => !v)} className="text-left">
-          <StatTile
-            label="Needs follow-up"
-            value={fadingCount}
-            sub={fadingOnly ? "Showing these — tap to clear" : "30+ days quiet or never — tap to filter"}
-            trend={fadingCount > 0 ? "Follow up" : undefined}
-            trendTone="down"
-          />
-        </button>
-        <StatTile label="Revenue this quarter" value={money(quarterRevenue)} sub="booked from partners" />
-      </div>
-
-      {/* Goal progress for the quarter (targets set by the owner in Settings). */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <GoalCard label="This quarter's growth" actual={quarterActuals.newContacts} target={goalTargets.goal_new_contacts} unit="new contacts" />
-        <GoalCard label="Community events" actual={quarterActuals.events} target={goalTargets.goal_events} unit="booked" />
-        <GoalCard label="Fundraisers" actual={quarterActuals.fundraisers} target={goalTargets.goal_fundraisers} unit="booked" />
-      </div>
+      {/* Metrics — desktop: above the tabs. (Mobile renders them below the list.) */}
+      <div className="hidden lg:flex lg:flex-col gap-5">{metricCards}</div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-line">
@@ -453,6 +460,9 @@ export function PartnersClient({
       ) : (
         <ActivityFeed activities={activities} now={now} locName={showLocationBadges ? locName : () => null} />
       )}
+
+      {/* Metrics — mobile: below the list, so search + follow-up + contacts come first. */}
+      <div className="lg:hidden flex flex-col gap-5">{metricCards}</div>
 
       {modalContact !== undefined && (
         <ContactModal
