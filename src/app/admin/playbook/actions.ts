@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import {
   generateDraft, createPost, updatePost, setPostStatus, deletePost, listAllPosts,
-  approvePost, generateAndSchedule, BATCH_SIZE,
+  approvePost, generateAndSchedule, publishAndShare, shareToFacebook, BATCH_SIZE,
   type Draft, type PostStatus,
 } from "@/lib/playbook";
 
@@ -29,10 +29,12 @@ export async function savePostAction(input: SaveInput): Promise<{ error: string 
   let id = input.id;
   if (id) {
     await updatePost(id, { title: input.title, excerpt: input.excerpt, body: input.body, category: input.category, keywords: input.keywords });
-    await setPostStatus(id, input.status, input.scheduledFor);
+    if (input.status === "published") await publishAndShare(id);
+    else await setPostStatus(id, input.status, input.scheduledFor);
   } else {
     id = await createPost(me.userId, { title: input.title, excerpt: input.excerpt, body: input.body, category: input.category, keywords: input.keywords, status: input.status, scheduledFor: input.scheduledFor });
     if (!id) return { error: "Couldn't save the post." };
+    if (input.status === "published") await publishAndShare(id);
   }
   revalidatePath("/admin/playbook");
   revalidatePath("/playbook");
@@ -41,10 +43,20 @@ export async function savePostAction(input: SaveInput): Promise<{ error: string 
 
 export async function setStatusAction(id: string, status: PostStatus): Promise<{ error: string | null }> {
   if (!(await admin())) return { error: "Not authorized." };
-  await setPostStatus(id, status);
+  if (status === "published") await publishAndShare(id);
+  else await setPostStatus(id, status);
   revalidatePath("/admin/playbook");
   revalidatePath("/playbook");
   return { error: null };
+}
+
+// Manually push an already-published post to Facebook (for posts published
+// before the page was connected, or that failed the first time).
+export async function shareToFacebookAction(id: string): Promise<{ error: string | null; already?: boolean }> {
+  if (!(await admin())) return { error: "Not authorized." };
+  const res = await shareToFacebook(id);
+  revalidatePath("/admin/playbook");
+  return { error: res.error, already: res.already };
 }
 
 export async function deletePostAction(id: string): Promise<{ error: string | null }> {
