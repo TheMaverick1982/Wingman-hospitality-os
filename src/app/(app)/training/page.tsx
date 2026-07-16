@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ClipboardList, CalendarClock, ArrowRight, Route } from "lucide-react";
+import { ClipboardList, CalendarClock, ArrowRight, Route, Trophy } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { computeLeaderboard } from "@/lib/leaderboard";
 import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
@@ -35,6 +37,13 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     allLocations: profile.allLocations,
     accessibleLocationIds: profile.accessibleLocationIds,
   });
+
+  // Training leaderboard (compact top 3) — shown to everyone when the owner has
+  // it enabled.
+  const leaderAdmin = createAdminClient();
+  const { data: lbOrg } = await leaderAdmin.from("organizations").select("leaderboard_enabled").eq("id", profile.orgId).maybeSingle();
+  const leaderboardEnabled = (lbOrg as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
+  const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, profile.allLocations ? null : effectiveLocation)).slice(0, 3) : [];
 
   const supabase = await createClient();
   let signoffsQ = supabase
@@ -144,6 +153,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             <Route size={14} /> Learning paths
           </Link>
+          {leaderboardEnabled && (
+            <Link href="/training/leaderboard" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+              <Trophy size={14} /> Leaderboard
+            </Link>
+          )}
           <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             Print / PDF
           </a>
@@ -151,6 +165,19 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} small />}
         </div>
       </div>
+
+      {leaderTop.length > 0 && (
+        <Link href="/training/leaderboard" className="bg-white border border-line rounded-2xl px-5 py-3.5 shadow-sm flex items-center gap-4 hover:border-brick transition-colors group">
+          <Trophy size={18} className="text-[#B8860B] shrink-0" />
+          <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2">Training leaders</span>
+            {leaderTop.map((r, i) => (
+              <span key={r.staffId} className="text-[13.5px] text-ink"><span className="font-semibold">{i + 1}. {r.name}</span> <span className="text-muted-2 tabular-nums">{r.points}</span></span>
+            ))}
+          </div>
+          <ArrowRight size={15} className="text-muted-2 group-hover:text-brick transition-colors shrink-0" />
+        </Link>
+      )}
 
       {canEdit && (
         <div className="rounded-2xl border border-brick/20 bg-brick-tint/50 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">

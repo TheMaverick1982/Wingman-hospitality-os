@@ -969,6 +969,25 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "training-leaderboard",
+    title: "Training leaderboard — a little friendly competition",
+    summary: "Rank your team on training points and turn 'you have to' into 'I want to move up.'",
+    categoryId: "team",
+    keywords: ["leaderboard", "points", "badges", "competition", "gamification", "rank", "motivation", "engagement"],
+    body: [
+      { kind: "p", text: "The training leaderboard ranks your team on points they earn from training: 10 points for each test passed, a bonus for their average score, and 3 points for each training sign-off. It updates on its own from what your team is already doing." },
+      { kind: "h", text: "Badges" },
+      { kind: "list", items: [
+        "Certified — passed at least one test.",
+        "Perfect score — aced a test at 100%.",
+        "On a roll — passed three or more tests in the last 30 days.",
+      ] },
+      { kind: "h", text: "Who sees it" },
+      { kind: "p", text: "Everyone on the team can see the leaderboard for their location, from Training & standards → Leaderboard. Managers and owners who span locations see the whole team. Only the account owner can turn it on or off, from the top of the leaderboard page — turn it off any time you'd rather not have competition on the floor." },
+      { kind: "tip", text: "The board fills in as your team takes tests and signs off training, so assign a test or two to get it going." },
+    ],
+  },
+  {
     slug: "learning-paths",
     title: "Learning paths — a step-by-step start for new hires",
     summary: "Bundle tests, role training, and tasks into one ordered checklist you assign to a new hire.",
