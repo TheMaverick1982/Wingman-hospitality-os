@@ -140,6 +140,7 @@ export function Composer({ categories, posts, lastScheduled, pendingApproval, sc
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <Link href={`/playbook/${p.slug}/opengraph-image`} target="_blank" className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick" title="Preview the Facebook/social share card">Card</Link>
                   <button type="button" onClick={() => edit(p)} className="text-muted-2 hover:text-ink" title="Edit"><Pencil size={15} /></button>
                   {p.status === "scheduled" && !p.approved && (
                     <button type="button" disabled={pending} onClick={() => start(async () => { const r = await approveAction(p.id); if (r.error) setErr(r.error); })} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-[#15803d] rounded-full px-3 py-1 hover:opacity-90 disabled:opacity-50"><CheckCircle2 size={13} /> Approve</button>
