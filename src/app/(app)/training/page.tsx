@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, CalendarClock, ArrowRight } from "lucide-react";
+import { ClipboardList, CalendarClock, ArrowRight, Route } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
@@ -140,6 +140,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             <ClipboardList size={14} /> Build &amp; manage tests
+          </Link>
+          <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+            <Route size={14} /> Learning paths
           </Link>
           <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
             Print / PDF

@@ -969,6 +969,25 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "learning-paths",
+    title: "Learning paths — a step-by-step start for new hires",
+    summary: "Bundle tests, role training, and tasks into one ordered checklist you assign to a new hire.",
+    categoryId: "team",
+    keywords: ["learning path", "paths", "onboarding", "new hire", "curriculum", "steps", "checklist", "assign", "train new"],
+    body: [
+      { kind: "p", text: "A learning path turns onboarding into one clear checklist. You bundle things a new hire needs to do — take a test, work through a role's training, or a simple task like shadowing a shift — into an ordered path, then assign it to the person. They see it when they log in, work through it, and check each step off." },
+      { kind: "h", text: "Build a path" },
+      { kind: "steps", items: [
+        "Go to Training & standards → Learning paths and click Create path. Give it a name like \"New Server — First 2 Weeks\".",
+        "Add steps in order: a Test (pick one of your tests), Role training (a department's training program), or a Task (free text, e.g. \"Shadow a senior server for one shift\"). Add a note to any step.",
+        "Assign it to one or more team members. They'll see it on their Learning paths screen next time they log in.",
+      ] },
+      { kind: "h", text: "Track progress" },
+      { kind: "p", text: "As the new hire checks off steps, you see a live percent-complete for each person on the path. Test and role-training steps link straight to the thing to do, so there's no hunting around." },
+      { kind: "tip", text: "Managers and owners build and assign paths; staff see and complete the ones assigned to them. Reuse a path for every new hire in that role so everyone gets the same start." },
+    ],
+  },
+  {
     slug: "franchise-overview",
     title: "Franchise groups: oversight, brand standards & billing",
     summary: "How a multi-unit brand keeps every location on one standard — and who pays.",
