@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAiUsage } from "@/lib/ai/usage";
+import { getSocialSettings, isConnected, GRAPH } from "@/lib/social-meta";
 
 // The Playbook — public content hub. Data access + AI drafting. Reads happen via
 // the service-role client (filtered to published for public pages); writes are
@@ -16,6 +17,7 @@ export type Post = {
   category: string;
   keywords: string[];
   status: PostStatus;
+  approved: boolean;
   scheduledFor: string | null;
   publishedAt: string | null;
   views: number;
@@ -33,6 +35,7 @@ function mapPost(r: Record<string, unknown>): Post {
     category: String(r.category ?? "General"),
     keywords: (r.keywords as string[]) ?? [],
     status: (r.status as PostStatus) ?? "draft",
+    approved: Boolean(r.approved),
     scheduledFor: (r.scheduled_for as string) ?? null,
     publishedAt: (r.published_at as string) ?? null,
     views: Number(r.views ?? 0),
@@ -167,4 +170,119 @@ Return ONLY JSON: {"title": string, "excerpt": string (one sentence, under 160 c
   } catch {
     return null;
   }
+}
+
+// ---- Scheduling (Tue/Thu noon ET) + approval + auto-publish ----
+
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
+export const RUNWAY_MIN = 4;        // generate more when fewer than this remain scheduled
+export const BATCH_SIZE = 8;        // ~one month at 2/week
+
+function etWeekday(dt: Date): number {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(dt);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd);
+}
+
+// The UTC instant of 12:00 America/New_York on the given UTC calendar day.
+function noonEtInstant(y: number, mo: number, d: number): Date {
+  const guess = new Date(Date.UTC(y, mo, d, 16, 0, 0)); // 16:00 UTC ~= noon ET (EDT)
+  const hourStr = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).formatToParts(guess).find((p) => p.type === "hour")?.value ?? "12";
+  const adj = 12 - Number(hourStr);
+  return new Date(guess.getTime() + adj * 3600000);
+}
+
+// The next `count` Tue/Thu-noon-ET instants strictly after fromMs.
+export function nextSlots(count: number, fromMs: number): string[] {
+  const out: string[] = [];
+  const cursor = new Date(fromMs);
+  cursor.setUTCHours(0, 0, 0, 0);
+  for (let i = 0; i < 120 && out.length < count; i++) {
+    const day = new Date(cursor.getTime() + i * 86400000);
+    const slot = noonEtInstant(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
+    const wd = etWeekday(slot);
+    if ((wd === 2 || wd === 4) && slot.getTime() > fromMs) out.push(slot.toISOString());
+  }
+  return out;
+}
+
+export async function scheduledFuture(): Promise<Post[]> {
+  const admin = createAdminClient();
+  const nowIso = new Date().toISOString();
+  const { data } = await admin.from("blog_posts").select("*").eq("status", "scheduled").gte("scheduled_for", nowIso).order("scheduled_for");
+  return ((data ?? []) as Record<string, unknown>[]).map(mapPost);
+}
+
+export async function lastScheduledDate(): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("blog_posts").select("scheduled_for").eq("status", "scheduled").order("scheduled_for", { ascending: false }).limit(1).maybeSingle();
+  return (data as { scheduled_for?: string } | null)?.scheduled_for ?? null;
+}
+
+export async function approvePost(id: string): Promise<void> {
+  const admin = createAdminClient();
+  await admin.from("blog_posts").update({ approved: true, updated_at: new Date().toISOString() }).eq("id", id);
+}
+
+// Generate `count` posts and schedule them into the next open Tue/Thu noon-ET
+// slots (skipping ones already taken), rotating categories and deduping titles.
+// They land as scheduled + NOT approved, awaiting review.
+export async function generateAndSchedule(userId: string | null, count: number): Promise<{ created: number; error: string | null }> {
+  const admin = createAdminClient();
+  const existing = (await listAllPosts()).map((p) => p.title);
+  const taken = new Set((await scheduledFuture()).map((p) => p.scheduledFor));
+  // Find open slots after the latest currently-scheduled date (so we extend the runway).
+  const last = await lastScheduledDate();
+  const fromMs = Math.max(Date.now(), last ? new Date(last).getTime() : 0);
+  const slots = nextSlots(count + taken.size + 4, fromMs).filter((s) => !taken.has(s)).slice(0, count);
+
+  let created = 0;
+  for (let i = 0; i < slots.length; i++) {
+    const category = PLAYBOOK_CATEGORIES[(existing.length + created + i) % PLAYBOOK_CATEGORIES.length];
+    const draft = await generateDraft({ category, existingTitles: [...existing, ...Array(created).fill("")].filter(Boolean) });
+    if (!draft) continue;
+    existing.push(draft.title);
+    const slug = await uniqueSlug(slugify(draft.title));
+    await admin.from("blog_posts").insert({
+      slug, title: draft.title, excerpt: draft.excerpt, body: draft.body, category: draft.category, keywords: draft.keywords,
+      status: "scheduled", approved: false, scheduled_for: slots[i], created_by: userId,
+    });
+    created += 1;
+  }
+  return { created, error: created === 0 ? "Couldn't generate posts (the AI may be unavailable)." : null };
+}
+
+// Post a published article to the connected Facebook page (best-effort).
+async function postToFacebook(title: string, excerpt: string, slug: string): Promise<string | null> {
+  try {
+    const s = await getSocialSettings();
+    if (!isConnected(s) || !s) return null;
+    const url = `${SITE}/playbook/${slug}`;
+    const message = `${title}\n\n${excerpt}`.trim();
+    const res = await fetch(`${GRAPH}/${s.fb_page_id}/feed`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, link: url, access_token: s.page_access_token }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { id?: string };
+    return res.ok ? data.id ?? "posted" : null;
+  } catch {
+    return null;
+  }
+}
+
+// Publish approved + scheduled posts whose time has arrived. Posts each to
+// Facebook. Returns the slugs published.
+export async function publishDuePosts(): Promise<string[]> {
+  const admin = createAdminClient();
+  const nowIso = new Date().toISOString();
+  const { data } = await admin.from("blog_posts").select("id, slug, title, excerpt").eq("status", "scheduled").eq("approved", true).lte("scheduled_for", nowIso);
+  const due = (data ?? []) as { id: string; slug: string; title: string; excerpt: string }[];
+  const published: string[] = [];
+  for (const p of due) {
+    await admin.from("blog_posts").update({ status: "published", published_at: nowIso, updated_at: nowIso }).eq("id", p.id);
+    const fb = await postToFacebook(p.title, p.excerpt, p.slug);
+    if (fb) await admin.from("blog_posts").update({ facebook_posted_at: nowIso }).eq("id", p.id);
+    published.push(p.slug);
+  }
+  return published;
 }
