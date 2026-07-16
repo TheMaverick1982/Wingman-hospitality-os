@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Check, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import { resolveError, reopenError } from "./actions";
+import { resolveError, reopenError, loadMoreResolvedErrors } from "./actions";
 
 export type ErrorEvent = {
   id: string;
@@ -49,11 +49,51 @@ function timeAgo(iso: string): string {
   return `${Math.round(hrs / 24)}d ago`;
 }
 
-export function HealthClient({ open, resolved }: { open: ErrorEvent[]; resolved: ErrorEvent[] }) {
+export function HealthClient({ open, resolved, resolvedHasMore = false }: { open: ErrorEvent[]; resolved: ErrorEvent[]; resolvedHasMore?: boolean }) {
+  const [resolvedRows, setResolvedRows] = useState<ErrorEvent[]>(resolved);
+  const [hasMore, setHasMore] = useState(resolvedHasMore);
+  const [pending, start] = useTransition();
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  // When the server sends a fresh first page (e.g. after resolving/reopening a
+  // bug via router.refresh()), reset the paginated list to it.
+  useEffect(() => {
+    setResolvedRows(resolved);
+    setHasMore(resolvedHasMore);
+  }, [resolved, resolvedHasMore]);
+
+  const loadMore = () => {
+    setLoadErr(null);
+    start(async () => {
+      const r = await loadMoreResolvedErrors(resolvedRows.length);
+      if (r.error) { setLoadErr(r.error); return; }
+      const seen = new Set(resolvedRows.map((x) => x.id));
+      setResolvedRows((prev) => [...prev, ...r.rows.filter((x) => !seen.has(x.id))]);
+      setHasMore(r.hasMore);
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <Section title="Open" events={open} emptyMsg="No open bugs. The app is running clean. 🎉" resolvedSection={false} />
-      {resolved.length > 0 && <Section title="Resolved" events={resolved} emptyMsg="" resolvedSection={true} />}
+      {resolvedRows.length > 0 && (
+        <div>
+          <Section title="Resolved" events={resolvedRows} emptyMsg="" resolvedSection={true} />
+          {loadErr && <div className="text-[13px] text-danger mt-3">{loadErr}</div>}
+          {hasMore && (
+            <div className="mt-3 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={pending}
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick disabled:opacity-50"
+              >
+                {pending ? <><Loader2 size={14} className="animate-spin" /> Loading…</> : "Load more resolved"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

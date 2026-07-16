@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { logActivity } from "@/lib/activity-log";
+import { logActivity, listActivity, ACTIVITY_PAGE_SIZE, type ActivityListRow } from "@/lib/activity-log";
 import { EDITABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { linkOrCreateStaff } from "@/lib/staff-link";
@@ -536,4 +536,13 @@ export async function resumeSubscription(): Promise<ActionState> {
   await resumeOrgSubscription(createAdminClient(), profile.orgId);
   revalidatePath("/settings");
   return { error: null };
+}
+
+// Owner-only: fetch an older page of the staff activity trail for "Load more".
+export async function loadMoreActivityAction(offset: number): Promise<{ rows: ActivityListRow[]; hasMore: boolean; error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.accessRole !== "super_admin") return { rows: [], hasMore: false, error: "Only a Super Admin can view activity." };
+  const safeOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
+  const { rows, hasMore } = await listActivity(profile.orgId, safeOffset, ACTIVITY_PAGE_SIZE);
+  return { rows, hasMore, error: null };
 }

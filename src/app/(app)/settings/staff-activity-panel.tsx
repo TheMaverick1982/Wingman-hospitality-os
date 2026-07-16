@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { LogIn, UserPlus, UserMinus, Pencil, Trash2, Plus, Users, Activity } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { LogIn, UserPlus, UserMinus, Pencil, Trash2, Plus, Users, Activity, Loader2 } from "lucide-react";
+import { loadMoreActivityAction } from "./actions";
 
 export type ActivityRow = {
   id: string;
@@ -49,9 +50,25 @@ function dayKey(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
-export function StaffActivityPanel({ rows, staff }: { rows: ActivityRow[]; staff: { id: string; name: string }[] }) {
+export function StaffActivityPanel({ rows: initialRows, staff, initialHasMore = false }: { rows: ActivityRow[]; staff: { id: string; name: string }[]; initialHasMore?: boolean }) {
   const [who, setWho] = useState("");
   const [area, setArea] = useState("");
+  const [rows, setRows] = useState<ActivityRow[]>(initialRows);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [pending, start] = useTransition();
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  const loadMore = () => {
+    setLoadErr(null);
+    start(async () => {
+      const r = await loadMoreActivityAction(rows.length);
+      if (r.error) { setLoadErr(r.error); return; }
+      // Guard against any duplicate on the page boundary.
+      const seen = new Set(rows.map((x) => x.id));
+      setRows((prev) => [...prev, ...r.rows.filter((x) => !seen.has(x.id))]);
+      setHasMore(r.hasMore);
+    });
+  };
 
   const filtered = useMemo(
     () => rows.filter((r) => (!who || r.actorId === who) && (!area || r.area === area)),
@@ -118,6 +135,23 @@ export function StaffActivityPanel({ rows, staff }: { rows: ActivityRow[]; staff
             </div>
           ))}
         </div>
+      )}
+
+      {loadErr && <div className="text-[13px] text-danger mt-4">{loadErr}</div>}
+      {hasMore && (
+        <div className="mt-5 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick disabled:opacity-50"
+          >
+            {pending ? <><Loader2 size={14} className="animate-spin" /> Loading…</> : "Load older activity"}
+          </button>
+        </div>
+      )}
+      {(who || area) && hasMore && (
+        <p className="text-[11.5px] text-muted-2 text-center mt-2">Filters apply to loaded activity. Load older activity to search further back.</p>
       )}
     </div>
   );

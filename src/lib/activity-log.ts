@@ -58,3 +58,51 @@ export async function logLoginOncePerWindow(orgId: string, actorId: string, acto
     /* best-effort */
   }
 }
+
+// One activity row, with the actor name resolved (current profile name first,
+// falling back to the name stored on the event).
+export type ActivityListRow = {
+  id: string;
+  actorId: string | null;
+  actorName: string;
+  area: string;
+  action: string;
+  label: string;
+  createdAt: string;
+};
+
+// The activity trail grows without bound per org, so it's read a page at a time
+// (offset/limit) rather than capped at a fixed slab. Returns the page plus a
+// `hasMore` flag (true when a full page came back, so a "Load more" is worth
+// showing). Names are resolved against the current team roster in one lookup.
+export const ACTIVITY_PAGE_SIZE = 100;
+
+export async function listActivity(orgId: string, offset = 0, limit = ACTIVITY_PAGE_SIZE): Promise<{ rows: ActivityListRow[]; hasMore: boolean }> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("activity_events")
+    .select("id, actor_id, actor_name, area, action, label, created_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  const raw = (data ?? []) as { id: string; actor_id: string | null; actor_name: string; area: string; action: string; label: string; created_at: string }[];
+
+  // Resolve current names for the actors on this page (falls back to stored name).
+  const ids = [...new Set(raw.map((r) => r.actor_id).filter((v): v is string => Boolean(v)))];
+  const nameById = new Map<string, string>();
+  if (ids.length) {
+    const { data: people } = await admin.from("profiles").select("id, full_name").in("id", ids);
+    for (const p of (people ?? []) as { id: string; full_name: string }[]) nameById.set(p.id, p.full_name);
+  }
+
+  const rows: ActivityListRow[] = raw.map((r) => ({
+    id: r.id,
+    actorId: r.actor_id,
+    actorName: (r.actor_id ? nameById.get(r.actor_id) : "") || r.actor_name || "Someone",
+    area: r.area,
+    action: r.action,
+    label: r.label,
+    createdAt: r.created_at,
+  }));
+  return { rows, hasMore: raw.length === limit };
+}
