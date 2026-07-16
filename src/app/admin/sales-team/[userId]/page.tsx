@@ -49,6 +49,7 @@ export default async function RepDetailPage({ params }: { params: Promise<{ user
         ) : (
           <p className="text-sm text-muted mt-0.5">Hasn&apos;t completed the certification yet.</p>
         )}
+        <Link href={`/admin/sales-team/${userId}/answer-key`} className="inline-block mt-2 text-[13px] font-semibold text-brick">Open answer key →</Link>
       </div>
 
       <ReportPanel userId={userId} initial={cached?.report ?? null} initialAt={cached?.createdAt ?? null} />
