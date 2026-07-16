@@ -31,6 +31,7 @@ import { lightspeedConfigured } from "@/lib/lightspeed";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
+import { StaffActivityPanel, type ActivityRow } from "./staff-activity-panel";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -542,6 +543,26 @@ export default async function SettingsPage() {
   }));
   const lightspeedIsConfigured = lightspeedConfigured();
 
+  // Staff activity trail (owner-only). Names resolved from the team list, falling
+  // back to the stored actor_name.
+  const nameById = new Map(allMembers.map((m) => [m.id, m.full_name]));
+  const { data: activityRows } = await admin
+    .from("activity_events")
+    .select("id, actor_id, actor_name, area, action, label, created_at")
+    .eq("org_id", profile.orgId)
+    .order("created_at", { ascending: false })
+    .limit(250);
+  const activity: ActivityRow[] = ((activityRows ?? []) as { id: string; actor_id: string | null; actor_name: string; area: string; action: string; label: string; created_at: string }[]).map((r) => ({
+    id: r.id,
+    actorId: r.actor_id,
+    actorName: (r.actor_id ? nameById.get(r.actor_id) : "") || r.actor_name || "Someone",
+    area: r.area,
+    action: r.action,
+    label: r.label,
+    createdAt: r.created_at,
+  }));
+  const activityStaff = allMembers.map((m) => ({ id: m.id, name: m.full_name }));
+
   return (
     <>
       <div>
@@ -572,6 +593,7 @@ export default async function SettingsPage() {
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>
           ) },
+          { key: "activity", label: "Activity", content: <StaffActivityPanel rows={activity} staff={activityStaff} /> },
           { key: "trash", label: "Trash", content: trashContent },
         ]}
       />

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
+import { logActivity } from "@/lib/activity-log";
 
 export type ActionState = { error: string | null };
 
@@ -60,6 +61,9 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
     .from("guest_visits")
     .upsert(visits, { onConflict: "guest_id,visit_number" });
   if (visitsError) return { error: visitsError.message };
+
+  const actor = await getCurrentProfile();
+  if (actor) await logActivity({ orgId: actor.orgId, actorId: actor.userId, actorName: actor.fullName, area: "guests", action: guestId ? "updated" : "created", label: name });
 
   revalidatePath("/bounceback");
   revalidatePath("/dashboard");
@@ -168,6 +172,7 @@ export async function deleteGuest(guestId: string) {
       entityId: guestId,
       entityLabel: (g as { name?: string } | null)?.name ?? "",
     });
+    await logActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "guests", action: "deleted", label: (g as { name?: string } | null)?.name ?? "" });
   }
   revalidatePath("/bounceback");
   revalidatePath("/dashboard");

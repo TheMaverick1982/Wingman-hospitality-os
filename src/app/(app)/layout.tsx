@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { logLoginOncePerWindow } from "@/lib/activity-log";
 import { getOrgLocations } from "@/lib/data/locations";
 import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
@@ -24,6 +25,9 @@ export const metadata: Metadata = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
+
+  // Record a login for the staff-activity trail (throttled to once per session).
+  await logLoginOncePerWindow(profile.orgId, profile.userId, profile.fullName);
 
   const isSuperAdmin = profile.accessRole === "super_admin";
   const locations = await getOrgLocations();

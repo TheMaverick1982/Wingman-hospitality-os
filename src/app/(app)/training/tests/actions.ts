@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { logActivity as recordActivity } from "@/lib/activity-log";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
 import { recordAiUsage } from "@/lib/ai/usage";
@@ -207,6 +208,7 @@ export async function applyTest(settings: TestSettings, days: ProposedDay[], sou
   );
   if (qRows.length > 0) await supabase.from("test_questions").insert(qRows);
 
+  await recordActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "training", action: "created", label: settings.title.trim() });
   revalidatePath("/training/tests");
   return { error: null, id: testId };
 }
@@ -384,9 +386,12 @@ export async function updateTestSettings(id: string, settings: Partial<TestSetti
 }
 
 export async function deleteTest(id: string): Promise<void> {
-  if (!(await canBuild())) return;
+  const profile = await canBuild();
+  if (!profile) return;
   const supabase = await createClient();
+  const { data: t } = await supabase.from("tests").select("title").eq("id", id).maybeSingle();
   await supabase.from("tests").delete().eq("id", id);
+  await recordActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "training", action: "deleted", label: (t as { title?: string } | null)?.title ?? "" });
   revalidatePath("/training/tests");
 }
 
