@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
+import { logActivity as recordActivity } from "@/lib/activity-log";
 import type { PartnerActivityType } from "@/lib/partners";
 
 export type ActionState = { error: string | null };
@@ -75,6 +76,7 @@ export async function saveContact(_prev: ActionState, formData: FormData): Promi
     if (error) return { error: error.message };
   }
 
+  await recordActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "partners", action: contactId ? "updated" : "created", label: companyName });
   revalidatePath("/partners");
   return { error: null };
 }
@@ -98,6 +100,7 @@ export async function deleteContact(contactId: string) {
     entityId: contactId,
     entityLabel: (c as { company_name?: string } | null)?.company_name ?? "",
   });
+  await recordActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "partners", action: "deleted", label: (c as { company_name?: string } | null)?.company_name ?? "" });
   revalidatePath("/partners");
 }
 

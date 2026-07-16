@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { logActivity } from "@/lib/activity-log";
 import { EDITABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { linkOrCreateStaff } from "@/lib/staff-link";
@@ -81,6 +82,7 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
     });
   }
 
+  await logActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "staff", action: "invited", label: `${fullName || email}${role ? ` (${role})` : ""}` });
   revalidatePath("/settings");
   revalidatePath("/staff");
   return { error: null };
@@ -198,6 +200,7 @@ export async function deleteTeamMember(userId: string): Promise<ActionState> {
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) return { error: error.message };
 
+  await logActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "staff", action: "removed", label: (target as { full_name?: string }).full_name ?? "a team member" });
   revalidatePath("/settings");
   return { error: null };
 }
