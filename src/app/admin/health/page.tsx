@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HealthClient, type ErrorEvent } from "./health-client";
+import { RESOLVED_PAGE_SIZE } from "./constants";
 
 export const metadata: Metadata = { title: "Health · Admin" };
 
@@ -9,15 +10,19 @@ export default async function HealthPage() {
   await requirePlatformSection("health");
   const admin = createAdminClient();
 
-  const { data } = await admin
-    .from("error_events")
-    .select("id, fingerprint, message, stack, route, source, org_id, user_email, count, resolved, first_seen, last_seen")
-    .order("last_seen", { ascending: false })
-    .limit(300);
-  const events = (data ?? []) as ErrorEvent[];
-
-  const open = events.filter((e) => !e.resolved);
-  const resolved = events.filter((e) => e.resolved);
+  const cols = "id, fingerprint, message, stack, route, source, org_id, user_email, count, resolved, first_seen, last_seen";
+  // Open bugs are self-limiting (you resolve them), so load them all — the stat
+  // tiles need an accurate count. The resolved history grows without bound, so it's
+  // paginated with "Load more" (first page here, older pages via the action).
+  const [{ data: openData }, { data: resolvedData }, { count: resolvedTotal }] = await Promise.all([
+    admin.from("error_events").select(cols).eq("resolved", false).order("last_seen", { ascending: false }),
+    admin.from("error_events").select(cols).eq("resolved", true).order("last_seen", { ascending: false }).range(0, RESOLVED_PAGE_SIZE - 1),
+    admin.from("error_events").select("id", { count: "exact", head: true }).eq("resolved", true),
+  ]);
+  const open = (openData ?? []) as ErrorEvent[];
+  const resolved = (resolvedData ?? []) as ErrorEvent[];
+  const resolvedCount = resolvedTotal ?? resolved.length;
+  const resolvedHasMore = resolved.length === RESOLVED_PAGE_SIZE;
   const totalHits = open.reduce((s, e) => s + (e.count ?? 1), 0);
 
   return (
@@ -33,10 +38,10 @@ export default async function HealthPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Stat label="Open bugs" value={open.length} tone={open.length ? "brick" : "olive"} />
         <Stat label="Total hits (open)" value={totalHits} tone="muted" />
-        <Stat label="Resolved" value={resolved.length} tone="olive" />
+        <Stat label="Resolved" value={resolvedCount} tone="olive" />
       </div>
 
-      <HealthClient open={open} resolved={resolved} />
+      <HealthClient open={open} resolved={resolved} resolvedHasMore={resolvedHasMore} />
     </div>
   );
 }
