@@ -21,6 +21,9 @@ export function MarketingNav() {
           <Link href="/pricing" className="text-sm font-medium text-ink hidden sm:inline">
             Pricing
           </Link>
+          <Link href="/playbook" className="text-sm font-medium text-ink hidden sm:inline">
+            Playbook
+          </Link>
           <Link href="/login" className="text-sm font-medium text-[#525252] hidden sm:inline">
             Log in
           </Link>
@@ -56,6 +59,13 @@ export function MarketingNav() {
             className="text-[15px] font-medium text-ink py-3 border-b border-[#f1f1f1]"
           >
             Pricing
+          </Link>
+          <Link
+            href="/playbook"
+            onClick={() => setOpen(false)}
+            className="text-[15px] font-medium text-ink py-3 border-b border-[#f1f1f1]"
+          >
+            The Playbook
           </Link>
           <Link href="/login" onClick={() => setOpen(false)} className="text-[15px] font-medium text-[#525252] py-3">
             Log in
