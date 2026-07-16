@@ -59,6 +59,14 @@ export async function getPublishedBySlug(slug: string): Promise<Post | null> {
   return data ? mapPost(data as Record<string, unknown>) : null;
 }
 
+// Any-status lookup by slug — used by the OG share-card image so the owner can
+// preview a card for a draft/scheduled post before it publishes.
+export async function getBySlugAny(slug: string): Promise<Post | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("blog_posts").select("*").eq("slug", slug).maybeSingle();
+  return data ? mapPost(data as Record<string, unknown>) : null;
+}
+
 export async function incrementViews(id: string): Promise<void> {
   try {
     const admin = createAdminClient();

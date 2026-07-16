@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getPublishedBySlug } from "@/lib/playbook";
+import { getBySlugAny } from "@/lib/playbook";
 import { INTER_500, INTER_700, INTER_900 } from "@/lib/social-cards/fonts-data";
 import { planeDataUri } from "@/lib/social-cards/plane";
 
@@ -21,7 +21,7 @@ function titleSize(len: number): number {
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await getPublishedBySlug(slug).catch(() => null);
+  const post = await getBySlugAny(slug).catch(() => null);
   const title = post?.title ?? "The Playbook";
   const category = post?.category ?? "For restaurant operators";
 
