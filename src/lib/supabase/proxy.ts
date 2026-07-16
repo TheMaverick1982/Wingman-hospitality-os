@@ -13,6 +13,8 @@ const PUBLIC_PREFIXES = [
   "/guest-journey",
   "/pricing",
   "/book-a-demo",
+  // The Playbook — public SEO content hub (visitors are logged out).
+  "/playbook",
   // Self-serve "Try the live demo" — provisions a throwaway sandbox for a
   // visitor who is (by definition) not yet logged in.
   "/demo",

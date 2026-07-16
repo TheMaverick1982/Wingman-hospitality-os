@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Sparkles, Loader2, Save, Send, Trash2, Pencil } from "lucide-react";
-import { generateDraftAction, savePostAction, setStatusAction, deletePostAction } from "./actions";
+import { Sparkles, Loader2, Save, Send, Trash2, Pencil, CalendarClock, CheckCircle2, Check } from "lucide-react";
+import { generateDraftAction, savePostAction, setStatusAction, deletePostAction, approveAction, generateMonthAction } from "./actions";
 import type { Post, PostStatus } from "@/lib/playbook";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -13,9 +13,15 @@ const STATUS_STYLE: Record<string, string> = {
 };
 const input = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-[14px] text-ink outline-none focus:border-brick";
 
-export function Composer({ categories, posts }: { categories: string[]; posts: Post[] }) {
+function fmtDT(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export function Composer({ categories, posts, lastScheduled, pendingApproval, scheduledCount }: { categories: string[]; posts: Post[]; lastScheduled: string | null; pendingApproval: number; scheduledCount: number }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   // Draft form state
   const [id, setId] = useState<string | null>(null);
@@ -57,6 +63,26 @@ export function Composer({ categories, posts }: { categories: string[]; posts: P
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Schedule status + month generator */}
+      <div className="bg-white border border-line rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <CalendarClock size={17} className="text-brick" />
+          <div className="text-[13.5px] text-charcoal-2">
+            <span className="font-semibold text-ink">{scheduledCount}</span> scheduled{pendingApproval > 0 && <span className="text-[#B45309] font-semibold"> · {pendingApproval} awaiting your approval</span>}
+            {lastScheduled && <span className="text-muted-2"> · booked through {fmtDT(lastScheduled)}</span>}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setErr(null); setNote(null); start(async () => { const r = await generateMonthAction(); if (r.error) setErr(r.error); else setNote(`Drafted and scheduled ${r.created} post${r.created === 1 ? "" : "s"}. Review and approve them below.`); }); }}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-ink rounded-full px-4 py-2 hover:opacity-90 disabled:opacity-50"
+        >
+          <Sparkles size={14} /> Generate &amp; schedule a month
+        </button>
+      </div>
+      {note && <div className="text-[13px] text-[#15803d] font-medium">{note}</div>}
+
       {/* Composer */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm flex flex-col gap-3">
         <div className="text-[15px] font-semibold text-ink">{id ? "Edit post" : "New post"}</div>
@@ -107,14 +133,19 @@ export function Composer({ categories, posts }: { categories: string[]; posts: P
                   <div className="text-[12.5px] text-muted-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                     <span>{p.category}</span>
                     <span className={`font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>{p.status}</span>
+                    {p.status === "scheduled" && p.scheduledFor && <span className="inline-flex items-center gap-1"><CalendarClock size={11} /> {fmtDT(p.scheduledFor)}</span>}
+                    {p.status === "scheduled" && (p.approved ? <span className="inline-flex items-center gap-1 text-[#15803d] font-semibold"><Check size={11} /> approved</span> : <span className="text-[#B45309] font-semibold">needs approval</span>)}
                     {p.status === "published" && <span>{p.views} view{p.views === 1 ? "" : "s"}</span>}
                     {p.status === "published" && <Link href={`/playbook/${p.slug}`} target="_blank" className="text-brick font-semibold">View →</Link>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button type="button" onClick={() => edit(p)} className="text-muted-2 hover:text-ink" title="Edit"><Pencil size={15} /></button>
+                  {p.status === "scheduled" && !p.approved && (
+                    <button type="button" disabled={pending} onClick={() => start(async () => { const r = await approveAction(p.id); if (r.error) setErr(r.error); })} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-[#15803d] rounded-full px-3 py-1 hover:opacity-90 disabled:opacity-50"><CheckCircle2 size={13} /> Approve</button>
+                  )}
                   {p.status !== "published" ? (
-                    <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "published"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3 py-1 hover:bg-brick-dark disabled:opacity-50">Publish</button>
+                    <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "published"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3 py-1 hover:bg-brick-dark disabled:opacity-50">Publish now</button>
                   ) : (
                     <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "draft"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick px-2">Unpublish</button>
                   )}

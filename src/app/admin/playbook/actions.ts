@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import {
   generateDraft, createPost, updatePost, setPostStatus, deletePost, listAllPosts,
+  approvePost, generateAndSchedule, BATCH_SIZE,
   type Draft, type PostStatus,
 } from "@/lib/playbook";
 
@@ -52,4 +53,21 @@ export async function deletePostAction(id: string): Promise<{ error: string | nu
   revalidatePath("/admin/playbook");
   revalidatePath("/playbook");
   return { error: null };
+}
+
+// Approve a scheduled post so the cron publishes it at its scheduled time.
+export async function approveAction(id: string): Promise<{ error: string | null }> {
+  if (!(await admin())) return { error: "Not authorized." };
+  await approvePost(id);
+  revalidatePath("/admin/playbook");
+  return { error: null };
+}
+
+// Draft and schedule a month of posts (Tue/Thu noon ET), awaiting approval.
+export async function generateMonthAction(): Promise<{ error: string | null; created?: number }> {
+  const me = await admin();
+  if (!me) return { error: "Not authorized." };
+  const res = await generateAndSchedule(me.userId, BATCH_SIZE);
+  revalidatePath("/admin/playbook");
+  return { error: res.error, created: res.created };
 }
