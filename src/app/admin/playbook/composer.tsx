@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Sparkles, Loader2, Save, Send, Trash2, Pencil, CalendarClock, CheckCircle2, Check } from "lucide-react";
-import { generateDraftAction, savePostAction, setStatusAction, deletePostAction, approveAction, generateMonthAction } from "./actions";
+import { Sparkles, Loader2, Save, Send, Trash2, Pencil, CalendarClock, CheckCircle2, Check, Share2 } from "lucide-react";
+import { generateDraftAction, savePostAction, setStatusAction, deletePostAction, approveAction, generateMonthAction, shareToFacebookAction } from "./actions";
 import type { Post, PostStatus } from "@/lib/playbook";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -136,6 +136,9 @@ export function Composer({ categories, posts, lastScheduled, pendingApproval, sc
                     {p.status === "scheduled" && p.scheduledFor && <span className="inline-flex items-center gap-1"><CalendarClock size={11} /> {fmtDT(p.scheduledFor)}</span>}
                     {p.status === "scheduled" && (p.approved ? <span className="inline-flex items-center gap-1 text-[#15803d] font-semibold"><Check size={11} /> approved</span> : <span className="text-[#B45309] font-semibold">needs approval</span>)}
                     {p.status === "published" && <span>{p.views} view{p.views === 1 ? "" : "s"}</span>}
+                    {p.status === "published" && (p.facebookPostedAt
+                      ? <span className="inline-flex items-center gap-1 text-[#1877F2] font-semibold"><Share2 size={11} /> on Facebook</span>
+                      : <span className="text-[#B45309] font-semibold">not on Facebook yet</span>)}
                     {p.status === "published" && <Link href={`/playbook/${p.slug}`} target="_blank" className="text-brick font-semibold">View →</Link>}
                   </div>
                 </div>
@@ -148,7 +151,12 @@ export function Composer({ categories, posts, lastScheduled, pendingApproval, sc
                   {p.status !== "published" ? (
                     <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "published"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3 py-1 hover:bg-brick-dark disabled:opacity-50">Publish now</button>
                   ) : (
-                    <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "draft"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick px-2">Unpublish</button>
+                    <>
+                      {!p.facebookPostedAt && (
+                        <button type="button" disabled={pending} onClick={() => { setErr(null); setNote(null); start(async () => { const r = await shareToFacebookAction(p.id); if (r.error) setErr(r.error); else setNote(r.already ? "Already on Facebook." : "Shared to Facebook."); }); }} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-[#1877F2] rounded-full px-3 py-1 hover:opacity-90 disabled:opacity-50" title="Push this post to the connected Facebook page"><Share2 size={12} /> Share to FB</button>
+                      )}
+                      <button type="button" disabled={pending} onClick={() => start(async () => { const r = await setStatusAction(p.id, "draft"); if (r.error) setErr(r.error); })} className="text-[12.5px] font-semibold text-charcoal-2 hover:text-brick px-2">Unpublish</button>
+                    </>
                   )}
                   <button type="button" disabled={pending} onClick={() => { if (window.confirm(`Delete "${p.title}"?`)) start(async () => { const r = await deletePostAction(p.id); if (r.error) setErr(r.error); }); }} className="text-muted-2 hover:text-danger" title="Delete"><Trash2 size={15} /></button>
                 </div>

@@ -20,6 +20,7 @@ export type Post = {
   approved: boolean;
   scheduledFor: string | null;
   publishedAt: string | null;
+  facebookPostedAt: string | null;
   views: number;
 };
 
@@ -38,6 +39,7 @@ function mapPost(r: Record<string, unknown>): Post {
     approved: Boolean(r.approved),
     scheduledFor: (r.scheduled_for as string) ?? null,
     publishedAt: (r.published_at as string) ?? null,
+    facebookPostedAt: (r.facebook_posted_at as string) ?? null,
     views: Number(r.views ?? 0),
   };
 }
@@ -278,18 +280,54 @@ async function postToFacebook(title: string, excerpt: string, slug: string): Pro
   }
 }
 
+// Mark a post published and share it to Facebook (once). Used by both the
+// scheduled cron and the manual "Publish now" button so every publish path
+// lands on the site AND the connected Facebook page. Idempotent on FB: if the
+// post already has facebook_posted_at, it won't be posted again.
+export async function publishAndShare(id: string): Promise<{ facebook: "posted" | "skipped" | "already" }> {
+  const admin = createAdminClient();
+  const nowIso = new Date().toISOString();
+  const { data } = await admin.from("blog_posts").select("slug, title, excerpt, facebook_posted_at").eq("id", id).single();
+  const post = data as { slug: string; title: string; excerpt: string; facebook_posted_at: string | null } | null;
+  if (!post) return { facebook: "skipped" };
+
+  await admin.from("blog_posts").update({ status: "published", published_at: nowIso, updated_at: nowIso }).eq("id", id);
+
+  if (post.facebook_posted_at) return { facebook: "already" };
+  const fb = await postToFacebook(post.title, post.excerpt, post.slug);
+  if (fb) {
+    await admin.from("blog_posts").update({ facebook_posted_at: nowIso }).eq("id", id);
+    return { facebook: "posted" };
+  }
+  return { facebook: "skipped" };
+}
+
+// Share an already-published post to Facebook (for posts published before FB
+// was connected, or that failed the first time). No-op if already shared.
+export async function shareToFacebook(id: string): Promise<{ ok: boolean; already: boolean; error: string | null }> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("blog_posts").select("slug, title, excerpt, facebook_posted_at").eq("id", id).single();
+  const post = data as { slug: string; title: string; excerpt: string; facebook_posted_at: string | null } | null;
+  if (!post) return { ok: false, already: false, error: "Post not found." };
+  if (post.facebook_posted_at) return { ok: true, already: true, error: null };
+  const s = await getSocialSettings();
+  if (!isConnected(s)) return { ok: false, already: false, error: "Facebook isn't connected. Connect a page under Admin → Social first." };
+  const fb = await postToFacebook(post.title, post.excerpt, post.slug);
+  if (!fb) return { ok: false, already: false, error: "Facebook rejected the post. Re-check the page connection under Admin → Social." };
+  await admin.from("blog_posts").update({ facebook_posted_at: new Date().toISOString() }).eq("id", id);
+  return { ok: true, already: false, error: null };
+}
+
 // Publish approved + scheduled posts whose time has arrived. Posts each to
 // Facebook. Returns the slugs published.
 export async function publishDuePosts(): Promise<string[]> {
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  const { data } = await admin.from("blog_posts").select("id, slug, title, excerpt").eq("status", "scheduled").eq("approved", true).lte("scheduled_for", nowIso);
-  const due = (data ?? []) as { id: string; slug: string; title: string; excerpt: string }[];
+  const { data } = await admin.from("blog_posts").select("id, slug").eq("status", "scheduled").eq("approved", true).lte("scheduled_for", nowIso);
+  const due = (data ?? []) as { id: string; slug: string }[];
   const published: string[] = [];
   for (const p of due) {
-    await admin.from("blog_posts").update({ status: "published", published_at: nowIso, updated_at: nowIso }).eq("id", p.id);
-    const fb = await postToFacebook(p.title, p.excerpt, p.slug);
-    if (fb) await admin.from("blog_posts").update({ facebook_posted_at: nowIso }).eq("id", p.id);
+    await publishAndShare(p.id);
     published.push(p.slug);
   }
   return published;
