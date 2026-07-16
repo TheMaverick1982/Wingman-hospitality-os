@@ -8,8 +8,10 @@ import type { SocialSettings } from "@/lib/social-meta";
 
 const REST = "https://api.linkedin.com/rest";
 // LinkedIn versions its API monthly (YYYYMM) and only keeps each active for ~12
-// months. Keep this within the last year; override via env when it ages out.
-const LI_VERSION = process.env.LINKEDIN_API_VERSION ?? "202506";
+// months. Keep this within the last year; override via env (LINKEDIN_API_VERSION)
+// when it ages out — the env value must be a bare YYYYMM (e.g. 202606), not a
+// date. A stale value fails with "Requested version <v> is not active".
+const LI_VERSION = process.env.LINKEDIN_API_VERSION ?? "202606";
 const VIDEO_EXT = /\.(mp4|mov|m4v)$/i;
 export const LI_SCOPES = "openid profile w_member_social";
 
