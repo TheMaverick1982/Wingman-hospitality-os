@@ -3,10 +3,10 @@
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown, Eye, Lock } from "lucide-react";
+import { Check, Sparkles, FileText, GraduationCap, Trash2, ClipboardList, Users, Copy, Archive, ArchiveRestore, ChevronDown, Eye, Lock, Upload } from "lucide-react";
 import type { Department } from "@/lib/constants";
 import { MODE_LABEL } from "@/lib/tests";
-import { proposeTest, proposeTestFromTraining, applyTest, createExampleTest, deleteTest, duplicateTest, setTestArchived, type ProposeState, type ProposedDay } from "./actions";
+import { proposeTest, proposeTestFromTraining, proposeTestFromDocument, applyTest, createExampleTest, deleteTest, duplicateTest, setTestArchived, type ProposeState, type ProposedDay } from "./actions";
 
 const proposeInitial: ProposeState = { error: null };
 const inputCls = "w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] text-ink outline-none focus:border-brick";
@@ -144,16 +144,17 @@ function SettingsFields({ activeDepartments }: { activeDepartments: Department[]
 
 export function TestsClient({ tests, archived = [], activeDepartments, canEdit }: { tests: TestListRow[]; archived?: TestListRow[]; activeDepartments: Department[]; canEdit: boolean }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"ai" | "training" | "example">("ai");
+  const [tab, setTab] = useState<"ai" | "document" | "training" | "example">("ai");
   const [propose, proposeAction, proposing] = useActionState(proposeTest, proposeInitial);
   const [fromTraining, fromTrainingAction, fromTrainingPending] = useActionState(proposeTestFromTraining, proposeInitial);
+  const [fromDoc, fromDocAction, fromDocPending] = useActionState(proposeTestFromDocument, proposeInitial);
   const [applying, startApply] = useTransition();
   const [applyErr, setApplyErr] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [exampleBusy, setExampleBusy] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  const active = tab === "training" ? fromTraining : propose;
+  const active = tab === "training" ? fromTraining : tab === "document" ? fromDoc : propose;
   const showPreview = !dismissed && active.days && active.settings;
 
   function approve() {
@@ -184,6 +185,7 @@ export function TestsClient({ tests, archived = [], activeDepartments, canEdit }
           <div className="flex gap-1 bg-paper border border-line rounded-xl p-1 w-fit">
             {[
               { k: "ai" as const, label: "Build with AI", icon: Sparkles },
+              { k: "document" as const, label: "From a document", icon: Upload },
               { k: "training" as const, label: "From a training", icon: GraduationCap },
               { k: "example" as const, label: "Start from an example", icon: FileText },
             ].map((t) => (
@@ -210,6 +212,28 @@ export function TestsClient({ tests, archived = [], activeDepartments, canEdit }
                   {proposing ? "Building…" : "Get recommendations"}
                 </button>
                 {propose.error && <span className="text-[13px] text-danger">{propose.error}</span>}
+              </div>
+            </form>
+          )}
+
+          {tab === "document" && (
+            <form action={fromDocAction} onSubmit={() => { setDismissed(false); setApplyErr(null); }} className="flex flex-col gap-3">
+              <p className="text-[13.5px] text-muted">Upload an SOP, ops manual, or menu — Wingman reads it and builds the training + quiz from it. PDFs are read directly; you can also paste the text.</p>
+              <SettingsFields activeDepartments={activeDepartments} />
+              <div>
+                <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Upload a file <span className="font-normal text-muted-2">(PDF, .txt, .md, .csv — up to 12MB)</span></label>
+                <input type="file" name="file" accept=".pdf,.txt,.md,.csv,application/pdf,text/plain,text/markdown,text/csv" className="block w-full text-[13px] text-charcoal-2 file:mr-3 file:rounded-full file:border-0 file:bg-brick file:text-white file:px-4 file:py-2 file:text-[13px] file:font-semibold hover:file:bg-brick-dark" />
+              </div>
+              <div>
+                <label className="text-[13px] font-semibold text-charcoal-2 block mb-1.5">Or paste the text <span className="font-normal text-muted-2">(optional)</span></label>
+                <textarea name="material" rows={4} placeholder="Paste an SOP or manual here if you'd rather not upload a file." className={`${inputCls} resize-y`} />
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={fromDocPending} className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors disabled:opacity-60 inline-flex items-center gap-2">
+                  {fromDocPending && <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+                  {fromDocPending ? "Reading & building…" : "Build test from document"}
+                </button>
+                {fromDoc.error && <span className="text-[13px] text-danger">{fromDoc.error}</span>}
               </div>
             </form>
           )}

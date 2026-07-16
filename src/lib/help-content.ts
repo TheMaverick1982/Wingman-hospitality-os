@@ -339,6 +339,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Build a test three ways" },
       { kind: "list", items: [
         "Build with AI — set the title, format, and settings, then describe what it should cover (or paste your existing material for the AI to organize and improve). Wingman drafts the days and questions for you to review and approve.",
+        "From a document — upload a file (a PDF SOP, ops manual, or menu — or a .txt/.md/.csv), and Wingman reads it and builds the training + quiz straight from its contents. PDFs are read directly; you can also paste the text instead. You still review and approve before anything is saved.",
         "From a training — turn a role's existing training standards into a learn-then-quiz: the AI writes a learning section that teaches the standards, then questions on it. Fastest path: on the Training page, open a role and click \"Turn into a test\" right under its training program. It shows a \"building your test…\" note while the AI writes it (a few seconds — don't refresh), then drops it into your tests area with a \"Review & edit\" button so you can read it over and adjust it before you assign anyone. Edited the training later? Hit \"Update the test\" to regenerate it.",
         "Start from an example — drop in a ready-made Food, Bartender, or Kitchen Test and tailor it. (The Kitchen Test is best rebuilt from your own menu + recipes with Build with AI, so it quizzes on your exact dishes.)",
       ] },

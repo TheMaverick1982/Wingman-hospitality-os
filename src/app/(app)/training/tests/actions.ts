@@ -60,6 +60,25 @@ async function callModel(system: string, prompt: string, maxTokens: number, orgI
   return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
 }
 
+// Like callModel, but accepts raw content blocks so we can attach a document
+// (e.g. a PDF Claude reads natively) alongside the instruction text.
+async function callModelWithContent(system: string, content: unknown[], maxTokens: number, orgId: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Wingman's AI is temporarily unavailable. Please try again in a moment.");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: maxTokens, system, messages: [{ role: "user", content }] }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic API returned ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  await recordAiUsage({ orgId, feature: "test_builder_doc", model: "claude-sonnet-5", usage: data.usage });
+  return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
+}
+
 function extractJson(text: string): string {
   let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
   const first = cleaned.indexOf("{");
@@ -150,6 +169,77 @@ ${schema}`;
     }
     const days = normalizeDays(parsed.days ?? [], settings.day_count, settings.mode);
     if (days.every((d) => d.questions.length === 0)) throw new Error("The generator returned no questions. Try again.");
+    return { error: null, days, summary: String(parsed.summary ?? "").slice(0, 300), settings };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
+  }
+}
+
+const MAX_DOC_BYTES = 12 * 1024 * 1024; // 12MB
+
+// Build a test from an UPLOADED DOCUMENT (SOP, ops manual, menu). PDFs are read
+// natively by the model; text files (.txt/.md/.csv) are read as text. Returns a
+// PREVIEW to review + approve, same as proposeTest.
+export async function proposeTestFromDocument(_prev: ProposeState, formData: FormData): Promise<ProposeState> {
+  const profile = await canBuild();
+  if (!profile) return { error: "You don't have access to build tests." };
+  if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+
+  const settings = readSettings(formData);
+  if (!settings.title) return { error: "Give the test a title." };
+
+  const file = formData.get("file");
+  const pasted = String(formData.get("material") || "").trim().slice(0, 12000);
+  const hasFile = file instanceof File && file.size > 0;
+  if (!hasFile && !pasted) return { error: "Upload a document (PDF or text) or paste its text." };
+  if (hasFile && file.size > MAX_DOC_BYTES) return { error: "That file is too large — keep it under 12MB (or paste the text)." };
+
+  const teach = settings.mode === "study_quiz";
+  const schema = `{"summary": string, "days": [{"day_number": number, "title": string, "content": string, "questions": [{"kind": "multiple_choice" | "true_false", "prompt": string, "options": [string], "correct_index": number, "explanation": string}]}]}`;
+  const instruction = `Turn the attached document into a ${settings.day_count}-day ${teach ? "learn-then-quiz" : "exam"} titled "${settings.title}".
+${settings.description ? `What it's for: ${settings.description}` : ""}
+${settings.target_departments.length ? `Who takes it: ${settings.target_departments.join(", ")}` : "Who takes it: all staff"}
+Base everything ONLY on the document's actual content — organize it across ${settings.day_count} day${settings.day_count === 1 ? "" : "s"}. For EACH day give a short "title", ${teach ? '"content" = clear teaching text the employee reads before the questions' : '"content" = one or two lines of context'}, and 3-6 auto-scored "questions" ("multiple_choice" with 3-4 options and one correct, or "true_false" with options exactly ["True","False"]; set "correct_index" 0-based; add a one-line "explanation"). Fair and unambiguous. Also a one-sentence "summary".
+Respond with ONLY valid JSON, no markdown fences, matching exactly:
+${schema}`;
+
+  try {
+    let text: string;
+    const isPdf = hasFile && ((file as File).type === "application/pdf" || (file as File).name.toLowerCase().endsWith(".pdf"));
+    if (isPdf) {
+      const b64 = Buffer.from(await (file as File).arrayBuffer()).toString("base64");
+      text = await callModelWithContent(
+        TEST_SYSTEM,
+        [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } },
+          { type: "text", text: instruction },
+        ],
+        8000,
+        profile.orgId,
+      );
+    } else {
+      // Text file or pasted text.
+      let material = pasted;
+      if (hasFile) {
+        const fileText = (await (file as File).text()).slice(0, 40000);
+        material = `${fileText}\n${pasted}`.trim();
+      }
+      if (!material) return { error: "Couldn't read any text from that file. Try a PDF, or paste the text." };
+      text = await callModel(TEST_SYSTEM, `${instruction}\n\nDocument:\n"""\n${material}\n"""`, 8000, profile.orgId);
+    }
+
+    const cleaned = extractJson(text);
+    let parsed: { summary?: string; days?: RawDay[] };
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      const lastObj = cleaned.lastIndexOf("}");
+      const arrStart = cleaned.indexOf("[");
+      if (lastObj > arrStart && arrStart !== -1) parsed = JSON.parse(cleaned.slice(0, lastObj + 1) + "]}");
+      else throw new Error("The test was cut short while generating. Try fewer days or a shorter document.");
+    }
+    const days = normalizeDays(parsed.days ?? [], settings.day_count, settings.mode);
+    if (days.every((d) => d.questions.length === 0)) throw new Error("Couldn't pull questions from that document. Try a clearer file or paste the text.");
     return { error: null, days, summary: String(parsed.summary ?? "").slice(0, 300), settings };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
