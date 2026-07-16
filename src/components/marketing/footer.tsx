@@ -45,6 +45,9 @@ export function MarketingFooter() {
           <Link href="/pricing" className="text-[#525252]">
             Pricing
           </Link>
+          <Link href="/playbook" className="text-[#525252]">
+            The Playbook
+          </Link>
           <Link href="/calculator" className="text-[#525252]">
             Calculator
           </Link>
