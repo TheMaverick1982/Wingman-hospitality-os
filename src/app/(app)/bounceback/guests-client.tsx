@@ -282,6 +282,7 @@ export function GuestsClient({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div className="min-w-0">
           <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Turn first visits into regulars</h1>
+          <p className="text-[14px] text-charcoal-2 mb-1.5 max-w-xl">Log a guest and their first visit, give them a reason to come back, and track each return here. Add a guest with <span className="font-semibold text-ink">Log New Guest</span>, or import a list.</p>
           {scopedLocationName ? (
             <p className="text-base text-muted">
               Guests whose first visit was at <span className="font-semibold text-ink">{scopedLocationName}</span>. Switch to{" "}
