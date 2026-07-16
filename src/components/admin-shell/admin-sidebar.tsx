@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, Ticket, GraduationCap, Wallet, Gauge, UserCog, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, Ticket, GraduationCap, Wallet, Gauge, UserCog, BookOpen, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { PLATFORM_SECTIONS, type PlatformSection } from "@/lib/auth/platform";
 
@@ -17,6 +17,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; section: PlatformSec
   { href: "/admin/leads", label: "Leads", icon: Inbox, section: "analytics" },
   { href: "/admin/affiliates", label: "Affiliates", icon: Share2, section: "affiliates" },
   { href: "/admin/social", label: "Social", icon: CalendarClock, section: "social" },
+  { href: "/admin/playbook", label: "The Playbook", icon: BookOpen, section: "social" },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket, section: "coupons" },
   { href: "/admin/sales-dashboard", label: "Sales Dashboard", icon: Gauge, section: "sales_dashboard" },
   { href: "/admin/sales-training", label: "Sales Training", icon: GraduationCap, section: "sales_training" },
