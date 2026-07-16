@@ -1,5 +1,7 @@
-import { LineChart } from "lucide-react";
+import Link from "next/link";
+import { LineChart, BookOpen } from "lucide-react";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
+import { listPublished } from "@/lib/playbook";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { ga4Configured, getAnalytics, type AnalyticsData, type DateRange } from "@/lib/ga4";
 import { GaSettingsForm } from "./ga-settings-form";
@@ -32,6 +34,8 @@ export default async function AdminAnalyticsPage({
 }) {
   await requirePlatformSection("analytics");
   const gaMeasurementId = await getGaMeasurementId();
+  const playbookPosts = [...(await listPublished())].sort((a, b) => b.views - a.views);
+  const playbookViews = playbookPosts.reduce((s, p) => s + p.views, 0);
   const { range, label, preset, start, end } = resolveRange(await searchParams);
 
   const connected = ga4Configured();
@@ -83,6 +87,38 @@ export default async function AdminAnalyticsPage({
           )}
         </div>
       )}
+
+      {/* The Playbook — traffic by post (from our own view counter, no GA4 needed) */}
+      <div className="bg-white border border-line rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <BookOpen size={16} className="text-brick" />
+            <h2 className="text-[15px] font-semibold text-ink">The Playbook — traffic by post</h2>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-2">Total views</div>
+            <div className="text-[20px] font-bold text-ink tabular-nums leading-tight">{playbookViews.toLocaleString()}</div>
+          </div>
+        </div>
+        {playbookPosts.length === 0 ? (
+          <div className="px-6 py-8 text-center text-sm text-muted-2">No published posts yet. Publish from The Playbook to start tracking traffic here.</div>
+        ) : (
+          <div className="divide-y divide-line">
+            {playbookPosts.map((p) => (
+              <div key={p.id} className="px-6 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/playbook/${p.slug}`} target="_blank" className="text-[14px] font-semibold text-ink hover:text-brick truncate block">{p.title}</Link>
+                  <div className="text-[12px] text-muted-2">{p.category}{p.publishedAt ? ` · ${new Date(p.publishedAt).toLocaleDateString()}` : ""}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[16px] font-bold text-ink tabular-nums">{p.views.toLocaleString()}</div>
+                  <div className="text-[11px] text-muted-2">view{p.views === 1 ? "" : "s"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white border border-line rounded-2xl p-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-2 mb-4">Tracking code</h2>
