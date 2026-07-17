@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, Ticket, GraduationCap, Wallet, Gauge, UserCog, BookOpen, ArrowLeft, type LucideIcon } from "lucide-react";
+import { Building2, BarChart3, CreditCard, LineChart, LifeBuoy, Users, Share2, Inbox, Contact, CalendarClock, CalendarCheck, Ticket, GraduationCap, Wallet, Gauge, UserCog, BookOpen, ArrowLeft, type LucideIcon } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { PLATFORM_SECTIONS, type PlatformSection } from "@/lib/auth/platform";
 
@@ -56,6 +56,17 @@ export function AdminSidebar({ fullName, platformAccess }: { fullName: string; p
             </Link>
           );
         })}
+        {/* Calendar is personal to each staffer (their own booking page), so it's
+            shown to all platform staff, not gated by a section grant. */}
+        <Link
+          href="/admin/calendar"
+          className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+            pathname.startsWith("/admin/calendar") ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
+          }`}
+        >
+          <CalendarCheck size={19} strokeWidth={2} className={pathname.startsWith("/admin/calendar") ? "text-white/90" : "text-muted-2"} />
+          Calendar
+        </Link>
         {isSuper && (
           <Link
             href="/admin/sales-team"
