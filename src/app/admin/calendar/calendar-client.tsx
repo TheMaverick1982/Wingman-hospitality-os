@@ -299,16 +299,25 @@ export function CalendarClient({
   );
 }
 
-function BookingRowView({ booking }: { booking: BookingRow }) {
-  const start = new Date(booking.start_at);
-  const dateLabel = start.toLocaleDateString("en-US", {
+function formatBookingDate(iso: string, tz: string): string {
+  const opts: Intl.DateTimeFormatOptions = {
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: booking.time_zone || undefined,
-  });
+  };
+  // An invalid IANA tz makes toLocaleDateString throw — guard so one bad row
+  // can't crash the whole page.
+  try {
+    return new Date(iso).toLocaleDateString("en-US", { ...opts, timeZone: tz || undefined });
+  } catch {
+    return new Date(iso).toLocaleDateString("en-US", opts);
+  }
+}
+
+function BookingRowView({ booking }: { booking: BookingRow }) {
+  const dateLabel = formatBookingDate(booking.start_at, booking.time_zone);
   return (
     <div className="flex items-center justify-between py-3 gap-4">
       <div className="min-w-0">

@@ -146,9 +146,10 @@ export async function completeGoogleOAuth(
       connected_at: new Date().toISOString(),
     };
     if (tokens.refresh_token) update.refresh_token = tokens.refresh_token;
-    await admin.from("calendar_google_accounts").update(update).eq("id", already.id);
+    const { error } = await admin.from("calendar_google_accounts").update(update).eq("id", already.id);
+    if (error) return { error: `Couldn't save the connection: ${error.message}` };
   } else {
-    await admin.from("calendar_google_accounts").insert({
+    const { error } = await admin.from("calendar_google_accounts").insert({
       user_id: userId,
       google_sub: sub,
       email,
@@ -158,6 +159,7 @@ export async function completeGoogleOAuth(
       scopes: tokens.scope,
       calendar_id: "primary",
     });
+    if (error) return { error: `Couldn't save the connection: ${error.message}` };
   }
   return { error: null, email };
 }

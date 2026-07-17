@@ -30,12 +30,36 @@ export default async function AdminCalendarPage({
 
   const isSuper = PLATFORM_SECTIONS.every((s) => profile.platformAccess.includes(s.key));
 
+  // Guarded/isolated reads: a single failing query (e.g. a not-yet-applied
+  // migration) degrades that section instead of taking down the whole page. The
+  // real error is logged so it shows up in the server logs.
+  const guard = async <T,>(label: string, p: Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await p;
+    } catch (e) {
+      console.error(`[calendar] ${label} read failed:`, e);
+      return fallback;
+    }
+  };
+
+  const DEFAULT_DEMO = {
+    time_zone: "America/New_York",
+    meeting_duration_minutes: 30,
+    buffer_minutes: 0,
+    advance_notice_hours: 12,
+    booking_window_days: 21,
+    availability: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, start: "09:00", end: "17:00" })),
+    page_title: "Book a demo",
+    page_description: "",
+    is_active: false,
+  };
+
   const [settings, accounts, bookings, demoConfig, demoMembers] = await Promise.all([
-    getCalendarSettings(profile.userId),
-    listGoogleAccountsPublic(profile.userId),
-    listUpcomingBookings(profile.userId),
-    getDemoPoolConfig(),
-    listDemoPoolMembers(),
+    guard("settings", getCalendarSettings(profile.userId), null),
+    guard("accounts", listGoogleAccountsPublic(profile.userId), []),
+    guard("bookings", listUpcomingBookings(profile.userId), []),
+    guard("demoConfig", getDemoPoolConfig(), DEFAULT_DEMO),
+    guard("demoMembers", listDemoPoolMembers(), []),
   ]);
 
   const defaultSlug = settings?.slug || slugify(profile.fullName || "rep") || "rep";
