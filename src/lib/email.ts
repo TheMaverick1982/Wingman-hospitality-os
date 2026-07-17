@@ -5,18 +5,30 @@ import "server-only";
 // when a human might reply (e.g. support) so replies reach a real inbox.
 export const MAIL_FROM = "Wingman <reports@updates.joinwingman.app>";
 
+// An attachment for Resend. `content` is base64-encoded file bytes. Used for the
+// booking confirmation's .ics calendar invite.
+export type EmailAttachment = {
+  filename: string;
+  content: string; // base64
+  contentType?: string;
+};
+
 export async function sendEmail({
   to,
   subject,
   html,
   from,
   replyTo,
+  cc,
+  attachments,
 }: {
   to: string[];
   subject: string;
   html: string;
   from?: string;
   replyTo?: string;
+  cc?: string[];
+  attachments?: EmailAttachment[];
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY isn't configured yet.");
@@ -33,6 +45,10 @@ export async function sendEmail({
       subject,
       html,
       ...(replyTo ? { reply_to: replyTo } : {}),
+      ...(cc && cc.length ? { cc } : {}),
+      ...(attachments && attachments.length
+        ? { attachments: attachments.map((a) => ({ filename: a.filename, content: a.content, ...(a.contentType ? { content_type: a.contentType } : {}) })) }
+        : {}),
     }),
   });
 

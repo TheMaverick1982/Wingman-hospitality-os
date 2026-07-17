@@ -3,6 +3,12 @@ import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { GhlCalendar } from "@/components/marketing/ghl-calendar";
 import { WingmanMark } from "@/components/ui/wingman-mark";
+import { getDemoPoolConfig, listDemoPoolMembers } from "@/lib/calendar/settings";
+import { BookingWidget } from "@/components/booking/booking-widget";
+
+// Reads live demo-pool state (which reps are in the pool, is it active) per
+// request, so it can't be statically prerendered.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Book a Demo",
@@ -24,7 +30,18 @@ const POINTS = [
   "Straight answers on pricing and rollout",
 ];
 
-export default function BookADemoPage() {
+// The native Wingman booking widget replaces the old GoHighLevel embed. It's
+// powered by the round-robin demo pool (Admin → Calendar): the config must be
+// live AND at least one rep opted in. Until then, we fall back to the legacy GHL
+// widget so this public page is never empty.
+async function demoPoolReady(): Promise<{ durationMinutes: number } | null> {
+  const [config, members] = await Promise.all([getDemoPoolConfig(), listDemoPoolMembers()]);
+  if (!config.is_active || members.length === 0) return null;
+  return { durationMinutes: config.meeting_duration_minutes };
+}
+
+export default async function BookADemoPage() {
+  const booking = await demoPoolReady();
   return (
     <div className="flex-1 flex flex-col force-light bg-panel">
       <MarketingNav />
@@ -63,8 +80,12 @@ export default function BookADemoPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-line rounded-3xl shadow-lg overflow-hidden p-2 sm:p-3">
-          <GhlCalendar />
+        <div className="bg-white border border-line rounded-3xl shadow-lg overflow-hidden p-5 sm:p-7">
+          {booking ? (
+            <BookingWidget slotsUrl="/api/book-demo/slots" bookUrl="/api/book-demo" durationMinutes={booking.durationMinutes} />
+          ) : (
+            <GhlCalendar />
+          )}
         </div>
       </div>
 

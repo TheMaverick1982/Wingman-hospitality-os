@@ -21,6 +21,10 @@ const PUBLIC_PREFIXES = [
   // Public pre-sales chat API — called by logged-out marketing visitors, so it
   // must not be bounced to /login (the route does its own IP/rate limiting).
   "/api/sales-chat",
+  // Per-salesperson booking pages + their availability/booking APIs — the
+  // prospect self-booking a meeting is (by definition) not logged in.
+  "/book",
+  "/api/book",
   // Machine-to-machine / no-session API routes that authenticate themselves and
   // must never be redirected to the HTML login page:
   //   /api/webhooks       — inbound webhooks (e.g. GHL booking) guarded by a token
