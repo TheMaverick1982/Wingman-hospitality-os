@@ -7,10 +7,12 @@ import {
   type CreatedEvent,
   type GoogleAccountRow,
 } from "./google";
+import { hasGmailSend } from "./google";
 import {
   microsoftFreeBusy,
   createMicrosoftEvent,
   deleteMicrosoftEvent,
+  hasMailSend,
   type MicrosoftAccountRow,
 } from "./microsoft";
 import { listGoogleAccounts, listMicrosoftAccounts, type PublicAccountInfo } from "./settings";
@@ -35,7 +37,13 @@ export async function listCalendarAccounts(userId: string): Promise<CalendarAcco
 // Non-secret account info for the UI (never a token).
 export async function listCalendarAccountsPublic(userId: string): Promise<PublicAccountInfo[]> {
   const accounts = await listCalendarAccounts(userId);
-  return accounts.map((a) => ({ id: a.id, email: a.email, provider: a.provider }));
+  return accounts.map((a) => ({
+    id: a.id,
+    email: a.email,
+    provider: a.provider,
+    // Whether this connection also granted email send (for Conversations).
+    mail: a.provider === "google" ? hasGmailSend(a.scopes) : hasMailSend(a.scopes),
+  }));
 }
 
 // Merge free/busy across every connected calendar, dispatching per provider.

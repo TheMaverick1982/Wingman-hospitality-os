@@ -170,13 +170,20 @@ export function CalendarClient({
         {accounts.length > 0 && (
           <div className="flex flex-col gap-2 mb-4">
             {accounts.map((a) => (
-              <div key={`${a.provider}-${a.id}`} className="flex items-center justify-between border border-line rounded-xl px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-full bg-olive-tint text-[#15803D] flex items-center justify-center">
+              <div key={`${a.provider}-${a.id}`} className="flex items-center justify-between border border-line rounded-xl px-4 py-3 gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="w-7 h-7 rounded-full bg-olive-tint text-[#15803D] flex items-center justify-center shrink-0">
                     <Check size={15} />
                   </span>
                   <span className="text-sm font-medium text-ink">{a.email || (a.provider === "microsoft" ? "Outlook account" : "Google account")}</span>
                   <Pill tone="muted">{a.provider === "microsoft" ? "Outlook" : "Google"}</Pill>
+                  {a.mail ? (
+                    <Pill tone="olive" dot>Email on</Pill>
+                  ) : (
+                    <a href={`/api/integrations/${a.provider}/connect`} className="text-[12.5px] font-semibold text-brick hover:opacity-70 whitespace-nowrap">
+                      Reconnect to send client email →
+                    </a>
+                  )}
                 </div>
                 <button
                   onClick={() => disconnect(a.provider, a.id)}
@@ -189,6 +196,12 @@ export function CalendarClient({
               </div>
             ))}
           </div>
+        )}
+
+        {connected && (
+          <p className="text-[12.5px] text-muted-2 mb-3">
+            &ldquo;Email on&rdquo; means client conversation emails send from that mailbox (Outlook two-way; Google send). If it says reconnect, click it once to grant email access.
+          </p>
         )}
 
         <div className="flex flex-wrap items-center gap-2.5">

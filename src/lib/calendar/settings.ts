@@ -35,7 +35,7 @@ export type DemoPoolConfig = {
   is_active: boolean;
 };
 
-export type PublicAccountInfo = { id: string; email: string; provider: "google" | "microsoft" };
+export type PublicAccountInfo = { id: string; email: string; provider: "google" | "microsoft"; mail: boolean };
 
 // A sensible Mon–Fri 9–5 default so a freshly-connected rep has something to edit.
 export const DEFAULT_AVAILABILITY: AvailabilityRule[] = [1, 2, 3, 4, 5].map((weekday) => ({
