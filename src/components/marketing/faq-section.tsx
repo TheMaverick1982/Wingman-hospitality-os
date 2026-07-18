@@ -1,33 +1,38 @@
+import { getPlatformPricing, dollars } from "@/lib/pricing";
+
 // Homepage FAQ. Doubles as (1) on-page keyword real estate — the answers say the
 // literal phrases restaurant operators search ("restaurant staff training
 // software", "get guests to come back", "multi-location") out loud — and (2) a
 // FAQPage rich result. The visible copy and the JSON-LD are generated from the
-// same source so they can never drift (a Google requirement).
+// same source so they can never drift (a Google requirement). The pricing answer
+// reads the live platform price so it never goes stale when pricing changes.
 
-const FAQS: { q: string; a: string }[] = [
-  {
-    q: "What is Wingman?",
-    a: "Wingman is restaurant staff training and guest-retention software — the culture, training, and accountability system hospitality teams use every shift to turn first-time guests into regulars. It replaces the training binder, the checklists, and the guesswork with one place your team actually uses on the floor.",
-  },
-  {
-    q: "How do I get restaurant guests to come back?",
-    a: "The cheapest way to grow a restaurant is bringing back the guests you already won. Wingman makes that a habit: your team flags every first-time guest, follows a simple service-recovery and bounce-back play to give them a reason to return, and you track your repeat rate as a real trend over time — so you can see whether guests are actually coming back.",
-  },
-  {
-    q: "How does Wingman train restaurant staff?",
-    a: "Wingman delivers role-by-role training and sign-offs for every position — host, server, bartender, and kitchen — plus pre-shift rituals, SOP checklists, and spot-checks that keep standards alive on the off-night. Managers assign training, verify it on the floor, and coach in the moment instead of hoping it stuck.",
-  },
-  {
-    q: "Does Wingman work for multi-location restaurants and franchises?",
-    a: "Yes. Wingman is built for multi-location restaurant operations and franchises: your culture, standards, and guest journey are portable across every location, with per-location accountability and reporting so each site runs to the same standard.",
-  },
-  {
-    q: "How much does Wingman cost?",
-    a: "Wingman is $199 per location, per month. You can try a fully-loaded live demo with no signup, run your retention upside on the calculator, or book a call to see it on your own floor.",
-  },
-];
+export async function FaqSection() {
+  const { firstCents, addlCents } = await getPlatformPricing();
 
-export function FaqSection() {
+  const FAQS: { q: string; a: string }[] = [
+    {
+      q: "What is Wingman?",
+      a: "Wingman is restaurant staff training and guest-retention software — the culture, training, and accountability system hospitality teams use every shift to turn first-time guests into regulars. It replaces the training binder, the checklists, and the guesswork with one place your team actually uses on the floor.",
+    },
+    {
+      q: "How do I get restaurant guests to come back?",
+      a: "The cheapest way to grow a restaurant is bringing back the guests you already won. Wingman makes that a habit: your team flags every first-time guest, follows a simple service-recovery and bounce-back play to give them a reason to return, and you track your repeat rate as a real trend over time — so you can see whether guests are actually coming back.",
+    },
+    {
+      q: "How does Wingman train restaurant staff?",
+      a: "Wingman delivers role-by-role training and sign-offs for every position — host, server, bartender, and kitchen — plus pre-shift rituals, SOP checklists, and spot-checks that keep standards alive on the off-night. Managers assign training, verify it on the floor, and coach in the moment instead of hoping it stuck.",
+    },
+    {
+      q: "Does Wingman work for multi-location restaurants and franchises?",
+      a: "Yes. Wingman is built for multi-location restaurant operations and franchises: your culture, standards, and guest journey are portable across every location, with per-location accountability and reporting so each site runs to the same standard.",
+    },
+    {
+      q: "How much does Wingman cost?",
+      a: `Wingman is ${dollars(firstCents)} per month for your first location and ${dollars(addlCents)} per month for each additional location. You can try a fully-loaded live demo with no signup, run your retention upside on the calculator, or book a call to see it on your own floor.`,
+    },
+  ];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

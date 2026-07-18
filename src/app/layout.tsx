@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
+import { getPlatformPricing } from "@/lib/pricing";
 import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
 import { SalesChat } from "@/components/marketing/sales-chat";
 import "./globals.css";
@@ -63,45 +64,48 @@ export const viewport: Viewport = {
 };
 
 // Two linked nodes in one @graph: the Organization (brand entity → knowledge
-// panel / brand SERP) and the SoftwareApplication (the product + its offer).
-const structuredData = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Organization",
-      "@id": `${siteUrl}/#organization`,
-      name: "Wingman",
-      legalName: "Wingman by The Maverick Agency",
-      url: siteUrl,
-      logo: `${siteUrl}/og-image.png`,
-      description:
-        "Wingman is the retention layer for hospitality — the culture, training, and accountability system that turns first-time restaurant guests into regulars.",
-      sameAs: ["https://www.instagram.com/joinwingmanapp/", "https://www.facebook.com/joinwingmanapp"],
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": `${siteUrl}/#software`,
-      name: "Wingman",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      url: siteUrl,
-      publisher: { "@id": `${siteUrl}/#organization` },
-      description:
-        "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",
-      offers: {
-        "@type": "Offer",
-        price: "199",
-        priceCurrency: "USD",
-        priceSpecification: {
-          "@type": "UnitPriceSpecification",
-          price: "199",
+// panel / brand SERP) and the SoftwareApplication (the product + its offer). The
+// offer price reads the live platform pricing so it never goes stale.
+function buildStructuredData(firstLocationPrice: string) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "Wingman",
+        legalName: "Wingman by The Maverick Agency",
+        url: siteUrl,
+        logo: `${siteUrl}/og-image.png`,
+        description:
+          "Wingman is the retention layer for hospitality — the culture, training, and accountability system that turns first-time restaurant guests into regulars.",
+        sameAs: ["https://www.instagram.com/joinwingmanapp/", "https://www.facebook.com/joinwingmanapp"],
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${siteUrl}/#software`,
+        name: "Wingman",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: siteUrl,
+        publisher: { "@id": `${siteUrl}/#organization` },
+        description:
+          "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",
+        offers: {
+          "@type": "Offer",
+          price: firstLocationPrice,
           priceCurrency: "USD",
-          unitText: "per location, per month",
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: firstLocationPrice,
+            priceCurrency: "USD",
+            unitText: "per month, first location",
+          },
         },
       },
-    },
-  ],
-};
+    ],
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -109,6 +113,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const gaMeasurementId = await getGaMeasurementId();
+  const { firstCents } = await getPlatformPricing();
+  const structuredData = buildStructuredData(String(Math.round(firstCents / 100)));
 
   return (
     <html lang="en" className="h-full antialiased">
