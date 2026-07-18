@@ -69,14 +69,13 @@ export function BookingWidget({
         if (cancelled) return;
         const list = data.slots ?? [];
         setSlots(list);
+        setSelectedDay(null); // show the calendar first; user picks a day
         const first = list[0];
         if (first) {
           const [y, m] = first.day.split("-").map(Number);
           setView({ year: y, month: m - 1 });
-          setSelectedDay(first.day);
         } else {
           setView(null);
-          setSelectedDay(null);
         }
       } catch (e) {
         if (!cancelled) setLoadError((e as Error).message);
@@ -236,94 +235,80 @@ export function BookingWidget({
         <p className="text-danger text-sm py-6">{loadError}</p>
       ) : slots.length === 0 ? (
         <p className="text-muted text-sm py-6">No open times right now — please check back soon.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
-          {/* Month calendar */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold text-ink">{view ? `${MONTH_NAMES[view.month]} ${view.year}` : ""}</div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => shiftMonth(-1)}
-                  disabled={!canGoPrev}
-                  type="button"
-                  className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={() => shiftMonth(1)}
-                  disabled={!canGoNext}
-                  type="button"
-                  className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {WEEKDAY_LABELS.map((w) => (
-                <div key={w} className="text-center text-[11px] font-semibold text-muted py-1">
-                  {w}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {cells.map((day, i) => {
-                if (!day) return <div key={`e${i}`} />;
-                const dayNum = Number(day.slice(8));
-                const isAvailable = availableDays.has(day);
-                const isSelected = day === selectedDay;
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    disabled={!isAvailable}
-                    onClick={() => setSelectedDay(day)}
-                    className={`aspect-square rounded-full text-sm flex items-center justify-center transition-colors ${
-                      isSelected
-                        ? "bg-brick text-white font-semibold"
-                        : isAvailable
-                          ? "text-ink font-medium bg-brick-tint hover:bg-brick hover:text-white"
-                          : "text-muted-2 cursor-default"
-                    }`}
-                  >
-                    {dayNum}
-                  </button>
-                );
-              })}
+      ) : selectedDay === null ? (
+        // Step 1: pick a date on the month calendar.
+        <div className="max-w-[360px] mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[15px] font-semibold text-ink">{view ? `${MONTH_NAMES[view.month]} ${view.year}` : ""}</div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => shiftMonth(-1)} disabled={!canGoPrev} type="button" className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent">
+                <ChevronLeft size={20} />
+              </button>
+              <button onClick={() => shiftMonth(1)} disabled={!canGoNext} type="button" className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent">
+                <ChevronRight size={20} />
+              </button>
             </div>
           </div>
-
-          {/* Times for the selected day */}
-          <div>
-            <div className="text-sm font-semibold text-ink mb-3">
-              {daySlots[0]?.date ?? "Pick a day"}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto content-start pr-1">
-              {daySlots.map((s) => (
+          <div className="grid grid-cols-7 gap-1.5 mb-2">
+            {WEEKDAY_LABELS.map((w) => (
+              <div key={w} className="text-center text-[11px] font-semibold text-muted py-1">
+                {w}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {cells.map((day, i) => {
+              if (!day) return <div key={`e${i}`} />;
+              const dayNum = Number(day.slice(8));
+              const isAvailable = availableDays.has(day);
+              return (
                 <button
-                  key={s.start}
-                  onClick={() => {
-                    setChosen(s);
-                    setError(null);
-                  }}
+                  key={day}
                   type="button"
-                  className="text-sm rounded-xl px-3 py-2.5 border border-line-strong text-ink font-medium hover:border-brick hover:bg-brick-tint transition-colors"
+                  disabled={!isAvailable}
+                  onClick={() => setSelectedDay(day)}
+                  className={`aspect-square rounded-full text-[15px] flex items-center justify-center transition-colors ${
+                    isAvailable
+                      ? "text-brick font-semibold bg-brick-tint hover:bg-brick hover:text-white"
+                      : "text-muted-2 cursor-default"
+                  }`}
                 >
-                  {s.time}
+                  {dayNum}
                 </button>
-              ))}
-              {daySlots.length === 0 && <p className="text-sm text-muted col-span-full">No times this day.</p>}
-            </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        // Step 2: pick a time for the selected day (calendar hidden).
+        <div className="max-w-[440px] mx-auto">
+          <button onClick={() => setSelectedDay(null)} type="button" className="text-sm text-muted hover:text-ink inline-flex items-center gap-1 mb-4">
+            <ChevronLeft size={15} /> Choose another date
+          </button>
+          <div className="text-[15px] font-semibold text-ink mb-3">{daySlots[0]?.date ?? selectedDay}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[320px] overflow-y-auto content-start pr-1">
+            {daySlots.map((s) => (
+              <button
+                key={s.start}
+                onClick={() => {
+                  setChosen(s);
+                  setError(null);
+                }}
+                type="button"
+                className="text-sm rounded-xl px-3 py-2.5 border border-line-strong text-ink font-medium hover:border-brick hover:bg-brick-tint transition-colors"
+              >
+                {s.time}
+              </button>
+            ))}
+            {daySlots.length === 0 && <p className="text-sm text-muted col-span-full">No times this day.</p>}
           </div>
         </div>
       )}
 
       {/* Time zone */}
-      <div className="mt-6 pt-4 border-t border-line flex items-center gap-2">
+      <div className="mt-6 pt-4 border-t border-line flex items-center gap-2 justify-center">
         <Globe size={15} className="text-muted shrink-0" />
-        <span className="text-sm text-muted whitespace-nowrap">Times shown in</span>
+        <span className="text-sm text-muted whitespace-nowrap">Times in</span>
         <select value={tz} onChange={(e) => setTz(e.target.value)} className="text-sm bg-transparent text-ink font-medium outline-none border border-line rounded-lg px-2 py-1 max-w-[240px]">
           {BOOKING_TIMEZONES.map(([v, label]) => (
             <option key={v} value={v}>
