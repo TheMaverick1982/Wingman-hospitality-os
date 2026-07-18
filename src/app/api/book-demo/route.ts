@@ -11,9 +11,6 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 // Public: book a demo, round-robin, on the least-loaded free rep in the pool.
 export async function POST(request: NextRequest) {
   const config = await getDemoPoolConfig();
-  if (!config.is_active) {
-    return NextResponse.json({ error: "Demo booking isn't available right now." }, { status: 404 });
-  }
 
   let body: { start?: unknown; name?: unknown; email?: unknown; phone?: unknown; notes?: unknown; tz?: unknown };
   try {
@@ -33,6 +30,7 @@ export async function POST(request: NextRequest) {
   if (!Number.isFinite(startMs) || startMs <= 0) return NextResponse.json({ error: "Pick a time to continue." }, { status: 400 });
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Enter your name." }, { status: 400 });
+  if (!phone) return NextResponse.json({ error: "Enter a mobile number." }, { status: 400 });
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (!(await consumeRateLimit(`book:${ip}`, 10, 3600))) {
@@ -40,6 +38,9 @@ export async function POST(request: NextRequest) {
   }
 
   const members = await listDemoPoolMembers();
+  if (members.length === 0) {
+    return NextResponse.json({ error: "Demo booking isn't available right now." }, { status: 404 });
+  }
   const result = await createDemoBooking({
     config,
     members,

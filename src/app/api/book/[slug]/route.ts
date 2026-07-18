@@ -43,6 +43,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!name) {
     return NextResponse.json({ error: "Enter your name." }, { status: 400 });
   }
+  if (!phone) {
+    return NextResponse.json({ error: "Enter a mobile number." }, { status: 400 });
+  }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const ok = await consumeRateLimit(`book:${ip}`, 10, 3600); // 10 bookings / IP / hour
