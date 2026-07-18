@@ -1,4 +1,5 @@
 import "server-only";
+import { bumpProviderUsage } from "@/lib/provider-usage";
 
 // Transactional email via Resend. Sends from the verified `updates.joinwingman.app`
 // subdomain (the root joinwingman.app isn't verified in Resend). Use `replyTo`
@@ -56,4 +57,8 @@ export async function sendEmail({
     const body = await response.text().catch(() => "");
     throw new Error(`Resend API returned ${response.status}: ${body.slice(0, 300)}`);
   }
+
+  // Count the send for the capacity watchdog (best-effort). One recipient list =
+  // one Resend call = one billed send.
+  await bumpProviderUsage("email");
 }
