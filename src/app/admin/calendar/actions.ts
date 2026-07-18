@@ -9,7 +9,6 @@ import {
   normalizeAvailability,
   slugify,
   getCalendarSettings,
-  DEFAULT_AVAILABILITY,
 } from "@/lib/calendar/settings";
 import { listCalendarAccounts } from "@/lib/calendar/providers";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
@@ -181,5 +180,3 @@ export async function saveDemoPoolConfig(input: DemoConfigInput): Promise<{ erro
     return { error: `Couldn't save the demo settings: ${(e as Error).message}` };
   }
 }
-
-export { DEFAULT_AVAILABILITY };
