@@ -26,6 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Wingman",
+    locale: "en_US",
     title: "Wingman — The Retention Layer for Hospitality",
     description:
       "Turn every first-time guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use.",
@@ -39,6 +40,7 @@ export const metadata: Metadata = {
       "Turn every first-time guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use.",
     images: ["/og-image.png"],
   },
+  alternates: { canonical: "/" },
   robots: {
     index: true,
     follow: true,
@@ -60,26 +62,45 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const organizationJsonLd = {
+// Two linked nodes in one @graph: the Organization (brand entity → knowledge
+// panel / brand SERP) and the SoftwareApplication (the product + its offer).
+const structuredData = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "Wingman",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  url: siteUrl,
-  description:
-    "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",
-  offers: {
-    "@type": "Offer",
-    price: "199",
-    priceCurrency: "USD",
-    priceSpecification: {
-      "@type": "UnitPriceSpecification",
-      price: "199",
-      priceCurrency: "USD",
-      unitText: "per location, per month",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
+      name: "Wingman",
+      legalName: "Wingman by The Maverick Agency",
+      url: siteUrl,
+      logo: `${siteUrl}/og-image.png`,
+      description:
+        "Wingman is the retention layer for hospitality — the culture, training, and accountability system that turns first-time restaurant guests into regulars.",
+      sameAs: ["https://www.instagram.com/joinwingmanapp/", "https://www.facebook.com/joinwingmanapp"],
     },
-  },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${siteUrl}/#software`,
+      name: "Wingman",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: siteUrl,
+      publisher: { "@id": `${siteUrl}/#organization` },
+      description:
+        "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",
+      offers: {
+        "@type": "Offer",
+        price: "199",
+        priceCurrency: "USD",
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: "199",
+          priceCurrency: "USD",
+          unitText: "per location, per month",
+        },
+      },
+    },
+  ],
 };
 
 export default async function RootLayout({
@@ -94,8 +115,7 @@ export default async function RootLayout({
       <body className="force-light min-h-full flex flex-col bg-paper text-ink font-sans">
         <script
           type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         <main className="flex-1 flex flex-col min-h-0">{children}</main>
         <SalesChat />

@@ -6,6 +6,7 @@ import { LaunchDemoForm } from "@/components/demo/launch-demo-form";
 export const metadata: Metadata = {
   title: "Try the live demo — Wingman",
   description: "Explore a fully-loaded Wingman workspace instantly. No signup needed — a private demo, ready in seconds.",
+  alternates: { canonical: "/demo" },
 };
 
 // Provisioning + seeding + lead capture runs in the launch server action; give

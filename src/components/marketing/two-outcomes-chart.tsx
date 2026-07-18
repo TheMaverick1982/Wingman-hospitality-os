@@ -22,7 +22,7 @@ export function TwoOutcomesChart() {
           </div>
         </div>
 
-        <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 mt-4 lg:mt-2 min-h-[220px] overflow-visible">
+        <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 mt-4 lg:mt-2 min-h-[220px] overflow-visible" role="img" aria-label="Two outcomes over time: a flat line when first-time guests never return, versus compounding growth when they become repeat regulars.">
           <defs>
             <linearGradient id="wmArea" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#0A6CFF" stopOpacity="0.18" />

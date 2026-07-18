@@ -5,6 +5,7 @@ import { WingmanLogo } from "@/components/ui/wingman-logo";
 export const metadata: Metadata = {
   title: "Wingman — Links",
   description: "Guest retention for restaurants. Try the demo, run your numbers, or book a call.",
+  alternates: { canonical: "/links" },
 };
 
 // Link-in-bio page for Instagram / social profiles. Standalone (no marketing
@@ -25,9 +26,9 @@ export default function LinksPage() {
       <div className="w-full max-w-[440px] flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4 text-center">
           <WingmanLogo className="h-6 w-auto" />
-          <p className="text-[15px] text-muted leading-relaxed max-w-[320px]">
+          <h1 className="text-[15px] text-muted leading-relaxed max-w-[320px] font-normal">
             Guest retention for restaurants — turn first-time guests into regulars, every shift.
-          </p>
+          </h1>
         </div>
 
         <nav className="w-full flex flex-col gap-3">

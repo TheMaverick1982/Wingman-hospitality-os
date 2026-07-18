@@ -8,7 +8,7 @@ export function HeroRetentionGraphic() {
         </span>
         <span className="text-[13px] text-muted-2 font-medium">Come once, gone for good</span>
       </div>
-      <svg viewBox="0 0 460 148" preserveAspectRatio="xMidYMid meet" className="w-full h-auto block">
+      <svg viewBox="0 0 460 148" preserveAspectRatio="xMidYMid meet" className="w-full h-auto block" role="img" aria-label="A one-time guest visits the restaurant once and never returns.">
         <line x1="20" y1="120" x2="290" y2="120" stroke="#EDEDED" strokeWidth="2" />
         <path d="M300 128 L120 128" stroke="#E4E4E4" strokeWidth="2" strokeDasharray="5 7" strokeLinecap="round" />
         {/* grey building */}
@@ -40,7 +40,7 @@ export function HeroRetentionGraphic() {
         </span>
         <span className="text-[13px] text-brick-dark font-semibold">They come back, again and again</span>
       </div>
-      <svg viewBox="0 0 460 148" preserveAspectRatio="xMidYMid meet" className="w-full h-auto block">
+      <svg viewBox="0 0 460 148" preserveAspectRatio="xMidYMid meet" className="w-full h-auto block" role="img" aria-label="A loyal guest returns to the restaurant again and again.">
         <line x1="20" y1="120" x2="290" y2="120" stroke="#E1ECFF" strokeWidth="2" />
         {/* loyalty loop */}
         <path

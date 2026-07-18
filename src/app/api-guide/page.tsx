@@ -4,6 +4,7 @@ import { PrintButton } from "./print-button";
 export const metadata: Metadata = {
   title: "Wingman API — Developer Guide",
   description: "Everything a developer needs to integrate a POS or automation with Wingman.",
+  alternates: { canonical: "/api-guide" },
 };
 
 const BASE_URL = "https://www.joinwingman.app";
