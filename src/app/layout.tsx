@@ -3,6 +3,8 @@ import { getGaMeasurementId } from "@/lib/data/platform-settings";
 import { getPlatformPricing } from "@/lib/pricing";
 import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
 import { VisitorTracker } from "@/components/analytics/visitor-tracker";
+import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SalesChat } from "@/components/marketing/sales-chat";
 import "./globals.css";
 
@@ -126,6 +128,8 @@ export default async function RootLayout({
         />
         <main className="flex-1 flex flex-col min-h-0">{children}</main>
         <VisitorTracker />
+        <ServiceWorkerRegistrar />
+        <InstallPrompt />
         <SalesChat />
       </body>
       <DelayedThirdParties gtmId="GTM-P7CJ3J7G" gaId={gaMeasurementId} />
