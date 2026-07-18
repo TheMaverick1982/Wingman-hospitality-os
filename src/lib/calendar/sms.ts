@@ -1,4 +1,5 @@
 import "server-only";
+import { bumpProviderUsage } from "@/lib/provider-usage";
 
 // Transactional SMS via Twilio's REST API (no SDK). Credentials live in Vercel as
 // TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN and a sender: TWILIO_MESSAGING_SERVICE_SID
@@ -56,6 +57,7 @@ export async function sendSms(to: string, body: string): Promise<{ ok: boolean; 
       const json = (await res.json().catch(() => ({}))) as { message?: string };
       return { ok: false, error: json.message ?? `Twilio error (${res.status})` };
     }
+    await bumpProviderUsage("sms"); // capacity watchdog (best-effort)
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
