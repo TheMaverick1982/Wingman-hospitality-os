@@ -256,12 +256,14 @@ function encodeHeader(v: string): string {
 // message appears in the rep's Sent mail and comes from their real address.
 export async function sendMailViaGmail(
   account: GoogleAccountRow,
-  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string },
+  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string; fromName?: string },
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const token = await freshAccessToken(account);
     const to = opts.toName ? `${encodeHeader(opts.toName)} <${opts.toEmail}>` : opts.toEmail;
     const headers = [
+      // Override the display name (still from the rep's real Gmail address).
+      ...(opts.fromName && account.email ? [`From: ${encodeHeader(opts.fromName)} <${account.email}>`] : []),
       `To: ${to}`,
       `Subject: ${encodeHeader(opts.subject)}`,
       ...(opts.replyTo ? [`Reply-To: ${opts.replyTo}`] : []),

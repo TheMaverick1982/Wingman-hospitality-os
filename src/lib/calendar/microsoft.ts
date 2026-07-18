@@ -272,7 +272,7 @@ export async function createMicrosoftEvent(
 // message shows up in the rep's Sent folder and comes from their real address.
 export async function sendMailViaGraph(
   account: MicrosoftAccountRow,
-  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string },
+  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string; fromName?: string },
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const token = await freshAccessToken(account);
@@ -281,6 +281,8 @@ export async function sendMailViaGraph(
       body: { contentType: "HTML", content: opts.html },
       toRecipients: [{ emailAddress: { address: opts.toEmail, name: opts.toName || undefined } }],
     };
+    // Override the display name (still from the rep's real address).
+    if (opts.fromName && account.email) message.from = { emailAddress: { name: opts.fromName, address: account.email } };
     if (opts.replyTo) message.replyTo = [{ emailAddress: { address: opts.replyTo } }];
     const res = await fetch(`${GRAPH}/me/sendMail`, {
       method: "POST",
