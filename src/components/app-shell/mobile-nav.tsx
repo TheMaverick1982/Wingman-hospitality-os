@@ -26,7 +26,10 @@ export function MobileNav(props: SidebarProps) {
 
   return (
     <>
-      <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-line px-5 h-14">
+      <div
+        className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-line px-5 min-h-14"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <button
           type="button"
           onClick={() => setOpen(true)}
