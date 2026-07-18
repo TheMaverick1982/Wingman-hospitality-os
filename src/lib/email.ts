@@ -1,5 +1,6 @@
 import "server-only";
 import { bumpProviderUsage } from "@/lib/provider-usage";
+import { fetchWithRetry } from "@/lib/fetch-retry";
 
 // Transactional email via Resend. Sends from the verified `updates.joinwingman.app`
 // subdomain (the root joinwingman.app isn't verified in Resend). Use `replyTo`
@@ -34,7 +35,7 @@ export async function sendEmail({
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY isn't configured yet.");
 
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetchWithRetry("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

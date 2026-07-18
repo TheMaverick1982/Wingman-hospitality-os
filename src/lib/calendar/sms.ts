@@ -1,5 +1,6 @@
 import "server-only";
 import { bumpProviderUsage } from "@/lib/provider-usage";
+import { fetchWithRetry } from "@/lib/fetch-retry";
 
 // Transactional SMS via Twilio's REST API (no SDK). Credentials live in Vercel as
 // TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN and a sender: TWILIO_MESSAGING_SERVICE_SID
@@ -45,7 +46,7 @@ export async function sendSms(to: string, body: string): Promise<{ ok: boolean; 
   }
 
   try {
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    const res = await fetchWithRetry(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
       method: "POST",
       headers: {
         authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
