@@ -111,9 +111,14 @@ export function LeadsTable({ rows }: { rows: LeadRow[] }) {
                 Close
               </button>
               {selected.contactId && (
-                <Link href={`/admin/crm/${selected.contactId}`} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark transition-colors">
-                  Open full contact →
-                </Link>
+                <>
+                  <Link href={`/admin/conversations/${selected.contactId}`} className="text-[13px] font-semibold text-charcoal-2 bg-paper border border-line rounded-lg px-4 py-2 hover:bg-white transition-colors">
+                    Conversation →
+                  </Link>
+                  <Link href={`/admin/crm/${selected.contactId}`} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark transition-colors">
+                    Open full contact →
+                  </Link>
+                </>
               )}
             </div>
           </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,9 +85,14 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/admin/crm" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink transition-colors w-fit">
-        <ArrowLeft size={15} /> Back to pipeline
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/admin/crm" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink transition-colors w-fit">
+          <ArrowLeft size={15} /> Back to pipeline
+        </Link>
+        <Link href={`/admin/conversations/${id}`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-lg px-3.5 py-2 hover:bg-brick-dark transition-colors">
+          <MessageSquare size={14} /> Open conversation
+        </Link>
+      </div>
       <ContactPanel
         contact={contact as ContactRecord}
         activities={(activities ?? []) as ActivityRecord[]}

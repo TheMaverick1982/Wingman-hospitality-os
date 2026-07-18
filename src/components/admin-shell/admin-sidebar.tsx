@@ -58,8 +58,19 @@ const NAV: NavEntry[] = [
       ],
     },
   },
-  { kind: "item", item: { href: "/admin/crm", label: "CRM", icon: Contact, section: "crm" } },
-  { kind: "item", item: { href: "/admin/conversations", label: "Conversations", icon: MessagesSquare, section: "crm" } },
+  {
+    kind: "group",
+    group: {
+      key: "crm",
+      label: "CRM",
+      icon: Contact,
+      items: [
+        { href: "/admin/leads", label: "Leads", icon: Inbox, section: "analytics" },
+        { href: "/admin/crm", label: "Pipeline", icon: Contact, section: "crm" },
+        { href: "/admin/conversations", label: "Conversations", icon: MessagesSquare, section: "crm" },
+      ],
+    },
+  },
   {
     kind: "group",
     group: {
@@ -68,7 +79,6 @@ const NAV: NavEntry[] = [
       icon: Gauge,
       items: [
         { href: "/admin/sales-dashboard", label: "Sales Dashboard", icon: Gauge, section: "sales_dashboard" },
-        { href: "/admin/leads", label: "Leads", icon: Inbox, section: "analytics" },
         { href: "/admin/calendar", label: "Calendar", icon: CalendarCheck, always: true },
         { href: "/admin/sales-training", label: "Sales Training", icon: GraduationCap, section: "sales_training" },
         { href: "/admin/sales-commissions", label: "Sales Commissions", icon: Wallet, section: "commissions" },
