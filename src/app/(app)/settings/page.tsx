@@ -17,6 +17,7 @@ import { EditLocationForm } from "./edit-location-form";
 import { PermissionsMatrixForm } from "./permissions-matrix-form";
 import { SettingsTabs } from "./tabs";
 import { NotificationSettings } from "./notification-settings";
+import { PushNotificationToggle } from "./push-notification-toggle";
 import { ApiKeysManager } from "./api-keys-manager";
 import { BillingEmailForm } from "./billing-email-form";
 import { BillingCancel } from "./billing-cancel";
@@ -50,7 +51,10 @@ export default async function SettingsPage() {
     .eq("id", profile.orgId)
     .maybeSingle();
   const notificationContent = (
-    <NotificationSettings initial={(orgNotif?.notification_settings as Partial<Record<NotificationKey, boolean>> | null) ?? {}} />
+    <div className="flex flex-col gap-5">
+      <NotificationSettings initial={(orgNotif?.notification_settings as Partial<Record<NotificationKey, boolean>> | null) ?? {}} />
+      <PushNotificationToggle />
+    </div>
   );
 
   // Managers don't see (or trigger the queries for) the owner-only tabs.
