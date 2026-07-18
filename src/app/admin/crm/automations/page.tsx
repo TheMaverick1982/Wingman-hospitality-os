@@ -46,7 +46,7 @@ export default async function AutomationsPage() {
             <tr className="border-b border-line bg-paper text-left text-xs font-semibold uppercase tracking-wide text-muted-2">
               <th className="px-5 py-3">Sequence</th>
               <th className="px-5 py-3">Funnel</th>
-              <th className="px-5 py-3">Emails</th>
+              <th className="px-5 py-3">Steps</th>
               <th className="px-5 py-3">Currently enrolled</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3" />
@@ -82,7 +82,7 @@ export default async function AutomationsPage() {
         </table>
       </div>
       <p className="text-[13px] text-muted-2">
-        Sequences auto-stop when a contact books a call, becomes a customer, or unsubscribes. Emails send hourly via the CRM cron, within the Mon–Sat 7am–7pm (contact&rsquo;s ET) send window — except transactional first emails, which go out immediately.
+        Sequences auto-stop when a contact books a call, becomes a customer, or unsubscribes. Steps send hourly via the CRM cron, within the Mon–Sat 7am–7pm (contact&rsquo;s ET) send window — except transactional first emails, which go out immediately. SMS steps only reach contacts who opted in to marketing texts and haven&rsquo;t replied STOP.
       </p>
     </div>
   );

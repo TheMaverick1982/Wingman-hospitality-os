@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { renderMerge, CRM_REPLY_TO } from "@/lib/crm-merge";
 import { resolveStep } from "@/lib/crm-step-resolver";
+import { sendSms, normalizePhone, twilioConfigured } from "@/lib/calendar/sms";
 
 // Runs hourly. Sends due nurture/onboarding steps, honoring:
 //   - draft/publish (drafts never send)
@@ -21,10 +22,10 @@ type Enrollment = {
   contact_id: string;
   next_step_order: number;
   enrolled_at: string;
-  crm_contacts: { email: string; name: string | null; unsubscribed: boolean; booked_at: string | null; customer_at: string | null; org_id: string | null; fields: Record<string, unknown> | null } | null;
+  crm_contacts: { email: string; name: string | null; phone: string | null; unsubscribed: boolean; sms_marketing_consent: boolean; sms_opt_out: boolean; booked_at: string | null; customer_at: string | null; org_id: string | null; fields: Record<string, unknown> | null } | null;
   crm_sequences: { source: string; active: boolean; published: boolean } | null;
 };
-type Step = { step_order: number; delay_days: number; subject: string; body: string; send_condition: string; transactional: boolean };
+type Step = { step_order: number; delay_days: number; channel: string; subject: string; body: string; send_condition: string; transactional: boolean };
 
 function inSendWindow(): boolean {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: SEND_TZ, weekday: "short", hour: "2-digit", hour12: false }).formatToParts(new Date());
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await admin
     .from("crm_enrollments")
-    .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, name, unsubscribed, booked_at, customer_at, org_id, fields), crm_sequences(source, active, published)")
+    .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, name, phone, unsubscribed, sms_marketing_consent, sms_opt_out, booked_at, customer_at, org_id, fields), crm_sequences(source, active, published)")
     .eq("status", "active")
     .lte("next_run_at", nowIso)
     .order("next_run_at", { ascending: true })
@@ -68,6 +69,8 @@ export async function GET(request: NextRequest) {
 
   const due = (data ?? []) as unknown as Enrollment[];
   let sent = 0;
+  let smsSent = 0;
+  let smsSkipped = 0;
   let stopped = 0;
   let completed = 0;
   let held = 0;
@@ -96,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     const { data: stepRows } = await admin
       .from("crm_sequence_steps")
-      .select("step_order, delay_days, subject, body, send_condition, transactional")
+      .select("step_order, delay_days, channel, subject, body, send_condition, transactional")
       .eq("sequence_id", e.sequence_id)
       .eq("active", true)
       .order("step_order", { ascending: true });
@@ -128,6 +131,53 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // Advance to the next step (or complete). Shared by both channels.
+    const advance = async () => {
+      const next = steps.find((s) => s.step_order > toSend.step_order);
+      if (next) {
+        const nextDue = new Date(new Date(e.enrolled_at).getTime() + next.delay_days * 86400000).toISOString();
+        await admin.from("crm_enrollments").update({ next_step_order: next.step_order, next_run_at: nextDue, updated_at: nowIso }).eq("id", e.id);
+      } else {
+        await admin.from("crm_enrollments").update({ status: "completed", updated_at: nowIso }).eq("id", e.id);
+        completed++;
+      }
+    };
+
+    // SMS step: gated on Twilio being configured + a phone + explicit marketing SMS
+    // consent + not opted out (A2P/TCPA). If the contact isn't eligible we skip the
+    // step and move on rather than stalling the whole sequence on it.
+    if (toSend.channel === "sms") {
+      const phone = normalizePhone(contact.phone ?? "");
+      const eligible = twilioConfigured() && Boolean(phone) && contact.sms_marketing_consent && !contact.sms_opt_out;
+      if (!eligible) {
+        smsSkipped++;
+        await advance();
+        continue;
+      }
+      const smsBody = renderMerge(toSend.body, contact);
+      const res = await sendSms(phone, smsBody);
+      if (!res.ok) {
+        // Best-effort: a single number failing (e.g. carrier-blocked, opted out at
+        // the carrier level) must not stall the sequence's later steps. Skip past
+        // this SMS instead of holding, and log it.
+        console.error("[crm] sequence sms failed", res.error);
+        smsSkipped++;
+        await advance();
+        continue;
+      }
+      smsSent++;
+      await admin.from("crm_activities").insert({
+        contact_id: e.contact_id,
+        kind: "sms_out",
+        subject: "",
+        body: smsBody,
+        meta: { sequence: seq.source, automated: true, to: phone, channel: "sms" },
+      });
+      await admin.from("crm_contacts").update({ last_activity_at: nowIso }).eq("id", e.contact_id);
+      await advance();
+      continue;
+    }
+
     const subject = renderMerge(toSend.subject, contact);
     const body = renderMerge(toSend.body, contact);
     try {
@@ -148,15 +198,8 @@ export async function GET(request: NextRequest) {
     });
     await admin.from("crm_contacts").update({ last_activity_at: nowIso }).eq("id", e.contact_id);
 
-    const next = steps.find((s) => s.step_order > toSend!.step_order);
-    if (next) {
-      const nextDue = new Date(new Date(e.enrolled_at).getTime() + next.delay_days * 86400000).toISOString();
-      await admin.from("crm_enrollments").update({ next_step_order: next.step_order, next_run_at: nextDue, updated_at: nowIso }).eq("id", e.id);
-    } else {
-      await admin.from("crm_enrollments").update({ status: "completed", updated_at: nowIso }).eq("id", e.id);
-      completed++;
-    }
+    await advance();
   }
 
-  return NextResponse.json({ processed: due.length, sent, stopped, completed, held, windowOpen });
+  return NextResponse.json({ processed: due.length, sent, smsSent, smsSkipped, stopped, completed, held, windowOpen });
 }
