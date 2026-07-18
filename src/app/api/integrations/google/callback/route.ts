@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { completeGoogleOAuth } from "@/lib/calendar/google";
-import { ensureUniqueSlug, getCalendarSettings, DEFAULT_AVAILABILITY } from "@/lib/calendar/settings";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { seedCalendarSettingsIfMissing } from "@/lib/calendar/settings";
 
 // Google Calendar OAuth callback. Verifies CSRF state, exchanges the code, stores
 // the connection, and seeds a booking-settings row on first connect so the rep
@@ -33,19 +32,7 @@ export async function GET(request: NextRequest) {
 
   // First connection: seed a booking-settings row (inactive until the rep
   // reviews availability and turns it on).
-  const existing = await getCalendarSettings(profile.userId);
-  if (!existing) {
-    const slug = await ensureUniqueSlug(profile.fullName || "rep", profile.userId);
-    const admin = createAdminClient();
-    await admin.from("calendar_settings").insert({
-      user_id: profile.userId,
-      slug,
-      time_zone: "America/New_York",
-      availability: DEFAULT_AVAILABILITY,
-      page_title: `Book a meeting with ${profile.fullName || "our team"}`,
-      is_active: false,
-    });
-  }
+  await seedCalendarSettingsIfMissing(profile.userId, profile.fullName);
 
   return NextResponse.redirect(new URL("/admin/calendar?g=connected", request.url));
 }

@@ -10,20 +10,18 @@ import {
   formatTime,
   type Slot,
 } from "./availability";
-import { mergedFreeBusy, createBookingEvent, deleteBookingEvent, siteUrl, type GoogleAccountRow } from "./google";
+import { siteUrl, type GoogleAccountRow } from "./google";
+import type { MicrosoftAccountRow } from "./microsoft";
+import { listCalendarAccounts, mergedFreeBusyAll, createEventOn, deleteEventOn, type CalendarAccount } from "./providers";
 import { buildIcs } from "./ics";
 import { buildBookingEmail, buildCancellationEmail } from "./booking-email";
-import {
-  listGoogleAccounts,
-  type CalendarSettings,
-  type DemoPoolConfig,
-} from "./settings";
+import { type CalendarSettings, type DemoPoolConfig } from "./settings";
 
 // Compute bookable slots for a single rep: their weekly rules minus busy time
-// merged across every connected Google calendar.
+// merged across every connected calendar (Google and/or Outlook).
 export async function getAvailableSlots(settings: CalendarSettings, nowMs: number): Promise<Slot[]> {
-  const accounts = await listGoogleAccounts(settings.user_id);
-  const busy = accounts.length ? await mergedFreeBusy(accounts, nowMs, nowMs + settings.booking_window_days * 86_400_000) : [];
+  const accounts = await listCalendarAccounts(settings.user_id);
+  const busy = accounts.length ? await mergedFreeBusyAll(accounts, nowMs, nowMs + settings.booking_window_days * 86_400_000) : [];
   return computeSlots({
     rules: settings.availability,
     timeZone: settings.time_zone,
@@ -43,7 +41,7 @@ export type BookResult = { ok: true; meetLink: string; startMs: number } | { ok:
 // rep flow and the round-robin demo pool.
 async function finalizeBooking(opts: {
   userId: string;
-  host: GoogleAccountRow;
+  host: CalendarAccount;
   hostName: string;
   summary: string;
   timeZone: string; // host time zone for the calendar event
@@ -62,11 +60,13 @@ async function finalizeBooking(opts: {
   const manageToken = randomUUID();
   const manageUrl = `${siteUrl()}/booking/${manageToken}`;
 
-  const created = await createBookingEvent(opts.host, {
+  const created = await createEventOn(opts.host, {
     summary: opts.summary,
     description,
     startISO,
     endISO,
+    startMs: opts.startMs,
+    endMs: opts.endMs,
     timeZone: opts.timeZone,
     inviteeEmail: opts.inviteeEmail,
     inviteeName: opts.inviteeName,
@@ -80,7 +80,9 @@ async function finalizeBooking(opts: {
     .from("calendar_bookings")
     .insert({
       user_id: opts.userId,
-      google_account_id: opts.host.id,
+      provider: opts.host.provider,
+      google_account_id: opts.host.provider === "google" ? opts.host.id : null,
+      microsoft_account_id: opts.host.provider === "microsoft" ? opts.host.id : null,
       google_event_id: created.event.eventId,
       meet_link: created.event.meetLink,
       html_link: created.event.htmlLink,
@@ -157,7 +159,7 @@ export async function createBooking(opts: {
   const { settings, startMs, nowMs } = opts;
   const endMs = startMs + settings.meeting_duration_minutes * 60_000;
 
-  const accounts = await listGoogleAccounts(settings.user_id);
+  const accounts = await listCalendarAccounts(settings.user_id);
   if (!accounts.length) return { ok: false, error: "This calendar isn't connected right now." };
 
   const open = await getAvailableSlots(settings, nowMs);
@@ -192,11 +194,11 @@ async function memberBusyMap(
   members: CalendarSettings[],
   fromMs: number,
   toMs: number,
-): Promise<{ member: CalendarSettings; accounts: GoogleAccountRow[]; busy: { start: number; end: number }[] | null }[]> {
+): Promise<{ member: CalendarSettings; accounts: CalendarAccount[]; busy: { start: number; end: number }[] | null }[]> {
   return Promise.all(
     members.map(async (member) => {
-      const accounts = await listGoogleAccounts(member.user_id);
-      const busy = accounts.length ? await mergedFreeBusy(accounts, fromMs, toMs) : null;
+      const accounts = await listCalendarAccounts(member.user_id);
+      const busy = accounts.length ? await mergedFreeBusyAll(accounts, fromMs, toMs) : null;
       return { member, accounts, busy };
     }),
   );
@@ -358,14 +360,16 @@ export async function cancelBookingByToken(token: string): Promise<{ ok: boolean
   const admin = createAdminClient();
   const { data } = await admin
     .from("calendar_bookings")
-    .select("id, user_id, google_account_id, google_event_id, invitee_name, invitee_email, start_at, time_zone, status, rebook_path")
+    .select("id, user_id, provider, google_account_id, microsoft_account_id, google_event_id, invitee_name, invitee_email, start_at, time_zone, status, rebook_path")
     .eq("manage_token", token)
     .maybeSingle();
   if (!data) return { ok: false, error: "Booking not found." };
   const row = data as {
     id: string;
     user_id: string;
+    provider: string | null;
     google_account_id: string | null;
+    microsoft_account_id: string | null;
     google_event_id: string;
     invitee_name: string;
     invitee_email: string;
@@ -376,10 +380,15 @@ export async function cancelBookingByToken(token: string): Promise<{ ok: boolean
   };
   if (row.status === "cancelled") return { ok: true, rebookPath: row.rebook_path || "/book-a-demo" };
 
-  // Delete the Google event (best-effort).
-  if (row.google_account_id && row.google_event_id) {
-    const { data: acct } = await admin.from("calendar_google_accounts").select("*").eq("id", row.google_account_id).maybeSingle();
-    if (acct) await deleteBookingEvent(acct as GoogleAccountRow, row.google_event_id);
+  // Delete the calendar event on the hosting provider (best-effort).
+  if (row.google_event_id) {
+    if (row.provider === "microsoft" && row.microsoft_account_id) {
+      const { data: acct } = await admin.from("calendar_microsoft_accounts").select("*").eq("id", row.microsoft_account_id).maybeSingle();
+      if (acct) await deleteEventOn({ provider: "microsoft", ...(acct as MicrosoftAccountRow) }, row.google_event_id);
+    } else if (row.google_account_id) {
+      const { data: acct } = await admin.from("calendar_google_accounts").select("*").eq("id", row.google_account_id).maybeSingle();
+      if (acct) await deleteEventOn({ provider: "google", ...(acct as GoogleAccountRow) }, row.google_event_id);
+    }
   }
 
   await admin
