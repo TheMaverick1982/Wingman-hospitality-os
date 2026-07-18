@@ -32,6 +32,20 @@ function flagBanner(flag: string, msg: string): { tone: "ok" | "err"; text: stri
   }
 }
 
+export type CalendarClientProps = {
+  googleConfigured: boolean;
+  microsoftConfigured: boolean;
+  baseUrl: string;
+  accounts: PublicAccountInfo[];
+  settings: CalendarSettings;
+  bookings: BookingRow[];
+  flag: string;
+  flagMsg: string;
+  isSuper: boolean;
+  demoConfig: DemoPoolConfig;
+  demoMemberCount: number;
+};
+
 export function CalendarClient({
   googleConfigured,
   microsoftConfigured,
@@ -44,19 +58,7 @@ export function CalendarClient({
   isSuper,
   demoConfig,
   demoMemberCount,
-}: {
-  googleConfigured: boolean;
-  microsoftConfigured: boolean;
-  baseUrl: string;
-  accounts: PublicAccountInfo[];
-  settings: CalendarSettings;
-  bookings: BookingRow[];
-  flag: string;
-  flagMsg: string;
-  isSuper: boolean;
-  demoConfig: DemoPoolConfig;
-  demoMemberCount: number;
-}) {
+}: CalendarClientProps) {
   const [slug, setSlug] = useState(settings.slug);
   const [timeZone, setTimeZone] = useState(settings.time_zone);
   const [duration, setDuration] = useState(settings.meeting_duration_minutes);
