@@ -24,14 +24,14 @@ export function GreetingHeader({ firstName, greetingLocation }: { firstName: str
   const timeLabel = now ? now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
 
   return (
-    <div className="flex items-end justify-between gap-6">
-      <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+      <div className="min-w-0">
+        <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.12] text-ink mb-1.5 text-balance">
           {greeting}, {firstName}
         </h1>
         <p className="text-base text-muted">Here&apos;s how {greetingLocation} is holding the standard today.</p>
       </div>
-      <div className="text-sm text-muted-2 font-medium whitespace-nowrap">
+      <div className="text-sm text-muted-2 font-medium sm:whitespace-nowrap sm:text-right shrink-0">
         {dateLabel} {dateLabel && timeLabel ? "·" : ""} {timeLabel}
       </div>
     </div>

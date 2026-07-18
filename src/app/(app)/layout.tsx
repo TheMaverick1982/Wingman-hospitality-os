@@ -75,7 +75,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : computeRepeatRate(guestRows, homeLocation?.id ?? profile.locationId ?? null);
 
   return (
-    <div className="w-full flex h-[100dvh] overflow-hidden">
+    <div className="fixed inset-0 flex overflow-hidden">
       <Sidebar
         accessRole={profile.accessRole}
         fullName={profile.fullName}
