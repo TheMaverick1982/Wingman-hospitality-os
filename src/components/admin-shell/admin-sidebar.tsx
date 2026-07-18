@@ -13,6 +13,7 @@ import {
   Share2,
   Inbox,
   Contact,
+  MessagesSquare,
   CalendarClock,
   CalendarCheck,
   Ticket,
@@ -58,6 +59,7 @@ const NAV: NavEntry[] = [
     },
   },
   { kind: "item", item: { href: "/admin/crm", label: "CRM", icon: Contact, section: "crm" } },
+  { kind: "item", item: { href: "/admin/conversations", label: "Conversations", icon: MessagesSquare, section: "crm" } },
   {
     kind: "group",
     group: {
