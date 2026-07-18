@@ -67,7 +67,7 @@ export function ConversationComposer({ contactId, hasEmail, hasPhone, fromMailbo
       )}
       {channel === "email" && (
         <p className="text-[12px] text-muted-2">
-          {fromMailbox ? `Sends from your mailbox (${fromMailbox})` : "Sends from the shared Wingman address. Connect your Outlook with email access to send from your own address."}
+          {fromMailbox ? `Sends from your mailbox (${fromMailbox})` : "Sends from the shared Wingman address. Connect your Outlook or Google with email access to send from your own address."}
         </p>
       )}
       {error && <p className="text-[13px] text-danger">{error}</p>}
