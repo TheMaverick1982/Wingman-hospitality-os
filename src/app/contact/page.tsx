@@ -21,8 +21,8 @@ export default function ContactPage() {
           Talk to us
         </h1>
         <p className="text-lg text-muted leading-[1.5] mb-9 max-w-[520px]">
-          Questions about Wingman, a demo, or your account? Send us a note and we&apos;ll get right back to you.
-          Prefer email? <a href="mailto:hello@joinwingman.app" className="text-brick font-medium">hello@joinwingman.app</a>.
+          Questions about Wingman, a demo, or your account? Send us a note using the form below and we&apos;ll
+          get right back to you.
         </p>
 
         <ContactForm />
