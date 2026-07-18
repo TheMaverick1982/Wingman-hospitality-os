@@ -45,8 +45,15 @@ export type MergeContact = { name?: string | null; fields?: Record<string, unkno
 export function renderMerge(text: string, contact: MergeContact): string {
   const first = safeFirstName(contact.name) ?? "there";
   const fields = contact.fields ?? {};
+  // Assigned rep (the salesperson who hosted the booking) — captured on the
+  // contact at booking time. Falls back to a neutral team signature so demo
+  // emails never render a blank name.
+  const repName = (typeof fields.rep_name === "string" && fields.rep_name.trim()) || "the Wingman team";
+  const repFirst = (typeof fields.rep_first_name === "string" && fields.rep_first_name.trim()) || safeFirstName(repName) || "the Wingman team";
   return text
     .replace(/\{\{\s*(first_name|name)\s*\}\}/gi, first)
+    .replace(/\{\{\s*rep_first_name\s*\}\}/gi, repFirst)
+    .replace(/\{\{\s*rep_name\s*\}\}/gi, repName)
     .replace(/\{\{\s*calendar\.booking_link\s*\}\}/gi, BOOKING_LINK)
     .replace(/\{\{\s*calendar\.onboarding_link\s*\}\}/gi, ONBOARDING_LINK)
     .replace(/\{\{\s*contact\.([a-z0-9_]+)\s*\}\}/gi, (_m, key: string) => {

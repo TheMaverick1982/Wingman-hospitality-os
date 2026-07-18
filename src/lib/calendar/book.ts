@@ -187,8 +187,15 @@ async function finalizeBooking(opts: {
   }
 
   // Record the booking in the CRM: advance the pipeline, stop any running nurture,
-  // and start the Demo Booked prep sequence. Best-effort — never blocks a booking.
-  await recordDemoBooked({ email: opts.inviteeEmail, name: opts.inviteeName, phone: opts.invitePhone });
+  // start the Demo Booked prep sequence, and tie the contact to the host rep (who
+  // signs their demo emails). Best-effort — never blocks a booking.
+  await recordDemoBooked({
+    email: opts.inviteeEmail,
+    name: opts.inviteeName,
+    phone: opts.invitePhone,
+    repUserId: opts.userId,
+    repName: opts.hostName,
+  });
 
   return { ok: true, meetLink: created.event.meetLink, startMs: opts.startMs };
 }
