@@ -11,8 +11,14 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "", priority: 1, changeFrequency: "weekly" },
   { path: "/how-it-works", priority: 0.9, changeFrequency: "monthly" },
   { path: "/pricing", priority: 0.9, changeFrequency: "monthly" },
+  // Top-of-funnel lead-gen pages — the ones people search for and convert on.
+  { path: "/calculator", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/scorecard", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/guest-journey", priority: 0.8, changeFrequency: "monthly" },
   { path: "/book-a-demo", priority: 0.8, changeFrequency: "monthly" },
   { path: "/playbook", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/contact", priority: 0.5, changeFrequency: "yearly" },
+  { path: "/download", priority: 0.4, changeFrequency: "yearly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
 ];

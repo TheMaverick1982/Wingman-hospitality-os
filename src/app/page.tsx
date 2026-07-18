@@ -10,6 +10,7 @@ import { CustomSystem } from "@/components/marketing/custom-system";
 import { RoleBasedTraining } from "@/components/marketing/role-based-training";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { QuoteSection } from "@/components/marketing/quote-section";
+import { FaqSection } from "@/components/marketing/faq-section";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { InlineCta } from "@/components/marketing/inline-cta";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -49,6 +50,7 @@ export default async function Home() {
       <HowItWorks />
       <InlineCta headline="Ready to set your standard?" sub="Takes minutes to get your team started." />
       <QuoteSection />
+      <FaqSection />
       <CtaSection />
       <MarketingFooter />
     </div>

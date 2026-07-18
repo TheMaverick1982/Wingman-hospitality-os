@@ -6,6 +6,7 @@ import { getPlatformPricing, dollars } from "@/lib/pricing";
 export const metadata: Metadata = {
   title: "Launch Special — 20% off your first 3 months | Wingman",
   description: "Founding-operator launch offer: 20% off your first 3 months of Wingman with code LAUNCH20. Guest retention for restaurants.",
+  alternates: { canonical: "/launch" },
 };
 
 const SIGNUP = "/signup?code=LAUNCH20";
