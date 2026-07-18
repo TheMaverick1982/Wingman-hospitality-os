@@ -297,6 +297,37 @@ export async function sendMailViaGraph(
   }
 }
 
+// Recent inbox messages received after `sinceIso` (first run: last 24h), oldest
+// first, for the inbound conversation sync.
+export type InboundMail = { id: string; fromEmail: string; fromName: string; subject: string; preview: string; receivedAt: string };
+export async function listRecentMail(account: MicrosoftAccountRow, sinceIso: string | null): Promise<InboundMail[]> {
+  try {
+    const token = await freshAccessToken(account);
+    const since = sinceIso ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const params =
+      `$filter=${encodeURIComponent(`receivedDateTime gt ${since}`)}` +
+      `&$orderby=${encodeURIComponent("receivedDateTime asc")}` +
+      `&$select=id,subject,bodyPreview,from,receivedDateTime&$top=25`;
+    const res = await fetch(`${GRAPH}/me/mailFolders/inbox/messages?${params}`, { headers: { authorization: `Bearer ${token}` } });
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      value?: { id?: string; subject?: string; bodyPreview?: string; receivedDateTime?: string; from?: { emailAddress?: { address?: string; name?: string } } }[];
+    };
+    return (json.value ?? [])
+      .filter((m) => m.id)
+      .map((m) => ({
+        id: m.id!,
+        fromEmail: (m.from?.emailAddress?.address ?? "").toLowerCase(),
+        fromName: m.from?.emailAddress?.name ?? "",
+        subject: m.subject ?? "",
+        preview: m.bodyPreview ?? "",
+        receivedAt: m.receivedDateTime ?? "",
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function deleteMicrosoftEvent(account: MicrosoftAccountRow, eventId: string): Promise<void> {
   if (!eventId) return;
   try {
