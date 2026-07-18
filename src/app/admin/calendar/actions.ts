@@ -14,6 +14,22 @@ import { listCalendarAccounts } from "@/lib/calendar/providers";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import { isValidTimeZone } from "@/lib/calendar/timezones";
 import { markDemoCompletedByEmail, markDemoNoShowByEmail } from "@/lib/crm-sequences";
+import { twilioConfigured, normalizePhone, sendSms } from "@/lib/calendar/sms";
+
+// Fire a one-off test SMS through the live Twilio config, so an admin can confirm
+// the A2P connection end-to-end (SID set, number in the sender pool, campaign
+// approved). Returns the exact Twilio error on failure so misconfig is obvious.
+export async function sendTestSms(phone: string): Promise<{ ok: boolean; error?: string }> {
+  const profile = await getCurrentProfile();
+  if (!profile?.isPlatformAdmin) return { ok: false, error: "Not authorized." };
+  if (!twilioConfigured()) {
+    return { ok: false, error: "Twilio isn't configured — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_MESSAGING_SERVICE_SID in the environment, then redeploy." };
+  }
+  const to = normalizePhone(phone || "");
+  if (!to) return { ok: false, error: "Enter a valid mobile number." };
+  const res = await sendSms(to, "Wingman test message — your SMS connection is working. Reply STOP to opt out.");
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Twilio rejected the message." };
+}
 
 const DURATIONS = new Set([15, 20, 30, 45, 60]);
 

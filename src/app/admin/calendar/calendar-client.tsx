@@ -9,7 +9,7 @@ import { Pill } from "@/components/ui/pill";
 import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import type { CalendarSettings, DemoPoolConfig, PublicAccountInfo, BookingRow } from "@/lib/calendar/settings";
-import { saveCalendarSettings, disconnectCalendarAccount, disconnectZoom, markBookingOutcome } from "./actions";
+import { saveCalendarSettings, disconnectCalendarAccount, disconnectZoom, markBookingOutcome, sendTestSms } from "./actions";
 import { AvailabilityEditor } from "./availability-editor";
 import { DemoPoolCard } from "./demo-pool-card";
 import type { VideoProvider } from "@/lib/calendar/settings";
@@ -357,6 +357,8 @@ export function CalendarClient({
       {/* Round-robin Book-a-Demo pool */}
       <DemoPoolCard isSuper={isSuper} inPool={settings.in_demo_pool} memberCount={demoMemberCount} config={demoConfig} />
 
+      <TestSmsCard />
+
       {/* Bookings — upcoming to join, recent to mark showed/no-show */}
       <Card className="p-6">
         <h2 className="font-display text-xl font-semibold text-ink mb-1">Meetings</h2>
@@ -398,6 +400,50 @@ function ConnectButton({
       <PlugZap size={16} />
       {label}
     </a>
+  );
+}
+
+function TestSmsCard() {
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [pending, start] = useTransition();
+
+  function send() {
+    setResult(null);
+    start(async () => {
+      const res = await sendTestSms(phone);
+      setResult(res.ok ? { ok: true, msg: "Sent! Check your phone." } : { ok: false, msg: res.error ?? "Failed." });
+    });
+  }
+
+  return (
+    <Card className="p-6">
+      <h2 className="font-display text-xl font-semibold text-ink mb-1">Test your SMS connection</h2>
+      <p className="text-sm text-muted mb-4">Send a one-off text through your live Twilio setup to confirm the A2P connection works end-to-end.</p>
+      <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center">
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          type="tel"
+          placeholder="+1 555 123 4567"
+          className="flex-1 max-w-[280px] text-sm bg-paper border border-line rounded-lg px-3 py-2 outline-none focus:border-brick text-ink"
+        />
+        <button
+          type="button"
+          onClick={send}
+          disabled={pending || !phone.trim()}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-brick text-white font-semibold px-5 py-2 text-sm hover:bg-brick-dark transition-colors disabled:opacity-40 w-fit"
+        >
+          {pending ? "Sending…" : "Send test SMS"}
+        </button>
+      </div>
+      {result && (
+        <p className={`text-[13px] mt-3 ${result.ok ? "text-olive" : "text-danger"}`}>
+          {result.ok ? "✓ " : ""}
+          {result.msg}
+        </p>
+      )}
+    </Card>
   );
 }
 
