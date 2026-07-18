@@ -11,6 +11,10 @@ export type MailboxSend = { sent: boolean; from?: string; provider?: "microsoft"
 
 const INBOUND_DOMAIN = process.env.INBOUND_EMAIL_DOMAIN ?? "reply.joinwingman.app";
 
+// Display name on outbound conversation email (still from the rep's real
+// address). Override with CONVERSATION_FROM_NAME in the environment.
+const FROM_NAME = process.env.CONVERSATION_FROM_NAME ?? "Wingman | By The Maverick";
+
 // Per-conversation reply-routing address. Replies to it are threaded by the
 // inbound-email webhook. Used for Google-sent + Resend-fallback email (Microsoft
 // replies are polled from the mailbox instead, so they don't need routing).
@@ -44,13 +48,13 @@ export async function sendViaUserMailbox(
   const { data: msData } = await admin.from("calendar_microsoft_accounts").select("*").eq("user_id", userId);
   const ms = ((msData ?? []) as MicrosoftAccountRow[]).find((a) => hasMailSend(a.scopes));
   if (ms) {
-    const res = await sendMailViaGraph(ms, opts); // no routing reply-to: replies land in the mailbox and are polled
+    const res = await sendMailViaGraph(ms, { ...opts, fromName: FROM_NAME }); // no routing reply-to: replies land in the mailbox and are polled
     return res.ok ? { sent: true, from: ms.email, provider: "microsoft" } : { sent: false, error: res.error, provider: "microsoft" };
   }
   const { data: gData } = await admin.from("calendar_google_accounts").select("*").eq("user_id", userId);
   const g = ((gData ?? []) as GoogleAccountRow[]).find((a) => hasGmailSend(a.scopes));
   if (g) {
-    const res = await sendMailViaGmail(g, { ...opts, replyTo: routingReplyTo }); // route replies (Gmail isn't polled)
+    const res = await sendMailViaGmail(g, { ...opts, fromName: FROM_NAME, replyTo: routingReplyTo }); // route replies (Gmail isn't polled)
     return res.ok ? { sent: true, from: g.email, provider: "google" } : { sent: false, error: res.error, provider: "google" };
   }
   return { sent: false };
