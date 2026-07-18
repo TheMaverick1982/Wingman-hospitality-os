@@ -61,32 +61,56 @@ export async function POST(request: NextRequest) {
   const keyword = bodyRaw.toLowerCase().replace(/[^a-z]/g, " ").trim().split(/\s+/)[0] ?? "";
   const isStop = STOP_WORDS.has(keyword);
   const isStart = START_WORDS.has(keyword);
-  if (!isStop && !isStart) return twiml(); // HELP and other replies handled by Twilio.
 
   const phone = normalizePhone(from);
   if (!phone) return twiml();
 
   const admin = createAdminClient();
-  const { data: contacts } = await admin.from("crm_contacts").select("id").eq("phone", phone).limit(20);
-  const ids = ((contacts ?? []) as { id: string }[]).map((c) => c.id);
-  if (ids.length === 0) return twiml();
-
   const nowIso = new Date().toISOString();
-  await admin
-    .from("crm_contacts")
-    .update({ sms_opt_out: isStop, updated_at: nowIso, last_activity_at: nowIso })
-    .in("id", ids);
 
-  // Timeline entry so the team sees the opt-out/opt-in.
+  const { data: contacts } = await admin.from("crm_contacts").select("id").eq("phone", phone).limit(20);
+  let ids = ((contacts ?? []) as { id: string }[]).map((c) => c.id);
+
+  // Unknown number texting in → create a contact so the reply lands in
+  // Conversations (email is required, so use a clearly-synthetic placeholder).
+  if (ids.length === 0) {
+    const { data: created } = await admin
+      .from("crm_contacts")
+      .insert({
+        email: `${phone.replace(/[^\d]/g, "")}@sms.wingman.local`,
+        name: phone,
+        phone,
+        first_source: "sms",
+        stage: "new",
+        tags: ["src:sms-inbound"],
+        last_activity_at: nowIso,
+      })
+      .select("id")
+      .maybeSingle();
+    const newId = (created as { id: string } | null)?.id;
+    if (newId) ids = [newId];
+    if (ids.length === 0) return twiml();
+  }
+
+  // Sync opt-out state on the standard consent keywords.
+  if (isStop || isStart) {
+    await admin.from("crm_contacts").update({ sms_opt_out: isStop, updated_at: nowIso }).in("id", ids);
+  }
+
+  // Log every inbound message into the conversation + advance the inbox pointers.
   await admin.from("crm_activities").insert(
     ids.map((contact_id) => ({
       contact_id,
       kind: "sms_in",
-      subject: isStop ? "Replied STOP" : "Replied START",
-      body: bodyRaw.slice(0, 500),
-      meta: { channel: "sms", from: phone, keyword },
+      subject: isStop ? "Replied STOP" : isStart ? "Replied START" : "",
+      body: bodyRaw.slice(0, 1000),
+      meta: { channel: "sms", from: phone, ...(isStop || isStart ? { keyword } : {}) },
     })),
   );
+  await admin
+    .from("crm_contacts")
+    .update({ last_message_at: nowIso, last_inbound_at: nowIso, last_activity_at: nowIso, updated_at: nowIso })
+    .in("id", ids);
 
   return twiml();
 }
