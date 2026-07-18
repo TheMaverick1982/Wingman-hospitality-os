@@ -216,6 +216,82 @@ export async function markBookedByEmail(email: string, adminArg?: Admin): Promis
   return true;
 }
 
+// Native calendar → CRM entry point when a demo is booked. Upserts the contact by
+// email (creating it if this is a brand-new lead), marks them as booked (advances
+// the pipeline + stops any running nurture), and — for non-customers only — enrolls
+// the short "Demo Booked — Prep" sequence. Best-effort; never blocks a booking.
+export async function recordDemoBooked(input: { email: string; name?: string; phone?: string }): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const email = (input.email || "").trim().toLowerCase();
+    if (!email) return;
+    const now = new Date().toISOString();
+
+    const { data: c } = await admin
+      .from("crm_contacts")
+      .select("id, stage, name, phone, customer_at")
+      .eq("email", email)
+      .maybeSingle();
+    const ex = c as { id: string; stage: string | null; name: string | null; phone: string | null; customer_at: string | null } | null;
+
+    let contactId = ex?.id;
+    let isCustomer = ex ? ex.customer_at != null || ex.stage === "signed_up" || ex.stage === "lost" : false;
+
+    if (!contactId) {
+      const { data: created } = await admin
+        .from("crm_contacts")
+        .insert({ email, name: input.name || null, phone: input.phone || null, first_source: "booked", stage: "demoed", booked_at: now, last_activity_at: now })
+        .select("id")
+        .single();
+      contactId = (created as { id: string } | null)?.id;
+      isCustomer = false;
+    } else {
+      const stage = isCustomer ? ex!.stage! : "demoed";
+      const patch: Record<string, unknown> = { booked_at: now, stage, last_activity_at: now, updated_at: now };
+      if (input.name && !ex!.name) patch.name = input.name;
+      if (input.phone && !ex!.phone) patch.phone = input.phone;
+      await admin.from("crm_contacts").update(patch).eq("id", contactId);
+    }
+    if (!contactId) return;
+
+    // Booking = engagement: stop any running nurture and log it.
+    await stopEnrollments(contactId, "booked", admin);
+    await admin.from("crm_activities").insert({ contact_id: contactId, kind: "system", body: "Booked a demo — sequences stopped, prep started" });
+
+    // Demo-prep only for non-customers (a customer booking an onboarding call
+    // shouldn't get demo-prep emails).
+    if (!isCustomer) {
+      await enrollContactInSource(contactId, email, "booked", admin, { ignoreWonGuards: true });
+    }
+  } catch (e) {
+    console.error("[crm] recordDemoBooked failed", e);
+  }
+}
+
+// Native calendar → CRM entry point when a booked demo is cancelled. Clears the
+// booking flag (so a future rebook re-triggers the booked path and won-guards
+// don't treat them as won) and enrolls the "Demo Cancel — Re-Book" win-back for
+// non-customers. Best-effort.
+export async function recordDemoCanceled(email: string): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const lower = (email || "").trim().toLowerCase();
+    if (!lower) return;
+    const { data: c } = await admin.from("crm_contacts").select("id, stage, customer_at").eq("email", lower).maybeSingle();
+    const ex = c as { id: string; stage: string | null; customer_at: string | null } | null;
+    if (!ex) return;
+    const now = new Date().toISOString();
+    await admin.from("crm_contacts").update({ booked_at: null, last_activity_at: now, updated_at: now }).eq("id", ex.id);
+    await admin.from("crm_activities").insert({ contact_id: ex.id, kind: "system", body: "Cancelled their demo — re-book sequence started" });
+    const isCustomer = ex.customer_at != null || ex.stage === "signed_up" || ex.stage === "lost";
+    if (!isCustomer) {
+      await enrollContactInSource(ex.id, lower, "demo-cancel", admin, { ignoreWonGuards: true });
+    }
+  } catch (e) {
+    console.error("[crm] recordDemoCanceled failed", e);
+  }
+}
+
 // Demo happened (appointment marked "showed") — move to Demo Completed. Booking
 // already stopped their nurtures; this just advances the pipeline + tags.
 export async function markDemoCompletedByEmail(email: string, adminArg?: Admin): Promise<boolean> {

@@ -13,6 +13,7 @@ import {
 import { listCalendarAccounts } from "@/lib/calendar/providers";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import { isValidTimeZone } from "@/lib/calendar/timezones";
+import { markDemoCompletedByEmail, markDemoNoShowByEmail } from "@/lib/crm-sequences";
 
 const DURATIONS = new Set([15, 20, 30, 45, 60]);
 
@@ -110,6 +111,42 @@ export async function disconnectCalendarAccount(
   } catch (e) {
     console.error("[calendar] disconnectCalendarAccount failed:", e);
     return { error: `Couldn't disconnect: ${(e as Error).message}` };
+  }
+}
+
+// Mark how a booked demo went. "showed" advances the CRM contact to Demo
+// Completed; "no_show" clears the booking and starts the no-show re-engagement
+// sequence. Scoped to the caller's own bookings.
+export async function markBookingOutcome(
+  bookingId: string,
+  outcome: "showed" | "no_show",
+): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
+  if (outcome !== "showed" && outcome !== "no_show") return { error: "Invalid outcome." };
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("calendar_bookings")
+      .select("id, invitee_email")
+      .eq("id", bookingId)
+      .eq("user_id", profile.userId)
+      .maybeSingle();
+    const row = data as { id: string; invitee_email: string } | null;
+    if (!row) return { error: "Booking not found." };
+
+    await admin.from("calendar_bookings").update({ outcome, outcome_at: new Date().toISOString() }).eq("id", row.id);
+
+    // Drive the CRM (best-effort — a stale/unknown email just no-ops).
+    if (row.invitee_email) {
+      if (outcome === "showed") await markDemoCompletedByEmail(row.invitee_email, admin);
+      else await markDemoNoShowByEmail(row.invitee_email, admin);
+    }
+    revalidatePath("/admin/calendar");
+    return { error: null };
+  } catch (e) {
+    console.error("[calendar] markBookingOutcome failed:", e);
+    return { error: `Couldn't save: ${(e as Error).message}` };
   }
 }
 
