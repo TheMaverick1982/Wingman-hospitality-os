@@ -39,6 +39,9 @@ const PUBLIC_PREFIXES = [
   "/terms",
   // PWA offline fallback page — precached by the service worker, must be auth-free.
   "/offline",
+  // "Get the app" / install-to-home-screen page — public (visitors install before
+  // signing in), so it must not bounce to /login.
+  "/download",
   // Public contact page + its form action (SMS opt-in capture).
   "/contact",
   // Public account/data deletion request page — required by Google Play / Apple
