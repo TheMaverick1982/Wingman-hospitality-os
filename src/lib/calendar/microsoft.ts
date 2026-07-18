@@ -18,8 +18,18 @@ const GRAPH = "https://graph.microsoft.com/v1.0";
 const MAX_ACCOUNTS = 2;
 
 // offline_access → refresh token; Calendars.ReadWrite → read free/busy + create
-// events; User.Read + openid/email/profile → identify the account.
-export const MS_SCOPES = ["offline_access", "openid", "email", "profile", "User.Read", "Calendars.ReadWrite"].join(" ");
+// events; User.Read + openid/email/profile → identify the account; Mail.Send +
+// Mail.Read → send/receive conversation email from the rep's own mailbox.
+export const MS_SCOPES = ["offline_access", "openid", "email", "profile", "User.Read", "Calendars.ReadWrite", "Mail.Send", "Mail.Read"].join(" ");
+
+// Whether an account's granted scopes include mailbox send / read (an account
+// connected before mail scopes were added must reconnect to grant them).
+export function hasMailSend(scopes: string): boolean {
+  return /mail\.send/i.test(scopes || "");
+}
+export function hasMailRead(scopes: string): boolean {
+  return /mail\.read/i.test(scopes || "");
+}
 
 export function microsoftRedirectUri(): string {
   return `${siteUrl()}/api/integrations/microsoft/callback`;
@@ -144,12 +154,16 @@ async function freshAccessToken(account: MicrosoftAccountRow): Promise<string> {
   if (exp && exp - Date.now() > 2 * 60 * 1000) return account.access_token;
   if (!account.refresh_token) return account.access_token;
   try {
+    // Refresh with the scopes THIS account actually granted — requesting more than
+    // was consented (e.g. the new Mail scopes on an older calendar-only account)
+    // makes Azure reject the refresh and would break the calendar. Reconnecting
+    // upgrades account.scopes to include mail.
     const body = new URLSearchParams({
       client_id: process.env.MICROSOFT_CALENDAR_CLIENT_ID ?? "",
       client_secret: process.env.MICROSOFT_CALENDAR_CLIENT_SECRET ?? "",
       grant_type: "refresh_token",
       refresh_token: account.refresh_token,
-      scope: MS_SCOPES,
+      scope: account.scopes || MS_SCOPES,
     });
     const res = await fetch(`${AUTHORITY}/token`, {
       method: "POST",
@@ -251,6 +265,35 @@ export async function createMicrosoftEvent(
     return { event: { eventId: json.id, iCalUID: json.iCalUId ?? "", meetLink: opts.videoLink ?? "", htmlLink: json.webLink ?? "" } };
   } catch (e) {
     return { error: (e as Error).message };
+  }
+}
+
+// Send an email from the account's own mailbox via Graph /me/sendMail. The
+// message shows up in the rep's Sent folder and comes from their real address.
+export async function sendMailViaGraph(
+  account: MicrosoftAccountRow,
+  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const token = await freshAccessToken(account);
+    const message: Record<string, unknown> = {
+      subject: opts.subject,
+      body: { contentType: "HTML", content: opts.html },
+      toRecipients: [{ emailAddress: { address: opts.toEmail, name: opts.toName || undefined } }],
+    };
+    if (opts.replyTo) message.replyTo = [{ emailAddress: { address: opts.replyTo } }];
+    const res = await fetch(`${GRAPH}/me/sendMail`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ message, saveToSentItems: true }),
+    });
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      return { ok: false, error: j.error?.message ?? `Graph sendMail error (${res.status})` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
   }
 }
 

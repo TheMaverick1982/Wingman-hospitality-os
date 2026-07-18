@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { CRM_REPLY_TO } from "@/lib/crm-merge";
 import { twilioConfigured, normalizePhone, sendSms } from "@/lib/calendar/sms";
+import { sendViaUserMailbox } from "@/lib/mailbox";
 
 // Platform-admin Conversations: a unified email + SMS inbox over crm_contacts +
 // crm_activities. The message history is the existing activity log; this adds the
@@ -102,22 +103,45 @@ async function touchOutbound(admin: ReturnType<typeof createAdminClient>, contac
   await admin.from("crm_contacts").update({ last_message_at: nowIso, last_activity_at: nowIso, updated_at: nowIso }).eq("id", contactId);
 }
 
+// A plain, personal-looking HTML wrapper for 1:1 conversation email — no
+// marketing/unsubscribe footer (this comes from a real person, not a campaign).
+function personalHtml(body: string): string {
+  const esc = (t: string) => t.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
+  const inner = esc(body)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')
+    .replace(/\n/g, "<br>");
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;">${inner}</div>`;
+}
+
 export async function sendConversationEmail(contactId: string, subject: string, body: string): Promise<{ ok: boolean; error?: string }> {
-  await requireAdmin();
+  const profile = await requireAdmin();
   const s = subject.trim();
   const b = body.trim();
   if (!s || !b) return { ok: false, error: "Subject and message are both required." };
   const admin = createAdminClient();
-  const { data: c } = await admin.from("crm_contacts").select("id, email").eq("id", contactId).maybeSingle();
-  const contact = c as { id: string; email: string } | null;
+  const { data: c } = await admin.from("crm_contacts").select("id, name, email").eq("id", contactId).maybeSingle();
+  const contact = c as { id: string; name: string | null; email: string } | null;
   if (!contact?.email) return { ok: false, error: "This contact has no email address." };
-  try {
-    await sendEmail({ to: [contact.email], subject: s, html: buildSequenceEmailHtml(b, contact.email), replyTo: CRM_REPLY_TO });
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
+  if (contact.email.endsWith("@sms.wingman.local")) return { ok: false, error: "This contact has no real email address (SMS-only)." };
+
+  // Prefer the rep's own connected mailbox (M365 → from their real address);
+  // fall back to Resend from the shared app domain.
+  let via = "resend";
+  let from: string | undefined;
+  const mailbox = await sendViaUserMailbox(profile.userId, { toEmail: contact.email, toName: contact.name ?? undefined, subject: s, html: personalHtml(b) });
+  if (mailbox.sent) {
+    via = mailbox.provider ?? "mailbox";
+    from = mailbox.from;
+  } else {
+    try {
+      await sendEmail({ to: [contact.email], subject: s, html: buildSequenceEmailHtml(b, contact.email), replyTo: CRM_REPLY_TO });
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
   }
+
   const nowIso = new Date().toISOString();
-  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "email_out", subject: s, body: b, meta: { source: "conversations", to: contact.email } });
+  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "email_out", subject: s, body: b, meta: { source: "conversations", to: contact.email, via, from } });
   await touchOutbound(admin, contactId, nowIso);
   return { ok: true };
 }
