@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, MessageSquare } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { getCurrentProfile } from "@/lib/auth/profile";
 import { getThread, markConversationRead, type ThreadMessage } from "@/lib/conversations";
+import { userSendMailbox } from "@/lib/mailbox";
 import { ConversationComposer } from "./composer";
 
 export const metadata: Metadata = { title: "Conversation · Admin" };
@@ -38,6 +40,8 @@ export default async function ConversationThreadPage({ params }: { params: Promi
 
   const { contact, messages } = thread;
   const hasPlaceholderEmail = contact.email.endsWith("@sms.wingman.local");
+  const profile = await getCurrentProfile();
+  const mailbox = profile ? await userSendMailbox(profile.userId) : null;
 
   return (
     <div className="flex flex-col gap-5 max-w-[760px]">
@@ -66,6 +70,7 @@ export default async function ConversationThreadPage({ params }: { params: Promi
         contactId={contact.id}
         hasEmail={!hasPlaceholderEmail && !!contact.email}
         hasPhone={!!contact.phone}
+        fromMailbox={mailbox?.email ?? null}
       />
     </div>
   );

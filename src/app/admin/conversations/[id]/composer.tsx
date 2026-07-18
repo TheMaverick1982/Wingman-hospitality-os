@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mail, MessageSquare, Send } from "lucide-react";
 import { sendEmailAction, sendSmsAction } from "../actions";
 
-export function ConversationComposer({ contactId, hasEmail, hasPhone }: { contactId: string; hasEmail: boolean; hasPhone: boolean }) {
+export function ConversationComposer({ contactId, hasEmail, hasPhone, fromMailbox }: { contactId: string; hasEmail: boolean; hasPhone: boolean; fromMailbox: string | null }) {
   // Default to whichever channel is available.
   const [channel, setChannel] = useState<"email" | "sms">(hasEmail ? "email" : "sms");
   const [subject, setSubject] = useState("");
@@ -64,6 +64,11 @@ export function ConversationComposer({ contactId, hasEmail, hasPhone }: { contac
 
       {channel === "sms" && (
         <p className="text-[12px] text-muted-2">{body.length} characters{body.length > 160 ? ` · ~${Math.ceil(body.length / 153)} segments` : ""}</p>
+      )}
+      {channel === "email" && (
+        <p className="text-[12px] text-muted-2">
+          {fromMailbox ? `Sends from your mailbox (${fromMailbox})` : "Sends from the shared Wingman address. Connect your Outlook with email access to send from your own address."}
+        </p>
       )}
       {error && <p className="text-[13px] text-danger">{error}</p>}
 
