@@ -12,7 +12,7 @@ import {
   slugify,
 } from "@/lib/calendar/settings";
 import { listCalendarAccountsPublic } from "@/lib/calendar/providers";
-import { CalendarClient } from "./calendar-client";
+import { CalendarMount } from "./calendar-mount";
 
 export const metadata: Metadata = { title: "Calendar · Admin" };
 
@@ -68,7 +68,7 @@ export default async function AdminCalendarPage({
   const defaultSlug = settings?.slug || slugify(profile.fullName || "rep") || "rep";
 
   return (
-    <CalendarClient
+    <CalendarMount
       googleConfigured={googleCalendarConfigured()}
       microsoftConfigured={microsoftCalendarConfigured()}
       baseUrl={siteUrl()}
