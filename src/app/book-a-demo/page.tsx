@@ -36,7 +36,8 @@ const POINTS = [
 // widget so this public page is never empty.
 async function demoPoolReady(): Promise<{ durationMinutes: number } | null> {
   const [config, members] = await Promise.all([getDemoPoolConfig(), listDemoPoolMembers()]);
-  if (!config.is_active || members.length === 0) return null;
+  // The pool is live as soon as at least one rep has added their calendar to it.
+  if (members.length === 0) return null;
   return { durationMinutes: config.meeting_duration_minutes };
 }
 

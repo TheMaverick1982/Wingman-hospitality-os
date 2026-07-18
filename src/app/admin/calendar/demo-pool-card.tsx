@@ -52,7 +52,7 @@ export function DemoPoolCard({
       <p className="text-sm text-muted mb-4 max-w-[560px]">
         The public <span className="font-medium text-ink">/book-a-demo</span> page draws from everyone in this
         pool: a time is offered if any of you is free, and each booking is assigned round-robin to a free rep
-        (least-loaded first). This replaces the old embedded calendar.
+        (least-loaded first). Adding your calendar makes it live — this replaces the old embedded calendar.
       </p>
 
       <div className="flex items-center gap-3">
@@ -76,7 +76,6 @@ function DemoConfigEditor({ config }: { config: DemoPoolConfig }) {
   const [windowDays, setWindowDays] = useState(config.booking_window_days);
   const [pageTitle, setPageTitle] = useState(config.page_title);
   const [pageDescription, setPageDescription] = useState(config.page_description);
-  const [isActive, setIsActive] = useState(config.is_active);
   const [rules, setRules] = useState<AvailabilityRule[]>(config.availability);
 
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
@@ -94,7 +93,7 @@ function DemoConfigEditor({ config }: { config: DemoPoolConfig }) {
         availability: rules,
         pageTitle,
         pageDescription,
-        isActive,
+        isActive: true,
       });
       setMsg(res.error ? { tone: "err", text: res.error } : { tone: "ok", text: "Saved." });
     });
@@ -147,11 +146,6 @@ function DemoConfigEditor({ config }: { config: DemoPoolConfig }) {
 
       <label className="block text-[13px] font-semibold mb-2 text-ink">Demo hours</label>
       <AvailabilityEditor rules={rules} onChange={setRules} />
-
-      <label className="flex items-center gap-2.5 mt-5 cursor-pointer">
-        <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="w-4 h-4 accent-[#b3402f]" />
-        <span className="text-sm font-medium text-ink">/book-a-demo is live (uses the pool)</span>
-      </label>
 
       <div className="flex items-center gap-3 mt-5">
         <Btn onClick={save} loading={pending}>

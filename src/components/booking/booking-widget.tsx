@@ -203,7 +203,7 @@ export function BookingWidget({
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Email</label>
         <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} placeholder="jane@restaurant.com" />
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">
-          Mobile <span className="font-normal text-muted">(optional — for a text reminder)</span>
+          Mobile <span className="font-normal text-muted">(for text reminders)</span>
         </label>
         <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" className={INPUT} placeholder="(555) 123-4567" />
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Anything we should know? (optional)</label>
@@ -211,7 +211,7 @@ export function BookingWidget({
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
         <button
           onClick={submit}
-          disabled={submitting || !name.trim() || !email.trim()}
+          disabled={submitting || !name.trim() || !email.trim() || !phone.trim()}
           type="button"
           className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-3 text-sm hover:bg-brick-dark transition-colors disabled:opacity-40"
         >
