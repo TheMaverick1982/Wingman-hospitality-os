@@ -33,6 +33,8 @@ const PUBLIC_PREFIXES = [
   "/api/webhooks",
   "/api/crm",
   "/api/cron",
+  // First-party page-view beacon from the public marketing site (no auth).
+  "/api/track",
   "/privacy",
   "/terms",
   // Public contact page + its form action (SMS opt-in capture).

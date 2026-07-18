@@ -6,6 +6,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { isHoneypotFilled } from "@/lib/honeypot";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
+import { getVisitorId } from "@/lib/visitor";
 import { SMS_CONSENT_VERSION, TRANSACTIONAL_CONSENT, MARKETING_CONSENT } from "./consent";
 
 export type ContactState = { error: string | null; ok: boolean };
@@ -73,18 +74,20 @@ export async function submitContact(input: {
     const tags = ["src:contact"];
     if (optInTransactional) tags.push("sms:transactional");
     if (optInMarketing) tags.push("sms:marketing");
-    const { data: existing } = await admin.from("crm_contacts").select("id, tags").eq("email", email).maybeSingle();
-    const ex = existing as { id: string; tags: string[] | null } | null;
+    const visitorId = await getVisitorId(); // link their anonymous browsing to this contact
+    const { data: existing } = await admin.from("crm_contacts").select("id, tags, visitor_id").eq("email", email).maybeSingle();
+    const ex = existing as { id: string; tags: string[] | null; visitor_id: string | null } | null;
     let contactId = ex?.id;
     // SMS consent columns power the CRM's SMS automations gating. Only ever set
     // a flag true (opt-in) here — never flip an existing true back to false from
     // an unchecked box, so a prior opt-in isn't silently revoked.
-    const consentUpdate: Record<string, boolean> = {};
+    const consentUpdate: Record<string, boolean | string> = {};
     if (optInTransactional) consentUpdate.sms_transactional_consent = true;
     if (optInMarketing) consentUpdate.sms_marketing_consent = true;
 
     if (contactId) {
       const mergedTags = Array.from(new Set([...(ex?.tags ?? []), ...tags]));
+      if (visitorId && !ex?.visitor_id) consentUpdate.visitor_id = visitorId; // don't overwrite an earlier link
       await admin
         .from("crm_contacts")
         .update({ name: name || undefined, phone: phone || undefined, last_activity_at: nowIso, updated_at: nowIso, tags: mergedTags, ...consentUpdate })
@@ -92,7 +95,7 @@ export async function submitContact(input: {
     } else {
       const { data: created } = await admin
         .from("crm_contacts")
-        .insert({ email, name, phone, first_source: "contact", last_activity_at: nowIso, tags, ...consentUpdate })
+        .insert({ email, name, phone, first_source: "contact", last_activity_at: nowIso, tags, ...consentUpdate, ...(visitorId ? { visitor_id: visitorId } : {}) })
         .select("id")
         .single();
       contactId = (created as { id: string } | null)?.id;
