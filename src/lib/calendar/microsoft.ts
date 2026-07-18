@@ -227,24 +227,28 @@ export async function createMicrosoftEvent(
     timeZone: string;
     inviteeEmail: string;
     inviteeName: string;
+    videoLink?: string;
   },
 ): Promise<{ event?: CreatedEvent; error?: string }> {
   try {
     const token = await freshAccessToken(account);
+    const content = opts.videoLink ? `${opts.description}\n\nJoin Zoom Meeting: ${opts.videoLink}` : opts.description;
+    const body: Record<string, unknown> = {
+      subject: opts.summary,
+      body: { contentType: "text", content },
+      start: { dateTime: new Date(opts.startMs).toISOString().slice(0, 19), timeZone: "UTC" },
+      end: { dateTime: new Date(opts.endMs).toISOString().slice(0, 19), timeZone: "UTC" },
+      attendees: [{ emailAddress: { address: opts.inviteeEmail, name: opts.inviteeName || undefined }, type: "required" }],
+    };
+    if (opts.videoLink) body.location = { displayName: "Zoom Meeting" };
     const res = await fetch(`${GRAPH}/me/events`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        subject: opts.summary,
-        body: { contentType: "text", content: opts.description },
-        start: { dateTime: new Date(opts.startMs).toISOString().slice(0, 19), timeZone: "UTC" },
-        end: { dateTime: new Date(opts.endMs).toISOString().slice(0, 19), timeZone: "UTC" },
-        attendees: [{ emailAddress: { address: opts.inviteeEmail, name: opts.inviteeName || undefined }, type: "required" }],
-      }),
+      body: JSON.stringify(body),
     });
     const json = (await res.json()) as { id?: string; iCalUId?: string; webLink?: string; error?: { message?: string } };
     if (!res.ok || !json.id) return { error: json.error?.message ?? `Microsoft Graph error (${res.status})` };
-    return { event: { eventId: json.id, iCalUID: json.iCalUId ?? "", meetLink: "", htmlLink: json.webLink ?? "" } };
+    return { event: { eventId: json.id, iCalUID: json.iCalUId ?? "", meetLink: opts.videoLink ?? "", htmlLink: json.webLink ?? "" } };
   } catch (e) {
     return { error: (e as Error).message };
   }

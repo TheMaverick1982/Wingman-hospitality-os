@@ -215,3 +215,14 @@ export function formatDateLong(atMs: number, timeZone: string): string {
     day: "numeric",
   }).format(new Date(atMs));
 }
+
+// Calendar day key "YYYY-MM-DD" in the given tz (en-CA renders ISO order), used
+// to group slots by day and match calendar cells.
+export function formatDayKey(atMs: number, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(atMs));
+}

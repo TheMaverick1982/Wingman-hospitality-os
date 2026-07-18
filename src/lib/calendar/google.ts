@@ -272,26 +272,32 @@ export async function createBookingEvent(
     timeZone: string;
     inviteeEmail: string;
     inviteeName: string;
+    // When set, use this external link (e.g. Zoom) instead of creating a Google
+    // Meet — the event just embeds it in the description.
+    videoLink?: string;
   },
 ): Promise<{ event?: CreatedEvent; error?: string }> {
   try {
     const token = await freshAccessToken(account);
     const requestId = `wm-${account.id}-${Date.now()}`;
+    const useMeet = !opts.videoLink;
+    const description = opts.videoLink ? `${opts.description}\n\nJoin Zoom Meeting: ${opts.videoLink}` : opts.description;
+    const body: Record<string, unknown> = {
+      summary: opts.summary,
+      description,
+      start: { dateTime: opts.startISO, timeZone: opts.timeZone },
+      end: { dateTime: opts.endISO, timeZone: opts.timeZone },
+      attendees: [{ email: opts.inviteeEmail, displayName: opts.inviteeName || undefined }],
+    };
+    if (useMeet) {
+      body.conferenceData = { createRequest: { requestId, conferenceSolutionKey: { type: "hangoutsMeet" } } };
+    }
     const res = await fetch(
       `${CAL_BASE}/calendars/${encodeURIComponent(account.calendar_id || "primary")}/events?conferenceDataVersion=1&sendUpdates=all`,
       {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({
-          summary: opts.summary,
-          description: opts.description,
-          start: { dateTime: opts.startISO, timeZone: opts.timeZone },
-          end: { dateTime: opts.endISO, timeZone: opts.timeZone },
-          attendees: [{ email: opts.inviteeEmail, displayName: opts.inviteeName || undefined }],
-          conferenceData: {
-            createRequest: { requestId, conferenceSolutionKey: { type: "hangoutsMeet" } },
-          },
-        }),
+        body: JSON.stringify(body),
       },
     );
     const json = (await res.json()) as {
@@ -303,10 +309,9 @@ export async function createBookingEvent(
       error?: { message?: string };
     };
     if (!res.ok || !json.id) return { error: json.error?.message ?? `Google Calendar error (${res.status})` };
-    const meet =
-      json.hangoutLink ??
-      json.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ??
-      "";
+    const meet = opts.videoLink
+      ? opts.videoLink
+      : json.hangoutLink ?? json.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ?? "";
     return { event: { eventId: json.id, iCalUID: json.iCalUID ?? "", meetLink: meet, htmlLink: json.htmlLink ?? "" } };
   } catch (e) {
     return { error: (e as Error).message };

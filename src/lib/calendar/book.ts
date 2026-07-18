@@ -7,15 +7,17 @@ import {
   intervalIsFree,
   toRfc3339WithOffset,
   formatDateLong,
+  formatDayKey,
   formatTime,
   type Slot,
 } from "./availability";
 import { siteUrl, type GoogleAccountRow } from "./google";
 import type { MicrosoftAccountRow } from "./microsoft";
+import { getZoomAccount, createZoomMeeting } from "./zoom";
 import { listCalendarAccounts, mergedFreeBusyAll, createEventOn, deleteEventOn, type CalendarAccount } from "./providers";
 import { buildIcs } from "./ics";
 import { buildBookingEmail, buildCancellationEmail } from "./booking-email";
-import { type CalendarSettings, type DemoPoolConfig } from "./settings";
+import { type CalendarSettings, type DemoPoolConfig, type VideoProvider } from "./settings";
 
 // Compute bookable slots for a single rep: their weekly rules minus busy time
 // merged across every connected calendar (Google and/or Outlook).
@@ -41,7 +43,8 @@ export type BookResult = { ok: true; meetLink: string; startMs: number } | { ok:
 // rep flow and the round-robin demo pool.
 async function finalizeBooking(opts: {
   userId: string;
-  host: CalendarAccount;
+  accounts: CalendarAccount[];
+  videoProvider: VideoProvider;
   hostName: string;
   summary: string;
   timeZone: string; // host time zone for the calendar event
@@ -60,7 +63,28 @@ async function finalizeBooking(opts: {
   const manageToken = randomUUID();
   const manageUrl = `${siteUrl()}/booking/${manageToken}`;
 
-  const created = await createEventOn(opts.host, {
+  // Pick the host calendar. For a Google Meet preference we host on Google (the
+  // only way to mint a Meet link); otherwise the rep's primary (Google-first).
+  const googleAccount = opts.accounts.find((a) => a.provider === "google");
+  const host = opts.videoProvider === "google_meet" && googleAccount ? googleAccount : opts.accounts[0];
+
+  // Decide the video link. Meet is only possible on a Google-hosted event and
+  // isn't wanted when the preference is Zoom. Otherwise create a Zoom meeting.
+  const useMeet = host.provider === "google" && opts.videoProvider !== "zoom";
+  let zoomLink = "";
+  if (!useMeet) {
+    const zoom = await getZoomAccount(opts.userId);
+    if (zoom) {
+      const z = await createZoomMeeting(zoom, {
+        topic: opts.summary,
+        startMs: opts.startMs,
+        durationMinutes: (opts.endMs - opts.startMs) / 60_000,
+      });
+      if (z.joinUrl) zoomLink = z.joinUrl;
+    }
+  }
+
+  const created = await createEventOn(host, {
     summary: opts.summary,
     description,
     startISO,
@@ -70,6 +94,7 @@ async function finalizeBooking(opts: {
     timeZone: opts.timeZone,
     inviteeEmail: opts.inviteeEmail,
     inviteeName: opts.inviteeName,
+    videoLink: useMeet ? undefined : zoomLink,
   });
   if (created.error || !created.event) {
     return { ok: false, error: created.error ?? "Couldn't create the calendar event." };
@@ -80,9 +105,9 @@ async function finalizeBooking(opts: {
     .from("calendar_bookings")
     .insert({
       user_id: opts.userId,
-      provider: opts.host.provider,
-      google_account_id: opts.host.provider === "google" ? opts.host.id : null,
-      microsoft_account_id: opts.host.provider === "microsoft" ? opts.host.id : null,
+      provider: host.provider,
+      google_account_id: host.provider === "google" ? host.id : null,
+      microsoft_account_id: host.provider === "microsoft" ? host.id : null,
       google_event_id: created.event.eventId,
       meet_link: created.event.meetLink,
       html_link: created.event.htmlLink,
@@ -120,20 +145,20 @@ async function finalizeBooking(opts: {
       startMs: opts.startMs,
       endMs: opts.endMs,
       summary: opts.summary,
-      description: created.event.meetLink ? `Google Meet: ${created.event.meetLink}` : opts.summary,
+      description: created.event.meetLink ? `Join the video call: ${created.event.meetLink}` : opts.summary,
       location: created.event.meetLink,
       organizerName: opts.hostName,
-      organizerEmail: opts.host.email,
+      organizerEmail: host.email,
       attendeeName: opts.inviteeName,
       attendeeEmail: opts.inviteeEmail,
       createdMs: opts.nowMs,
     });
     await sendEmail({
       to: [opts.inviteeEmail],
-      cc: opts.host.email ? [opts.host.email] : undefined,
+      cc: host.email ? [host.email] : undefined,
       subject: email.subject,
       html: email.html,
-      replyTo: opts.host.email || undefined,
+      replyTo: host.email || undefined,
       attachments: [
         { filename: "invite.ics", content: Buffer.from(ics, "utf8").toString("base64"), contentType: "text/calendar; method=REQUEST" },
       ],
@@ -169,7 +194,8 @@ export async function createBooking(opts: {
 
   return finalizeBooking({
     userId: settings.user_id,
-    host: accounts[0],
+    accounts,
+    videoProvider: settings.video_provider,
     hostName: opts.hostName,
     summary: settings.page_title || `Meeting with ${opts.hostName}`,
     timeZone: settings.time_zone,
@@ -288,7 +314,8 @@ export async function createDemoBooking(opts: {
 
   return finalizeBooking({
     userId: chosen.member.user_id,
-    host: chosen.accounts[0],
+    accounts: chosen.accounts,
+    videoProvider: chosen.member.video_provider,
     hostName,
     summary: config.page_title || "Wingman demo",
     timeZone: config.time_zone,
@@ -418,11 +445,13 @@ export async function cancelBookingByToken(token: string): Promise<{ ok: boolean
   return { ok: true, rebookPath: row.rebook_path || "/book-a-demo" };
 }
 
-// Serializable slot for the browser: epoch ms + preformatted labels in a tz.
+// Serializable slot for the browser: epoch ms + preformatted labels in a tz,
+// plus a "YYYY-MM-DD" day key so the client can group by calendar day.
 export function serializeSlots(slots: Slot[], timeZone: string) {
   return slots.map((s) => ({
     start: s.startMs,
     end: s.endMs,
+    day: formatDayKey(s.startMs, timeZone),
     date: formatDateLong(s.startMs, timeZone),
     time: formatTime(s.startMs, timeZone),
   }));

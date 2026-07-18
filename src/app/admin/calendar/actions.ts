@@ -33,7 +33,10 @@ type SaveInput = {
   pageTitle: string;
   pageDescription: string;
   isActive: boolean;
+  videoProvider: "auto" | "google_meet" | "zoom";
 };
+
+const VIDEO_PROVIDERS = new Set(["auto", "google_meet", "zoom"]);
 
 // Save the signed-in rep's own booking settings. Any platform staffer manages
 // their own calendar.
@@ -74,6 +77,7 @@ export async function saveCalendarSettings(input: SaveInput): Promise<{ error: s
       page_title: input.pageTitle.trim().slice(0, 160),
       page_description: input.pageDescription.trim().slice(0, 600),
       is_active: Boolean(input.isActive),
+      video_provider: VIDEO_PROVIDERS.has(input.videoProvider) ? input.videoProvider : "auto",
       updated_at: new Date().toISOString(),
     };
 
@@ -106,6 +110,22 @@ export async function disconnectCalendarAccount(
   } catch (e) {
     console.error("[calendar] disconnectCalendarAccount failed:", e);
     return { error: `Couldn't disconnect: ${(e as Error).message}` };
+  }
+}
+
+// Disconnect the rep's Zoom account.
+export async function disconnectZoom(): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("calendar_zoom_accounts").delete().eq("user_id", profile.userId);
+    if (error) return { error: error.message };
+    revalidatePath("/admin/calendar");
+    return { error: null };
+  } catch (e) {
+    console.error("[calendar] disconnectZoom failed:", e);
+    return { error: `Couldn't disconnect Zoom: ${(e as Error).message}` };
   }
 }
 

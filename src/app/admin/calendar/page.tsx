@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
 import { googleCalendarConfigured, siteUrl } from "@/lib/calendar/google";
 import { microsoftCalendarConfigured } from "@/lib/calendar/microsoft";
+import { zoomConfigured, getZoomAccount } from "@/lib/calendar/zoom";
 import {
   getCalendarSettings,
   getDemoPoolConfig,
@@ -57,12 +58,13 @@ export default async function AdminCalendarPage({
     is_active: false,
   };
 
-  const [settings, accounts, bookings, demoConfig, demoMembers] = await Promise.all([
+  const [settings, accounts, bookings, demoConfig, demoMembers, zoom] = await Promise.all([
     guard("settings", getCalendarSettings(profile.userId), null),
     guard("accounts", listCalendarAccountsPublic(profile.userId), []),
     guard("bookings", listUpcomingBookings(profile.userId), []),
     guard("demoConfig", getDemoPoolConfig(), DEFAULT_DEMO),
     guard("demoMembers", listDemoPoolMembers(), []),
+    guard("zoom", getZoomAccount(profile.userId), null),
   ]);
 
   const defaultSlug = settings?.slug || slugify(profile.fullName || "rep") || "rep";
@@ -87,6 +89,7 @@ export default async function AdminCalendarPage({
           page_description: "",
           is_active: false,
           in_demo_pool: false,
+          video_provider: "auto",
         }
       }
       bookings={bookings}
@@ -95,6 +98,8 @@ export default async function AdminCalendarPage({
       isSuper={isSuper}
       demoConfig={demoConfig}
       demoMemberCount={demoMembers.length}
+      zoomConfigured={zoomConfigured()}
+      zoomEmail={zoom?.email ?? null}
     />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calendar, Check, Copy, Link2, PlugZap, Trash2 } from "lucide-react";
+import { Calendar, Check, Copy, Link2, PlugZap, Trash2, Video } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Card } from "@/components/ui/card";
 import { Field, inputClass } from "@/components/ui/field";
@@ -9,9 +9,10 @@ import { Pill } from "@/components/ui/pill";
 import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import type { CalendarSettings, DemoPoolConfig, PublicAccountInfo, BookingRow } from "@/lib/calendar/settings";
-import { saveCalendarSettings, disconnectCalendarAccount } from "./actions";
+import { saveCalendarSettings, disconnectCalendarAccount, disconnectZoom } from "./actions";
 import { AvailabilityEditor } from "./availability-editor";
 import { DemoPoolCard } from "./demo-pool-card";
+import type { VideoProvider } from "@/lib/calendar/settings";
 
 const DURATIONS = [15, 20, 30, 45, 60];
 
@@ -44,6 +45,8 @@ export type CalendarClientProps = {
   isSuper: boolean;
   demoConfig: DemoPoolConfig;
   demoMemberCount: number;
+  zoomConfigured: boolean;
+  zoomEmail: string | null;
 };
 
 export function CalendarClient({
@@ -58,6 +61,8 @@ export function CalendarClient({
   isSuper,
   demoConfig,
   demoMemberCount,
+  zoomConfigured,
+  zoomEmail,
 }: CalendarClientProps) {
   const [slug, setSlug] = useState(settings.slug);
   const [timeZone, setTimeZone] = useState(settings.time_zone);
@@ -68,6 +73,7 @@ export function CalendarClient({
   const [pageTitle, setPageTitle] = useState(settings.page_title);
   const [pageDescription, setPageDescription] = useState(settings.page_description);
   const [isActive, setIsActive] = useState(settings.is_active);
+  const [videoProvider, setVideoProvider] = useState<VideoProvider>(settings.video_provider);
   const [rules, setRules] = useState<AvailabilityRule[]>(settings.availability);
 
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
@@ -94,6 +100,7 @@ export function CalendarClient({
         pageTitle,
         pageDescription,
         isActive,
+        videoProvider,
       });
       if (res.error) {
         setMsg({ tone: "err", text: res.error });
@@ -107,6 +114,13 @@ export function CalendarClient({
   function disconnect(provider: "google" | "microsoft", id: string) {
     startTransition(async () => {
       const res = await disconnectCalendarAccount(provider, id);
+      if (res.error) setMsg({ tone: "err", text: res.error });
+    });
+  }
+
+  function removeZoom() {
+    startTransition(async () => {
+      const res = await disconnectZoom();
       if (res.error) setMsg({ tone: "err", text: res.error });
     });
   }
@@ -200,11 +214,57 @@ export function CalendarClient({
         )}
       </Card>
 
+      {/* Video & conferencing */}
+      <Card className="p-6">
+        <h2 className="font-display text-xl font-semibold text-ink mb-1">Video for meetings</h2>
+        <p className="text-sm text-muted mb-4">
+          Choose how the video link is created for each booking. Google Meet only works when the meeting is
+          hosted on a Google calendar; Zoom works with any calendar (Google or Outlook).
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 items-start">
+          <Field label="Video provider">
+            <select value={videoProvider} onChange={(e) => setVideoProvider(e.target.value as VideoProvider)} className={inputClass}>
+              <option value="auto">Auto (Meet on Google, Zoom on Outlook)</option>
+              <option value="google_meet">Always Google Meet (hosts on Google)</option>
+              <option value="zoom">Always Zoom</option>
+            </select>
+            <p className="text-xs text-muted mt-1.5">Saved with your booking page below.</p>
+          </Field>
+          <div className="mb-4">
+            <label className="block text-[13px] font-semibold mb-1.5 text-ink">Zoom account</label>
+            {zoomEmail ? (
+              <div className="flex items-center justify-between border border-line rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-full bg-olive-tint text-[#15803D] flex items-center justify-center">
+                    <Video size={15} />
+                  </span>
+                  <span className="text-sm font-medium text-ink">{zoomEmail}</span>
+                </div>
+                <button onClick={removeZoom} disabled={pending} type="button" className="text-sm text-muted hover:text-danger flex items-center gap-1.5 disabled:opacity-50">
+                  <Trash2 size={15} /> Disconnect
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/api/integrations/zoom/connect"
+                className={`inline-flex items-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-2.5 text-sm hover:bg-brick-dark transition-colors ${
+                  zoomConfigured ? "" : "pointer-events-none opacity-40"
+                }`}
+              >
+                <PlugZap size={16} /> Connect Zoom
+              </a>
+            )}
+            {!zoomConfigured && <p className="text-xs text-muted mt-2">Zoom isn&apos;t configured on this environment yet.</p>}
+          </div>
+        </div>
+      </Card>
+
       {/* Booking page settings */}
       <Card className="p-6">
         <h2 className="font-display text-xl font-semibold text-ink mb-1">Your booking page</h2>
         <p className="text-sm text-muted mb-5">
-          Prospects pick an open time on this page. You&apos;ll both get a calendar invite with a Meet link.
+          Prospects pick an open time on this page. You&apos;ll both get a calendar invite with a video link.
         </p>
 
         <Field label="Booking link">
