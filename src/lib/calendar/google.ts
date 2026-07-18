@@ -18,7 +18,15 @@ export const GOOGLE_SCOPES = [
   "profile",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.readonly",
+  // Send conversation email from the rep's Gmail (send only — reading the inbox
+  // is a Google "restricted" scope we deliberately avoid; Gmail replies are
+  // captured via reply-routing instead).
+  "https://www.googleapis.com/auth/gmail.send",
 ].join(" ");
+
+export function hasGmailSend(scopes: string): boolean {
+  return /gmail\.send/i.test(scopes || "");
+}
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
@@ -239,6 +247,44 @@ export async function mergedFreeBusy(
 
 // Cancel a booking's Google event (notifying the attendee). Best-effort — a
 // failure here shouldn't block marking the booking cancelled in our own records.
+// RFC 2047-encode a header value when it contains non-ASCII.
+function encodeHeader(v: string): string {
+  return /^[\x00-\x7F]*$/.test(v) ? v : `=?UTF-8?B?${Buffer.from(v, "utf-8").toString("base64")}?=`;
+}
+
+// Send an HTML email from the account's Gmail via the Gmail API (send scope). The
+// message appears in the rep's Sent mail and comes from their real address.
+export async function sendMailViaGmail(
+  account: GoogleAccountRow,
+  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const token = await freshAccessToken(account);
+    const to = opts.toName ? `${encodeHeader(opts.toName)} <${opts.toEmail}>` : opts.toEmail;
+    const headers = [
+      `To: ${to}`,
+      `Subject: ${encodeHeader(opts.subject)}`,
+      ...(opts.replyTo ? [`Reply-To: ${opts.replyTo}`] : []),
+      "MIME-Version: 1.0",
+      'Content-Type: text/html; charset="UTF-8"',
+    ];
+    const raw = `${headers.join("\r\n")}\r\n\r\n${opts.html}`;
+    const encoded = Buffer.from(raw, "utf-8").toString("base64url");
+    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ raw: encoded }),
+    });
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      return { ok: false, error: j.error?.message ?? `Gmail send error (${res.status})` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 export async function deleteBookingEvent(account: GoogleAccountRow, eventId: string): Promise<void> {
   if (!eventId) return;
   try {

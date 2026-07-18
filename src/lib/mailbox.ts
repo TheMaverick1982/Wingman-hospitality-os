@@ -1,34 +1,57 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMailViaGraph, listRecentMail, hasMailSend, hasMailRead, type MicrosoftAccountRow } from "@/lib/calendar/microsoft";
+import { sendMailViaGmail, hasGmailSend, type GoogleAccountRow } from "@/lib/calendar/google";
 
 // Provider-agnostic "send from the rep's own connected mailbox" for 1:1 client
-// conversations. Microsoft 365 (Graph) today; Google send is layered on later.
-// Bulk marketing never comes through here — it stays on Resend.
+// conversations — Microsoft 365 (Graph) or Google (Gmail send). Bulk marketing
+// never comes through here — it stays on Resend.
 
 export type MailboxSend = { sent: boolean; from?: string; provider?: "microsoft" | "google"; error?: string };
 
-// Does this user have a mailbox connected that can SEND (for the composer to hint
-// whether email will go from their address vs the shared Resend fallback)?
-export async function userSendMailbox(userId: string): Promise<{ provider: "microsoft"; email: string } | null> {
-  const admin = createAdminClient();
-  const { data } = await admin.from("calendar_microsoft_accounts").select("email, scopes").eq("user_id", userId);
-  const ms = ((data ?? []) as { email: string; scopes: string }[]).find((a) => hasMailSend(a.scopes));
-  return ms ? { provider: "microsoft", email: ms.email } : null;
+const INBOUND_DOMAIN = process.env.INBOUND_EMAIL_DOMAIN ?? "reply.joinwingman.app";
+
+// Per-conversation reply-routing address. Replies to it are threaded by the
+// inbound-email webhook. Used for Google-sent + Resend-fallback email (Microsoft
+// replies are polled from the mailbox instead, so they don't need routing).
+export function conversationReplyTo(contactId: string): string {
+  return `reply+${contactId}@${INBOUND_DOMAIN}`;
 }
 
-// Try to send from the user's own mailbox. Returns sent:false if they have no
-// send-capable mailbox (caller falls back to Resend) or the provider errored.
+// Does this user have a mailbox connected that can SEND (for the composer to hint
+// which address email goes from)?
+export async function userSendMailbox(userId: string): Promise<{ provider: "microsoft" | "google"; email: string } | null> {
+  const admin = createAdminClient();
+  const [{ data: msData }, { data: gData }] = await Promise.all([
+    admin.from("calendar_microsoft_accounts").select("email, scopes").eq("user_id", userId),
+    admin.from("calendar_google_accounts").select("email, scopes").eq("user_id", userId),
+  ]);
+  const ms = ((msData ?? []) as { email: string; scopes: string }[]).find((a) => hasMailSend(a.scopes));
+  if (ms) return { provider: "microsoft", email: ms.email };
+  const g = ((gData ?? []) as { email: string; scopes: string }[]).find((a) => hasGmailSend(a.scopes));
+  return g ? { provider: "google", email: g.email } : null;
+}
+
+// Try to send from the user's own mailbox. Microsoft first, then Google. Returns
+// sent:false if they have no send-capable mailbox (caller falls back to Resend).
+// `routingReplyTo` is applied only to Google sends (Microsoft replies are polled).
 export async function sendViaUserMailbox(
   userId: string,
-  opts: { toEmail: string; toName?: string; subject: string; html: string; replyTo?: string },
+  opts: { toEmail: string; toName?: string; subject: string; html: string },
+  routingReplyTo?: string,
 ): Promise<MailboxSend> {
   const admin = createAdminClient();
-  const { data } = await admin.from("calendar_microsoft_accounts").select("*").eq("user_id", userId);
-  const ms = ((data ?? []) as MicrosoftAccountRow[]).find((a) => hasMailSend(a.scopes));
+  const { data: msData } = await admin.from("calendar_microsoft_accounts").select("*").eq("user_id", userId);
+  const ms = ((msData ?? []) as MicrosoftAccountRow[]).find((a) => hasMailSend(a.scopes));
   if (ms) {
-    const res = await sendMailViaGraph(ms, opts);
+    const res = await sendMailViaGraph(ms, opts); // no routing reply-to: replies land in the mailbox and are polled
     return res.ok ? { sent: true, from: ms.email, provider: "microsoft" } : { sent: false, error: res.error, provider: "microsoft" };
+  }
+  const { data: gData } = await admin.from("calendar_google_accounts").select("*").eq("user_id", userId);
+  const g = ((gData ?? []) as GoogleAccountRow[]).find((a) => hasGmailSend(a.scopes));
+  if (g) {
+    const res = await sendMailViaGmail(g, { ...opts, replyTo: routingReplyTo }); // route replies (Gmail isn't polled)
+    return res.ok ? { sent: true, from: g.email, provider: "google" } : { sent: false, error: res.error, provider: "google" };
   }
   return { sent: false };
 }

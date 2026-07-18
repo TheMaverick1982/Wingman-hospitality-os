@@ -2,10 +2,8 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { sendEmail } from "@/lib/email";
-import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
-import { CRM_REPLY_TO } from "@/lib/crm-merge";
 import { twilioConfigured, normalizePhone, sendSms } from "@/lib/calendar/sms";
-import { sendViaUserMailbox } from "@/lib/mailbox";
+import { sendViaUserMailbox, conversationReplyTo } from "@/lib/mailbox";
 
 // Platform-admin Conversations: a unified email + SMS inbox over crm_contacts +
 // crm_activities. The message history is the existing activity log; this adds the
@@ -124,17 +122,24 @@ export async function sendConversationEmail(contactId: string, subject: string, 
   if (!contact?.email) return { ok: false, error: "This contact has no email address." };
   if (contact.email.endsWith("@sms.wingman.local")) return { ok: false, error: "This contact has no real email address (SMS-only)." };
 
-  // Prefer the rep's own connected mailbox (M365 → from their real address);
-  // fall back to Resend from the shared app domain.
+  // Prefer the rep's own connected mailbox (M365/Gmail → from their real address);
+  // fall back to Resend from the shared app domain. Replies to Google-sent and
+  // Resend-fallback email route through the inbound address so they thread;
+  // Microsoft replies are polled from the mailbox instead.
+  const replyRouting = conversationReplyTo(contactId);
   let via = "resend";
   let from: string | undefined;
-  const mailbox = await sendViaUserMailbox(profile.userId, { toEmail: contact.email, toName: contact.name ?? undefined, subject: s, html: personalHtml(b) });
+  const mailbox = await sendViaUserMailbox(
+    profile.userId,
+    { toEmail: contact.email, toName: contact.name ?? undefined, subject: s, html: personalHtml(b) },
+    replyRouting,
+  );
   if (mailbox.sent) {
     via = mailbox.provider ?? "mailbox";
     from = mailbox.from;
   } else {
     try {
-      await sendEmail({ to: [contact.email], subject: s, html: buildSequenceEmailHtml(b, contact.email), replyTo: CRM_REPLY_TO });
+      await sendEmail({ to: [contact.email], subject: s, html: personalHtml(b), replyTo: replyRouting });
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }
