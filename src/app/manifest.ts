@@ -21,5 +21,11 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
+    // Long-press the installed icon to jump straight into a section.
+    shortcuts: [
+      { name: "Dashboard", short_name: "Dashboard", url: "/dashboard" },
+      { name: "Training", short_name: "Training", url: "/training" },
+      { name: "Accountability", short_name: "Standards", url: "/accountability" },
+    ],
   };
 }

@@ -57,6 +57,15 @@ const nextConfig: NextConfig = {
       // robots.txt-disallow /apply — that would stop Google from crawling the page
       // and reading the noindex, which is counterproductive.
       { source: "/apply/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      // The service worker must never be cached by the browser/CDN, so a new
+      // deploy's sw.js is fetched immediately and the update flow can run.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
     ];
   },
 };

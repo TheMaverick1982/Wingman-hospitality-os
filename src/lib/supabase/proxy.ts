@@ -37,6 +37,8 @@ const PUBLIC_PREFIXES = [
   "/api/track",
   "/privacy",
   "/terms",
+  // PWA offline fallback page — precached by the service worker, must be auth-free.
+  "/offline",
   // Public contact page + its form action (SMS opt-in capture).
   "/contact",
   // Public account/data deletion request page — required by Google Play / Apple
