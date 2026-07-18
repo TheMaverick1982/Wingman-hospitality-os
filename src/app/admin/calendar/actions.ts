@@ -9,9 +9,9 @@ import {
   normalizeAvailability,
   slugify,
   getCalendarSettings,
-  listGoogleAccounts,
   DEFAULT_AVAILABILITY,
 } from "@/lib/calendar/settings";
+import { listCalendarAccounts } from "@/lib/calendar/providers";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import { isValidTimeZone } from "@/lib/calendar/timezones";
 
@@ -84,17 +84,17 @@ export async function saveCalendarSettings(input: SaveInput): Promise<{ error: s
   return { error: null, slug };
 }
 
-// Disconnect one Google account (does not delete already-booked meetings).
-export async function disconnectGoogleAccount(accountId: string): Promise<{ error: string | null }> {
+// Disconnect one connected calendar (does not delete already-booked meetings).
+export async function disconnectCalendarAccount(
+  provider: "google" | "microsoft",
+  accountId: string,
+): Promise<{ error: string | null }> {
   const profile = await getCurrentProfile();
   if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
+  const table = provider === "microsoft" ? "calendar_microsoft_accounts" : "calendar_google_accounts";
   const admin = createAdminClient();
   // Scope the delete to the caller's own row so one rep can't remove another's.
-  const { error } = await admin
-    .from("calendar_google_accounts")
-    .delete()
-    .eq("id", accountId)
-    .eq("user_id", profile.userId);
+  const { error } = await admin.from(table).delete().eq("id", accountId).eq("user_id", profile.userId);
   if (error) return { error: error.message };
   revalidatePath("/admin/calendar");
   return { error: null };
@@ -110,8 +110,8 @@ export async function setDemoPoolMembership(inPool: boolean): Promise<{ error: s
   if (inPool) {
     const settings = await getCalendarSettings(profile.userId);
     if (!settings || !settings.is_active) return { error: "Turn your booking page on before joining the demo pool." };
-    const accounts = await listGoogleAccounts(profile.userId);
-    if (!accounts.length) return { error: "Connect a Google Calendar before joining the demo pool." };
+    const accounts = await listCalendarAccounts(profile.userId);
+    if (!accounts.length) return { error: "Connect a calendar before joining the demo pool." };
   }
 
   const { error } = await admin

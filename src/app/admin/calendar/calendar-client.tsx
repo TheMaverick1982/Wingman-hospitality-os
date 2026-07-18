@@ -9,7 +9,7 @@ import { Pill } from "@/components/ui/pill";
 import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import type { CalendarSettings, DemoPoolConfig, PublicAccountInfo, BookingRow } from "@/lib/calendar/settings";
-import { saveCalendarSettings, disconnectGoogleAccount } from "./actions";
+import { saveCalendarSettings, disconnectCalendarAccount } from "./actions";
 import { AvailabilityEditor } from "./availability-editor";
 import { DemoPoolCard } from "./demo-pool-card";
 
@@ -18,22 +18,23 @@ const DURATIONS = [15, 20, 30, 45, 60];
 function flagBanner(flag: string, msg: string): { tone: "ok" | "err"; text: string } | null {
   switch (flag) {
     case "connected":
-      return { tone: "ok", text: "Google Calendar connected." };
+      return { tone: "ok", text: "Calendar connected." };
     case "denied":
       return { tone: "err", text: "Connection cancelled." };
     case "badstate":
       return { tone: "err", text: "Connection expired — please try again." };
     case "unconfigured":
-      return { tone: "err", text: "Google Calendar isn't configured on this environment yet." };
+      return { tone: "err", text: "That calendar provider isn't configured on this environment yet." };
     case "error":
-      return { tone: "err", text: msg || "Something went wrong connecting Google Calendar." };
+      return { tone: "err", text: msg || "Something went wrong connecting your calendar." };
     default:
       return null;
   }
 }
 
 export function CalendarClient({
-  configured,
+  googleConfigured,
+  microsoftConfigured,
   baseUrl,
   accounts,
   settings,
@@ -44,7 +45,8 @@ export function CalendarClient({
   demoConfig,
   demoMemberCount,
 }: {
-  configured: boolean;
+  googleConfigured: boolean;
+  microsoftConfigured: boolean;
   baseUrl: string;
   accounts: PublicAccountInfo[];
   settings: CalendarSettings;
@@ -72,6 +74,8 @@ export function CalendarClient({
 
   const banner = flagBanner(flag, flagMsg);
   const connected = accounts.length > 0;
+  const googleCount = accounts.filter((a) => a.provider === "google").length;
+  const microsoftCount = accounts.filter((a) => a.provider === "microsoft").length;
   const bookingUrl = `${baseUrl}/book/${slug}`;
 
   function save() {
@@ -98,9 +102,9 @@ export function CalendarClient({
     });
   }
 
-  function disconnect(id: string) {
+  function disconnect(provider: "google" | "microsoft", id: string) {
     startTransition(async () => {
-      const res = await disconnectGoogleAccount(id);
+      const res = await disconnectCalendarAccount(provider, id);
       if (res.error) setMsg({ tone: "err", text: res.error });
     });
   }
@@ -135,53 +139,62 @@ export function CalendarClient({
         </div>
       )}
 
-      {/* Connected accounts */}
+      {/* Connected calendars */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-display text-xl font-semibold text-ink">Google Calendar</h2>
-          {connected && <Pill tone="olive" dot>{accounts.length} of 2 connected</Pill>}
+          <h2 className="font-display text-xl font-semibold text-ink">Connected calendars</h2>
+          {connected && <Pill tone="olive" dot>{accounts.length} connected</Pill>}
         </div>
         <p className="text-sm text-muted mb-4">
-          Connect up to two calendars. We merge free/busy across both so you&apos;re never double-booked.
+          Connect Google and/or Outlook (up to two of each). We merge free/busy across all of them so
+          you&apos;re never double-booked. Google meetings get a Meet link; Outlook meetings use Zoom
+          (coming next).
         </p>
 
-        {!configured && (
-          <p className="text-sm text-danger mb-3">
-            Google Calendar credentials aren&apos;t configured on this environment yet.
-          </p>
+        {accounts.length > 0 && (
+          <div className="flex flex-col gap-2 mb-4">
+            {accounts.map((a) => (
+              <div key={`${a.provider}-${a.id}`} className="flex items-center justify-between border border-line rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-full bg-olive-tint text-[#15803D] flex items-center justify-center">
+                    <Check size={15} />
+                  </span>
+                  <span className="text-sm font-medium text-ink">{a.email || (a.provider === "microsoft" ? "Outlook account" : "Google account")}</span>
+                  <Pill tone="muted">{a.provider === "microsoft" ? "Outlook" : "Google"}</Pill>
+                </div>
+                <button
+                  onClick={() => disconnect(a.provider, a.id)}
+                  disabled={pending}
+                  className="text-sm text-muted hover:text-danger flex items-center gap-1.5 disabled:opacity-50"
+                  type="button"
+                >
+                  <Trash2 size={15} /> Disconnect
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
-        <div className="flex flex-col gap-2 mb-4">
-          {accounts.map((a) => (
-            <div key={a.id} className="flex items-center justify-between border border-line rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2.5">
-                <span className="w-7 h-7 rounded-full bg-olive-tint text-[#15803D] flex items-center justify-center">
-                  <Check size={15} />
-                </span>
-                <span className="text-sm font-medium text-ink">{a.email || "Google account"}</span>
-              </div>
-              <button
-                onClick={() => disconnect(a.id)}
-                disabled={pending}
-                className="text-sm text-muted hover:text-danger flex items-center gap-1.5 disabled:opacity-50"
-                type="button"
-              >
-                <Trash2 size={15} /> Disconnect
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {accounts.length < 2 && (
-          <a
+        <div className="flex flex-wrap items-center gap-2.5">
+          <ConnectButton
             href="/api/integrations/google/connect"
-            className={`inline-flex items-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-2.5 text-sm hover:bg-brick-dark transition-colors ${
-              configured ? "" : "pointer-events-none opacity-40"
-            }`}
-          >
-            <PlugZap size={16} />
-            {connected ? "Connect another calendar" : "Connect Google Calendar"}
-          </a>
+            configured={googleConfigured}
+            disabled={googleCount >= 2}
+            label={googleCount > 0 ? "Add another Google calendar" : "Connect Google Calendar"}
+          />
+          <ConnectButton
+            href="/api/integrations/microsoft/connect"
+            configured={microsoftConfigured}
+            disabled={microsoftCount >= 2}
+            label={microsoftCount > 0 ? "Add another Outlook calendar" : "Connect Outlook"}
+          />
+        </div>
+        {(!googleConfigured || !microsoftConfigured) && (
+          <p className="text-xs text-muted mt-3">
+            {!googleConfigured && "Google"}
+            {!googleConfigured && !microsoftConfigured && " and "}
+            {!microsoftConfigured && "Outlook"} credentials aren&apos;t configured on this environment yet.
+          </p>
         )}
       </Card>
 
@@ -296,6 +309,32 @@ export function CalendarClient({
         )}
       </Card>
     </div>
+  );
+}
+
+function ConnectButton({
+  href,
+  configured,
+  disabled,
+  label,
+}: {
+  href: string;
+  configured: boolean;
+  disabled: boolean;
+  label: string;
+}) {
+  if (disabled) return null;
+  const off = !configured;
+  return (
+    <a
+      href={href}
+      className={`inline-flex items-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-2.5 text-sm hover:bg-brick-dark transition-colors ${
+        off ? "pointer-events-none opacity-40" : ""
+      }`}
+    >
+      <PlugZap size={16} />
+      {label}
+    </a>
   );
 }
 

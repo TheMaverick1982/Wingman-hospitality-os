@@ -3,14 +3,15 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
 import { googleCalendarConfigured, siteUrl } from "@/lib/calendar/google";
+import { microsoftCalendarConfigured } from "@/lib/calendar/microsoft";
 import {
   getCalendarSettings,
   getDemoPoolConfig,
   listDemoPoolMembers,
-  listGoogleAccountsPublic,
   listUpcomingBookings,
   slugify,
 } from "@/lib/calendar/settings";
+import { listCalendarAccountsPublic } from "@/lib/calendar/providers";
 import { CalendarClient } from "./calendar-client";
 
 export const metadata: Metadata = { title: "Calendar · Admin" };
@@ -25,7 +26,9 @@ export default async function AdminCalendarPage({
   if (!profile.isPlatformAdmin) redirect("/dashboard");
 
   const sp = await searchParams;
-  const flag = typeof sp.g === "string" ? sp.g : "";
+  // Both providers report status via ?g= (Google) or ?m= (Microsoft); the banner
+  // copy is provider-neutral so either works.
+  const flag = (typeof sp.g === "string" ? sp.g : "") || (typeof sp.m === "string" ? sp.m : "");
   const flagMsg = typeof sp.msg === "string" ? sp.msg : "";
 
   const isSuper = PLATFORM_SECTIONS.every((s) => profile.platformAccess.includes(s.key));
@@ -56,7 +59,7 @@ export default async function AdminCalendarPage({
 
   const [settings, accounts, bookings, demoConfig, demoMembers] = await Promise.all([
     guard("settings", getCalendarSettings(profile.userId), null),
-    guard("accounts", listGoogleAccountsPublic(profile.userId), []),
+    guard("accounts", listCalendarAccountsPublic(profile.userId), []),
     guard("bookings", listUpcomingBookings(profile.userId), []),
     guard("demoConfig", getDemoPoolConfig(), DEFAULT_DEMO),
     guard("demoMembers", listDemoPoolMembers(), []),
@@ -66,7 +69,8 @@ export default async function AdminCalendarPage({
 
   return (
     <CalendarClient
-      configured={googleCalendarConfigured()}
+      googleConfigured={googleCalendarConfigured()}
+      microsoftConfigured={microsoftCalendarConfigured()}
       baseUrl={siteUrl()}
       accounts={accounts}
       settings={

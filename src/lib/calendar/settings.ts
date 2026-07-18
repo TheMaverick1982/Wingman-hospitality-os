@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AvailabilityRule } from "./availability";
 import type { GoogleAccountRow } from "./google";
+import type { MicrosoftAccountRow } from "./microsoft";
 
 export type CalendarSettings = {
   user_id: string;
@@ -31,7 +32,7 @@ export type DemoPoolConfig = {
   is_active: boolean;
 };
 
-export type PublicAccountInfo = { id: string; email: string };
+export type PublicAccountInfo = { id: string; email: string; provider: "google" | "microsoft" };
 
 // A sensible Mon–Fri 9–5 default so a freshly-connected rep has something to edit.
 export const DEFAULT_AVAILABILITY: AvailabilityRule[] = [1, 2, 3, 4, 5].map((weekday) => ({
@@ -126,10 +127,31 @@ export async function listGoogleAccounts(userId: string): Promise<GoogleAccountR
   return (data ?? []) as GoogleAccountRow[];
 }
 
-// Non-secret account info for the UI (id + email only, never a token).
-export async function listGoogleAccountsPublic(userId: string): Promise<PublicAccountInfo[]> {
-  const rows = await listGoogleAccounts(userId);
-  return rows.map((r) => ({ id: r.id, email: r.email }));
+export async function listMicrosoftAccounts(userId: string): Promise<MicrosoftAccountRow[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("calendar_microsoft_accounts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("connected_at", { ascending: true });
+  return (data ?? []) as MicrosoftAccountRow[];
+}
+
+// Seed a booking-settings row on first calendar connect (either provider), so the
+// rep lands on a ready-to-edit page. No-op if they already have one.
+export async function seedCalendarSettingsIfMissing(userId: string, fullName: string): Promise<void> {
+  const existing = await getCalendarSettings(userId);
+  if (existing) return;
+  const slug = await ensureUniqueSlug(fullName || "rep", userId);
+  const admin = createAdminClient();
+  await admin.from("calendar_settings").insert({
+    user_id: userId,
+    slug,
+    time_zone: "America/New_York",
+    availability: DEFAULT_AVAILABILITY,
+    page_title: `Book a meeting with ${fullName || "our team"}`,
+    is_active: false,
+  });
 }
 
 const SLUG_CLEAN = /[^a-z0-9]+/g;
