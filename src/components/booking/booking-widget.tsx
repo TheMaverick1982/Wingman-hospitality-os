@@ -206,6 +206,10 @@ export function BookingWidget({
           Mobile <span className="font-normal text-muted">(for text reminders)</span>
         </label>
         <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" className={INPUT} placeholder="(555) 123-4567" />
+        <p className="text-xs text-muted mt-1.5 leading-[1.5]">
+          By adding your number you agree to receive text reminders about this meeting. Msg &amp; data rates may
+          apply; reply STOP to opt out.
+        </p>
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Anything we should know? (optional)</label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} min-h-[80px]`} placeholder="What you'd like to cover." />
         {error && <p className="text-danger text-sm mt-3">{error}</p>}

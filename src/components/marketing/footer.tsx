@@ -57,6 +57,9 @@ export function MarketingFooter() {
           <Link href="/affiliates" className="text-[#525252]">
             Affiliates
           </Link>
+          <Link href="/contact" className="text-[#525252]">
+            Contact
+          </Link>
           <Link href="/login" className="text-[#525252]">
             Log in
           </Link>

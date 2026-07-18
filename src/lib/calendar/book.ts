@@ -178,7 +178,7 @@ async function finalizeBooking(opts: {
       const link = created.event.meetLink ? ` Join: ${created.event.meetLink}` : "";
       await sendSms(
         opts.invitePhone,
-        `You're booked with ${opts.hostName} on ${dateLabel} at ${timeLabel}.${link} — Wingman`,
+        `You're booked with ${opts.hostName} on ${dateLabel} at ${timeLabel}.${link} — Wingman. Reply STOP to opt out.`,
       );
     } catch {
       // ignore

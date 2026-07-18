@@ -60,6 +60,14 @@ const SECTIONS = [
     ],
   },
   {
+    h: "Text messaging (SMS)",
+    body: [
+      "By providing your mobile number and opting in, you agree to receive text messages from Wingman (The Maverick Agency). Depending on the opt-in you select, these include appointment confirmations and reminders and/or marketing and promotional messages. Message frequency varies. Message and data rates may apply. Consent to receive marketing texts is not a condition of any purchase.",
+      "Reply STOP (or UNSUBSCRIBE, CANCEL, END, or QUIT) to any message at any time to stop receiving texts; you will receive one confirmation that you have been unsubscribed. Reply HELP (or INFO) for help, or email hello@joinwingman.app. Reply START to opt back in.",
+      "Carriers are not liable for delayed or undelivered messages. Supported carriers and features may change without notice. Mobile opt-in information and consent are never shared with or sold to third parties for their own marketing.",
+    ],
+  },
+  {
     h: "Service availability and interruptions",
     body: [
       "We work hard to keep Wingman available, but we do not guarantee that the service will be uninterrupted, timely, secure, or error-free. Access may be unavailable from time to time — for scheduled maintenance, updates, or circumstances outside our reasonable control such as outages, server or network failures, or problems with the third-party providers the service depends on.",
