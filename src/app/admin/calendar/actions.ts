@@ -42,46 +42,51 @@ export async function saveCalendarSettings(input: SaveInput): Promise<{ error: s
   const profile = await getCurrentProfile();
   if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
 
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  // Ensure a row exists (they may not have connected yet, but can still draft).
-  const existing = await getCalendarSettings(profile.userId);
+    // Ensure a row exists (they may not have connected yet, but can still draft).
+    const existing = await getCalendarSettings(profile.userId);
 
-  const cleanSlug = slugify(input.slug || profile.fullName || "rep");
-  if (!cleanSlug) return { error: "Choose a booking link." };
-  // Keep the slug unique across reps (and stable if it's already theirs).
-  let slug = cleanSlug;
-  if (!existing || existing.slug !== cleanSlug) {
-    slug = await ensureUniqueSlug(cleanSlug, profile.userId);
+    const cleanSlug = slugify(input.slug || profile.fullName || "rep");
+    if (!cleanSlug) return { error: "Choose a booking link." };
+    // Keep the slug unique across reps (and stable if it's already theirs).
+    let slug = cleanSlug;
+    if (!existing || existing.slug !== cleanSlug) {
+      slug = await ensureUniqueSlug(cleanSlug, profile.userId);
+    }
+
+    const tz = isValidTimeZone(input.timeZone) ? input.timeZone : "America/New_York";
+    const duration = DURATIONS.has(input.meetingDurationMinutes) ? input.meetingDurationMinutes : 30;
+    const buffer = Math.min(120, Math.max(0, Math.round(input.bufferMinutes || 0)));
+    const notice = Math.min(168, Math.max(0, Math.round(input.advanceNoticeHours || 0)));
+    const windowDays = Math.min(90, Math.max(1, Math.round(input.bookingWindowDays || 21)));
+    const availability = normalizeAvailability(input.availability);
+
+    const payload = {
+      user_id: profile.userId,
+      slug,
+      time_zone: tz,
+      meeting_duration_minutes: duration,
+      buffer_minutes: buffer,
+      advance_notice_hours: notice,
+      booking_window_days: windowDays,
+      availability,
+      page_title: input.pageTitle.trim().slice(0, 160),
+      page_description: input.pageDescription.trim().slice(0, 600),
+      is_active: Boolean(input.isActive),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await admin.from("calendar_settings").upsert(payload, { onConflict: "user_id" });
+    if (error) return { error: error.message };
+
+    revalidatePath("/admin/calendar");
+    return { error: null, slug };
+  } catch (e) {
+    console.error("[calendar] saveCalendarSettings failed:", e);
+    return { error: `Couldn't save: ${(e as Error).message}` };
   }
-
-  const tz = isValidTimeZone(input.timeZone) ? input.timeZone : "America/New_York";
-  const duration = DURATIONS.has(input.meetingDurationMinutes) ? input.meetingDurationMinutes : 30;
-  const buffer = Math.min(120, Math.max(0, Math.round(input.bufferMinutes || 0)));
-  const notice = Math.min(168, Math.max(0, Math.round(input.advanceNoticeHours || 0)));
-  const windowDays = Math.min(90, Math.max(1, Math.round(input.bookingWindowDays || 21)));
-  const availability = normalizeAvailability(input.availability);
-
-  const payload = {
-    user_id: profile.userId,
-    slug,
-    time_zone: tz,
-    meeting_duration_minutes: duration,
-    buffer_minutes: buffer,
-    advance_notice_hours: notice,
-    booking_window_days: windowDays,
-    availability,
-    page_title: input.pageTitle.trim().slice(0, 160),
-    page_description: input.pageDescription.trim().slice(0, 600),
-    is_active: Boolean(input.isActive),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await admin.from("calendar_settings").upsert(payload, { onConflict: "user_id" });
-  if (error) return { error: error.message };
-
-  revalidatePath("/admin/calendar");
-  return { error: null, slug };
 }
 
 // Disconnect one connected calendar (does not delete already-booked meetings).
@@ -92,12 +97,17 @@ export async function disconnectCalendarAccount(
   const profile = await getCurrentProfile();
   if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
   const table = provider === "microsoft" ? "calendar_microsoft_accounts" : "calendar_google_accounts";
-  const admin = createAdminClient();
-  // Scope the delete to the caller's own row so one rep can't remove another's.
-  const { error } = await admin.from(table).delete().eq("id", accountId).eq("user_id", profile.userId);
-  if (error) return { error: error.message };
-  revalidatePath("/admin/calendar");
-  return { error: null };
+  try {
+    const admin = createAdminClient();
+    // Scope the delete to the caller's own row so one rep can't remove another's.
+    const { error } = await admin.from(table).delete().eq("id", accountId).eq("user_id", profile.userId);
+    if (error) return { error: error.message };
+    revalidatePath("/admin/calendar");
+    return { error: null };
+  } catch (e) {
+    console.error("[calendar] disconnectCalendarAccount failed:", e);
+    return { error: `Couldn't disconnect: ${(e as Error).message}` };
+  }
 }
 
 // Add or remove the signed-in rep's calendars from the round-robin /book-a-demo
@@ -105,22 +115,27 @@ export async function disconnectCalendarAccount(
 export async function setDemoPoolMembership(inPool: boolean): Promise<{ error: string | null }> {
   const profile = await getCurrentProfile();
   if (!profile?.isPlatformAdmin) return { error: "Not authorized." };
-  const admin = createAdminClient();
+  try {
+    const admin = createAdminClient();
 
-  if (inPool) {
-    const settings = await getCalendarSettings(profile.userId);
-    if (!settings || !settings.is_active) return { error: "Turn your booking page on before joining the demo pool." };
-    const accounts = await listCalendarAccounts(profile.userId);
-    if (!accounts.length) return { error: "Connect a calendar before joining the demo pool." };
+    if (inPool) {
+      const settings = await getCalendarSettings(profile.userId);
+      if (!settings || !settings.is_active) return { error: "Turn your booking page on before joining the demo pool." };
+      const accounts = await listCalendarAccounts(profile.userId);
+      if (!accounts.length) return { error: "Connect a calendar before joining the demo pool." };
+    }
+
+    const { error } = await admin
+      .from("calendar_settings")
+      .update({ in_demo_pool: inPool, updated_at: new Date().toISOString() })
+      .eq("user_id", profile.userId);
+    if (error) return { error: error.message };
+    revalidatePath("/admin/calendar");
+    return { error: null };
+  } catch (e) {
+    console.error("[calendar] setDemoPoolMembership failed:", e);
+    return { error: `Couldn't update the demo pool: ${(e as Error).message}` };
   }
-
-  const { error } = await admin
-    .from("calendar_settings")
-    .update({ in_demo_pool: inPool, updated_at: new Date().toISOString() })
-    .eq("user_id", profile.userId);
-  if (error) return { error: error.message };
-  revalidatePath("/admin/calendar");
-  return { error: null };
 }
 
 type DemoConfigInput = {
@@ -142,24 +157,29 @@ export async function saveDemoPoolConfig(input: DemoConfigInput): Promise<{ erro
   const isSuper = profile?.isPlatformAdmin && PLATFORM_SECTIONS.every((s) => profile.platformAccess.includes(s.key));
   if (!isSuper) return { error: "Only an owner can edit the demo pool." };
 
-  const admin = createAdminClient();
-  const payload = {
-    id: true,
-    time_zone: isValidTimeZone(input.timeZone) ? input.timeZone : "America/New_York",
-    meeting_duration_minutes: DURATIONS.has(input.meetingDurationMinutes) ? input.meetingDurationMinutes : 30,
-    buffer_minutes: clampInt(input.bufferMinutes, 0, 120, 0),
-    advance_notice_hours: clampInt(input.advanceNoticeHours, 0, 168, 12),
-    booking_window_days: clampInt(input.bookingWindowDays, 1, 90, 21),
-    availability: normalizeAvailability(input.availability),
-    page_title: input.pageTitle.trim().slice(0, 160) || "Book a demo",
-    page_description: input.pageDescription.trim().slice(0, 600),
-    is_active: Boolean(input.isActive),
-    updated_at: new Date().toISOString(),
-  };
-  const { error } = await admin.from("calendar_demo_pool").upsert(payload, { onConflict: "id" });
-  if (error) return { error: error.message };
-  revalidatePath("/admin/calendar");
-  return { error: null };
+  try {
+    const admin = createAdminClient();
+    const payload = {
+      id: true,
+      time_zone: isValidTimeZone(input.timeZone) ? input.timeZone : "America/New_York",
+      meeting_duration_minutes: DURATIONS.has(input.meetingDurationMinutes) ? input.meetingDurationMinutes : 30,
+      buffer_minutes: clampInt(input.bufferMinutes, 0, 120, 0),
+      advance_notice_hours: clampInt(input.advanceNoticeHours, 0, 168, 12),
+      booking_window_days: clampInt(input.bookingWindowDays, 1, 90, 21),
+      availability: normalizeAvailability(input.availability),
+      page_title: input.pageTitle.trim().slice(0, 160) || "Book a demo",
+      page_description: input.pageDescription.trim().slice(0, 600),
+      is_active: Boolean(input.isActive),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await admin.from("calendar_demo_pool").upsert(payload, { onConflict: "id" });
+    if (error) return { error: error.message };
+    revalidatePath("/admin/calendar");
+    return { error: null };
+  } catch (e) {
+    console.error("[calendar] saveDemoPoolConfig failed:", e);
+    return { error: `Couldn't save the demo settings: ${(e as Error).message}` };
+  }
 }
 
 export { DEFAULT_AVAILABILITY };
