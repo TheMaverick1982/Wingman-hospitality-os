@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeFirstName } from "@/lib/name-safety";
+import { getVisitorId } from "@/lib/visitor";
 
 // Server-side engine for CRM nurture sequences (Phase 1B). Enrollment, stop
 // conditions (booked / customer / unsubscribed), and the email HTML + unsub link.
@@ -240,12 +241,14 @@ export async function recordDemoBooked(input: {
     const repFirst = repName ? safeFirstName(repName) ?? repName : "";
     const repFields = repName ? { rep_name: repName, rep_first_name: repFirst } : {};
 
+    const visitorId = await getVisitorId(); // link their anonymous browsing to this contact
+
     const { data: c } = await admin
       .from("crm_contacts")
-      .select("id, stage, name, phone, customer_at, fields")
+      .select("id, stage, name, phone, customer_at, fields, visitor_id")
       .eq("email", email)
       .maybeSingle();
-    const ex = c as { id: string; stage: string | null; name: string | null; phone: string | null; customer_at: string | null; fields: Record<string, unknown> | null } | null;
+    const ex = c as { id: string; stage: string | null; name: string | null; phone: string | null; customer_at: string | null; fields: Record<string, unknown> | null; visitor_id: string | null } | null;
 
     let contactId = ex?.id;
     let isCustomer = ex ? ex.customer_at != null || ex.stage === "signed_up" || ex.stage === "lost" : false;
@@ -263,6 +266,7 @@ export async function recordDemoBooked(input: {
           last_activity_at: now,
           fields: repFields,
           ...(input.repUserId ? { assigned_rep_id: input.repUserId } : {}),
+          ...(visitorId ? { visitor_id: visitorId } : {}),
         })
         .select("id")
         .single();
@@ -276,6 +280,7 @@ export async function recordDemoBooked(input: {
       // Refresh the rep each booking (a rebook may land on a different host).
       if (repName) patch.fields = { ...(ex!.fields ?? {}), ...repFields };
       if (input.repUserId) patch.assigned_rep_id = input.repUserId;
+      if (visitorId && !ex!.visitor_id) patch.visitor_id = visitorId; // don't overwrite an earlier link
       await admin.from("crm_contacts").update(patch).eq("id", contactId);
     }
     if (!contactId) return;
