@@ -35,6 +35,8 @@ const PUBLIC_PREFIXES = [
   "/api/cron",
   "/privacy",
   "/terms",
+  // Public contact page + its form action (SMS opt-in capture).
+  "/contact",
   // Public account/data deletion request page — required by Google Play / Apple
   // to be reachable without a login (reviewers and users open it logged out).
   "/delete-account",

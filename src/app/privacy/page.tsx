@@ -48,6 +48,14 @@ const SECTIONS = [
     ],
   },
   {
+    h: "Text messages (SMS)",
+    body: [
+      "If you give us your mobile number — for example, when you book a meeting through Wingman or submit our contact form — we use it to send you service messages about that booking (confirmations and reminders) and, only if you separately opt in, occasional promotional messages. Message frequency varies, and message and data rates may apply.",
+      "You can opt out of text messages at any time by replying STOP to any message; reply HELP for help. We honor opt-out requests promptly.",
+      "Mobile phone numbers and SMS opt-in consent are never shared with, or sold to, third parties or affiliates for their own marketing purposes. We share them only with the messaging provider (such as Twilio) that helps us deliver the messages you asked for.",
+    ],
+  },
+  {
     h: "Data retention",
     body: [
       "We keep your data while your account is active. After cancellation, your data remains available to export for 30 days, then is deleted from active systems.",
