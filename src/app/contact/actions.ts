@@ -76,16 +76,23 @@ export async function submitContact(input: {
     const { data: existing } = await admin.from("crm_contacts").select("id, tags").eq("email", email).maybeSingle();
     const ex = existing as { id: string; tags: string[] | null } | null;
     let contactId = ex?.id;
+    // SMS consent columns power the CRM's SMS automations gating. Only ever set
+    // a flag true (opt-in) here — never flip an existing true back to false from
+    // an unchecked box, so a prior opt-in isn't silently revoked.
+    const consentUpdate: Record<string, boolean> = {};
+    if (optInTransactional) consentUpdate.sms_transactional_consent = true;
+    if (optInMarketing) consentUpdate.sms_marketing_consent = true;
+
     if (contactId) {
       const mergedTags = Array.from(new Set([...(ex?.tags ?? []), ...tags]));
       await admin
         .from("crm_contacts")
-        .update({ name: name || undefined, phone: phone || undefined, last_activity_at: nowIso, updated_at: nowIso, tags: mergedTags })
+        .update({ name: name || undefined, phone: phone || undefined, last_activity_at: nowIso, updated_at: nowIso, tags: mergedTags, ...consentUpdate })
         .eq("id", contactId);
     } else {
       const { data: created } = await admin
         .from("crm_contacts")
-        .insert({ email, name, phone, first_source: "contact", last_activity_at: nowIso, tags })
+        .insert({ email, name, phone, first_source: "contact", last_activity_at: nowIso, tags, ...consentUpdate })
         .select("id")
         .single();
       contactId = (created as { id: string } | null)?.id;

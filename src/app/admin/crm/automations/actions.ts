@@ -56,14 +56,20 @@ export async function updateStep(formData: FormData): Promise<void> {
   if (!(await guard())) return;
   const stepId = String(formData.get("stepId") || "");
   const sequenceId = String(formData.get("sequenceId") || "");
+  const channel = String(formData.get("channel") || "email") === "sms" ? "sms" : "email";
   const subject = String(formData.get("subject") || "").trim();
   const body = String(formData.get("body") || "").trim();
   const delayRaw = Number(formData.get("delay_days"));
   const delay_days = Number.isFinite(delayRaw) && delayRaw >= 0 ? Math.round(delayRaw) : 0;
   const active = String(formData.get("active") || "") === "on";
-  if (!stepId || !subject || !body) return;
+  // Email needs a subject; SMS has none (the body IS the message). Body always required.
+  if (!stepId || !body) return;
+  if (channel === "email" && !subject) return;
   const admin = createAdminClient();
-  await admin.from("crm_sequence_steps").update({ subject, body, delay_days, active, updated_at: new Date().toISOString() }).eq("id", stepId);
+  await admin
+    .from("crm_sequence_steps")
+    .update({ channel, subject: channel === "sms" ? "" : subject, body, delay_days, active, updated_at: new Date().toISOString() })
+    .eq("id", stepId);
   revalidatePath(`/admin/crm/automations/${sequenceId}`);
 }
 
