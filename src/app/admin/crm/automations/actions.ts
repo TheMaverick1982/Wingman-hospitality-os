@@ -105,5 +105,80 @@ export async function deleteStep(formData: FormData): Promise<void> {
   if (!stepId) return;
   const admin = createAdminClient();
   await admin.from("crm_sequence_steps").delete().eq("id", stepId);
+  // Close the gap left in step_order so the sequence stays 1..n contiguous.
+  if (sequenceId) {
+    const { data } = await admin.from("crm_sequence_steps").select("id").eq("sequence_id", sequenceId).order("step_order", { ascending: true });
+    await renumberSteps(admin, sequenceId, ((data ?? []) as { id: string }[]).map((r) => r.id));
+  }
+  revalidatePath(`/admin/crm/automations/${sequenceId}`);
+}
+
+// Rewrite step_order to match the given id order (1..n). Two-phase — park in a
+// high range first — so the unique(sequence_id, step_order) constraint can't be
+// violated mid-update while rows swap places.
+async function renumberSteps(admin: ReturnType<typeof createAdminClient>, sequenceId: string, orderedIds: string[]): Promise<void> {
+  const nowIso = new Date().toISOString();
+  for (let k = 0; k < orderedIds.length; k++) {
+    await admin.from("crm_sequence_steps").update({ step_order: 100000 + k, updated_at: nowIso }).eq("id", orderedIds[k]).eq("sequence_id", sequenceId);
+  }
+  for (let k = 0; k < orderedIds.length; k++) {
+    await admin.from("crm_sequence_steps").update({ step_order: k + 1, updated_at: nowIso }).eq("id", orderedIds[k]).eq("sequence_id", sequenceId);
+  }
+}
+
+// Move a step one position up or down within its sequence.
+export async function moveStep(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const stepId = String(formData.get("stepId") || "");
+  const sequenceId = String(formData.get("sequenceId") || "");
+  const direction = String(formData.get("direction") || "");
+  if (!stepId || !sequenceId || (direction !== "up" && direction !== "down")) return;
+  const admin = createAdminClient();
+  const { data } = await admin.from("crm_sequence_steps").select("id").eq("sequence_id", sequenceId).order("step_order", { ascending: true });
+  const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+  const i = ids.indexOf(stepId);
+  if (i < 0) return;
+  const j = direction === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await renumberSteps(admin, sequenceId, ids);
+  revalidatePath(`/admin/crm/automations/${sequenceId}`);
+}
+
+// Insert a fresh step directly after the given step (not just at the end).
+export async function insertStepAfter(formData: FormData): Promise<void> {
+  if (!(await guard())) return;
+  const afterStepId = String(formData.get("stepId") || "");
+  const sequenceId = String(formData.get("sequenceId") || "");
+  if (!afterStepId || !sequenceId) return;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("crm_sequence_steps")
+    .select("id, step_order, delay_days")
+    .eq("sequence_id", sequenceId)
+    .order("step_order", { ascending: true });
+  const steps = (data ?? []) as { id: string; step_order: number; delay_days: number }[];
+  const i = steps.findIndex((s) => s.id === afterStepId);
+  if (i < 0) return;
+  const prev = steps[i];
+  const next = steps[i + 1];
+  // Slot the new step's day between its neighbors (or a week after the last one).
+  const delay_days = next ? Math.round((prev.delay_days + next.delay_days) / 2) : prev.delay_days + 7;
+  const { data: created } = await admin
+    .from("crm_sequence_steps")
+    .insert({
+      sequence_id: sequenceId,
+      step_order: 999000, // temporary; renumberSteps assigns the real slot
+      delay_days,
+      subject: "New email subject",
+      body: "Hi {{first_name}},\n\nWrite your message here.\n\nhttps://www.joinwingman.app/demo",
+    })
+    .select("id")
+    .single();
+  const newId = (created as { id: string } | null)?.id;
+  if (!newId) return;
+  const ids = steps.map((s) => s.id);
+  ids.splice(i + 1, 0, newId);
+  await renumberSteps(admin, sequenceId, ids);
   revalidatePath(`/admin/crm/automations/${sequenceId}`);
 }

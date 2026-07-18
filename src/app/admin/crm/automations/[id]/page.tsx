@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceLabel, sourceTrigger } from "@/lib/crm";
-import { setSequencePublished, addStep, deleteStep } from "../actions";
+import { setSequencePublished, addStep } from "../actions";
 import { StepEditor, type EditableStep } from "./step-editor";
 
 export const metadata: Metadata = { title: "Edit sequence · CRM" };
@@ -60,8 +60,14 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
       )}
 
       <div className="flex flex-col gap-4">
-        {steps.map((step) => (
-          <StepEditor key={step.id} step={step} sequenceId={sequence.id} />
+        {steps.map((step, idx) => (
+          <StepEditor
+            key={step.id}
+            step={step}
+            sequenceId={sequence.id}
+            isFirst={idx === 0}
+            isLast={idx === steps.length - 1}
+          />
         ))}
       </div>
 
@@ -69,18 +75,10 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
         <form action={addStep}>
           <input type="hidden" name="sequenceId" value={sequence.id} />
           <button type="submit" className="text-[13px] font-semibold text-ink bg-paper border border-line-strong rounded-lg px-4 py-2 hover:bg-white transition-colors">
-            + Add step
+            + Add step at the end
           </button>
         </form>
-        {steps.length > 0 && (
-          <form action={deleteStep}>
-            <input type="hidden" name="stepId" value={steps[steps.length - 1].id} />
-            <input type="hidden" name="sequenceId" value={sequence.id} />
-            <button type="submit" className="text-[13px] font-medium text-danger hover:opacity-70 transition-opacity">
-              Remove last step
-            </button>
-          </form>
-        )}
+        <p className="text-[12px] text-muted-2">Use the ↑ ↓ on a card to reorder, or + to insert a step below it.</p>
       </div>
     </div>
   );
