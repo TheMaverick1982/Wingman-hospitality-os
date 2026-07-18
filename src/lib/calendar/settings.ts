@@ -192,17 +192,21 @@ export type BookingRow = {
   meet_link: string;
   html_link: string;
   status: string;
+  outcome: string | null;
   created_at: string;
 };
 
+// Confirmed meetings from the last 7 days forward — future ones to join, and
+// recently-ended ones so a rep can mark showed / no-show (which drives the CRM).
 export async function listUpcomingBookings(userId: string, limit = 25): Promise<BookingRow[]> {
   const admin = createAdminClient();
+  const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const { data } = await admin
     .from("calendar_bookings")
-    .select("id, invitee_name, invitee_email, invitee_notes, start_at, end_at, time_zone, meet_link, html_link, status, created_at")
+    .select("id, invitee_name, invitee_email, invitee_notes, start_at, end_at, time_zone, meet_link, html_link, status, outcome, created_at")
     .eq("user_id", userId)
     .eq("status", "confirmed")
-    .gte("end_at", new Date().toISOString())
+    .gte("end_at", since)
     .order("start_at", { ascending: true })
     .limit(limit);
   return (data ?? []) as BookingRow[];

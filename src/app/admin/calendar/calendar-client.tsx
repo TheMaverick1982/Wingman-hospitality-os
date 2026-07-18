@@ -9,7 +9,7 @@ import { Pill } from "@/components/ui/pill";
 import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
 import type { AvailabilityRule } from "@/lib/calendar/availability";
 import type { CalendarSettings, DemoPoolConfig, PublicAccountInfo, BookingRow } from "@/lib/calendar/settings";
-import { saveCalendarSettings, disconnectCalendarAccount, disconnectZoom } from "./actions";
+import { saveCalendarSettings, disconnectCalendarAccount, disconnectZoom, markBookingOutcome } from "./actions";
 import { AvailabilityEditor } from "./availability-editor";
 import { DemoPoolCard } from "./demo-pool-card";
 import type { VideoProvider } from "@/lib/calendar/settings";
@@ -357,11 +357,12 @@ export function CalendarClient({
       {/* Round-robin Book-a-Demo pool */}
       <DemoPoolCard isSuper={isSuper} inPool={settings.in_demo_pool} memberCount={demoMemberCount} config={demoConfig} />
 
-      {/* Upcoming bookings */}
+      {/* Bookings — upcoming to join, recent to mark showed/no-show */}
       <Card className="p-6">
-        <h2 className="font-display text-xl font-semibold text-ink mb-4">Upcoming meetings</h2>
+        <h2 className="font-display text-xl font-semibold text-ink mb-1">Meetings</h2>
+        <p className="text-sm text-muted mb-4">Upcoming demos to join, plus the last week&rsquo;s meetings to mark showed or no-show (this updates the CRM).</p>
         {bookings.length === 0 ? (
-          <p className="text-sm text-muted">No upcoming meetings yet.</p>
+          <p className="text-sm text-muted">No meetings yet.</p>
         ) : (
           <div className="flex flex-col divide-y divide-line">
             {bookings.map((b) => (
@@ -419,6 +420,19 @@ function formatBookingDate(iso: string, tz: string): string {
 
 function BookingRowView({ booking }: { booking: BookingRow }) {
   const dateLabel = formatBookingDate(booking.start_at, booking.time_zone);
+  const [pending, start] = useTransition();
+  const [outcome, setOutcome] = useState<string | null>(booking.outcome);
+  // Capture "now" once on mount (impure to read during render otherwise).
+  const [nowMs] = useState(() => Date.now());
+  const hasStarted = new Date(booking.start_at).getTime() <= nowMs;
+
+  function mark(next: "showed" | "no_show") {
+    start(async () => {
+      const res = await markBookingOutcome(booking.id, next);
+      if (!res.error) setOutcome(next);
+    });
+  }
+
   return (
     <div className="flex items-center justify-between py-3 gap-4">
       <div className="min-w-0">
@@ -428,10 +442,36 @@ function BookingRowView({ booking }: { booking: BookingRow }) {
           {booking.time_zone ? ` · ${booking.time_zone}` : ""}
         </div>
       </div>
-      {booking.meet_link && (
-        <a href={booking.meet_link} target="_blank" rel="noreferrer" className="text-sm text-brick font-medium whitespace-nowrap">
-          Join Meet →
-        </a>
+
+      {outcome ? (
+        <span className={`text-xs font-semibold whitespace-nowrap ${outcome === "showed" ? "text-olive" : "text-muted"}`}>
+          {outcome === "showed" ? "✓ Showed" : "No-show"}
+        </span>
+      ) : hasStarted ? (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <button
+            type="button"
+            onClick={() => mark("showed")}
+            disabled={pending}
+            className="text-xs font-semibold text-olive bg-olive-tint rounded-lg px-2.5 py-1.5 hover:opacity-80 transition-opacity disabled:opacity-40"
+          >
+            Showed
+          </button>
+          <button
+            type="button"
+            onClick={() => mark("no_show")}
+            disabled={pending}
+            className="text-xs font-semibold text-charcoal-2 bg-paper border border-line rounded-lg px-2.5 py-1.5 hover:bg-white transition-colors disabled:opacity-40"
+          >
+            No-show
+          </button>
+        </div>
+      ) : (
+        booking.meet_link && (
+          <a href={booking.meet_link} target="_blank" rel="noreferrer" className="text-sm text-brick font-medium whitespace-nowrap">
+            Join Meet →
+          </a>
+        )
       )}
     </div>
   );

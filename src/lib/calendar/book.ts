@@ -19,6 +19,7 @@ import { listCalendarAccounts, mergedFreeBusyAll, createEventOn, deleteEventOn, 
 import { buildIcs } from "./ics";
 import { buildBookingEmail, buildCancellationEmail } from "./booking-email";
 import { type CalendarSettings, type DemoPoolConfig, type VideoProvider } from "./settings";
+import { recordDemoBooked, recordDemoCanceled } from "@/lib/crm-sequences";
 
 // Compute bookable slots for a single rep: their weekly rules minus busy time
 // merged across every connected calendar (Google and/or Outlook).
@@ -184,6 +185,10 @@ async function finalizeBooking(opts: {
       // ignore
     }
   }
+
+  // Record the booking in the CRM: advance the pipeline, stop any running nurture,
+  // and start the Demo Booked prep sequence. Best-effort — never blocks a booking.
+  await recordDemoBooked({ email: opts.inviteeEmail, name: opts.inviteeName, phone: opts.invitePhone });
 
   return { ok: true, meetLink: created.event.meetLink, startMs: opts.startMs };
 }
@@ -463,6 +468,9 @@ export async function cancelBookingByToken(token: string): Promise<{ ok: boolean
   } catch {
     // ignore
   }
+
+  // CRM: clear the booking and start the re-book win-back. Best-effort.
+  await recordDemoCanceled(row.invitee_email);
 
   return { ok: true, rebookPath: row.rebook_path || "/book-a-demo" };
 }

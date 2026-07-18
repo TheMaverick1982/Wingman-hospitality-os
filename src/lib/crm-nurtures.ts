@@ -347,6 +347,59 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
       },
     ],
   },
+  {
+    // Fires the moment someone books a demo (native calendar → recordDemoBooked).
+    // Deliberately PREP-only and short so it never collides with the transactional
+    // confirmation + 24h/1h reminders the calendar already sends, and never runs
+    // post-demo (the no-show / customer paths own what happens after the meeting).
+    source: "booked",
+    name: "Demo Booked — Prep",
+    steps: [
+      {
+        step_order: 1,
+        delay_days: 0,
+        subject: "You're booked — here's how to get the most out of it",
+        body: "{{contact.first_name}} — you're on the calendar, and I'm looking forward to it.\n\nQuick heads-up so it's the best 30 minutes we can spend: come with the one number that keeps you up at night — how many of your first-time guests actually come back. If you don't know it, that's fine, that's kind of the point.\n\nIt helps to have in mind: how you train your team today, and what happens (if anything) after a guest's first visit. We'll build the demo around your restaurant, not a generic tour.\n\nYou'll get the join link and reminders separately. If anything changes, there's a reschedule link in your confirmation — no need to cancel and start over.\n\nSee you soon,\nBrian\nFounder, Wingman",
+        transactional: true,
+        send_condition: "always",
+      },
+    ],
+  },
+  {
+    // Fires when someone cancels a booked demo (native calendar → recordDemoCanceled).
+    // The transactional cancel email with the rebook link goes out immediately from
+    // the calendar; this win-back starts a couple days later so it doesn't stack on
+    // top of it. Rebooking stops this sequence automatically (recordDemoBooked stops
+    // all active enrollments).
+    source: "demo-cancel",
+    name: "Demo Cancel — Re-Book",
+    steps: [
+      {
+        step_order: 1,
+        delay_days: 2,
+        subject: "Want to grab a new time?",
+        body: "{{contact.first_name}} — no worries at all about cancelling; restaurant life doesn't care what's on the calendar.\n\nThe reason you booked in the first place hasn't gone anywhere, though — too many first-time guests still walking out and never coming back. Whenever you've got 30 minutes, I'd still love to show you how operators fix that.\n\nGrab whatever time works: {{calendar.booking_link}}\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 2,
+        delay_days: 7,
+        subject: "One play you can run without us",
+        body: "{{contact.first_name}} — whether or not we ever get that demo on the books, here's something you can use tonight.\n\nHave your host quietly flag every first-timer, and make sure a manager does one specific thing before they leave: name a dish to come back for, or hand them a reason to return this week. That single habit moves your repeat rate more than almost anything on the marketing side.\n\nThat's the whole idea behind Wingman — and if you want to see the system that makes it automatic, the door's open: {{calendar.booking_link}}\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 3,
+        delay_days: 14,
+        subject: "Should I close your file?",
+        body: "{{contact.first_name}} — I'll stop nudging after this one.\n\nIf the timing's just wrong right now, no hard feelings — reply and tell me and I'll check back another season. If you'd still like to see it, here's the link one more time: {{calendar.booking_link}}\n\nEither way, I'm rooting for you and your team.\n\nBrian\nFounder, Wingman",
+        transactional: false,
+        send_condition: "always",
+      },
+    ],
+  },
 ];
 
 // Legacy source whose sequence is retired by the spec (folded into the demo funnel).
