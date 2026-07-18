@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeFirstName } from "@/lib/name-safety";
 
 // Server-side engine for CRM nurture sequences (Phase 1B). Enrollment, stop
 // conditions (booked / customer / unsubscribed), and the email HTML + unsub link.
@@ -220,19 +221,31 @@ export async function markBookedByEmail(email: string, adminArg?: Admin): Promis
 // email (creating it if this is a brand-new lead), marks them as booked (advances
 // the pipeline + stops any running nurture), and — for non-customers only — enrolls
 // the short "Demo Booked — Prep" sequence. Best-effort; never blocks a booking.
-export async function recordDemoBooked(input: { email: string; name?: string; phone?: string }): Promise<void> {
+export async function recordDemoBooked(input: {
+  email: string;
+  name?: string;
+  phone?: string;
+  repUserId?: string | null;
+  repName?: string | null;
+}): Promise<void> {
   try {
     const admin = createAdminClient();
     const email = (input.email || "").trim().toLowerCase();
     if (!email) return;
     const now = new Date().toISOString();
 
+    // The host rep becomes the contact's lead owner and signs their demo emails
+    // ({{rep_name}} / {{rep_first_name}} merge fields resolve from these).
+    const repName = (input.repName || "").trim();
+    const repFirst = repName ? safeFirstName(repName) ?? repName : "";
+    const repFields = repName ? { rep_name: repName, rep_first_name: repFirst } : {};
+
     const { data: c } = await admin
       .from("crm_contacts")
-      .select("id, stage, name, phone, customer_at")
+      .select("id, stage, name, phone, customer_at, fields")
       .eq("email", email)
       .maybeSingle();
-    const ex = c as { id: string; stage: string | null; name: string | null; phone: string | null; customer_at: string | null } | null;
+    const ex = c as { id: string; stage: string | null; name: string | null; phone: string | null; customer_at: string | null; fields: Record<string, unknown> | null } | null;
 
     let contactId = ex?.id;
     let isCustomer = ex ? ex.customer_at != null || ex.stage === "signed_up" || ex.stage === "lost" : false;
@@ -240,7 +253,17 @@ export async function recordDemoBooked(input: { email: string; name?: string; ph
     if (!contactId) {
       const { data: created } = await admin
         .from("crm_contacts")
-        .insert({ email, name: input.name || null, phone: input.phone || null, first_source: "booked", stage: "demoed", booked_at: now, last_activity_at: now })
+        .insert({
+          email,
+          name: input.name || null,
+          phone: input.phone || null,
+          first_source: "booked",
+          stage: "demoed",
+          booked_at: now,
+          last_activity_at: now,
+          fields: repFields,
+          ...(input.repUserId ? { assigned_rep_id: input.repUserId } : {}),
+        })
         .select("id")
         .single();
       contactId = (created as { id: string } | null)?.id;
@@ -250,6 +273,9 @@ export async function recordDemoBooked(input: { email: string; name?: string; ph
       const patch: Record<string, unknown> = { booked_at: now, stage, last_activity_at: now, updated_at: now };
       if (input.name && !ex!.name) patch.name = input.name;
       if (input.phone && !ex!.phone) patch.phone = input.phone;
+      // Refresh the rep each booking (a rebook may land on a different host).
+      if (repName) patch.fields = { ...(ex!.fields ?? {}), ...repFields };
+      if (input.repUserId) patch.assigned_rep_id = input.repUserId;
       await admin.from("crm_contacts").update(patch).eq("id", contactId);
     }
     if (!contactId) return;

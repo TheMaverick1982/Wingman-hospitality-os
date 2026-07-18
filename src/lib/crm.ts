@@ -35,7 +35,32 @@ const SOURCE_LABELS: Record<string, string> = {
   signup: "Signup onboarding",
   "demo-no-show": "Demo no-show",
   referral: "Referral ask (day 30)",
+  booked: "Demo booked",
+  "demo-cancel": "Demo cancelled",
+  reactivation: "Reactivation",
+  contact: "Contact form",
 };
+
+// Plain-language description of what enrolls a contact into each sequence — shown
+// at the top of the automation editor so it's obvious what fires it.
+const SOURCE_TRIGGERS: Record<string, string> = {
+  demo: "A prospect tries the live demo sandbox but doesn't book a call.",
+  calculator: "A prospect completes the ROI / retention calculator.",
+  scorecard: "A prospect completes the Hospitality Scorecard.",
+  "book-a-demo": "A prospect books a call.",
+  booked: "A prospect books a demo on the calendar.",
+  "demo-cancel": "A prospect cancels their booked demo.",
+  "demo-no-show": "A prospect books a demo but doesn't show up.",
+  signup: "A prospect becomes a paying customer (post-signup onboarding).",
+  referral: "30 days after a customer signs up (referral ask).",
+  reactivation: "A customer cancels their subscription.",
+  contact: "Someone submits the contact form.",
+};
+
+export function sourceTrigger(source: string | null | undefined): string | null {
+  if (!source) return null;
+  return SOURCE_TRIGGERS[source] ?? null;
+}
 
 export function sourceLabel(source: string | null | undefined): string {
   if (!source) return "—";

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sourceLabel } from "@/lib/crm";
+import { sourceLabel, sourceTrigger } from "@/lib/crm";
 import { setSequencePublished, addStep, deleteStep } from "../actions";
 import { StepEditor, type EditableStep } from "./step-editor";
 
@@ -36,7 +36,7 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-ink">{sequence.name}</h1>
           <p className="text-sm text-muted mt-1">Nurtures leads from the {sourceLabel(sequence.source)} funnel. Days are counted from when they enter the sequence.</p>
-          <p className="text-[13px] text-muted-2 mt-1">Use <code className="text-brick">{"{{first_name}}"}</code> to personalize — it becomes their first name, or &ldquo;there&rdquo; if it&apos;s missing or inappropriate. Steps can be email or SMS; SMS only reaches contacts who opted in to marketing texts.</p>
+          <p className="text-[13px] text-muted-2 mt-1">Use <code className="text-brick">{"{{first_name}}"}</code> for the contact&apos;s first name and <code className="text-brick">{"{{rep_name}}"}</code> for the assigned salesperson (great for signing demo emails). Steps can be email or SMS; SMS only reaches contacts who opted in to marketing texts.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-full ${sequence.published ? "text-olive bg-olive-tint" : "text-[#b4884a] bg-gold-tint"}`}>
@@ -51,6 +51,13 @@ export default async function EditSequencePage({ params }: { params: Promise<{ i
           </form>
         </div>
       </div>
+
+      {sourceTrigger(sequence.source) && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-line bg-paper px-4 py-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-brick mt-0.5 shrink-0">Trigger</span>
+          <p className="text-sm text-charcoal-2 leading-[1.5]">{sourceTrigger(sequence.source)}</p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         {steps.map((step) => (
