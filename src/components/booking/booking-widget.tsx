@@ -52,6 +52,7 @@ export function BookingWidget({
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +134,7 @@ export function BookingWidget({
       const res = await fetch(bookUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ start: chosen.start, name, email, notes, tz }),
+        body: JSON.stringify({ start: chosen.start, name, email, phone, notes, tz }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; meetLink?: string; code?: string };
       if (!res.ok || !data.ok) {
@@ -201,6 +202,10 @@ export function BookingWidget({
         <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT} placeholder="Jane Doe" />
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Email</label>
         <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} placeholder="jane@restaurant.com" />
+        <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">
+          Mobile <span className="font-normal text-muted">(optional — for a text reminder)</span>
+        </label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" className={INPUT} placeholder="(555) 123-4567" />
         <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Anything we should know? (optional)</label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} min-h-[80px]`} placeholder="What you'd like to cover." />
         {error && <p className="text-danger text-sm mt-3">{error}</p>}

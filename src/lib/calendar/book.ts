@@ -14,6 +14,7 @@ import {
 import { siteUrl, type GoogleAccountRow } from "./google";
 import type { MicrosoftAccountRow } from "./microsoft";
 import { getZoomAccount, createZoomMeeting } from "./zoom";
+import { twilioConfigured, sendSms } from "./sms";
 import { listCalendarAccounts, mergedFreeBusyAll, createEventOn, deleteEventOn, type CalendarAccount } from "./providers";
 import { buildIcs } from "./ics";
 import { buildBookingEmail, buildCancellationEmail } from "./booking-email";
@@ -53,6 +54,7 @@ async function finalizeBooking(opts: {
   endMs: number;
   inviteeName: string;
   inviteeEmail: string;
+  invitePhone: string;
   notes: string;
   rebookPath: string;
   nowMs: number;
@@ -113,6 +115,7 @@ async function finalizeBooking(opts: {
       html_link: created.event.htmlLink,
       invitee_name: opts.inviteeName,
       invitee_email: opts.inviteeEmail,
+      invitee_phone: opts.invitePhone,
       invitee_notes: opts.notes,
       start_at: new Date(opts.startMs).toISOString(),
       end_at: new Date(opts.endMs).toISOString(),
@@ -167,6 +170,21 @@ async function finalizeBooking(opts: {
     // swallow — booking already succeeded
   }
 
+  // Confirmation SMS (best-effort) when the guest gave a phone and Twilio is set up.
+  if (opts.invitePhone && twilioConfigured()) {
+    try {
+      const dateLabel = formatDateLong(opts.startMs, opts.displayTimeZone);
+      const timeLabel = formatTime(opts.startMs, opts.displayTimeZone);
+      const link = created.event.meetLink ? ` Join: ${created.event.meetLink}` : "";
+      await sendSms(
+        opts.invitePhone,
+        `You're booked with ${opts.hostName} on ${dateLabel} at ${timeLabel}.${link} — Wingman`,
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   return { ok: true, meetLink: created.event.meetLink, startMs: opts.startMs };
 }
 
@@ -177,6 +195,7 @@ export async function createBooking(opts: {
   startMs: number;
   inviteeName: string;
   inviteeEmail: string;
+  invitePhone: string;
   notes: string;
   displayTimeZone: string;
   nowMs: number;
@@ -204,6 +223,7 @@ export async function createBooking(opts: {
     endMs,
     inviteeName: opts.inviteeName,
     inviteeEmail: opts.inviteeEmail,
+    invitePhone: opts.invitePhone,
     notes: opts.notes,
     rebookPath: `/book/${settings.slug}`,
     nowMs,
@@ -260,6 +280,7 @@ export async function createDemoBooking(opts: {
   startMs: number;
   inviteeName: string;
   inviteeEmail: string;
+  invitePhone: string;
   notes: string;
   displayTimeZone: string;
   nowMs: number;
@@ -324,6 +345,7 @@ export async function createDemoBooking(opts: {
     endMs,
     inviteeName: opts.inviteeName,
     inviteeEmail: opts.inviteeEmail,
+    invitePhone: opts.invitePhone,
     notes: opts.notes,
     rebookPath: "/book-a-demo",
     nowMs,

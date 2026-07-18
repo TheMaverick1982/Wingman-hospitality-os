@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Demo booking isn't available right now." }, { status: 404 });
   }
 
-  let body: { start?: unknown; name?: unknown; email?: unknown; notes?: unknown; tz?: unknown };
+  let body: { start?: unknown; name?: unknown; email?: unknown; phone?: unknown; notes?: unknown; tz?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
   const startMs = Number(body.start);
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 200) : "";
+  const phone = typeof body.phone === "string" ? body.phone.trim().slice(0, 40) : "";
   const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 2000) : "";
   const tzRaw = typeof body.tz === "string" ? body.tz : "";
   const tz = tzRaw && isValidTimeZone(tzRaw) ? tzRaw : config.time_zone;
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
     startMs,
     inviteeName: name,
     inviteeEmail: email,
+    invitePhone: phone,
     notes,
     displayTimeZone: tz,
     nowMs: Date.now(),
