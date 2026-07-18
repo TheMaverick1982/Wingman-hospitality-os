@@ -16,6 +16,12 @@ function whenLabels(startMs: number, endMs: number, timeZone: string) {
   return { dateLabel, startLabel, endLabel, tzShort };
 }
 
+function videoLabel(url: string): string {
+  if (/zoom\.us/i.test(url)) return "Join with Zoom";
+  if (/meet\.google/i.test(url)) return "Join with Google Meet";
+  return "Join the video call";
+}
+
 function shell(inner: string): string {
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.55;max-width:560px;">${inner}</div>`;
 }
@@ -52,7 +58,7 @@ export function buildBookingEmail(opts: {
 
   const meetBlock = opts.meetLink
     ? `<div style="margin:16px 0 8px;">
-        <a href="${esc(opts.meetLink)}" style="display:inline-block;background:#0a6cff;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">Join with Google Meet →</a>
+        <a href="${esc(opts.meetLink)}" style="display:inline-block;background:#0a6cff;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">${esc(videoLabel(opts.meetLink))} →</a>
       </div>
       <p style="font-size:13px;color:#737373;margin:0 0 4px;">Or paste this link: <a href="${esc(opts.meetLink)}" style="color:#0a6cff;">${esc(opts.meetLink)}</a></p>`
     : `<p style="font-size:14px;color:#525252;margin:0 0 8px;">A video link will follow shortly.</p>`;
@@ -95,7 +101,7 @@ export function buildReminderEmail(opts: {
 
   const cta = opts.meetLink
     ? `<div style="margin:16px 0 8px;">
-        <a href="${esc(opts.meetLink)}" style="display:inline-block;background:#0a6cff;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">Join with Google Meet →</a>
+        <a href="${esc(opts.meetLink)}" style="display:inline-block;background:#0a6cff;color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;padding:11px 22px;border-radius:99px;">${esc(videoLabel(opts.meetLink))} →</a>
       </div>`
     : "";
 

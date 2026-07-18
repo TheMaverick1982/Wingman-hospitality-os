@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Check, ChevronLeft, Clock, Loader2, Video } from "lucide-react";
+import { Calendar, Check, ChevronLeft, ChevronRight, Clock, Globe, Loader2, Video } from "lucide-react";
+import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
 
-type SlotDTO = { start: number; end: number; date: string; time: string };
+type SlotDTO = { start: number; end: number; day: string; date: string; time: string };
+
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function guessTimeZone(): string {
   try {
@@ -13,10 +17,20 @@ function guessTimeZone(): string {
   }
 }
 
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+// Label the video link by its host for the confirmation screen.
+function videoLabel(url: string): string {
+  if (/zoom\.us/i.test(url)) return "Join with Zoom";
+  if (/meet\.google/i.test(url)) return "Join with Google Meet";
+  return "Join the video call";
+}
+
 // Self-contained booking flow used by both the per-salesperson /book/[slug] page
-// and the public round-robin /book-a-demo marketing page. Fetches open slots, lets
-// the guest pick a day + time, collects their details, and books. The endpoints
-// are injected so the same widget drives a single rep or the demo pool.
+// and the public round-robin /book-a-demo marketing page. Shows a month calendar
+// to pick a day, then the open times that day, then collects details.
 export function BookingWidget({
   slotsUrl,
   bookUrl,
@@ -27,12 +41,13 @@ export function BookingWidget({
   hostName?: string;
   durationMinutes: number;
 }) {
-  // Detect the visitor's zone at first render (SSR falls back to the same default).
-  const [tz] = useState<string>(() => guessTimeZone());
+  const [tz, setTz] = useState<string>(() => guessTimeZone());
   const [slots, setSlots] = useState<SlotDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeDate, setActiveDate] = useState<string | null>(null);
+
+  const [view, setView] = useState<{ year: number; month: number } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [chosen, setChosen] = useState<SlotDTO | null>(null);
 
   const [name, setName] = useState("");
@@ -52,8 +67,17 @@ export function BookingWidget({
         if (!r.ok) throw new Error(r.status === 404 ? "This booking page isn't available." : "Couldn't load times.");
         const data = (await r.json()) as { slots: SlotDTO[] };
         if (cancelled) return;
-        setSlots(data.slots ?? []);
-        setActiveDate(data.slots?.[0]?.date ?? null);
+        const list = data.slots ?? [];
+        setSlots(list);
+        const first = list[0];
+        if (first) {
+          const [y, m] = first.day.split("-").map(Number);
+          setView({ year: y, month: m - 1 });
+          setSelectedDay(first.day);
+        } else {
+          setView(null);
+          setSelectedDay(null);
+        }
       } catch (e) {
         if (!cancelled) setLoadError((e as Error).message);
       } finally {
@@ -66,13 +90,41 @@ export function BookingWidget({
     };
   }, [slotsUrl, tz]);
 
-  const dates = useMemo(() => {
-    const seen: string[] = [];
-    for (const s of slots) if (!seen.includes(s.date)) seen.push(s.date);
-    return seen;
-  }, [slots]);
+  const availableDays = useMemo(() => new Set(slots.map((s) => s.day)), [slots]);
+  const daySlots = useMemo(() => slots.filter((s) => s.day === selectedDay), [slots, selectedDay]);
 
-  const daySlots = useMemo(() => slots.filter((s) => s.date === activeDate), [slots, activeDate]);
+  // Calendar grid cells for the current view month (pure date arithmetic in UTC so
+  // it doesn't drift with the browser zone).
+  const cells = useMemo(() => {
+    if (!view) return [] as (string | null)[];
+    const firstWeekday = new Date(Date.UTC(view.year, view.month, 1)).getUTCDay();
+    const daysInMonth = new Date(Date.UTC(view.year, view.month + 1, 0)).getUTCDate();
+    const out: (string | null)[] = [];
+    for (let i = 0; i < firstWeekday; i++) out.push(null);
+    for (let d = 1; d <= daysInMonth; d++) out.push(`${view.year}-${pad(view.month + 1)}-${pad(d)}`);
+    return out;
+  }, [view]);
+
+  const firstAvailableDay = slots[0]?.day ?? null;
+  const canGoPrev = useMemo(() => {
+    if (!view || !firstAvailableDay) return false;
+    const [fy, fm] = firstAvailableDay.split("-").map(Number);
+    return view.year > fy || (view.year === fy && view.month > fm - 1);
+  }, [view, firstAvailableDay]);
+  const lastAvailableDay = slots.length ? slots[slots.length - 1].day : null;
+  const canGoNext = useMemo(() => {
+    if (!view || !lastAvailableDay) return false;
+    const [ly, lm] = lastAvailableDay.split("-").map(Number);
+    return view.year < ly || (view.year === ly && view.month < lm - 1);
+  }, [view, lastAvailableDay]);
+
+  function shiftMonth(delta: number) {
+    setView((v) => {
+      if (!v) return v;
+      const d = new Date(Date.UTC(v.year, v.month + delta, 1));
+      return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
+    });
+  }
 
   async function submit() {
     if (!chosen) return;
@@ -87,7 +139,6 @@ export function BookingWidget({
       const data = (await res.json()) as { ok?: boolean; error?: string; meetLink?: string; code?: string };
       if (!res.ok || !data.ok) {
         setError(data.error ?? "Couldn't book that time.");
-        // If the slot was taken, refresh the list.
         if (data.code === "slot_taken") {
           setChosen(null);
           const r = await fetch(`${slotsUrl}?tz=${encodeURIComponent(tz)}`);
@@ -127,21 +178,53 @@ export function BookingWidget({
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-2.5 text-sm hover:bg-brick-dark transition-colors"
           >
-            <Video size={16} /> Join with Google Meet
+            <Video size={16} /> {videoLabel(done.meetLink)}
           </a>
         )}
       </div>
     );
   }
 
+  // Details form
+  if (chosen) {
+    return (
+      <div>
+        <button onClick={() => setChosen(null)} type="button" className="text-sm text-muted hover:text-ink inline-flex items-center gap-1 mb-4">
+          <ChevronLeft size={15} /> Back to times
+        </button>
+        <div className="bg-paper border border-line rounded-xl px-4 py-3 mb-5">
+          <div className="text-sm font-semibold text-ink">{chosen.date}</div>
+          <div className="text-sm text-muted">
+            {chosen.time} · {durationMinutes} min · {tz}
+          </div>
+        </div>
+        <label className="block text-[13px] font-semibold mb-1.5 text-ink">Your name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT} placeholder="Jane Doe" />
+        <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Email</label>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} placeholder="jane@restaurant.com" />
+        <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Anything we should know? (optional)</label>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} min-h-[80px]`} placeholder="What you'd like to cover." />
+        {error && <p className="text-danger text-sm mt-3">{error}</p>}
+        <button
+          onClick={submit}
+          disabled={submitting || !name.trim() || !email.trim()}
+          type="button"
+          className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-3 text-sm hover:bg-brick-dark transition-colors disabled:opacity-40"
+        >
+          {submitting ? <Loader2 size={16} className="animate-spin" /> : <Calendar size={16} />} Confirm booking
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="flex items-center gap-4 text-sm text-muted mb-5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted mb-5">
         <span className="inline-flex items-center gap-1.5">
           <Clock size={15} /> {durationMinutes} min
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Video size={15} /> Google Meet
+          <Video size={15} /> Video call
         </span>
       </div>
 
@@ -153,68 +236,102 @@ export function BookingWidget({
         <p className="text-danger text-sm py-6">{loadError}</p>
       ) : slots.length === 0 ? (
         <p className="text-muted text-sm py-6">No open times right now — please check back soon.</p>
-      ) : chosen ? (
-        // Details form
-        <div>
-          <button onClick={() => setChosen(null)} type="button" className="text-sm text-muted hover:text-ink inline-flex items-center gap-1 mb-4">
-            <ChevronLeft size={15} /> Back to times
-          </button>
-          <div className="bg-paper border border-line rounded-xl px-4 py-3 mb-5">
-            <div className="text-sm font-semibold text-ink">{chosen.date}</div>
-            <div className="text-sm text-muted">
-              {chosen.time} · {durationMinutes} min · {tz}
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+          {/* Month calendar */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold text-ink">{view ? `${MONTH_NAMES[view.month]} ${view.year}` : ""}</div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => shiftMonth(-1)}
+                  disabled={!canGoPrev}
+                  type="button"
+                  className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => shiftMonth(1)}
+                  disabled={!canGoNext}
+                  type="button"
+                  className="p-1.5 rounded-lg text-muted hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {WEEKDAY_LABELS.map((w) => (
+                <div key={w} className="text-center text-[11px] font-semibold text-muted py-1">
+                  {w}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((day, i) => {
+                if (!day) return <div key={`e${i}`} />;
+                const dayNum = Number(day.slice(8));
+                const isAvailable = availableDays.has(day);
+                const isSelected = day === selectedDay;
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    disabled={!isAvailable}
+                    onClick={() => setSelectedDay(day)}
+                    className={`aspect-square rounded-full text-sm flex items-center justify-center transition-colors ${
+                      isSelected
+                        ? "bg-brick text-white font-semibold"
+                        : isAvailable
+                          ? "text-ink font-medium bg-brick-tint hover:bg-brick hover:text-white"
+                          : "text-muted-2 cursor-default"
+                    }`}
+                  >
+                    {dayNum}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <label className="block text-[13px] font-semibold mb-1.5 text-ink">Your name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT} placeholder="Jane Doe" />
-          <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} placeholder="jane@restaurant.com" />
-          <label className="block text-[13px] font-semibold mb-1.5 mt-4 text-ink">Anything we should know? (optional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${INPUT} min-h-[80px]`} placeholder="What you'd like to cover." />
-          {error && <p className="text-danger text-sm mt-3">{error}</p>}
-          <button
-            onClick={submit}
-            disabled={submitting || !name.trim() || !email.trim()}
-            type="button"
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full bg-brick text-white font-semibold px-5 py-3 text-sm hover:bg-brick-dark transition-colors disabled:opacity-40"
-          >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : <Calendar size={16} />} Confirm booking
-          </button>
-        </div>
-      ) : (
-        // Date + time picker
-        <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-5">
-          <div className="flex sm:flex-col gap-2 overflow-x-auto sm:max-h-[320px] sm:overflow-y-auto pb-1">
-            {dates.map((d) => (
-              <button
-                key={d}
-                onClick={() => setActiveDate(d)}
-                type="button"
-                className={`text-left text-sm rounded-xl px-3.5 py-2.5 border whitespace-nowrap transition-colors ${
-                  d === activeDate ? "border-brick bg-brick-tint text-brick-dark font-semibold" : "border-line text-charcoal-2 hover:bg-paper"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:max-h-[320px] sm:overflow-y-auto content-start">
-            {daySlots.map((s) => (
-              <button
-                key={s.start}
-                onClick={() => {
-                  setChosen(s);
-                  setError(null);
-                }}
-                type="button"
-                className="text-sm rounded-xl px-3 py-2.5 border border-line-strong text-ink font-medium hover:border-brick hover:bg-brick-tint transition-colors"
-              >
-                {s.time}
-              </button>
-            ))}
+
+          {/* Times for the selected day */}
+          <div>
+            <div className="text-sm font-semibold text-ink mb-3">
+              {daySlots[0]?.date ?? "Pick a day"}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto content-start pr-1">
+              {daySlots.map((s) => (
+                <button
+                  key={s.start}
+                  onClick={() => {
+                    setChosen(s);
+                    setError(null);
+                  }}
+                  type="button"
+                  className="text-sm rounded-xl px-3 py-2.5 border border-line-strong text-ink font-medium hover:border-brick hover:bg-brick-tint transition-colors"
+                >
+                  {s.time}
+                </button>
+              ))}
+              {daySlots.length === 0 && <p className="text-sm text-muted col-span-full">No times this day.</p>}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Time zone */}
+      <div className="mt-6 pt-4 border-t border-line flex items-center gap-2">
+        <Globe size={15} className="text-muted shrink-0" />
+        <span className="text-sm text-muted whitespace-nowrap">Times shown in</span>
+        <select value={tz} onChange={(e) => setTz(e.target.value)} className="text-sm bg-transparent text-ink font-medium outline-none border border-line rounded-lg px-2 py-1 max-w-[240px]">
+          {BOOKING_TIMEZONES.map(([v, label]) => (
+            <option key={v} value={v}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

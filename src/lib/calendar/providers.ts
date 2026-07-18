@@ -58,6 +58,9 @@ export type CreateEventOpts = {
   timeZone: string;
   inviteeEmail: string;
   inviteeName: string;
+  // Pre-created external video link (e.g. Zoom) to embed in the event. Google
+  // ignores this (it mints its own Meet link); Outlook embeds it.
+  videoLink?: string;
 };
 
 export async function createEventOn(account: CalendarAccount, opts: CreateEventOpts): Promise<{ event?: CreatedEvent; error?: string }> {

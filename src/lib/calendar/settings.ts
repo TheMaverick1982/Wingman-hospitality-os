@@ -17,7 +17,10 @@ export type CalendarSettings = {
   page_description: string;
   is_active: boolean;
   in_demo_pool: boolean;
+  video_provider: VideoProvider;
 };
+
+export type VideoProvider = "auto" | "google_meet" | "zoom";
 
 // Shared config for the public round-robin /book-a-demo page.
 export type DemoPoolConfig = {
@@ -71,7 +74,12 @@ function rowToSettings(row: Record<string, unknown>): CalendarSettings {
     page_description: String(row.page_description ?? ""),
     is_active: Boolean(row.is_active),
     in_demo_pool: Boolean(row.in_demo_pool),
+    video_provider: normalizeVideoProvider(row.video_provider),
   };
+}
+
+function normalizeVideoProvider(raw: unknown): VideoProvider {
+  return raw === "google_meet" || raw === "zoom" ? raw : "auto";
 }
 
 export async function getCalendarSettings(userId: string): Promise<CalendarSettings | null> {
