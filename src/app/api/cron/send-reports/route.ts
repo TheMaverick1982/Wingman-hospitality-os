@@ -4,7 +4,16 @@ import { sendEmail } from "@/lib/email";
 import { stageOf, type GuestWithVisits } from "@/lib/hospitality";
 import { buildPhases } from "@/lib/growth-plan";
 
+// Report building runs several sequential per-org queries + an email per schedule,
+// so give the run room and bound how many schedules one run takes on.
+export const maxDuration = 300;
+
 const FREQUENCY_DAYS: Record<string, number> = { weekly: 7, biweekly: 14, monthly: 30 };
+
+// Cap schedules pulled per run; ordered oldest-sent-first so the most overdue go
+// out first and the rest are picked up on the next daily run.
+const SCHEDULE_BATCH = 400;
+const TIME_BUDGET_MS = 280_000;
 
 const SECTION_LABELS: Record<string, string> = {
   culture: "Culture",
@@ -24,10 +33,15 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const { data: schedules, error } = await supabase.from("report_schedules").select("*");
+  const { data: schedules, error } = await supabase
+    .from("report_schedules")
+    .select("*")
+    .order("last_sent_at", { ascending: true, nullsFirst: true })
+    .limit(SCHEDULE_BATCH);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const now = Date.now();
+  const startedAt = now;
   const due = (schedules ?? []).filter((s) => {
     if (!s.last_sent_at) return true;
     const daysSince = (now - new Date(s.last_sent_at).getTime()) / 86400000;
@@ -35,8 +49,14 @@ export async function GET(request: NextRequest) {
   });
 
   const results: { id: string; sent: boolean; error?: string }[] = [];
+  let capped = false;
 
   for (const schedule of due) {
+    // Stop before the platform kills us mid-send; the rest go out next run.
+    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      capped = true;
+      break;
+    }
     try {
       if (schedule.recipient_emails.length === 0) {
         results.push({ id: schedule.id, sent: false, error: "No recipients" });
@@ -59,7 +79,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked: schedules?.length ?? 0, due: due.length, results });
+  return NextResponse.json({ checked: schedules?.length ?? 0, due: due.length, sent: results.filter((r) => r.sent).length, capped, results });
 }
 
 async function buildReportHtml(

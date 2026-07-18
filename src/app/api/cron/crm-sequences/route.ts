@@ -57,23 +57,41 @@ export async function GET(request: NextRequest) {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const windowOpen = inSendWindow();
+  // Held/failed enrollments are pushed ~1h out so they leave the due window for
+  // this run (retried next hour). This is what lets the drain loop below re-fetch
+  // fresh rows each pass without ever spinning on the same ones.
+  const retryIso = new Date(now + 3_600_000).toISOString();
 
-  const { data, error } = await admin
-    .from("crm_enrollments")
-    .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, name, phone, unsubscribed, sms_marketing_consent, sms_opt_out, booked_at, customer_at, org_id, fields), crm_sequences(source, active, published)")
-    .eq("status", "active")
-    .lte("next_run_at", nowIso)
-    .order("next_run_at", { ascending: true })
-    .limit(120);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Drain the backlog within the run rather than capping at one batch/hour.
+  // Bounded by a wall-clock budget (well under maxDuration) and a hard batch cap.
+  const BATCH = 150;
+  const TIME_BUDGET_MS = 50_000;
+  const MAX_BATCHES = 60;
 
-  const due = (data ?? []) as unknown as Enrollment[];
+  let processed = 0;
   let sent = 0;
   let smsSent = 0;
   let smsSkipped = 0;
   let stopped = 0;
   let completed = 0;
   let held = 0;
+  let capped = false;
+
+  for (let batchNo = 0; batchNo < MAX_BATCHES; batchNo++) {
+    const { data, error } = await admin
+      .from("crm_enrollments")
+      .select("id, sequence_id, contact_id, next_step_order, enrolled_at, crm_contacts(email, name, phone, unsubscribed, sms_marketing_consent, sms_opt_out, booked_at, customer_at, org_id, fields), crm_sequences(source, active, published)")
+      .eq("status", "active")
+      .lte("next_run_at", nowIso)
+      .order("next_run_at", { ascending: true })
+      .limit(BATCH);
+    if (error) {
+      if (processed === 0) return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[crm] batch fetch failed mid-run", error.message);
+      break;
+    }
+    const due = (data ?? []) as unknown as Enrollment[];
+    if (due.length === 0) break;
 
   for (const e of due) {
     const contact = e.crm_contacts;
@@ -81,7 +99,10 @@ export async function GET(request: NextRequest) {
     if (!contact || !seq) continue;
 
     // Draft/unpublished → hold (don't send, don't advance); re-checked next run.
-    if (!seq.published) continue;
+    if (!seq.published) {
+      await admin.from("crm_enrollments").update({ next_run_at: retryIso, updated_at: nowIso }).eq("id", e.id);
+      continue;
+    }
 
     // Customer-oriented sequences (signup onboarding, referral) are FOR customers,
     // so becoming a customer / booking a demo must NOT stop them — only unsubscribe
@@ -126,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     // Send-window hold for non-transactional emails.
     if (!toSend.transactional && !windowOpen) {
-      await admin.from("crm_enrollments").update({ next_step_order: toSend.step_order, updated_at: nowIso }).eq("id", e.id);
+      await admin.from("crm_enrollments").update({ next_step_order: toSend.step_order, next_run_at: retryIso, updated_at: nowIso }).eq("id", e.id);
       held++;
       continue;
     }
@@ -184,7 +205,7 @@ export async function GET(request: NextRequest) {
       await sendEmail({ to: [contact.email], subject, html: buildSequenceEmailHtml(body, contact.email), replyTo: CRM_REPLY_TO });
     } catch (err) {
       console.error("[crm] sequence send failed", err);
-      await admin.from("crm_enrollments").update({ next_step_order: toSend.step_order, updated_at: nowIso }).eq("id", e.id);
+      await admin.from("crm_enrollments").update({ next_step_order: toSend.step_order, next_run_at: retryIso, updated_at: nowIso }).eq("id", e.id);
       continue;
     }
     sent++;
@@ -201,5 +222,15 @@ export async function GET(request: NextRequest) {
     await advance();
   }
 
-  return NextResponse.json({ processed: due.length, sent, smsSent, smsSkipped, stopped, completed, held, windowOpen });
+    processed += due.length;
+    if (due.length < BATCH) break; // fully drained the due backlog
+    if (Date.now() - now > TIME_BUDGET_MS) {
+      capped = true;
+      break;
+    }
+  }
+
+  if (capped) console.warn(`[crm] time budget hit after ${processed} due steps — backlog remains, resumes next run`);
+
+  return NextResponse.json({ processed, sent, smsSent, smsSkipped, stopped, completed, held, windowOpen, capped });
 }
