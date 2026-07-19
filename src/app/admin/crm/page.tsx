@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CRM_STAGES } from "@/lib/crm";
-import { PipelineBoard, type BoardContact } from "./pipeline-board";
+import { CrmWorkspace } from "./crm-workspace";
+import { type ContactRow } from "./contacts-table";
 
 export const metadata: Metadata = { title: "CRM" };
 
@@ -16,10 +16,10 @@ export default async function CrmPage() {
 
   const { data } = await admin
     .from("crm_contacts")
-    .select("id, email, name, stage, first_source, unsubscribed, last_activity_at")
+    .select("id, email, name, phone, stage, first_source, unsubscribed, tags, last_activity_at, created_at, fields")
     .order("last_activity_at", { ascending: false })
     .limit(2000);
-  const contacts = (data ?? []) as BoardContact[];
+  const contacts = (data ?? []) as ContactRow[];
 
   const weekAgo = weekAgoIso();
   const newThisWeek = contacts.filter((c) => c.last_activity_at >= weekAgo).length;
@@ -30,7 +30,7 @@ export default async function CrmPage() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">CRM</h1>
-          <p className="text-sm text-muted mt-1">Every lead from your funnels, in one pipeline. Drag a card to move it through the stages.</p>
+          <p className="text-sm text-muted mt-1">Every lead from your funnels. Search and filter the table, or switch to the board to drag contacts through stages.</p>
         </div>
         <div className="flex gap-3">
           {[
@@ -51,7 +51,7 @@ export default async function CrmPage() {
           No contacts yet. New leads from the demo, sales chat, calculator, and scorecard will appear here automatically.
         </div>
       ) : (
-        <PipelineBoard contacts={contacts} stages={CRM_STAGES} />
+        <CrmWorkspace contacts={contacts} />
       )}
     </div>
   );
