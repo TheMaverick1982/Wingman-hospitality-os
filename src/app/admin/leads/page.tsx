@@ -22,14 +22,17 @@ export default async function AdminLeadsPage() {
 
   const [{ data }, { data: contacts }, { data: enrolls }] = await Promise.all([
     admin.from("leads").select("id, email, name, source, payload, created_at").is("deleted_at", null).order("created_at", { ascending: false }).limit(500),
-    admin.from("crm_contacts").select("id, email"),
+    admin.from("crm_contacts").select("id, email, stage"),
     admin.from("crm_enrollments").select("contact_id, status, crm_sequences(name)").eq("status", "active"),
   ]);
   const leads = (data ?? []) as Lead[];
 
-  // Map each lead email → the active sequence it's enrolled in (via its CRM contact).
+  // Map each lead email → its CRM contact (id + stage). Stage drives the
+  // "Customers" smart list (signed_up), matching the Pipeline contacts list.
+  const contactByEmail = new Map<string, { id: string; stage: string }>();
+  for (const c of (contacts ?? []) as { id: string; email: string; stage: string }[]) contactByEmail.set(c.email, { id: c.id, stage: c.stage });
   const contactIdByEmail = new Map<string, string>();
-  for (const c of (contacts ?? []) as { id: string; email: string }[]) contactIdByEmail.set(c.email, c.id);
+  for (const [email, c] of contactByEmail) contactIdByEmail.set(email, c.id);
   const seqByContact = new Map<string, string>();
   for (const e of (enrolls ?? []) as unknown as { contact_id: string; crm_sequences: { name: string } | null }[]) {
     if (e.crm_sequences?.name) seqByContact.set(e.contact_id, e.crm_sequences.name);
@@ -44,16 +47,20 @@ export default async function AdminLeadsPage() {
     return acc;
   }, {});
 
-  const rows: LeadRow[] = leads.map((l) => ({
-    id: l.id,
-    name: l.name,
-    email: l.email,
-    source: l.source,
-    payload: l.payload,
-    created_at: l.created_at,
-    automation: automationFor(l.email),
-    contactId: contactIdByEmail.get(l.email.toLowerCase()) ?? null,
-  }));
+  const rows: LeadRow[] = leads.map((l) => {
+    const c = contactByEmail.get(l.email.toLowerCase());
+    return {
+      id: l.id,
+      name: l.name,
+      email: l.email,
+      source: l.source,
+      payload: l.payload,
+      created_at: l.created_at,
+      automation: automationFor(l.email),
+      contactId: c?.id ?? null,
+      isCustomer: c?.stage === "signed_up",
+    };
+  });
 
   return (
     <>
