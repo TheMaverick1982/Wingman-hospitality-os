@@ -30,6 +30,18 @@ const STAGE_STYLE: Partial<Record<CrmStage, string>> = {
 };
 const STAGE_FALLBACK = "bg-paper text-charcoal-2 border-line";
 
+// Smart lists are LIVE segments (filters), not static lists — membership updates
+// automatically as a contact's stage changes. "Customers" holds everyone at the
+// signed_up stage: they join on signup and drop off if their stage later moves.
+const SMART_LISTS: { key: string; label: string; match: (c: ContactRow) => boolean }[] = [
+  { key: "all", label: "All contacts", match: () => true },
+  { key: "customers", label: "Customers", match: (c) => c.stage === "signed_up" },
+  { key: "leads", label: "Active leads", match: (c) => c.stage === "new" || c.stage === "engaged" },
+  { key: "demoed", label: "Demoed", match: (c) => c.stage === "demoed" || c.stage === "demo_completed" },
+  { key: "past", label: "Past clients", match: (c) => c.stage === "past_client" },
+  { key: "lost", label: "Lost", match: (c) => c.stage === "lost" },
+];
+
 // Contact tags are stored as src:*/aff:* internal labels — show them cleaned up.
 function displayTag(tag: string): string {
   if (tag.startsWith("src:")) return sourceLabel(tag.slice(4));
@@ -59,10 +71,17 @@ type SortKey = "name" | "created_at" | "last_activity_at";
 export function ContactsTable({ contacts }: { contacts: ContactRow[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [smart, setSmart] = useState("all");
   const [stage, setStage] = useState<"all" | CrmStage>("all");
   const [source, setSource] = useState<"all" | string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("last_activity_at");
   const [asc, setAsc] = useState(false);
+
+  const listCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const sl of SMART_LISTS) m[sl.key] = contacts.filter(sl.match).length;
+    return m;
+  }, [contacts]);
 
   const sources = useMemo(() => {
     const s = new Set<string>();
@@ -72,7 +91,9 @@ export function ContactsTable({ contacts }: { contacts: ContactRow[] }) {
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const smartMatch = SMART_LISTS.find((s) => s.key === smart)?.match ?? (() => true);
     let list = contacts.filter((c) => {
+      if (!smartMatch(c)) return false;
       if (stage !== "all" && c.stage !== stage) return false;
       if (source !== "all" && c.first_source !== source) return false;
       if (!needle) return true;
@@ -90,7 +111,7 @@ export function ContactsTable({ contacts }: { contacts: ContactRow[] }) {
       return asc ? cmp : -cmp;
     });
     return list;
-  }, [contacts, q, stage, source, sortKey, asc]);
+  }, [contacts, q, smart, stage, source, sortKey, asc]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setAsc((v) => !v);
@@ -111,6 +132,26 @@ export function ContactsTable({ contacts }: { contacts: ContactRow[] }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Smart lists (live segments) */}
+      <div className="flex flex-wrap gap-1.5">
+        {SMART_LISTS.map((sl) => {
+          const active = smart === sl.key;
+          return (
+            <button
+              key={sl.key}
+              type="button"
+              onClick={() => setSmart(sl.key)}
+              className={`inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                active ? "bg-ink text-white border-ink" : "bg-white text-charcoal-2 border-line hover:border-ink/30"
+              }`}
+            >
+              {sl.label}
+              <span className={`text-[11px] ${active ? "text-white/70" : "text-muted-2"}`}>{listCounts[sl.key] ?? 0}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
