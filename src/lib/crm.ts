@@ -67,7 +67,7 @@ export function sourceLabel(source: string | null | undefined): string {
   return SOURCE_LABELS[source] ?? source;
 }
 
-export type CrmActivityKind = "lead" | "note" | "email_out" | "email_in" | "stage_change" | "system";
+export type CrmActivityKind = "lead" | "note" | "email_out" | "email_in" | "sms_out" | "sms_in" | "stage_change" | "system";
 
 // Map a captured lead's payload into the contact custom fields the emails merge
 // ({{contact.calc_annual_upside}}, {{contact.scorecard_gap_1}}, ...). Reads both

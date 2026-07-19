@@ -53,7 +53,7 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
 
   const { data: contact } = await admin
     .from("crm_contacts")
-    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, assigned_rep_id, visitor_id, created_at")
+    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, assigned_rep_id, visitor_id, created_at, tags, sms_opt_out")
     .eq("id", id)
     .maybeSingle();
   if (!contact) notFound();
