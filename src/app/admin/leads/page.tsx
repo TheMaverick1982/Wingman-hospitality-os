@@ -79,7 +79,7 @@ export default async function AdminLeadsPage() {
         </div>
       </div>
 
-      <LeadsTable rows={rows} />
+      <LeadsTable rows={rows} isOwner={isOwner} />
     </>
   );
 }
