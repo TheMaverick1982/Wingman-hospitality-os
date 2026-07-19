@@ -124,6 +124,13 @@ export function StepEditor({
           className="text-sm bg-paper border border-line rounded-lg px-3 py-2 outline-none focus:border-brick text-ink resize-y font-[inherit]"
         />
 
+        <p className="text-[12px] text-muted-2">
+          Merge fields: <code className="bg-paper px-1 rounded">{"{{first_name}}"}</code>{" "}
+          <code className="bg-paper px-1 rounded">{"{{firstPrice}}"}</code>{" "}
+          <code className="bg-paper px-1 rounded">{"{{addlPrice}}"}</code>{" "}
+          <code className="bg-paper px-1 rounded">{"{{calendar.booking_link}}"}</code> — prices always render your current pricing.
+        </p>
+
         {channel === "sms" && (
           <p className={`text-[12px] ${body.length > SMS_LIMIT ? "text-danger" : "text-muted-2"}`}>
             {body.length} characters{body.length > 160 ? ` · ~${Math.ceil(body.length / 153)} segments` : ""} · only contacts who opted in to marketing texts receive this. STOP/HELP are handled automatically.
