@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isCrmStage, stageLabel } from "@/lib/crm";
 import { stopEnrollments, suppressEmail, buildSequenceEmailHtml } from "@/lib/crm-sequences";
+import { sendConversationSms } from "@/lib/conversations";
 import { personalize } from "@/lib/name-safety";
 
 export type CrmActionState = { error: string | null; ok: boolean };
@@ -67,7 +68,7 @@ export async function assignContact(contactId: string, repId: string): Promise<C
   return { error: null, ok: true };
 }
 
-// Edit a contact's details (name, phone, freeform notes).
+// Edit a contact's details (name, email, phone, freeform notes).
 export async function updateContactDetails(_prev: CrmActionState, formData: FormData): Promise<CrmActionState> {
   const me = await platformSectionActor("crm");
   if (!me) return { error: "Not authorized.", ok: false };
@@ -76,9 +77,58 @@ export async function updateContactDetails(_prev: CrmActionState, formData: Form
   const name = String(formData.get("name") || "").trim() || null;
   const phone = String(formData.get("phone") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address.", ok: false };
 
   const admin = createAdminClient();
-  const { error } = await admin.from("crm_contacts").update({ name, phone, notes, updated_at: new Date().toISOString() }).eq("id", contactId);
+  const { error } = await admin.from("crm_contacts").update({ name, email, phone, notes, updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (error) {
+    if (error.code === "23505") return { error: "Another contact already uses that email.", ok: false };
+    return { error: error.message, ok: false };
+  }
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Send a one-off SMS to the contact and log it. Reuses the conversations helper,
+// which enforces Twilio config, a valid mobile, and STOP/opt-out.
+export async function sendContactSms(_prev: CrmActionState, formData: FormData): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const contactId = String(formData.get("contactId") || "");
+  const body = String(formData.get("body") || "").trim();
+  if (!contactId || !body) return { error: "Write a message first.", ok: false };
+  const res = await sendConversationSms(contactId, body);
+  if (!res.ok) return { error: res.error ?? "Couldn't send the text.", ok: false };
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Add a freeform tag to a contact (e.g. "vip", "franchise-lead").
+export async function addContactTag(contactId: string, tag: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const t = tag.trim().slice(0, 40);
+  if (!contactId || !t) return { error: "Enter a tag.", ok: false };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("crm_contacts").select("tags").eq("id", contactId).maybeSingle();
+  const cur = ((c as { tags: string[] | null } | null)?.tags) ?? [];
+  if (cur.includes(t)) return { error: null, ok: true };
+  const { error } = await admin.from("crm_contacts").update({ tags: [...cur, t], updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (error) return { error: error.message, ok: false };
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Remove a tag from a contact.
+export async function removeContactTag(contactId: string, tag: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!contactId || !tag) return { error: "Missing tag.", ok: false };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("crm_contacts").select("tags").eq("id", contactId).maybeSingle();
+  const cur = ((c as { tags: string[] | null } | null)?.tags) ?? [];
+  const { error } = await admin.from("crm_contacts").update({ tags: cur.filter((x) => x !== tag), updated_at: new Date().toISOString() }).eq("id", contactId);
   if (error) return { error: error.message, ok: false };
   revalidatePath(`/admin/crm/${contactId}`);
   return { error: null, ok: true };

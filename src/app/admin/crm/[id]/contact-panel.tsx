@@ -2,16 +2,20 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { CRM_STAGES, sourceLabel, leadResultRows, type CrmStage, type CrmActivityKind } from "@/lib/crm";
 import {
   moveContactStage,
   addNote,
   sendContactEmail,
+  sendContactSms,
   updateContactDetails,
   markContactBooked,
   unsubscribeContact,
   deleteContact,
   assignContact,
+  addContactTag,
+  removeContactTag,
   type CrmActionState,
 } from "../actions";
 
@@ -31,6 +35,8 @@ export type ContactRecord = {
   org_id: string | null;
   assigned_rep_id: string | null;
   created_at: string;
+  tags: string[] | null;
+  sms_opt_out: boolean;
 };
 
 export type ActivityRecord = {
@@ -56,13 +62,43 @@ function when(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+// Contact tags are stored as raw labels; src:*/aff:* internal tags get a friendly
+// display name, but removal still uses the raw value.
+function displayTag(tag: string): string {
+  if (tag.startsWith("src:")) return sourceLabel(tag.slice(4));
+  if (tag.startsWith("aff:")) return `Affiliate: ${tag.slice(4)}`;
+  return tag;
+}
+
 export function ContactPanel({ contact, activities, enrollments, canDelete, reps }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean; reps: SalesRep[] }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"email" | "note">("email");
+  const [tab, setTab] = useState<"email" | "sms" | "note">("email");
   const [savingStage, setSavingStage] = useState(false);
   const [savingRep, setSavingRep] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tags, setTags] = useState<string[]>(contact.tags ?? []);
+  const [newTag, setNewTag] = useState("");
+  const [tagBusy, setTagBusy] = useState(false);
+
+  async function onAddTag() {
+    const t = newTag.trim().slice(0, 40);
+    if (!t || tags.includes(t)) {
+      setNewTag("");
+      return;
+    }
+    setTagBusy(true);
+    setTags((prev) => [...prev, t]); // optimistic
+    setNewTag("");
+    const res = await addContactTag(contact.id, t);
+    if (!res.ok) setTags((prev) => prev.filter((x) => x !== t)); // revert
+    setTagBusy(false);
+  }
+  async function onRemoveTag(tag: string) {
+    setTags((prev) => prev.filter((x) => x !== tag)); // optimistic
+    const res = await removeContactTag(contact.id, tag);
+    if (!res.ok) setTags((prev) => [...prev, tag]); // revert
+  }
 
   function onAssign(repId: string) {
     setSavingRep(true);
@@ -74,8 +110,10 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
 
   const [detailsState, detailsAction, detailsPending] = useActionState(updateContactDetails, initial);
   const [emailState, emailAction, emailPending] = useActionState(sendContactEmail, initial);
+  const [smsState, smsAction, smsPending] = useActionState(sendContactSms, initial);
   const [noteState, noteAction, notePending] = useActionState(addNote, initial);
   const emailFormRef = useRef<HTMLFormElement>(null);
+  const smsFormRef = useRef<HTMLFormElement>(null);
   const noteFormRef = useRef<HTMLFormElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +123,12 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
       router.refresh();
     }
   }, [emailState, router]);
+  useEffect(() => {
+    if (smsState.ok) {
+      smsFormRef.current?.reset();
+      router.refresh();
+    }
+  }, [smsState, router]);
   useEffect(() => {
     if (noteState.ok) {
       noteFormRef.current?.reset();
@@ -138,6 +182,9 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
 
             <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Name</label>
             <input name="name" defaultValue={contact.name ?? ""} placeholder="Full name" className="text-sm bg-paper border border-line rounded-lg px-3 py-2 -mt-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2" />
+
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Email</label>
+            <input name="email" type="email" defaultValue={contact.email} placeholder="name@email.com" className="text-sm bg-paper border border-line rounded-lg px-3 py-2 -mt-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2" />
 
             <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Phone</label>
             <input name="phone" defaultValue={contact.phone ?? ""} placeholder="(555) 555-5555" className="text-sm bg-paper border border-line rounded-lg px-3 py-2 -mt-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2" />
@@ -195,6 +242,39 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
             </dl>
           </div>
 
+          {/* Tags */}
+          <div className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Tags</span>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.length === 0 && <span className="text-[13px] text-muted-2">No tags yet.</span>}
+              {tags.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 text-[12px] font-medium text-olive bg-olive-tint pl-2.5 pr-1.5 py-0.5 rounded-full">
+                  {displayTag(t)}
+                  <button type="button" onClick={() => onRemoveTag(t)} aria-label={`Remove ${displayTag(t)}`} className="text-olive/60 hover:text-danger transition-colors">
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onAddTag();
+                  }
+                }}
+                placeholder="Add a tag…"
+                className="flex-1 min-w-0 text-sm bg-paper border border-line rounded-lg px-3 py-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2"
+              />
+              <button type="button" onClick={onAddTag} disabled={tagBusy || !newTag.trim()} className="text-[13px] font-semibold text-ink bg-paper border border-line-strong rounded-lg px-3 py-1.5 hover:bg-white disabled:opacity-40 transition-colors shrink-0">
+                Add
+              </button>
+            </div>
+          </div>
+
           {/* Automations */}
           <div className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-3">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Automations</span>
@@ -247,6 +327,9 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
               <button type="button" onClick={() => setTab("email")} className={`text-[13px] font-semibold px-3 py-1.5 rounded-lg transition-colors ${tab === "email" ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"}`}>
                 Email
               </button>
+              <button type="button" onClick={() => setTab("sms")} className={`text-[13px] font-semibold px-3 py-1.5 rounded-lg transition-colors ${tab === "sms" ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"}`}>
+                SMS
+              </button>
               <button type="button" onClick={() => setTab("note")} className={`text-[13px] font-semibold px-3 py-1.5 rounded-lg transition-colors ${tab === "note" ? "bg-brick text-white" : "text-charcoal-2 hover:bg-paper"}`}>
                 Note
               </button>
@@ -261,6 +344,22 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
                   {emailState.error ? <span className="text-[12.5px] text-danger">{emailState.error}</span> : <span />}
                   <button type="submit" disabled={emailPending || contact.unsubscribed} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark disabled:opacity-40 transition-colors">
                     {emailPending ? "Sending…" : "Send email"}
+                  </button>
+                </div>
+              </form>
+            ) : tab === "sms" ? (
+              <form ref={smsFormRef} action={smsAction} className="flex flex-col gap-2">
+                <input type="hidden" name="contactId" value={contact.id} />
+                {(!contact.phone || contact.sms_opt_out) && (
+                  <p className="text-[12.5px] text-muted-2">
+                    {contact.sms_opt_out ? "This contact replied STOP — you can't text them." : "No mobile number on file. Add a phone above, then save, to text."}
+                  </p>
+                )}
+                <textarea name="body" placeholder={contact.sms_opt_out ? "Opted out of texts." : "Write a text…"} required rows={4} disabled={!contact.phone || contact.sms_opt_out} className="text-sm bg-paper border border-line rounded-lg px-3 py-2 outline-none focus:border-brick text-ink placeholder:text-muted-2 resize-y disabled:opacity-50" />
+                <div className="flex items-center justify-between">
+                  {smsState.error ? <span className="text-[12.5px] text-danger">{smsState.error}</span> : <span />}
+                  <button type="submit" disabled={smsPending || !contact.phone || contact.sms_opt_out} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark disabled:opacity-40 transition-colors">
+                    {smsPending ? "Sending…" : "Send text"}
                   </button>
                 </div>
               </form>
@@ -308,6 +407,21 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
 }
 
 function ActivityRow({ a }: { a: ActivityRecord }) {
+  if (a.kind === "sms_out" || a.kind === "sms_in") {
+    const outbound = a.kind === "sms_out";
+    const automated = Boolean((a.meta as { automated?: boolean })?.automated);
+    return (
+      <div className={`max-w-[85%] ${outbound ? "self-end" : "self-start"}`}>
+        <div className={`rounded-2xl px-4 py-2.5 ${outbound ? "bg-[#0a7d3b] text-white rounded-tr-sm" : "bg-paper text-ink rounded-tl-sm border border-line"}`}>
+          <div className="text-[13.5px] leading-[1.5] whitespace-pre-line">{a.body}</div>
+        </div>
+        <div className={`text-[11px] text-muted-2 mt-1 ${outbound ? "text-right" : ""}`}>
+          {automated ? "Automated text" : outbound ? "Text sent" : "Text received"} · {when(a.created_at)}
+        </div>
+      </div>
+    );
+  }
+
   if (a.kind === "email_out" || a.kind === "email_in") {
     const outbound = a.kind === "email_out";
     const automated = Boolean((a.meta as { automated?: boolean })?.automated);
