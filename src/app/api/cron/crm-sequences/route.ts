@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { renderMerge, CRM_REPLY_TO } from "@/lib/crm-merge";
+import { getPlatformPricing, applyPriceTokens } from "@/lib/pricing";
 import { resolveStep } from "@/lib/crm-step-resolver";
 import { sendSms, normalizePhone, twilioConfigured } from "@/lib/calendar/sms";
 
@@ -93,6 +94,10 @@ export async function GET(request: NextRequest) {
     const due = (data ?? []) as unknown as Enrollment[];
     if (due.length === 0) break;
 
+  // Live pricing so {{firstPrice}}/{{addlPrice}} in any step render the current
+  // configured price — automations never quote a stale number.
+  const pricing = await getPlatformPricing();
+
   for (const e of due) {
     const contact = e.crm_contacts;
     const seq = e.crm_sequences;
@@ -175,7 +180,7 @@ export async function GET(request: NextRequest) {
         await advance();
         continue;
       }
-      const smsBody = renderMerge(toSend.body, contact);
+      const smsBody = applyPriceTokens(renderMerge(toSend.body, contact), pricing);
       const res = await sendSms(phone, smsBody);
       if (!res.ok) {
         // Best-effort: a single number failing (e.g. carrier-blocked, opted out at
@@ -199,8 +204,8 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const subject = renderMerge(toSend.subject, contact);
-    const body = renderMerge(toSend.body, contact);
+    const subject = applyPriceTokens(renderMerge(toSend.subject, contact), pricing);
+    const body = applyPriceTokens(renderMerge(toSend.body, contact), pricing);
     try {
       await sendEmail({ to: [contact.email], subject, html: buildSequenceEmailHtml(body, contact.email), replyTo: CRM_REPLY_TO });
     } catch (err) {

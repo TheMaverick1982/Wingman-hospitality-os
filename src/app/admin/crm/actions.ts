@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email";
 import { isCrmStage, stageLabel, isCustomContactField } from "@/lib/crm";
 import { stopEnrollments, suppressEmail, buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { sendConversationSms } from "@/lib/conversations";
+import { getPlatformPricing, applyPriceTokens } from "@/lib/pricing";
 import { personalize } from "@/lib/name-safety";
 
 export type CrmActionState = { error: string | null; ok: boolean };
@@ -312,9 +313,11 @@ export async function sendContactEmail(_prev: CrmActionState, formData: FormData
   if (!c) return { error: "Contact not found.", ok: false };
   if (c.unsubscribed) return { error: "This contact has unsubscribed — can't email them.", ok: false };
 
-  // Support {{first_name}} merge fields with the safe-name fallback.
-  const finalSubject = personalize(subject, c.name);
-  const finalBody = personalize(body, c.name);
+  // Support {{first_name}} merge fields with the safe-name fallback, plus
+  // {{firstPrice}}/{{addlPrice}} live pricing tokens.
+  const pricing = await getPlatformPricing();
+  const finalSubject = applyPriceTokens(personalize(subject, c.name), pricing);
+  const finalBody = applyPriceTokens(personalize(body, c.name), pricing);
 
   // Use the shared sequence wrapper so even one-off emails carry the CAN-SPAM
   // unsubscribe footer + postal address.
