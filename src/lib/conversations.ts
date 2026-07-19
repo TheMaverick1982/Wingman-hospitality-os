@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { sendEmail } from "@/lib/email";
 import { twilioConfigured, normalizePhone, sendSms } from "@/lib/calendar/sms";
 import { sendViaUserMailbox, conversationReplyTo } from "@/lib/mailbox";
+import { withFirstSmsOptOut } from "@/lib/sms-optout";
 
 // Platform-admin Conversations: a unified email + SMS inbox over crm_contacts +
 // crm_activities. The message history is the existing activity log; this adds the
@@ -203,10 +204,11 @@ export async function sendConversationSms(contactId: string, body: string): Prom
   const to = normalizePhone(contact?.phone ?? "");
   if (!to) return { ok: false, error: "This contact has no mobile number." };
   if (contact?.sms_opt_out) return { ok: false, error: "This contact replied STOP — you can't text them." };
-  const res = await sendSms(to, b);
+  const finalBody = await withFirstSmsOptOut(admin, contactId, b);
+  const res = await sendSms(to, finalBody);
   if (!res.ok) return { ok: false, error: res.error ?? "Twilio rejected the message." };
   const nowIso = new Date().toISOString();
-  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "sms_out", subject: "", body: b, meta: { source: "conversations", to } });
+  await admin.from("crm_activities").insert({ contact_id: contactId, kind: "sms_out", subject: "", body: finalBody, meta: { source: "conversations", to } });
   await touchOutbound(admin, contactId, nowIso);
   return { ok: true };
 }
