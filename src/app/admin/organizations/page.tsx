@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
-import { Pill } from "@/components/ui/pill";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { PLATFORM_SECTIONS } from "@/lib/auth/platform";
 import { CreateOrgButton } from "./create-org-form";
+import { OrgTable, type OrgRow } from "./org-table";
 
 export default async function AdminOrganizationsPage() {
   const profile = await requirePlatformSection("organizations");
@@ -61,6 +60,21 @@ export default async function AdminOrganizationsPage() {
   const totalRevenueCents = ((charges ?? []) as { amount_cents: number }[]).reduce((s, c) => s + (c.amount_cents ?? 0), 0);
   const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 
+  const orgRows: OrgRow[] = (orgs ?? []).map((org) => {
+    const isFranchisor = franchisorOrgIds.has(org.id);
+    return {
+      id: org.id,
+      name: org.name,
+      locations: locationCountByOrg.get(org.id) ?? 0,
+      team: teamCountByOrg.get(org.id) ?? 0,
+      repeatRate: computeRepeatRate(guestsByOrg.get(org.id) ?? [], null),
+      createdAt: org.created_at ?? null,
+      isFranchisor,
+      isFranchisee: !isFranchisor && Boolean(org.franchise_group_id),
+      isFree: Boolean(org.is_free_account),
+    };
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-6">
@@ -81,57 +95,7 @@ export default async function AdminOrganizationsPage() {
         </div>
       )}
 
-      <div className="bg-white border border-line rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line bg-paper text-left text-xs font-semibold uppercase tracking-wide text-muted-2">
-              <th className="px-5 py-3">Organization</th>
-              <th className="px-5 py-3">Locations</th>
-              <th className="px-5 py-3">Team members</th>
-              <th className="px-5 py-3">Repeat rate</th>
-              <th className="px-5 py-3">Created</th>
-              <th className="px-5 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {(orgs ?? []).map((org) => {
-              const repeatRate = computeRepeatRate(guestsByOrg.get(org.id) ?? [], null);
-              const isFranchisor = franchisorOrgIds.has(org.id);
-              const isFranchisee = !isFranchisor && Boolean(org.franchise_group_id);
-              return (
-                <tr key={org.id} className="border-b border-line last:border-b-0">
-                  <td className="px-5 py-4 font-semibold text-ink">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {org.name}
-                      {isFranchisor && <Pill tone="brick">Franchisor</Pill>}
-                      {isFranchisee && <Pill tone="muted">Franchisee</Pill>}
-                      {org.is_free_account && <Pill tone="olive">Free</Pill>}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-charcoal-2">{locationCountByOrg.get(org.id) ?? 0}</td>
-                  <td className="px-5 py-4 text-charcoal-2">{teamCountByOrg.get(org.id) ?? 0}</td>
-                  <td className="px-5 py-4 text-charcoal-2">{repeatRate}%</td>
-                  <td className="px-5 py-4 text-muted-2">
-                    {org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <Link href={`/admin/organizations/${org.id}`} className="text-sm font-semibold text-brick">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-            {(orgs ?? []).length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-muted">
-                  No organizations yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <OrgTable rows={orgRows} />
     </div>
   );
 }

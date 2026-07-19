@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { Building2, Plus, X, UserPlus, Mail, Trash2, Archive, RotateCcw } from "lucide-react";
+import { Building2, Plus, X, UserPlus, Mail, Trash2, Archive, RotateCcw, Search } from "lucide-react";
 import {
   createFranchiseGroup,
   addFranchiseMember,
@@ -35,6 +35,11 @@ const initial: FranchiseActionState = { error: null };
 
 export function FranchiseAdminClient({ groups, orgOptions, adminOptions }: { groups: GroupView[]; orgOptions: OrgOption[]; adminOptions: AdminOption[] }) {
   const [createState, createAction, creating] = useActionState(createFranchiseGroup, initial);
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const filtered = needle
+    ? groups.filter((g) => g.name.toLowerCase().includes(needle) || g.members.some((m) => m.name.toLowerCase().includes(needle)))
+    : groups;
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,17 +68,32 @@ export function FranchiseAdminClient({ groups, orgOptions, adminOptions }: { gro
         </form>
       </div>
 
+      {/* Search */}
+      {groups.length > 0 && (
+        <div className="relative max-w-[360px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-2" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search franchise groups…"
+            className="w-full rounded-xl border border-line bg-white pl-9 pr-3 py-2.5 text-sm text-ink placeholder:text-muted-2 outline-none focus:border-brick transition-colors"
+          />
+        </div>
+      )}
+
       {(() => {
-        const active = groups.filter((g) => !g.archived);
-        const archived = groups.filter((g) => g.archived);
+        const active = filtered.filter((g) => !g.archived);
+        const archived = filtered.filter((g) => g.archived);
         return (
           <>
             {groups.length === 0 ? (
               <div className="text-sm text-muted-2">No franchise groups yet.</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-sm text-muted-2">No franchise groups match “{q}”.</div>
             ) : (
               active.map((g) => <GroupCard key={g.id} group={g} orgOptions={orgOptions} adminOptions={adminOptions} />)
             )}
-            {active.length === 0 && archived.length > 0 && (
+            {filtered.length > 0 && active.length === 0 && archived.length > 0 && (
               <div className="text-sm text-muted-2">No active franchise groups.</div>
             )}
 
