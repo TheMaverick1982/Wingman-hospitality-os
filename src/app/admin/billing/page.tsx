@@ -26,7 +26,7 @@ export default async function AdminBillingPage() {
         <PricingForm firstDollars={Math.round(pricing.firstCents / 100)} addlDollars={Math.round(pricing.addlCents / 100)} />
       </div>
 
-      <AiUsageCard summary={aiUsage} />
+      <AiUsageCard initial={aiUsage} />
 
       <div className="bg-white border border-line rounded-2xl p-10 text-center">
         <div className="w-12 h-12 rounded-full bg-brick-tint flex items-center justify-center mx-auto mb-5">

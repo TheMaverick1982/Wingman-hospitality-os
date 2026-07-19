@@ -30,7 +30,11 @@ const ROW_CAP = 100_000;
 // overall + per-client cost summary. The ledger is append-only and small at
 // current scale, so we aggregate in JS rather than via an RPC. org_id null rows
 // are Wingman's own internal calls (social generation, the public sales chat).
-export async function getAiUsageSummary(admin: Admin, nowIso: string): Promise<AiUsageSummary> {
+export async function getAiUsageSummary(
+  admin: Admin,
+  nowIso: string,
+  range?: { start?: string | null; end?: string | null },
+): Promise<AiUsageSummary> {
   const empty: AiUsageSummary = {
     total: { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 },
     last30: { calls: 0, costUsd: 0 },
@@ -38,11 +42,14 @@ export async function getAiUsageSummary(admin: Admin, nowIso: string): Promise<A
     truncated: false,
   };
 
-  const { data: rows } = await admin
+  let query = admin
     .from("ai_usage_events")
     .select("org_id, model, input_tokens, output_tokens, created_at")
     .order("created_at", { ascending: false })
     .limit(ROW_CAP);
+  if (range?.start) query = query.gte("created_at", range.start);
+  if (range?.end) query = query.lte("created_at", range.end);
+  const { data: rows } = await query;
   const events = (rows ?? []) as {
     org_id: string | null;
     model: string;
