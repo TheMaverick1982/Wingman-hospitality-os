@@ -16,8 +16,12 @@ import {
   assignContact,
   addContactTag,
   removeContactTag,
+  setContactField,
+  removeContactField,
   type CrmActionState,
 } from "../actions";
+
+export type CustomField = { key: string; value: string };
 
 export type SalesRep = { id: string; name: string };
 
@@ -70,7 +74,7 @@ function displayTag(tag: string): string {
   return tag;
 }
 
-export function ContactPanel({ contact, activities, enrollments, canDelete, reps }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean; reps: SalesRep[] }) {
+export function ContactPanel({ contact, activities, enrollments, canDelete, reps, customFields }: { contact: ContactRecord; activities: ActivityRecord[]; enrollments: EnrollmentRecord[]; canDelete: boolean; reps: SalesRep[]; customFields: CustomField[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<"email" | "sms" | "note">("email");
   const [savingStage, setSavingStage] = useState(false);
@@ -98,6 +102,30 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
     setTags((prev) => prev.filter((x) => x !== tag)); // optimistic
     const res = await removeContactTag(contact.id, tag);
     if (!res.ok) setTags((prev) => [...prev, tag]); // revert
+  }
+
+  const [fields, setFields] = useState<CustomField[]>(customFields);
+  const [newFieldKey, setNewFieldKey] = useState("");
+  const [newFieldVal, setNewFieldVal] = useState("");
+  const [fieldBusy, setFieldBusy] = useState(false);
+
+  async function onAddField() {
+    const k = newFieldKey.trim().slice(0, 60);
+    const v = newFieldVal.trim();
+    if (!k) return;
+    setFieldBusy(true);
+    const res = await setContactField(contact.id, k, v);
+    if (res.ok) {
+      setFields((prev) => [...prev.filter((f) => f.key !== k), { key: k, value: v }]);
+      setNewFieldKey("");
+      setNewFieldVal("");
+    }
+    setFieldBusy(false);
+  }
+  async function onRemoveField(key: string) {
+    setFields((prev) => prev.filter((f) => f.key !== key)); // optimistic
+    const res = await removeContactField(contact.id, key);
+    if (!res.ok) router.refresh(); // resync on failure
   }
 
   function onAssign(repId: string) {
@@ -272,6 +300,43 @@ export function ContactPanel({ contact, activities, enrollments, canDelete, reps
               <button type="button" onClick={onAddTag} disabled={tagBusy || !newTag.trim()} className="text-[13px] font-semibold text-ink bg-paper border border-line-strong rounded-lg px-3 py-1.5 hover:bg-white disabled:opacity-40 transition-colors shrink-0">
                 Add
               </button>
+            </div>
+          </div>
+
+          {/* Custom fields */}
+          <div className="bg-white border border-line rounded-2xl p-5 flex flex-col gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Custom fields</span>
+            {fields.length === 0 && <p className="text-[13px] text-muted-2">No custom fields yet.</p>}
+            {fields.map((f) => (
+              <div key={f.key} className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[11px] text-muted-2 truncate">{f.key}</div>
+                  <div className="text-[13px] text-ink font-medium truncate">{f.value || "—"}</div>
+                </div>
+                <button type="button" onClick={() => onRemoveField(f.key)} aria-label={`Remove ${f.key}`} className="shrink-0 text-muted-2 hover:text-danger transition-colors">
+                  <X size={14} strokeWidth={2.5} />
+                </button>
+              </div>
+            ))}
+            <div className="flex flex-col gap-2 pt-1">
+              <input value={newFieldKey} onChange={(e) => setNewFieldKey(e.target.value)} placeholder="Field name (e.g. Company)" className="text-sm bg-paper border border-line rounded-lg px-3 py-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2" />
+              <div className="flex gap-2">
+                <input
+                  value={newFieldVal}
+                  onChange={(e) => setNewFieldVal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onAddField();
+                    }
+                  }}
+                  placeholder="Value"
+                  className="flex-1 min-w-0 text-sm bg-paper border border-line rounded-lg px-3 py-1.5 outline-none focus:border-brick text-ink placeholder:text-muted-2"
+                />
+                <button type="button" onClick={onAddField} disabled={fieldBusy || !newFieldKey.trim()} className="text-[13px] font-semibold text-ink bg-paper border border-line-strong rounded-lg px-3 py-1.5 hover:bg-white disabled:opacity-40 transition-colors shrink-0">
+                  Add
+                </button>
+              </div>
             </div>
           </div>
 

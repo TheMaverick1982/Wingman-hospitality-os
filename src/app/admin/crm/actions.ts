@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { isCrmStage, stageLabel } from "@/lib/crm";
+import { isCrmStage, stageLabel, isCustomContactField } from "@/lib/crm";
 import { stopEnrollments, suppressEmail, buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { sendConversationSms } from "@/lib/conversations";
 import { personalize } from "@/lib/name-safety";
@@ -194,6 +194,105 @@ export async function addNote(_prev: CrmActionState, formData: FormData): Promis
   const { error } = await admin.from("crm_activities").insert({ contact_id: contactId, kind: "note", body, created_by: me.userId });
   if (error) return { error: error.message, ok: false };
   await touch(admin, contactId);
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Manually create a contact, then open it. Email is required + unique.
+export async function createContact(_prev: CrmActionState, formData: FormData): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const name = String(formData.get("name") || "").trim() || null;
+  const phone = String(formData.get("phone") || "").trim() || null;
+  const stageRaw = String(formData.get("stage") || "new");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address.", ok: false };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("crm_contacts")
+    .insert({ email, name, phone, stage: isCrmStage(stageRaw) ? stageRaw : "new", first_source: "manual", tags: ["src:manual"] })
+    .select("id")
+    .single();
+  if (error) {
+    if (error.code === "23505") return { error: "A contact with that email already exists.", ok: false };
+    return { error: error.message, ok: false };
+  }
+  revalidatePath("/admin/crm");
+  redirect(`/admin/crm/${(data as { id: string }).id}`);
+}
+
+// Bulk-import contacts (parsed client-side from CSV). Upserts by email:
+// new emails are inserted; existing ones get name/phone filled in if blank.
+export async function importContacts(
+  rows: { email: string; name?: string | null; phone?: string | null }[],
+): Promise<{ ok: boolean; imported: number; updated: number; skipped: number; error?: string }> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { ok: false, imported: 0, updated: 0, skipped: 0, error: "Not authorized." };
+  const admin = createAdminClient();
+  const capped = rows.slice(0, 2000);
+  let imported = 0;
+  let updated = 0;
+  let skipped = 0;
+  const nowIso = new Date().toISOString();
+  for (const r of capped) {
+    const email = String(r.email || "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      skipped++;
+      continue;
+    }
+    const name = (r.name ?? "").toString().trim() || null;
+    const phone = (r.phone ?? "").toString().trim() || null;
+    const { data: existing } = await admin.from("crm_contacts").select("id, name, phone").eq("email", email).maybeSingle();
+    const ex = existing as { id: string; name: string | null; phone: string | null } | null;
+    if (ex) {
+      const upd: Record<string, unknown> = { updated_at: nowIso };
+      if (name && !ex.name) upd.name = name;
+      if (phone && !ex.phone) upd.phone = phone;
+      if (Object.keys(upd).length > 1) {
+        await admin.from("crm_contacts").update(upd).eq("id", ex.id);
+        updated++;
+      } else {
+        skipped++;
+      }
+    } else {
+      const { error } = await admin.from("crm_contacts").insert({ email, name, phone, first_source: "import", tags: ["src:import"] });
+      if (error) skipped++;
+      else imported++;
+    }
+  }
+  revalidatePath("/admin/crm");
+  return { ok: true, imported, updated, skipped };
+}
+
+// Set/replace a user-authored custom field on a contact (stored in fields jsonb).
+export async function setContactField(contactId: string, key: string, value: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const k = key.trim().slice(0, 60);
+  if (!contactId || !k) return { error: "Field name is required.", ok: false };
+  if (!isCustomContactField(k)) return { error: "That field name is reserved.", ok: false };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("crm_contacts").select("fields").eq("id", contactId).maybeSingle();
+  const fields = { ...((c as { fields: Record<string, unknown> | null } | null)?.fields ?? {}) };
+  fields[k] = value.trim();
+  const { error } = await admin.from("crm_contacts").update({ fields, updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (error) return { error: error.message, ok: false };
+  revalidatePath(`/admin/crm/${contactId}`);
+  return { error: null, ok: true };
+}
+
+// Remove a custom field from a contact.
+export async function removeContactField(contactId: string, key: string): Promise<CrmActionState> {
+  const me = await platformSectionActor("crm");
+  if (!me) return { error: "Not authorized.", ok: false };
+  if (!contactId || !key) return { error: "Missing field.", ok: false };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("crm_contacts").select("fields").eq("id", contactId).maybeSingle();
+  const fields = { ...((c as { fields: Record<string, unknown> | null } | null)?.fields ?? {}) };
+  delete fields[key];
+  const { error } = await admin.from("crm_contacts").update({ fields, updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (error) return { error: error.message, ok: false };
   revalidatePath(`/admin/crm/${contactId}`);
   return { error: null, ok: true };
 }

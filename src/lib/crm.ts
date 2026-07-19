@@ -69,6 +69,16 @@ export function sourceLabel(source: string | null | undefined): string {
 
 export type CrmActivityKind = "lead" | "note" | "email_out" | "email_in" | "sms_out" | "sms_in" | "stage_change" | "system";
 
+// System-managed contact.fields keys (funnel calc_*/scorecard_* results, merge
+// helpers). Everything else in `fields` is a user-authored "custom field" shown
+// and editable on the contact page.
+const RESERVED_FIELD_PREFIXES = ["calc_", "scorecard_", "rep_"];
+const RESERVED_FIELD_KEYS = new Set(["workspace_name", "lead_source_page"]);
+export function isCustomContactField(key: string): boolean {
+  if (RESERVED_FIELD_KEYS.has(key)) return false;
+  return !RESERVED_FIELD_PREFIXES.some((p) => key.startsWith(p));
+}
+
 // Map a captured lead's payload into the contact custom fields the emails merge
 // ({{contact.calc_annual_upside}}, {{contact.scorecard_gap_1}}, ...). Reads both
 // the spec field keys and our current landing-page keys, so it works before and
