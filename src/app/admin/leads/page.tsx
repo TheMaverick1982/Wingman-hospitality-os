@@ -19,7 +19,7 @@ export default async function AdminLeadsPage() {
   const admin = createAdminClient();
 
   const [{ data }, { data: contacts }, { data: enrolls }] = await Promise.all([
-    admin.from("leads").select("id, email, name, source, payload, created_at").order("created_at", { ascending: false }).limit(500),
+    admin.from("leads").select("id, email, name, source, payload, created_at").is("deleted_at", null).order("created_at", { ascending: false }).limit(500),
     admin.from("crm_contacts").select("id, email"),
     admin.from("crm_enrollments").select("contact_id, status, crm_sequences(name)").eq("status", "active"),
   ]);

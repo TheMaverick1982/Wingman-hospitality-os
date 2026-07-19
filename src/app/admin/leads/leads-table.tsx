@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { leadResultRows, sourceLabel } from "@/lib/crm";
+import { deleteLead } from "./actions";
 
 export type LeadRow = {
   id: string;
@@ -20,8 +22,27 @@ function shortDetail(row: LeadRow): string {
   return rows.slice(0, 2).map((r) => `${r.value}`).join(" · ");
 }
 
-export function LeadsTable({ rows }: { rows: LeadRow[] }) {
+export function LeadsTable({ rows: initialRows }: { rows: LeadRow[] }) {
   const [selected, setSelected] = useState<LeadRow | null>(null);
+  const [rows, setRows] = useState<LeadRow[]>(initialRows);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const handleDelete = (row: LeadRow, e: React.MouseEvent) => {
+    e.stopPropagation(); // don't open the detail modal
+    if (!window.confirm(`Delete the lead for ${row.name || row.email}? It will be removed from this list.`)) return;
+    setDeletingId(row.id);
+    startTransition(async () => {
+      const res = await deleteLead(row.id);
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== row.id));
+        setSelected((cur) => (cur?.id === row.id ? null : cur));
+      } else {
+        window.alert(res.error || "Couldn't delete that lead. Please try again.");
+      }
+      setDeletingId(null);
+    });
+  };
 
   if (rows.length === 0) {
     return (
@@ -43,6 +64,7 @@ export function LeadsTable({ rows }: { rows: LeadRow[] }) {
                 <th className="px-5 py-3">Automation</th>
                 <th className="px-5 py-3">Detail</th>
                 <th className="px-5 py-3 whitespace-nowrap">Date</th>
+                <th className="px-5 py-3 w-px"><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
             <tbody>
@@ -64,6 +86,18 @@ export function LeadsTable({ rows }: { rows: LeadRow[] }) {
                   </td>
                   <td className="px-5 py-3 text-[13px] text-charcoal-2">{shortDetail(row)}</td>
                   <td className="px-5 py-3 text-[13px] text-muted-2 whitespace-nowrap">{new Date(row.created_at).toLocaleDateString()}</td>
+                  <td className="px-3 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(row, e)}
+                      disabled={deletingId === row.id}
+                      aria-label={`Delete lead ${row.name || row.email}`}
+                      title="Delete lead"
+                      className="text-muted-2 hover:text-red-600 disabled:opacity-40 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={16} strokeWidth={2} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

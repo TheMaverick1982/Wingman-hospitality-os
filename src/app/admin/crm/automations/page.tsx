@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceLabel } from "@/lib/crm";
-import { CrmTabs } from "../crm-tabs";
 import { ResyncButton } from "./resync-button";
 
 export const metadata: Metadata = { title: "Automations · CRM" };
@@ -33,12 +32,11 @@ export default async function AutomationsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">CRM</h1>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Automations</h1>
           <p className="text-sm text-muted mt-1">Nurture sequences that email each lead based on the funnel they came in through.</p>
         </div>
         <ResyncButton />
       </div>
-      <CrmTabs />
 
       <div className="bg-white border border-line rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
