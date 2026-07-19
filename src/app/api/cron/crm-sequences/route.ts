@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 import { renderMerge, CRM_REPLY_TO } from "@/lib/crm-merge";
 import { getPlatformPricing, applyPriceTokens } from "@/lib/pricing";
+import { withFirstSmsOptOut } from "@/lib/sms-optout";
 import { resolveStep } from "@/lib/crm-step-resolver";
 import { sendSms, normalizePhone, twilioConfigured } from "@/lib/calendar/sms";
 
@@ -180,7 +181,7 @@ export async function GET(request: NextRequest) {
         await advance();
         continue;
       }
-      const smsBody = applyPriceTokens(renderMerge(toSend.body, contact), pricing);
+      const smsBody = await withFirstSmsOptOut(admin, e.contact_id, applyPriceTokens(renderMerge(toSend.body, contact), pricing));
       const res = await sendSms(phone, smsBody);
       if (!res.ok) {
         // Best-effort: a single number failing (e.g. carrier-blocked, opted out at
