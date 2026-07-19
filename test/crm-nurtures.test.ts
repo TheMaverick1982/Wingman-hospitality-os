@@ -25,9 +25,23 @@ const EXPECTED: Record<string, { days: number[]; conds: string[]; transFirst: bo
 describe("nurture sequence data integrity", () => {
   it("seeds exactly the expected sources", () => {
     expect(NURTURE_SEQUENCES.map((s) => s.source).sort()).toEqual(
-      ["calculator", "demo", "demo-no-show", "reactivation", "referral", "scorecard", "signup"]
+      ["booked", "calculator", "demo", "demo-cancel", "demo-no-show", "reactivation", "referral", "scorecard", "signup"]
     );
     expect(RETIRED_SOURCES).toContain("sales-chat");
+  });
+
+  // Covers EVERY seeded automation (not just the ones with a cadence spec below),
+  // so merge fields in newer sequences — booked, demo-cancel, reactivation — are
+  // guarded too. A missing/blank field must fall back, never leave {{residue}} or
+  // render "undefined".
+  it("every merge field in every automation resolves cleanly", () => {
+    for (const seq of NURTURE_SEQUENCES) {
+      for (const step of seq.steps) {
+        const rendered = renderMerge(step.subject + "\n" + step.body, { name: null, fields: {} });
+        expect(rendered, `${seq.source} #${step.step_order} left {{residue}}`).not.toContain("{{");
+        expect(rendered, `${seq.source} #${step.step_order} rendered "undefined"`).not.toContain("undefined");
+      }
+    }
   });
 
   for (const [source, exp] of Object.entries(EXPECTED)) {
