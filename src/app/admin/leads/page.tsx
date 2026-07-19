@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
+import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LeadsTable, type LeadRow } from "./leads-table";
 
@@ -15,7 +16,8 @@ type Lead = {
 };
 
 export default async function AdminLeadsPage() {
-  await requirePlatformSection("analytics");
+  const profile = await requirePlatformSection("analytics");
+  const isOwner = profile.email === BILLING_OWNER_EMAIL;
   const admin = createAdminClient();
 
   const [{ data }, { data: contacts }, { data: enrolls }] = await Promise.all([
@@ -65,9 +67,16 @@ export default async function AdminLeadsPage() {
             )}
           </p>
         </div>
-        <Link href="/admin/crm" className="text-sm font-semibold text-brick">
-          Open the CRM pipeline →
-        </Link>
+        <div className="flex items-center gap-4">
+          {isOwner && (
+            <Link href="/admin/leads/deleted" className="text-sm font-semibold text-muted hover:text-ink transition-colors">
+              Deleted leads
+            </Link>
+          )}
+          <Link href="/admin/crm" className="text-sm font-semibold text-brick">
+            Open the CRM pipeline →
+          </Link>
+        </div>
       </div>
 
       <LeadsTable rows={rows} />
