@@ -6,6 +6,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { canAccessPlatformSection } from "@/lib/auth/platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listSalesReps } from "@/lib/sales-reps";
+import { isCustomContactField } from "@/lib/crm";
 import { ContactPanel, type ContactRecord, type ActivityRecord, type EnrollmentRecord } from "./contact-panel";
 
 export const metadata: Metadata = { title: "Contact · CRM" };
@@ -53,11 +54,14 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
 
   const { data: contact } = await admin
     .from("crm_contacts")
-    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, assigned_rep_id, visitor_id, created_at, tags, sms_opt_out")
+    .select("id, email, name, phone, notes, stage, first_source, unsubscribed, booked_at, customer_at, org_id, assigned_rep_id, visitor_id, created_at, tags, sms_opt_out, fields")
     .eq("id", id)
     .maybeSingle();
   if (!contact) notFound();
-  const contactRow = contact as ContactRecord & { visitor_id: string | null };
+  const contactRow = contact as ContactRecord & { visitor_id: string | null; fields: Record<string, unknown> | null };
+  const customFields = Object.entries(contactRow.fields ?? {})
+    .filter(([k]) => isCustomContactField(k))
+    .map(([key, value]) => ({ key, value: value == null ? "" : String(value) }));
 
   const reps = await listSalesReps();
   const [{ data: activities }, { data: enrollments }, { data: pageViews }] = await Promise.all([
@@ -99,6 +103,7 @@ export default async function CrmContactPage({ params }: { params: Promise<{ id:
         enrollments={(enrollments ?? []) as unknown as EnrollmentRecord[]}
         canDelete={canDelete}
         reps={reps}
+        customFields={customFields}
       />
       <SiteActivity views={views} />
     </div>
