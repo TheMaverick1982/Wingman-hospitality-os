@@ -16,6 +16,7 @@ export type LeadRow = {
   created_at: string;
   automation: string | null;
   contactId: string | null;
+  isCustomer: boolean;
 };
 
 function shortDetail(row: LeadRow): string {
@@ -29,15 +30,19 @@ export function LeadsTable({ rows: initialRows, isOwner }: { rows: LeadRow[]; is
   const [rows, setRows] = useState<LeadRow[]>(initialRows);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
+  const [list, setList] = useState<"all" | "customers">("all");
   const [deleting, startDelete] = useTransition();
+
+  const customerCount = useMemo(() => rows.filter((r) => r.isCustomer).length, [rows]);
 
   const visibleRows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter(
-      (r) => (r.name ?? "").toLowerCase().includes(needle) || r.email.toLowerCase().includes(needle) || r.source.toLowerCase().includes(needle),
-    );
-  }, [rows, q]);
+    return rows.filter((r) => {
+      if (list === "customers" && !r.isCustomer) return false;
+      if (!needle) return true;
+      return (r.name ?? "").toLowerCase().includes(needle) || r.email.toLowerCase().includes(needle) || r.source.toLowerCase().includes(needle);
+    });
+  }, [rows, q, list]);
 
   // GHL-style: clicking a lead opens the full contact (with its conversation
   // inline). Leads without a linked CRM contact fall back to the detail popup.
@@ -88,6 +93,29 @@ export function LeadsTable({ rows: initialRows, isOwner }: { rows: LeadRow[]; is
 
   return (
     <>
+      {/* Smart lists */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {([
+          { key: "all", label: "All contacts", count: rows.length },
+          { key: "customers", label: "Customers", count: customerCount },
+        ] as const).map((sl) => {
+          const active = list === sl.key;
+          return (
+            <button
+              key={sl.key}
+              type="button"
+              onClick={() => setList(sl.key)}
+              className={`inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                active ? "bg-ink text-white border-ink" : "bg-white text-charcoal-2 border-line hover:border-ink/30"
+              }`}
+            >
+              {sl.label}
+              <span className={`text-[11px] ${active ? "text-white/70" : "text-muted-2"}`}>{sl.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search */}
       <div className="relative mb-3 max-w-[360px]">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-2" />
@@ -141,7 +169,9 @@ export function LeadsTable({ rows: initialRows, isOwner }: { rows: LeadRow[]; is
             <tbody>
               {visibleRows.length === 0 && (
                 <tr>
-                  <td colSpan={isOwner ? 7 : 6} className="px-5 py-10 text-center text-sm text-muted">No leads match “{q}”.</td>
+                  <td colSpan={isOwner ? 7 : 6} className="px-5 py-10 text-center text-sm text-muted">
+                    {q ? `No leads match “${q}”.` : list === "customers" ? "No customers yet — leads become customers when they reach the Signed up stage." : "No leads."}
+                  </td>
                 </tr>
               )}
               {visibleRows.map((row) => (
