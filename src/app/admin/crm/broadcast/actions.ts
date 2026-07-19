@@ -4,6 +4,7 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { renderMerge, CRM_REPLY_TO } from "@/lib/crm-merge";
+import { getPlatformPricing, applyPriceTokens } from "@/lib/pricing";
 import { buildSequenceEmailHtml } from "@/lib/crm-sequences";
 
 export type BroadcastState = { error: string | null; sent: number | null; skipped: number | null };
@@ -30,13 +31,16 @@ export async function sendBroadcast(_prev: BroadcastState, formData: FormData): 
   if (!body) return { error: "Write a message.", sent: null, skipped: null };
 
   const admin = createAdminClient();
+  const pricing = await getPlatformPricing();
+  // Resolve {{contact.*}} merge fields AND {{firstPrice}}/{{addlPrice}} live pricing.
+  const render = (text: string, contact: { name?: string | null; fields?: Record<string, unknown> | null }) => applyPriceTokens(renderMerge(text, contact), pricing);
 
   // Test send: just email the tester, no logging, no contact fan-out.
   if (test) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(testEmail)) return { error: "Enter a valid test email.", sent: null, skipped: null };
-    const html = buildSequenceEmailHtml(renderMerge(body, { name: "there", fields: {} }), testEmail);
+    const html = buildSequenceEmailHtml(render(body, { name: "there", fields: {} }), testEmail);
     try {
-      await sendEmail({ to: [testEmail], subject: renderMerge(subject, { name: "there", fields: {} }), html, replyTo: CRM_REPLY_TO });
+      await sendEmail({ to: [testEmail], subject: render(subject, { name: "there", fields: {} }), html, replyTo: CRM_REPLY_TO });
     } catch (e) {
       return { error: `Test send failed: ${(e as Error).message}`, sent: null, skipped: null };
     }
@@ -63,8 +67,9 @@ export async function sendBroadcast(_prev: BroadcastState, formData: FormData): 
   const nowIso = new Date().toISOString();
   for (const c of targets) {
     const merged = { name: c.name, fields: c.fields };
-    const subj = renderMerge(subject, merged);
-    const html = buildSequenceEmailHtml(renderMerge(body, merged), c.email);
+    const subj = render(subject, merged);
+    const renderedBody = render(body, merged);
+    const html = buildSequenceEmailHtml(renderedBody, c.email);
     try {
       await sendEmail({ to: [c.email], subject: subj, html, replyTo: CRM_REPLY_TO });
       sent++;
@@ -72,7 +77,7 @@ export async function sendBroadcast(_prev: BroadcastState, formData: FormData): 
         contact_id: c.id,
         kind: "email_out",
         subject: subj,
-        body: renderMerge(body, merged),
+        body: renderedBody,
         meta: { broadcast: true, tags, to: c.email },
       });
       await admin.from("crm_contacts").update({ last_activity_at: nowIso }).eq("id", c.id);
