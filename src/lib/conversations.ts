@@ -20,9 +20,24 @@ export type ConversationRow = {
   preview: string;
   lastKind: string;
   unread: boolean;
+  starred: boolean;
 };
 
 export type ThreadMessage = { id: string; kind: string; subject: string | null; body: string | null; created_at: string };
+
+export type ThreadContact = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  stage: string;
+  first_source: string | null;
+  tags: string[] | null;
+  assigned_rep_id: string | null;
+  unsubscribed: boolean;
+  starred: boolean;
+  created_at: string;
+};
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
@@ -30,17 +45,17 @@ async function requireAdmin() {
   return profile;
 }
 
-export async function listConversations(limit = 50): Promise<ConversationRow[]> {
+export async function listConversations(limit = 100): Promise<ConversationRow[]> {
   const admin = createAdminClient();
   const { data: contacts } = await admin
     .from("crm_contacts")
-    .select("id, name, email, phone, last_message_at, last_inbound_at, convo_read_at")
+    .select("id, name, email, phone, last_message_at, last_inbound_at, convo_read_at, convo_starred")
     .not("last_message_at", "is", null)
     .order("last_message_at", { ascending: false })
     .limit(limit);
   const rows = (contacts ?? []) as {
     id: string; name: string | null; email: string; phone: string | null;
-    last_message_at: string | null; last_inbound_at: string | null; convo_read_at: string | null;
+    last_message_at: string | null; last_inbound_at: string | null; convo_read_at: string | null; convo_starred: boolean;
   }[];
   if (rows.length === 0) return [];
 
@@ -72,14 +87,33 @@ export async function listConversations(limit = 50): Promise<ConversationRow[]> 
       preview: text.length > 120 ? `${text.slice(0, 120)}…` : text,
       lastKind: m?.kind ?? "",
       unread: inboundAt > readAt,
+      starred: r.convo_starred,
     };
   });
 }
 
-export async function getThread(contactId: string): Promise<{ contact: { id: string; name: string | null; email: string; phone: string | null }; messages: ThreadMessage[] } | null> {
+export async function getThread(contactId: string): Promise<{ contact: ThreadContact; messages: ThreadMessage[] } | null> {
   const admin = createAdminClient();
-  const { data: c } = await admin.from("crm_contacts").select("id, name, email, phone").eq("id", contactId).maybeSingle();
+  const { data: c } = await admin
+    .from("crm_contacts")
+    .select("id, name, email, phone, stage, first_source, tags, assigned_rep_id, unsubscribed, convo_starred, created_at")
+    .eq("id", contactId)
+    .maybeSingle();
   if (!c) return null;
+  const row = c as Record<string, unknown>;
+  const contact: ThreadContact = {
+    id: row.id as string,
+    name: (row.name as string | null) ?? null,
+    email: row.email as string,
+    phone: (row.phone as string | null) ?? null,
+    stage: (row.stage as string) ?? "new",
+    first_source: (row.first_source as string | null) ?? null,
+    tags: (row.tags as string[] | null) ?? null,
+    assigned_rep_id: (row.assigned_rep_id as string | null) ?? null,
+    unsubscribed: Boolean(row.unsubscribed),
+    starred: Boolean(row.convo_starred),
+    created_at: row.created_at as string,
+  };
   const { data: msgs } = await admin
     .from("crm_activities")
     .select("id, kind, subject, body, created_at")
@@ -87,7 +121,7 @@ export async function getThread(contactId: string): Promise<{ contact: { id: str
     .in("kind", MESSAGE_KINDS as unknown as string[])
     .order("created_at", { ascending: true })
     .limit(500);
-  return { contact: c as { id: string; name: string | null; email: string; phone: string | null }, messages: (msgs ?? []) as ThreadMessage[] };
+  return { contact, messages: (msgs ?? []) as ThreadMessage[] };
 }
 
 // Mark a thread read (admin opened it).
@@ -95,6 +129,13 @@ export async function markConversationRead(contactId: string): Promise<void> {
   await requireAdmin();
   const admin = createAdminClient();
   await admin.from("crm_contacts").update({ convo_read_at: new Date().toISOString() }).eq("id", contactId);
+}
+
+// Star / unstar a conversation (Team-inbox "Starred" tab).
+export async function setConversationStar(contactId: string, starred: boolean): Promise<void> {
+  await requireAdmin();
+  const admin = createAdminClient();
+  await admin.from("crm_contacts").update({ convo_starred: starred }).eq("id", contactId);
 }
 
 async function touchOutbound(admin: ReturnType<typeof createAdminClient>, contactId: string, nowIso: string) {

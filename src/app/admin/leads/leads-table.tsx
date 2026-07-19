@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { leadResultRows, sourceLabel } from "@/lib/crm";
 import { deleteLead } from "./actions";
@@ -23,8 +24,16 @@ function shortDetail(row: LeadRow): string {
 }
 
 export function LeadsTable({ rows: initialRows }: { rows: LeadRow[] }) {
+  const router = useRouter();
   const [selected, setSelected] = useState<LeadRow | null>(null);
   const [rows, setRows] = useState<LeadRow[]>(initialRows);
+
+  // GHL-style: clicking a lead opens the full contact (with its conversation
+  // inline). Leads without a linked CRM contact fall back to the detail popup.
+  const openLead = (row: LeadRow) => {
+    if (row.contactId) router.push(`/admin/crm/${row.contactId}`);
+    else setSelected(row);
+  };
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -69,7 +78,7 @@ export function LeadsTable({ rows: initialRows }: { rows: LeadRow[] }) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} onClick={() => setSelected(row)} className="border-b border-[#F5F5F5] last:border-0 hover:bg-paper cursor-pointer transition-colors">
+                <tr key={row.id} onClick={() => openLead(row)} className="border-b border-[#F5F5F5] last:border-0 hover:bg-paper cursor-pointer transition-colors">
                   <td className="px-5 py-3">
                     <div className="text-[14px] font-semibold text-ink">{row.name || "—"}</div>
                     <div className="text-[12.5px] text-muted-2">{row.email}</div>
@@ -145,14 +154,9 @@ export function LeadsTable({ rows: initialRows }: { rows: LeadRow[] }) {
                 Close
               </button>
               {selected.contactId && (
-                <>
-                  <Link href={`/admin/conversations/${selected.contactId}`} className="text-[13px] font-semibold text-charcoal-2 bg-paper border border-line rounded-lg px-4 py-2 hover:bg-white transition-colors">
-                    Conversation →
-                  </Link>
-                  <Link href={`/admin/crm/${selected.contactId}`} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark transition-colors">
-                    Open full contact →
-                  </Link>
-                </>
+                <Link href={`/admin/crm/${selected.contactId}`} className="text-[13px] font-semibold text-white bg-brick rounded-lg px-4 py-2 hover:bg-brick-dark transition-colors">
+                  Open full contact →
+                </Link>
               )}
             </div>
           </div>
