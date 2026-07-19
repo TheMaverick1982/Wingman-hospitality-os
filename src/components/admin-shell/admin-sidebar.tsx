@@ -25,6 +25,8 @@ import {
   ArrowLeft,
   ChevronDown,
   Megaphone,
+  Workflow,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
@@ -68,6 +70,8 @@ const NAV: NavEntry[] = [
         { href: "/admin/leads", label: "Leads", icon: Inbox, section: "analytics" },
         { href: "/admin/crm", label: "Pipeline", icon: Contact, section: "crm" },
         { href: "/admin/conversations", label: "Conversations", icon: MessagesSquare, section: "crm" },
+        { href: "/admin/crm/automations", label: "Automations", icon: Workflow, section: "crm" },
+        { href: "/admin/crm/broadcast", label: "Broadcast", icon: Send, section: "crm" },
       ],
     },
   },
@@ -124,7 +128,14 @@ export function AdminSidebar({ fullName, platformAccess }: { fullName: string; p
     if (item.superOnly) return isSuper;
     return item.section ? platformAccess.includes(item.section) : true;
   };
-  const isActive = (href: string) => pathname.startsWith(href);
+  // Highlight only the single most-specific match, so a sub-page like
+  // /admin/crm/automations lights up "Automations" — not also "Pipeline"
+  // (/admin/crm), which is a prefix of it.
+  const allHrefs = NAV.flatMap((e) => (e.kind === "group" ? e.group.items : [e.item])).map((i) => i.href);
+  const activeHref = allHrefs
+    .filter((href) => pathname === href || pathname.startsWith(href + "/"))
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (href: string) => href === activeHref;
 
   // Which group holds the current page — used to auto-expand it.
   let activeGroup: string | undefined;

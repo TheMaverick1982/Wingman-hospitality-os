@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CrmTabs } from "../crm-tabs";
 import { BroadcastForm } from "./broadcast-form";
 
 export const metadata: Metadata = { title: "Broadcast · CRM" };
@@ -30,10 +29,9 @@ export default async function BroadcastPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">CRM</h1>
+        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Broadcast</h1>
         <p className="text-sm text-muted mt-1">Send a one-off email to everyone carrying a tag — affiliates, a funnel, any segment.</p>
       </div>
-      <CrmTabs />
 
       {tags.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-10 text-center text-muted">

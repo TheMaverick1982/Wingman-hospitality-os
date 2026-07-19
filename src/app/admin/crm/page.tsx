@@ -3,7 +3,6 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CRM_STAGES } from "@/lib/crm";
 import { PipelineBoard, type BoardContact } from "./pipeline-board";
-import { CrmTabs } from "./crm-tabs";
 
 export const metadata: Metadata = { title: "CRM" };
 
@@ -46,8 +45,6 @@ export default async function CrmPage() {
           ))}
         </div>
       </div>
-
-      <CrmTabs />
 
       {contacts.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-10 text-center text-sm text-muted">
