@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { sendConversationEmail, sendConversationSms } from "@/lib/conversations";
+import { sendConversationEmail, sendConversationSms, setConversationStar } from "@/lib/conversations";
+
+export async function toggleConversationStar(contactId: string, starred: boolean): Promise<{ ok: boolean }> {
+  await setConversationStar(contactId, starred);
+  revalidatePath("/admin/conversations");
+  revalidatePath(`/admin/conversations/${contactId}`);
+  return { ok: true };
+}
 
 export async function sendEmailAction(contactId: string, subject: string, body: string): Promise<{ ok: boolean; error?: string }> {
   const res = await sendConversationEmail(contactId, subject, body);
