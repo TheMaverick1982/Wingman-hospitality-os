@@ -39,13 +39,17 @@ type NavItem = { href: string; label: string; icon: LucideIcon; section: Section
 // everything else is grouped so the desktop nav stays short and scroll-free.
 const DASHBOARD_ITEM: NavItem = { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" };
 const REPORTING_ITEM: NavItem = { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" };
+// Guest Bounce Back is the most-used tool on the floor, so on mobile it's also
+// surfaced as a one-tap shortcut above the Guests group (see below). It still
+// lives inside Guests as its canonical home.
+const BOUNCEBACK_ITEM: NavItem = { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" };
 
 const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
   {
     id: "guests",
     label: "Guests",
     items: [
-      { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" },
+      BOUNCEBACK_ITEM,
       { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
       { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey" },
     ],
@@ -201,6 +205,12 @@ export function Sidebar({
           </Link>
         )}
         {canSee(DASHBOARD_ITEM.section) && navLink(DASHBOARD_ITEM)}
+
+        {/* Mobile: pin Guest Bounce Back above the Guests group for one-tap
+            access — it's the tool staff reach for constantly on the floor. */}
+        {variant === "drawer" && canSee(BOUNCEBACK_ITEM.section) && (
+          <div className="mt-1.5">{navLink(BOUNCEBACK_ITEM)}</div>
+        )}
 
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((it) => canSee(it.section));
