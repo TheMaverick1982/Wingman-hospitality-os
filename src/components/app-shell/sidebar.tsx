@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -25,28 +26,60 @@ import {
   HelpCircle,
   Lightbulb,
   PlugZap,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { SidebarLocationStat, type LocationStat } from "./sidebar-location-stat";
 
-const NAV: { href: string; label: string; icon: LucideIcon; section: Section }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" },
-  { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
-  { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" },
-  { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
-  { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
-  { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey" },
-  { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
-  { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
-  { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
-  { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
-  { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
-  { href: "/partners", label: "Partners", icon: Handshake, section: "partners" },
-  { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" },
-  { href: "/staff", label: "Staff", icon: Users, section: "staff" },
+type NavItem = { href: string; label: string; icon: LucideIcon; section: Section };
+
+// Dashboard and Reporting are pinned on their own (top and bottom of the list);
+// everything else is grouped so the desktop nav stays short and scroll-free.
+const DASHBOARD_ITEM: NavItem = { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" };
+const REPORTING_ITEM: NavItem = { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" };
+
+const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
+  {
+    id: "guests",
+    label: "Guests",
+    items: [
+      { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" },
+      { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
+      { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey" },
+    ],
+  },
+  {
+    id: "team",
+    label: "Team",
+    items: [
+      { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
+      { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
+      { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
+      { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
+      { href: "/staff", label: "Staff", icon: Users, section: "staff" },
+    ],
+  },
+  {
+    id: "growth",
+    label: "Growth",
+    items: [
+      { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
+      { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
+      { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
+      { href: "/partners", label: "Partners", icon: Handshake, section: "partners" },
+    ],
+  },
 ];
+
+const NAV_STATE_KEY = "wm.nav.openGroups";
+
+// The group whose section matches the current route (or null on Dashboard/Reporting).
+function activeGroupId(pathname: string): string | null {
+  const g = NAV_GROUPS.find((grp) => grp.items.some((it) => pathname.startsWith(it.href)));
+  return g?.id ?? null;
+}
 
 function initialsOf(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -85,6 +118,63 @@ export function Sidebar({
   // itself hides the owner-only tabs from them).
   const canSeeSettings = accessRole === "super_admin" || accessRole === "manager" || accessRole === "shift_lead";
 
+  const canSee = (section: Section) => getSectionAccess(accessRole, section, permissionOverrides) !== "none";
+
+  // Collapsible nav groups. Start with only the group containing the current
+  // page open — computed from the pathname so server and client render the same
+  // markup — then load the visitor's saved open/closed choices on the client.
+  // The active group is always forced open so the current page is never hidden.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(NAV_GROUPS.map((g) => [g.id, g.id === activeGroupId(pathname)]))
+  );
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(NAV_STATE_KEY) || "{}") as Record<string, boolean>;
+      setOpenGroups((prev) => {
+        const merged = { ...prev };
+        for (const g of NAV_GROUPS) if (g.id in saved) merged[g.id] = saved[g.id];
+        const active = activeGroupId(pathname);
+        if (active) merged[active] = true;
+        return merged;
+      });
+    } catch {
+      // ignore unreadable/blocked storage
+    }
+    // Load once on mount; the pathname effect below keeps the active group open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    const active = activeGroupId(pathname);
+    if (active) setOpenGroups((prev) => (prev[active] ? prev : { ...prev, [active]: true }));
+  }, [pathname]);
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore unwritable storage
+      }
+      return next;
+    });
+  };
+
+  const navLink = (item: NavItem) => {
+    const active = pathname.startsWith(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+          active ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
+        }`}
+      >
+        <item.icon size={19} strokeWidth={2} className={active ? "text-white/90" : "text-muted-2"} />
+        {item.label}
+      </Link>
+    );
+  };
+
   // Desktop: a fixed sticky column, hidden on small screens (a mobile drawer
   // renders the same nav via variant="drawer").
   const rootClass =
@@ -110,21 +200,31 @@ export function Sidebar({
             Start here
           </Link>
         )}
-        {NAV.filter((item) => getSectionAccess(accessRole, item.section, permissionOverrides) !== "none").map((item) => {
-          const active = pathname.startsWith(item.href);
+        {canSee(DASHBOARD_ITEM.section) && navLink(DASHBOARD_ITEM)}
+
+        {NAV_GROUPS.map((group) => {
+          const items = group.items.filter((it) => canSee(it.section));
+          if (items.length === 0) return null; // hide a group the role can't see into
+          const open = openGroups[group.id];
+          const hasActive = items.some((it) => pathname.startsWith(it.href));
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
-                active ? "bg-brick text-white font-semibold" : "text-charcoal-2 font-medium hover:bg-paper"
-              }`}
-            >
-              <item.icon size={19} strokeWidth={2} className={active ? "text-white/90" : "text-muted-2"} />
-              {item.label}
-            </Link>
+            <div key={group.id} className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id)}
+                aria-expanded={open}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
+              >
+                {/* Tint the label when its section holds the current page but is collapsed. */}
+                <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
+                <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+              </button>
+              {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
+            </div>
           );
         })}
+
+        {canSee(REPORTING_ITEM.section) && <div className="mt-1.5">{navLink(REPORTING_ITEM)}</div>}
 
         {/* Developer role: API-only. Its single home is the API access page. */}
         {isDeveloperRole && (
