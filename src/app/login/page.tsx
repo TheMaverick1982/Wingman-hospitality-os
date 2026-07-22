@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Field, inputClass } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
@@ -61,7 +62,7 @@ export default function LoginPage() {
                 <input name="email" type="email" placeholder="you@restaurant.com" required className={inputClass} />
               </Field>
               <Field label="Password">
-                <input name="password" type="password" placeholder="••••••••" required className={inputClass} />
+                <PasswordInput name="password" placeholder="••••••••" required />
               </Field>
               <div className="flex justify-end -mt-1 mb-1">
                 <Link href="/forgot-password" className="text-sm font-medium text-brick">

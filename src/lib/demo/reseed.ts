@@ -942,9 +942,12 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
  * Full reseed: ensure the demo auth user, org, locations and profile exist,
  * wipe all tenant content for the demo org, then repopulate the showcase.
  * Idempotent and safe to call on every demo login.
+ *
+ * Pass `knownUserId` when the caller already resolved the demo user (login does,
+ * just before sign-in) to skip a second paginated auth-user lookup.
  */
-export async function reseedDemoOrg(): Promise<DemoContext> {
-  const userId = await ensureDemoUser();
+export async function reseedDemoOrg(knownUserId?: string): Promise<DemoContext> {
+  const userId = knownUserId ?? (await ensureDemoUser());
   const ctx = await ensureDemoOrg(userId);
   await wipeDemoOrg(ctx.orgId);
   await populateDemoOrg(ctx);

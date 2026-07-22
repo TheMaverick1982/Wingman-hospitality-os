@@ -23,6 +23,11 @@ const REQUIRE_HUMAN_AFTER_FAILURES = 2;
 const FAILURE_COOKIE = "wm_lf";
 const FAILURE_COOKIE_MAX_AGE = 900; // 15 minutes
 
+// How long a fresh demo reseed is considered good enough to reuse. Within this
+// window, additional demo logins skip the expensive wipe+repopulate and land
+// instantly. Short enough that the showcase never drifts far from pristine.
+const DEMO_RESEED_DEBOUNCE_SECONDS = 90;
+
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
@@ -56,8 +61,10 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   }
 
   // Step-up bot check: only enforced once this browser has failed enough times.
-  // Fails open when TURNSTILE_SECRET_KEY isn't configured.
-  if (requireHuman && !(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null, ip))) {
+  // The shared demo account is fully exempt — it's the public showcase, hands out
+  // nothing sensitive, and is already IP-rate-limited, so it must never get stuck
+  // behind a challenge. Fails open when TURNSTILE_SECRET_KEY isn't configured.
+  if (!isDemoEmail(email) && requireHuman && !(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null, ip))) {
     return { error: "Couldn't verify you're human — please try again.", requireHuman: true };
   }
 
@@ -65,9 +72,11 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   // Demo account: guarantee it exists with the known password before we try to
   // sign in, so the very first login (and any password rotation) self-heals.
+  // Reuse the resolved id below so the post-login reseed doesn't look it up again.
+  let demoUserId: string | undefined;
   if (isDemoEmail(email)) {
     try {
-      await ensureDemoUser();
+      demoUserId = await ensureDemoUser();
     } catch (e) {
       console.error("[demo] ensureDemoUser failed", e);
     }
@@ -87,15 +96,23 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   // Clean login — clear the failure counter so the next sign-in starts fresh.
   setFailures(0);
 
-  // On every successful demo sign-in, wipe + repopulate the demo org so each
-  // viewer starts from the same clean, fully-populated showcase.
+  // On a successful demo sign-in, wipe + repopulate the demo org so each viewer
+  // starts from a clean, fully-populated showcase. The reseed is heavy (~dozens
+  // of serial DB round-trips), so debounce it: only the first login in a short
+  // window pays for it, and rapid retries or several people opening the demo at
+  // once land instantly on the already-fresh org instead of each triggering a
+  // full wipe+repopulate. consumeRateLimit fails open, so a limiter hiccup just
+  // means we reseed as before.
   if (isDemoEmail(email)) {
-    try {
-      await reseedDemoOrg();
-    } catch (e) {
-      // Don't block login if the reseed hiccups — they still land in a working
-      // (if stale) demo. The next login will try again.
-      console.error("[demo] reseedDemoOrg failed", e);
+    const shouldReseed = await consumeRateLimit("demo-reseed", 1, DEMO_RESEED_DEBOUNCE_SECONDS);
+    if (shouldReseed) {
+      try {
+        await reseedDemoOrg(demoUserId);
+      } catch (e) {
+        // Don't block login if the reseed hiccups — they still land in a working
+        // (if stale) demo. The next login will try again.
+        console.error("[demo] reseedDemoOrg failed", e);
+      }
     }
   }
 
