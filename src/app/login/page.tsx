@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Field, inputClass } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
@@ -13,6 +14,24 @@ const initialState: LoginState = { error: null };
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initialState);
+  const [humanToken, setHumanToken] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
+  const challengedLastAttempt = useRef(false);
+
+  // A returned attempt that carried a Turnstile token spent it server-side, so
+  // mint a fresh one for the next try by bumping the widget's reset signal. The
+  // attempt that first triggers the requirement sent no token, so skip it.
+  useEffect(() => {
+    if (state.error && challengedLastAttempt.current) setResetSignal((s) => s + 1);
+    challengedLastAttempt.current = state.requireHuman === true;
+  }, [state]);
+
+  // Normal logins never see a challenge. Only after a few failed attempts does
+  // the server ask for proof-of-human; then we render the (invisible) widget and
+  // hold the submit button until it hands back a token, so the retry can't be
+  // rejected for a missing one.
+  const needHuman = state.requireHuman === true;
+  const waitingForHuman = needHuman && !humanToken;
 
   return (
     <div className="min-h-full flex flex-col force-light bg-panel" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F7 100%)" }}>
@@ -43,19 +62,21 @@ export default function LoginPage() {
                 <input name="email" type="email" placeholder="you@restaurant.com" required className={inputClass} />
               </Field>
               <Field label="Password">
-                <input name="password" type="password" placeholder="••••••••" required className={inputClass} />
+                <PasswordInput name="password" placeholder="••••••••" required />
               </Field>
               <div className="flex justify-end -mt-1 mb-1">
                 <Link href="/forgot-password" className="text-sm font-medium text-brick">
                   Forgot password?
                 </Link>
               </div>
-              <div className="mt-1">
-                <TurnstileWidget />
-              </div>
+              {needHuman && (
+                <div className="mt-1">
+                  <TurnstileWidget onToken={setHumanToken} resetSignal={resetSignal} />
+                </div>
+              )}
               {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
-              <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
-                {pending ? "Logging in..." : "Log in"}
+              <Btn type="submit" disabled={pending || waitingForHuman} className="w-full justify-center mt-1">
+                {waitingForHuman ? "Verifying you're human…" : pending ? "Logging in..." : "Log in"}
               </Btn>
             </form>
 

@@ -4,6 +4,7 @@ import { Suspense, useActionState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Field, inputClass } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Btn } from "@/components/ui/btn";
 import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
@@ -101,13 +102,7 @@ function SignupForm() {
                 <input name="email" type="email" defaultValue={prefillEmail} placeholder="you@restaurant.com" required className={inputClass} />
               </Field>
               <Field label="Password">
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="At least 8 characters"
-                  required
-                  className={inputClass}
-                />
+                <PasswordInput name="password" placeholder="At least 8 characters" required />
               </Field>
               <Field label="Promo code (optional)">
                 <input name="promoCode" defaultValue={prefillCode} placeholder="Have a code? Enter it here" className={`${inputClass} uppercase`} />

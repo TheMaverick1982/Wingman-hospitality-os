@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useActionState } from "react";
-import { Field, inputClass } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Btn } from "@/components/ui/btn";
 import { setPassword, type SetPasswordState } from "./actions";
 
@@ -18,10 +19,10 @@ export default function SetPasswordPage({ searchParams }: { searchParams: Promis
       <form action={formAction} className="flex flex-col gap-1">
         {next && <input type="hidden" name="next" value={next} />}
         <Field label="Password">
-          <input name="password" type="password" placeholder="At least 8 characters" required className={inputClass} />
+          <PasswordInput name="password" placeholder="At least 8 characters" required />
         </Field>
         <Field label="Confirm password">
-          <input name="confirm" type="password" required className={inputClass} />
+          <PasswordInput name="confirm" required />
         </Field>
         {state.error && <p className="text-sm text-danger mb-2">{state.error}</p>}
         <Btn type="submit" disabled={pending} className="w-full justify-center mt-1">
