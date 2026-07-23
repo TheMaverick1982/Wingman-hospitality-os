@@ -11,6 +11,8 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
+import { StaffTests } from "@/components/dashboard/staff-tests";
+import { getMyTests } from "@/lib/data/staff-tests";
 import { StartTrainingButton } from "./start-training-button";
 import { StartTestButton, type TestOption } from "./start-test-button";
 import { RoleManager } from "../role-manager";
@@ -58,6 +60,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       .maybeSingle();
     myDept = (myStaffRow as { department: string } | null)?.department ?? null;
   }
+
+  // Anyone on the roster (staff OR manager) sees their own assigned tests + scores.
+  const myTests = await getMyTests(profile.userId, profile.orgId);
 
   const supabase = await createClient();
   let signoffsQ = supabase
@@ -187,6 +192,14 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} small />}
         </div>
       </div>
+
+      {myTests.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Your tests &amp; results</div>
+          <div className="text-[13px] text-muted mb-4">Take the ones outstanding, and see how you scored on the rest.</div>
+          <StaffTests tests={myTests} emptyLabel="No tests assigned to you yet." />
+        </div>
+      )}
 
       {leaderTop.length > 0 && (
         <Link href="/training/leaderboard" className="bg-white border border-line rounded-2xl px-5 py-3.5 shadow-sm flex items-center gap-4 hover:border-brick transition-colors group">

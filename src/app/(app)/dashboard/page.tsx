@@ -21,6 +21,8 @@ import { MomentumCard } from "@/components/dashboard/momentum-card";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
 import { StaffDashboard } from "./staff-dashboard";
+import { StaffTests } from "@/components/dashboard/staff-tests";
+import { getMyTests, isTestToDo } from "@/lib/data/staff-tests";
 import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
@@ -333,6 +335,11 @@ export default async function DashboardPage({
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 6);
 
+  // Managers/owners take tests too — surface any they still owe, right on their
+  // (otherwise full) dashboard. Empty (and hidden) if they're not on the roster.
+  const myTests = await getMyTests(profile.userId, profile.orgId);
+  const myToDo = myTests.filter(isTestToDo);
+
   const firstName = profile.fullName.split(" ")[0] || "there";
   const greetingLocation = effectiveLocation
     ? locations.find((l) => l.id === effectiveLocation)?.name ?? "your location"
@@ -456,6 +463,16 @@ export default async function DashboardPage({
           <KpiCard label="Spot-checks logged" value={String(spotChecks.length)} sub="across all departments" delta={trend?.spot.delta} series={trend?.spot.series} />
           <KpiCard label="Sign-offs this week" value={String(signoffsThisWeek ?? 0)} sub="logged in the last 7 days" delta={trend?.signoff.delta} series={trend?.signoff.series} />
           <KpiCard label="Culture moments" value={String(cultureMomentsThisQtr ?? 0)} sub="recognized this quarter" delta={trend?.culture.delta} series={trend?.culture.series} />
+        </div>
+      )}
+
+      {myToDo.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[15px] font-semibold text-ink">Your tests to take</span>
+            <span className="text-xs font-bold text-brick bg-brick-tint px-2 py-0.5 rounded-full">{myToDo.length}</span>
+          </div>
+          <StaffTests tests={myToDo} emptyLabel="" />
         </div>
       )}
 
