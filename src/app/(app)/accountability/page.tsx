@@ -418,6 +418,8 @@ export default async function AccountabilityPage({
       {/* Staff view: one hub for every checklist assigned to the viewer. */}
       {hubChecklists.length > 0 && <MyChecklistsHub checklists={hubChecklists} lang={profile.language} />}
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Completion &amp; flags</div>
+
       {/* Manager view: a completion report per checklist. */}
       {canSeeReport && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -484,6 +486,8 @@ export default async function AccountabilityPage({
           <span className="text-sm font-medium text-[#15803d]">Nothing flagged right now — standards are holding.</span>
         </div>
       )}
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Checks &amp; logs</div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Card className="p-6">
