@@ -76,6 +76,8 @@ export default async function RecoveryPage({
         </div>
       </div>
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">This period</div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Recovery spend" value={`$${discountTotal}`} sub="this period" />
         <StatTile label="Comps logged" value={discounts.length} sub="all with a reason" />
@@ -92,6 +94,8 @@ export default async function RecoveryPage({
           <StatTile label="Total revenue" value={`$${totalRevenue}`} sub="this period" />
         )}
       </div>
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Breakdown &amp; log</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">

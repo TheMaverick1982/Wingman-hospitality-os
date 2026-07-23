@@ -78,6 +78,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         {!canEdit && <Pill>View only</Pill>}
       </div>
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Headcount by role</div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {gridDepts.map((d) => {
           const count = allStaff.filter((s) => s.department === d).length;
