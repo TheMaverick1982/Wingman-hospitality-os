@@ -11,13 +11,15 @@ import { StatusPill } from "@/components/ui/status-pill";
 // RLS note: test_assignments and staff_training_progress are manager-only, so
 // those are read with the admin client scoped to this staffer's own rows. The
 // org row and the staffer's roster row read fine with the normal client.
+type TestEmbed = { title: string | null; pass_pct: number | null };
 type AssignmentRow = {
   test_id: string;
   status: string;
   best_score: number | null;
   last_score: number | null;
   due_at: string | null;
-  tests: { title: string | null; pass_pct: number | null } | null;
+  // Supabase types the embed as an array; at runtime it's the single joined row.
+  tests: TestEmbed | TestEmbed[] | null;
 };
 
 const STATUS: Record<string, { label: string; fg: string; bg: string; dot: string }> = {
@@ -48,9 +50,7 @@ export async function StaffDashboard({
     .is("deleted_at", null)
     .maybeSingle();
 
-  const staffRow = myStaff as { id: string; department: string } | null;
-
-  if (!staffRow) {
+  if (!myStaff) {
     return (
       <>
         <StaffGreeting firstName={firstName} />
@@ -64,16 +64,19 @@ export async function StaffDashboard({
     );
   }
 
+  const staffId = myStaff.id;
+  const department = myStaff.department;
+
   const [{ data: org }, { data: standards }, { data: trainingItems }, { data: progress }, { data: assignmentsData }] =
     await Promise.all([
       supabase.from("organizations").select("weekly_focus, weekly_experiment").single(),
-      supabase.from("department_standards").select("id").eq("department", staffRow.department),
-      supabase.from("department_training_items").select("id").eq("department", staffRow.department),
-      admin.from("staff_training_progress").select("item_type, item_id, checked").eq("staff_id", staffRow.id),
+      supabase.from("department_standards").select("id").eq("department", department),
+      supabase.from("department_training_items").select("id").eq("department", department),
+      admin.from("staff_training_progress").select("item_type, item_id, checked").eq("staff_id", staffId),
       admin
         .from("test_assignments")
         .select("test_id, status, best_score, last_score, due_at, tests(title, pass_pct)")
-        .eq("staff_id", staffRow.id)
+        .eq("staff_id", staffId)
         .order("assigned_at", { ascending: false }),
     ]);
 
@@ -96,7 +99,7 @@ export async function StaffDashboard({
       ? Math.round((allItemKeys.filter((k) => checkedKeys.has(k)).length / allItemKeys.length) * 100)
       : 0;
 
-  const assignments = (assignmentsData ?? []) as AssignmentRow[];
+  const assignments = (assignmentsData ?? []) as unknown as AssignmentRow[];
   const testOf = (a: AssignmentRow) => (Array.isArray(a.tests) ? a.tests[0] : a.tests) ?? null;
   const toDo = assignments.filter((a) => a.status === "assigned" || a.status === "in_progress");
   const passedCount = assignments.filter((a) => a.status === "passed").length;
