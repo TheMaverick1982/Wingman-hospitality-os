@@ -419,9 +419,13 @@ export default async function ReportingPage({
         <StatTile label="Referral rate" value={`${referralRate}%`} sub="raving-fan index" />
       </div>
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">This week&rsquo;s story</div>
+
       <ReportNarrative snapshot={reportSnapshot} />
 
       <RoiLedgerCard roi={roiLedger} />
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Retention &amp; revenue</div>
 
       {revenueInRange.billedVisits > 0 && (
         <div className="bg-white border border-line rounded-[20px] p-6 shadow-sm">
@@ -517,6 +521,10 @@ export default async function ReportingPage({
             ))}
           </div>
         </div>
+      )}
+
+      {(hasTrainingHistory || bizMetrics || auditTrend.length >= 2 || hasChecklistHistory || staffScores.length > 0 || compByServer.length > 0 || menuRows.length > 0) && (
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Team &amp; operations</div>
       )}
 
       {hasTrainingHistory && (
@@ -710,6 +718,8 @@ export default async function ReportingPage({
           </div>
         </Link>
       )}
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Go deeper</div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {sections.map((s) => (
