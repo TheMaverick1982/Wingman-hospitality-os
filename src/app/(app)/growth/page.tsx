@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MapPin, Check } from "lucide-react";
+import { MapPin, Check, ChevronDown } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
@@ -150,15 +150,19 @@ export default async function GrowthPlanPage({
         {!canEdit && <Pill>View only</Pill>}
       </div>
 
-      <div className="bg-brick-tint border border-[#CFE0FF] rounded-2xl p-6">
-        <p className="text-sm text-brick-dark leading-relaxed">
+      <details className="group bg-brick-tint border border-[#CFE0FF] rounded-2xl">
+        <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-5 py-4 text-sm font-semibold text-brick-dark [&::-webkit-details-marker]:hidden">
+          How the growth planner works
+          <ChevronDown size={16} className="ml-auto shrink-0 transition-transform group-open:rotate-180" />
+        </summary>
+        <p className="text-sm text-brick-dark leading-relaxed px-5 pb-5">
           Most operators try to grow revenue by chasing one big number — more covers, a bigger check, a busier
           Saturday. This tool shows why that&apos;s the hard way: revenue is really three numbers multiplied
           together, so a <strong>10% lift in each</strong> compounds into a <strong>33% total gain</strong>, not
           30%. Enter your real numbers below, see exactly what a modest, sustainable push in each lever is worth,
           and set a target you can actually hold your team to — by location or across the whole group.
         </p>
-      </div>
+      </details>
 
       <div className="flex gap-1 bg-white border border-line rounded-xl p-1 w-fit">
         {TABS.map((t) => (
