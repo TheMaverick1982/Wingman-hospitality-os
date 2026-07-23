@@ -677,8 +677,9 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
     return testId;
   };
   const foodTestId = await seedTest("food");
-  await seedTest("bartender");
-  await seedTest("kitchen");
+  const bartenderTestId = await seedTest("bartender");
+  const kitchenTestId = await seedTest("kitchen");
+  const ltoTestId = await seedTest("lto"); // study_quiz: read the content, then take the quiz on it
 
   // A staff record linked to the demo viewer's own login, so "Assigned to you"
   // appears and they can take the test live during a walkthrough.
@@ -697,6 +698,12 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
     };
     const assignments = [
       viewerStaff ? { org_id: orgId, test_id: foodTestId, staff_id: viewerStaff.id, location_id: downtown, assigned_by: userId, due_at: dueSoon, status: "assigned", current_day: 1 } : null,
+      // A learn-then-quiz (study_quiz) test to take, so the demo shows reading the
+      // content and then being quizzed on it.
+      viewerStaff && ltoTestId ? { org_id: orgId, test_id: ltoTestId, staff_id: viewerStaff.id, location_id: downtown, assigned_by: userId, due_at: dueSoon, status: "assigned", current_day: 1 } : null,
+      // Past results for the demo viewer, so their "tests taken / results" show.
+      viewerStaff && bartenderTestId ? { org_id: orgId, test_id: bartenderTestId, staff_id: viewerStaff.id, location_id: downtown, assigned_by: userId, due_at: isoTs(20), status: "passed", current_day: 1, attempts_used: 1, best_score: 88, last_score: 88, passed_at: isoTs(15) } : null,
+      viewerStaff && kitchenTestId ? { org_id: orgId, test_id: kitchenTestId, staff_id: viewerStaff.id, location_id: downtown, assigned_by: userId, due_at: isoTs(30), status: "passed", current_day: 1, attempts_used: 1, best_score: 95, last_score: 95, passed_at: isoTs(25) } : null,
       forStaff("Maya Rivera", { status: "passed", current_day: 5, attempts_used: 1, best_score: 92, last_score: 92, passed_at: isoTs(2) }),
       forStaff("Elena Vasquez", { status: "locked", current_day: 1, attempts_used: 2, best_score: 60, last_score: 60, locked_at: isoTs(1), locked_alerted: true }),
       forStaff("Sofia Marin", { status: "in_progress", current_day: 2, attempts_used: 0 }),

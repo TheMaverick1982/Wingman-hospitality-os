@@ -99,7 +99,7 @@ export function MenuTrainingSection({
         </div>
       )}
 
-      {engineered.length >= 4 && (
+      {canEdit && engineered.length >= 4 && (
         <div className="mb-5">
           <h3 className="font-display text-lg font-semibold text-ink mb-1">Menu engineering</h3>
           <p className="text-xs text-muted mb-3">

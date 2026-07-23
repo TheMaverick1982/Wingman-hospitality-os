@@ -126,6 +126,27 @@ export const ARTICLES: HelpArticle[] = [
     links: [{ label: "Managing your team", href: "/help/team-and-permissions" }],
   },
   {
+    slug: "staff-view",
+    title: "What team members see (the staff view)",
+    summary: "When someone logs in as Staff, Wingman shows a personal view built around their shift — not the whole restaurant.",
+    categoryId: "getting-started",
+    keywords: ["staff", "team member", "server", "employee view", "my training", "my tests", "personal dashboard", "what staff see"],
+    body: [
+      { kind: "p", text: "A Staff login is deliberately narrower than a manager's. Instead of restaurant-wide metrics, team members get a personal view built around their own shift, training, and tests." },
+      { kind: "list", items: [
+        "Dashboard — a personal home: their training progress, the tests assigned to them, this week's focus and experiment, and quick links to their pre-shift checklist and training. No restaurant-wide KPIs.",
+        "Training & standards — only the role(s) assigned to them, only their own tests and scores, and only their own sign-off log. No leaderboard, no other people's results.",
+        "Tests — assigned tests appear at the top of both their dashboard and their Training page; they click one to take it and see their score.",
+        "Accountability — their own pre-shift checklist and completion, not the whole team's.",
+        "Culture & Guest Journey — the shared standard and this week's focus (the manager huddle stays manager-only).",
+        "Help — the Team Playbook and the Ask Wingman assistant.",
+      ] },
+      { kind: "note", text: "Managers and owners keep the full view. Because managers also take tests, their dashboard and Training page add a personal \"your tests to take\" section on top of everything else." },
+      { kind: "note", text: "The sidebar is flattened for staff — the sections they can reach are listed directly, without the collapsible groups managers see." },
+    ],
+    links: [{ label: "Roles & who can see what", href: "/help/roles-and-access" }],
+  },
+  {
     slug: "reading-your-dashboard",
     title: "Reading your dashboard",
     summary: "What each tile means, and how the Business Health card works.",

@@ -13,6 +13,7 @@ import { Topbar } from "@/components/app-shell/topbar";
 import { ScrollReset } from "@/components/app-shell/scroll-reset";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
+import { DemoViewToggle } from "@/components/app-shell/demo-view-toggle";
 import { DemoTour } from "@/components/demo/demo-tour";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { FirstLoginLanguage } from "@/components/app-shell/first-login-language";
@@ -90,6 +91,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
+        {profile.isDemo && <DemoViewToggle mode={profile.accessRole === "staff" ? "staff" : "owner"} />}
         <MobileNav
           accessRole={profile.accessRole}
           fullName={profile.fullName}

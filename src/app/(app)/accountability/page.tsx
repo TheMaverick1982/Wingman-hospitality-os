@@ -347,6 +347,27 @@ export default async function AccountabilityPage({
     });
   }
 
+  // Staff get a personal accountability page — just their own checklists to run,
+  // none of the manager reports, spot-check logs, or company-wide cards.
+  const isStaff = profile.accessRole === "staff";
+  if (isStaff) {
+    return (
+      <>
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your checklists</h1>
+          <p className="text-base text-muted">Run through your checklist before each shift.</p>
+        </div>
+        {hubChecklists.length > 0 ? (
+          <MyChecklistsHub checklists={hubChecklists} lang={profile.language} />
+        ) : (
+          <div className="bg-white border border-line rounded-2xl p-8 shadow-sm text-center">
+            <p className="text-sm text-muted">No checklists are assigned to you right now.</p>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">

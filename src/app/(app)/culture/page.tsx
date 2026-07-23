@@ -43,6 +43,7 @@ export default async function CulturePage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   const canEdit = canEditSection(profile.accessRole, "culture", profile.permissionOverrides);
+  const isStaff = profile.accessRole === "staff";
 
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
@@ -156,7 +157,8 @@ export default async function CulturePage() {
         </div>
       </div>
 
-      <details className="bg-white border border-line rounded-2xl shadow-sm group">
+      {!isStaff && (
+        <details className="bg-white border border-line rounded-2xl shadow-sm group">
         <summary className="flex items-center justify-between gap-3 p-6 cursor-pointer list-none">
           <div>
             <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Weekly manager huddle</div>
@@ -194,7 +196,8 @@ export default async function CulturePage() {
             ))}
           </ol>
         </div>
-      </details>
+        </details>
+      )}
 
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Recognition</div>
 

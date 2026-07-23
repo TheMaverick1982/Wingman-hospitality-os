@@ -32,7 +32,9 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   dashboard: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
   culture: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
   bounceback: { super_admin: "full", manager: "full", shift_lead: "full", staff: "none", developer: "none" },
-  recovery: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  // Service Recovery is manager-facing analytics (comps, how issues were made
+  // right); staff don't action it, so it's hidden from them entirely.
+  recovery: { super_admin: "full", manager: "full", shift_lead: "full", staff: "none", developer: "none" },
   training: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
   journey: { super_admin: "full", manager: "full", shift_lead: "view", staff: "view", developer: "none" },
   accountability: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },

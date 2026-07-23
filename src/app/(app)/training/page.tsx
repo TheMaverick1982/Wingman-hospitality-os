@@ -11,6 +11,9 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
+import { StaffTests } from "@/components/dashboard/staff-tests";
+import { getMyTests, isTestToDo } from "@/lib/data/staff-tests";
+import { KpiCard } from "@/components/dashboard/kpi-card";
 import { StartTrainingButton } from "./start-training-button";
 import { StartTestButton, type TestOption } from "./start-test-button";
 import { RoleManager } from "../role-manager";
@@ -44,6 +47,26 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const { data: lbOrg } = await leaderAdmin.from("organizations").select("leaderboard_enabled").eq("id", profile.orgId).maybeSingle();
   const leaderboardEnabled = (lbOrg as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
   const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, profile.allLocations ? null : effectiveLocation)).slice(0, 3) : [];
+
+  // Staff see only their own department's training — resolve it from their roster row.
+  const isStaff = profile.accessRole === "staff";
+  let myDept: string | null = null;
+  let myStaffId: string | null = null;
+  if (isStaff) {
+    const { data: myStaffRow } = await leaderAdmin
+      .from("staff_members")
+      .select("id, department")
+      .eq("profile_id", profile.userId)
+      .eq("org_id", profile.orgId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    const row = myStaffRow as { id: string; department: string } | null;
+    myStaffId = row?.id ?? null;
+    myDept = row?.department ?? null;
+  }
+
+  // Anyone on the roster (staff OR manager) sees their own assigned tests + scores.
+  const myTests = await getMyTests(profile.userId, profile.orgId);
 
   const supabase = await createClient();
   let signoffsQ = supabase
@@ -108,7 +131,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // the wizard, managed here). Show only those; fall back to all if none exist.
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
   const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
-  const renderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
+  const baseRenderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
+  // Staff: restrict to their own department so they never see other roles' training.
+  const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
 
   const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
@@ -137,6 +162,63 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     };
   }
 
+  const myToDo = myTests.filter(isTestToDo);
+  const myPassed = myTests.filter((t) => t.status === "passed" || t.status === "locked");
+
+  // Staff get a focused, personal Training page: their metrics + tests at the top,
+  // then their results, then the standards for their role. No leaderboard, no
+  // manager tools.
+  if (isStaff) {
+    let trainingPct = 0;
+    if (myStaffId) {
+      const { data: prog } = await leaderAdmin
+        .from("staff_training_progress")
+        .select("item_type, item_id, checked")
+        .eq("staff_id", myStaffId);
+      const checkedKeys = new Set(
+        ((prog ?? []) as { item_type: string; item_id: string; checked: boolean }[])
+          .filter((p) => p.checked)
+          .map((p) => `${p.item_type}:${p.item_id}`)
+      );
+      const keys = [
+        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => s.department === myDept).map((s) => `standard:${s.id}`),
+        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => t.department === myDept).map((t) => `training:${t.id}`),
+      ];
+      trainingPct = keys.length ? Math.round((keys.filter((k) => checkedKeys.has(k)).length / keys.length) * 100) : 0;
+    }
+    return (
+      <>
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your training &amp; standards</h1>
+          <p className="text-base text-muted">Your tests, your progress, and the standards for your role.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <KpiCard label="Training complete" value={`${trainingPct}%`} sub="of your role's standards" />
+          <KpiCard label="Tests to take" value={String(myToDo.length)} sub="assigned to you" />
+          <KpiCard label="Tests passed" value={String(myPassed.filter((t) => t.status === "passed").length)} sub="nice work" />
+        </div>
+
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Tests to take</div>
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <StaffTests tests={myToDo} emptyLabel="No tests to take right now — nicely done." />
+        </div>
+
+        {myPassed.length > 0 && (
+          <>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your results</div>
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <StaffTests tests={myPassed} emptyLabel="" />
+            </div>
+          </>
+        )}
+
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
+        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -147,24 +229,38 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            <ClipboardList size={14} /> Build &amp; manage tests
-          </Link>
-          <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            <Route size={14} /> Learning paths
-          </Link>
+          {!isStaff && (
+            <>
+              <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+                <ClipboardList size={14} /> Build &amp; manage tests
+              </Link>
+              <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+                <Route size={14} /> Learning paths
+              </Link>
+            </>
+          )}
           {leaderboardEnabled && (
             <Link href="/training/leaderboard" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
               <Trophy size={14} /> Leaderboard
             </Link>
           )}
-          <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            Print / PDF
-          </a>
+          {!isStaff && (
+            <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+              Print / PDF
+            </a>
+          )}
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} small />}
         </div>
       </div>
+
+      {myTests.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Your tests &amp; results</div>
+          <div className="text-[13px] text-muted mb-4">Take the ones outstanding, and see how you scored on the rest.</div>
+          <StaffTests tests={myTests} emptyLabel="No tests assigned to you yet." />
+        </div>
+      )}
 
       {leaderTop.length > 0 && (
         <Link href="/training/leaderboard" className="bg-white border border-line rounded-2xl px-5 py-3.5 shadow-sm flex items-center gap-4 hover:border-brick transition-colors group">
@@ -238,11 +334,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
+      {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
 
       <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
 
-      <SignoffLog signoffs={allSignoffs} />
+      {!isStaff && <SignoffLog signoffs={allSignoffs} />}
     </>
   );
 }
