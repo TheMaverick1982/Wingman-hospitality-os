@@ -657,7 +657,7 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   const seedTest = async (key: string): Promise<string | null> => {
     const ex = EXAMPLE_TESTS.find((e) => e.key === key);
     if (!ex) return null;
-    const { data: t } = await admin
+    const { data: t, error: tErr } = await admin
       .from("tests")
       .insert({
         org_id: orgId, title: ex.settings.title, description: ex.settings.description, mode: ex.settings.mode,
@@ -668,7 +668,12 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       })
       .select("id")
       .single();
-    if (!t) return null;
+    // Don't fail silently: a null here skips the whole assignments block below,
+    // which is exactly how the demo viewer ends up with no "tests to take".
+    if (tErr || !t) {
+      console.error(`[demo] seedTest("${key}") failed to insert:`, tErr?.message ?? "no row returned");
+      return null;
+    }
     const testId = t.id as string;
     await admin.from("test_days").insert(ex.days.map((d) => ({ test_id: testId, org_id: orgId, day_number: d.day_number, title: d.title, content: d.content })));
     await admin.from("test_questions").insert(
@@ -709,7 +714,12 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       forStaff("Sofia Marin", { status: "in_progress", current_day: 2, attempts_used: 0 }),
       forStaff("Nadia Khan", { status: "assigned", current_day: 1 }),
     ].filter(Boolean) as Record<string, unknown>[];
-    if (assignments.length) await admin.from("test_assignments").insert(assignments);
+    if (assignments.length) {
+      const { error: aErr } = await admin.from("test_assignments").insert(assignments);
+      if (aErr) console.error("[demo] test_assignments insert failed:", aErr.message);
+    }
+  } else {
+    console.error("[demo] no example tests were created (foodTestId null) — skipping all test assignments.");
   }
 
   // Accountability checklist templates.
