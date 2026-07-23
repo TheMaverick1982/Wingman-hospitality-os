@@ -180,6 +180,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       )}
 
       {canEdit && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <div className="rounded-2xl border border-brick/20 bg-brick-tint/50 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-brick text-white flex items-center justify-center shrink-0">
             <ClipboardList size={20} />
@@ -195,9 +196,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
             <StartTestButton tests={testOptions} staff={staff} departments={renderDepts as Department[]} effectiveLocationId={effectiveLocation} />
           </div>
         </div>
-      )}
 
-      {canEdit && (
         <div className="rounded-2xl border border-[#cfe3d0] bg-olive-tint p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="w-11 h-11 rounded-xl bg-[#15803d] text-white flex items-center justify-center shrink-0">
@@ -235,6 +234,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
               </Link>
             </div>
           </div>
+        </div>
         </div>
       )}
 
