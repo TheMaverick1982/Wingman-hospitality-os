@@ -255,11 +255,13 @@ export const MOVEMENTS: Movement[] = [
       "\"Remember what you said about new servers picking it up on their own? Here's how your standard becomes something they're actually trained and checked against.\" (Then show Training / Accountability.)",
       "\"And here's how you prove they learned it, not just sat through it.\" — on the Training page, hit the big Start a test button: pick 'all staff,' check off the Food Test, send. Then open \"Assigned to you\" and take a question or two so they see the exact staff experience. Point out the results board (who passed, who's locked) and that a lock or a missed deadline emails the manager automatically. (The demo account is pre-loaded with all of this.)",
       "\"And it all rolls up under each person.\" — open anyone from Staff to show the Activity view: training %, tests passed, checklist completion, and their hiring score, all in one place. Great for the owner who asks \"how do I know where each person stands?\"",
+      "\"Want to see what your servers actually see? One click.\" — hit \"View as staff\" in the top bar. The nav shrinks and the whole app becomes the staff experience: a personal home (their training, their assigned tests, this week's focus), their pre-shift checklist, and a Training page scoped to just their role and their own scores — no restaurant numbers, no one else's results. Flip \"Back to owner view\" just as fast. This is the single best answer to \"will my team actually use it?\" — you SHOW the focused staff view instead of describing it. (Demo-only toggle; it's exactly what a real staff login sees.)",
     ],
     doThis: [
       "Before you show anything, play their problem back until they say \"that's right.\" That's your green light — once you've got it, the demo lands. If you don't, keep listening.",
       "Mirror their words as you click: \"this is that first-timer problem you mentioned.\"",
       "For an owner who's been burned by staff not retaining training, the test flow is the money shot: build it → assign it → take it as a staffer → who-passed board. Show it end to end.",
+      "When they ask \"what will my team actually deal with?\", flip \"View as staff\" and let them look. The stripped-down, personal staff view answers the objection better than any pitch.",
       "Tie every screen back to a dollar or an hour saved, in their world.",
       "Stop and ask \"is that the kind of thing you meant?\" — keep them in it.",
     ],
