@@ -130,6 +130,8 @@ export default async function CulturePage() {
         </div>
       </div>
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">This week</div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-gold-tint rounded-2xl p-6">
           <h3 className="font-display text-base font-semibold text-[#b45309] mb-2">This week&apos;s pre-shift focus</h3>
@@ -193,6 +195,8 @@ export default async function CulturePage() {
           </ol>
         </div>
       </details>
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Recognition</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
