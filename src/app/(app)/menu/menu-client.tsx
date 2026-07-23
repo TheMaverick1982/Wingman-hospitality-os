@@ -331,6 +331,8 @@ export function MenuClient({ items, canEdit }: { items: MenuItemRow[]; canEdit: 
             <StatTile label="Dogs" value={counts.dog} sub="low profit, low sales" />
           </div>
 
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Menu items</div>
+
           <div className="bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[760px]">
