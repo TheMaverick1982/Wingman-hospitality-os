@@ -3,6 +3,7 @@ import { requirePlatformSection } from "@/lib/auth/require-platform";
 import { getPlatformPricing, dollars } from "@/lib/pricing";
 import { listDemoTargets } from "@/lib/sales-reps";
 import { DemoLauncher } from "./demo-launcher";
+import { RefreshDemoButton } from "./refresh-demo-button";
 import {
   PRODUCT_ONE_LINER,
   WHY_IT_MATTERS,
@@ -57,8 +58,9 @@ export default async function SalesTrainingPage() {
             real conversations with operators.
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex flex-col items-end gap-2">
           <DemoLauncher targets={demoTargets} />
+          <RefreshDemoButton />
         </div>
       </div>
 

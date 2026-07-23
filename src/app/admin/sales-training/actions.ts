@@ -7,7 +7,7 @@ import { platformSectionActor } from "@/lib/auth/require-platform";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { payableDateFrom } from "@/lib/sales-commissions";
-import { provisionDemoSandbox } from "@/lib/demo/reseed";
+import { provisionDemoSandbox, reseedDemoOrg } from "@/lib/demo/reseed";
 import { attachDemoRun } from "@/lib/crm-sequences";
 
 // Must match the impersonation cookie used by the shared exit action + banner
@@ -133,4 +133,27 @@ export async function claimCommission(prev: ClaimState, formData: FormData): Pro
   revalidatePath("/admin/sales-training");
   revalidatePath("/admin/sales-commissions");
   return { error: null, ok: true, nonce: nonce + 1 };
+}
+
+// Force a fresh reseed of the SHARED wingmandemo org (the one behind the
+// wingmandemo@gmail.com login) and report what actually landed. Handy when the
+// shared demo looks stale (its on-login reseed is debounced) or to verify the
+// example tests + their assignments seeded — if the counts come back 0, the
+// server logs now carry the exact "[demo] seedTest(...) failed" reason.
+export type ReseedDemoState = { ok: boolean; tests?: number; assignments?: number; error?: string };
+
+export async function reseedSharedDemo(_prev: ReseedDemoState, _formData: FormData): Promise<ReseedDemoState> {
+  const actor = await platformSectionActor("sales_training");
+  if (!actor) return { ok: false, error: "You don't have sales access." };
+  try {
+    const ctx = await reseedDemoOrg();
+    const admin = createAdminClient();
+    const [{ count: tests }, { count: assignments }] = await Promise.all([
+      admin.from("tests").select("id", { count: "exact", head: true }).eq("org_id", ctx.orgId),
+      admin.from("test_assignments").select("id", { count: "exact", head: true }).eq("org_id", ctx.orgId),
+    ]);
+    return { ok: true, tests: tests ?? 0, assignments: assignments ?? 0 };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Reseed failed" };
+  }
 }
