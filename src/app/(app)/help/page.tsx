@@ -13,6 +13,10 @@ export const maxDuration = 60;
 
 export default async function HelpPage() {
   const profile = await getCurrentProfile();
+  // Staff get a focused Help: just their team's playbook (plus the always-on AI
+  // assistant widget). The product Help Center and support tickets are for
+  // owners/managers.
+  const isStaff = profile?.accessRole === "staff";
   const supabase = await createClient();
   const { data: playbook } = await supabase
     .from("playbook_articles")
@@ -23,7 +27,9 @@ export default async function HelpPage() {
     <>
       <div>
         <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Help Center</h1>
-        <p className="text-base text-muted">Search for how anything works, or browse by topic.</p>
+        <p className="text-base text-muted">
+          {isStaff ? "Your team's playbook — and ask the assistant anytime." : "Search for how anything works, or browse by topic."}
+        </p>
       </div>
 
       <PlaybookSection
@@ -31,21 +37,23 @@ export default async function HelpPage() {
         canEdit={profile?.accessRole === "super_admin"}
       />
 
-      <HelpBrowser categories={CATEGORIES} articles={ARTICLES} />
+      {!isStaff && <HelpBrowser categories={CATEGORIES} articles={ARTICLES} />}
 
-      <Link
-        href="/support"
-        className="flex items-center gap-4 bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors group"
-      >
-        <span className="w-11 h-11 rounded-[12px] bg-brick-tint text-brick flex items-center justify-center shrink-0">
-          <LifeBuoy size={20} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[15px] font-semibold text-ink">Still need help? Contact support</div>
-          <div className="text-[13px] text-muted-2">Open a ticket and our team will get back to you by email and here.</div>
-        </div>
-        <ArrowUpRight size={17} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
-      </Link>
+      {!isStaff && (
+        <Link
+          href="/support"
+          className="flex items-center gap-4 bg-white border border-line rounded-2xl p-5 shadow-sm hover:border-brick transition-colors group"
+        >
+          <span className="w-11 h-11 rounded-[12px] bg-brick-tint text-brick flex items-center justify-center shrink-0">
+            <LifeBuoy size={20} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[15px] font-semibold text-ink">Still need help? Contact support</div>
+            <div className="text-[13px] text-muted-2">Open a ticket and our team will get back to you by email and here.</div>
+          </div>
+          <ArrowUpRight size={17} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
+        </Link>
+      )}
     </>
   );
 }
