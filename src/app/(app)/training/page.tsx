@@ -12,7 +12,8 @@ import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
 import { StaffTests } from "@/components/dashboard/staff-tests";
-import { getMyTests } from "@/lib/data/staff-tests";
+import { getMyTests, isTestToDo } from "@/lib/data/staff-tests";
+import { KpiCard } from "@/components/dashboard/kpi-card";
 import { StartTrainingButton } from "./start-training-button";
 import { StartTestButton, type TestOption } from "./start-test-button";
 import { RoleManager } from "../role-manager";
@@ -50,15 +51,18 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // Staff see only their own department's training — resolve it from their roster row.
   const isStaff = profile.accessRole === "staff";
   let myDept: string | null = null;
+  let myStaffId: string | null = null;
   if (isStaff) {
     const { data: myStaffRow } = await leaderAdmin
       .from("staff_members")
-      .select("department")
+      .select("id, department")
       .eq("profile_id", profile.userId)
       .eq("org_id", profile.orgId)
       .is("deleted_at", null)
       .maybeSingle();
-    myDept = (myStaffRow as { department: string } | null)?.department ?? null;
+    const row = myStaffRow as { id: string; department: string } | null;
+    myStaffId = row?.id ?? null;
+    myDept = row?.department ?? null;
   }
 
   // Anyone on the roster (staff OR manager) sees their own assigned tests + scores.
@@ -156,6 +160,63 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       signoffCount: deptSignoffs.length,
       standardsCount: data[d].standards.length + data[d].trainingItems.length,
     };
+  }
+
+  const myToDo = myTests.filter(isTestToDo);
+  const myPassed = myTests.filter((t) => t.status === "passed" || t.status === "locked");
+
+  // Staff get a focused, personal Training page: their metrics + tests at the top,
+  // then their results, then the standards for their role. No leaderboard, no
+  // manager tools.
+  if (isStaff) {
+    let trainingPct = 0;
+    if (myStaffId) {
+      const { data: prog } = await leaderAdmin
+        .from("staff_training_progress")
+        .select("item_type, item_id, checked")
+        .eq("staff_id", myStaffId);
+      const checkedKeys = new Set(
+        ((prog ?? []) as { item_type: string; item_id: string; checked: boolean }[])
+          .filter((p) => p.checked)
+          .map((p) => `${p.item_type}:${p.item_id}`)
+      );
+      const keys = [
+        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => s.department === myDept).map((s) => `standard:${s.id}`),
+        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => t.department === myDept).map((t) => `training:${t.id}`),
+      ];
+      trainingPct = keys.length ? Math.round((keys.filter((k) => checkedKeys.has(k)).length / keys.length) * 100) : 0;
+    }
+    return (
+      <>
+        <div>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your training &amp; standards</h1>
+          <p className="text-base text-muted">Your tests, your progress, and the standards for your role.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <KpiCard label="Training complete" value={`${trainingPct}%`} sub="of your role's standards" />
+          <KpiCard label="Tests to take" value={String(myToDo.length)} sub="assigned to you" />
+          <KpiCard label="Tests passed" value={String(myPassed.filter((t) => t.status === "passed").length)} sub="nice work" />
+        </div>
+
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Tests to take</div>
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <StaffTests tests={myToDo} emptyLabel="No tests to take right now — nicely done." />
+        </div>
+
+        {myPassed.length > 0 && (
+          <>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your results</div>
+            <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+              <StaffTests tests={myPassed} emptyLabel="" />
+            </div>
+          </>
+        )}
+
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
+        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
+      </>
+    );
   }
 
   return (

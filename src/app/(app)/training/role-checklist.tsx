@@ -76,18 +76,18 @@ export function RoleChecklist({
         </div>
       )}
 
-      <div className="pt-4 mt-4 border-t border-line flex flex-col gap-3">
-        {canEdit && (
+      {canEdit && (
+        <div className="pt-4 mt-4 border-t border-line flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-sm text-muted">Verify they learned it — make this an online test.</span>
             <RoleTestButton department={department} hasTest={hasTest} hasTraining={hospitalityItems.length + roleItems.length > 0} />
           </div>
-        )}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted">Ready to train someone on this?</span>
-          <StartTrainingButton staff={staff} locations={locations} department={department} small />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-muted">Ready to train someone on this?</span>
+            <StartTrainingButton staff={staff} locations={locations} department={department} small />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
