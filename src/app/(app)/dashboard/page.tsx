@@ -20,6 +20,7 @@ import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { MomentumCard } from "@/components/dashboard/momentum-card";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
+import { StaffDashboard } from "./staff-dashboard";
 import { FIVE_GAPS, constraintGapIndex, scoreTone } from "@/lib/audit";
 import { RetentionChart } from "@/components/dashboard/retention-chart";
 import { GreetingHeader } from "@/components/dashboard/greeting-header";
@@ -63,6 +64,12 @@ export default async function DashboardPage({
   if (!profile) return null;
   // The developer role is API-only — its home is the API access page.
   if (profile.accessRole === "developer") redirect("/api-access");
+  // Staff get a personal dashboard (their tests, training, checklist, focus) —
+  // not the restaurant-wide manager view. Branch out before the heavy manager
+  // data fetching below.
+  if (profile.accessRole === "staff") {
+    return <StaffDashboard userId={profile.userId} orgId={profile.orgId} fullName={profile.fullName} />;
+  }
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const { location } = await searchParams;
