@@ -130,6 +130,7 @@ export function Sidebar({
   const pathname = usePathname();
   const isSuperAdmin = accessRole === "super_admin";
   const isDeveloperRole = accessRole === "developer";
+  const isStaff = accessRole === "staff";
   // Managers/shift leads reach Settings for the Notifications section (the page
   // itself hides the owner-only tabs from them).
   const canSeeSettings = accessRole === "super_admin" || accessRole === "manager" || accessRole === "shift_lead";
@@ -224,27 +225,32 @@ export function Sidebar({
           <div className="mt-1.5">{navLink(BOUNCEBACK_ITEM)}</div>
         )}
 
-        {NAV_GROUPS.map((group) => {
-          const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
-          if (items.length === 0) return null; // hide a group the role can't see into
-          const open = openGroups[group.id];
-          const hasActive = items.some((it) => pathname.startsWith(it.href));
-          return (
-            <div key={group.id} className="mt-1.5">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                aria-expanded={open}
-                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
-              >
-                {/* Tint the label when its section holds the current page but is collapsed. */}
-                <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
-                <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
-              </button>
-              {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
-            </div>
-          );
-        })}
+        {isStaff
+          ? // Staff see only a handful of sections — show them flat, no collapsible group headers.
+            NAV_GROUPS.flatMap((group) => groupItemsFor(group, variant).filter((it) => canSee(it.section))).map((it) =>
+              navLink(it)
+            )
+          : NAV_GROUPS.map((group) => {
+              const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
+              if (items.length === 0) return null; // hide a group the role can't see into
+              const open = openGroups[group.id];
+              const hasActive = items.some((it) => pathname.startsWith(it.href));
+              return (
+                <div key={group.id} className="mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={open}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
+                  >
+                    {/* Tint the label when its section holds the current page but is collapsed. */}
+                    <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
+                    <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+                  </button>
+                  {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
+                </div>
+              );
+            })}
 
         {canSee(REPORTING_ITEM.section) && <div className="mt-1.5">{navLink(REPORTING_ITEM)}</div>}
 
