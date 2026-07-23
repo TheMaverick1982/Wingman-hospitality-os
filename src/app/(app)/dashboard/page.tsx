@@ -495,7 +495,7 @@ export default async function DashboardPage({
 
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Retention &amp; operations</div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm" data-tour="retention">
           <div className="flex items-start justify-between mb-2">
             <div>
@@ -541,7 +541,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
         <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F1F1]">
             <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Sign-off log</span>
@@ -607,7 +607,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
         <div className="bg-[#0A0A0A] rounded-2xl p-7 text-white">
           <div className="flex items-start justify-between mb-6">
             <div>
