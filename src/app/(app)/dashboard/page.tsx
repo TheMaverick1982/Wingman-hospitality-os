@@ -330,6 +330,13 @@ export default async function DashboardPage({
   const greetingLocation = effectiveLocation
     ? locations.find((l) => l.id === effectiveLocation)?.name ?? "your location"
     : "every location";
+
+  // Pair the "this week" cards and the two status pills side-by-side on desktop
+  // (instead of a tall stack) to declutter the top of the page.
+  const showMomentum = Boolean(momentum && onboarding?.allDone);
+  const showMoves = Boolean(weeklyMoves);
+  const showFocus = Boolean(org?.weekly_focus);
+  const showAudit = Boolean(latestAudit && auditConstraint);
   return (
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
@@ -374,47 +381,54 @@ export default async function DashboardPage({
         <WeekVerdict repeatRate={trend.repeatNow} repeatDelta={trend.repeatDelta} momentum={momentum} />
       )}
 
-      {momentum && onboarding?.allDone && <MomentumCard momentum={momentum} />}
-
-      {weeklyMoves && (
-        <WeeklyMovesCard
-          initialMoves={weeklyMoves.moves}
-          weekLabel={new Date(`${weeklyMoves.weekStart}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
-        />
+      {(showMomentum || showMoves) && (
+        <div className={`grid grid-cols-1 gap-5 ${showMomentum && showMoves ? "lg:grid-cols-2 items-start" : ""}`}>
+          {momentum && onboarding?.allDone && <MomentumCard momentum={momentum} />}
+          {weeklyMoves && (
+            <WeeklyMovesCard
+              initialMoves={weeklyMoves.moves}
+              weekLabel={new Date(`${weeklyMoves.weekStart}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+            />
+          )}
+        </div>
       )}
 
-      {org?.weekly_focus && (
-        <Link
-          href="/culture"
-          className="flex items-center gap-3 bg-gold-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
-        >
-          <Sparkle size={16} className="text-[#b45309] shrink-0" />
-          <span className="text-sm text-[#b45309]">
-            <span className="font-semibold">This week&apos;s pre-shift focus:</span> {org.weekly_focus}
-          </span>
-        </Link>
-      )}
+      {(showFocus || showAudit) && (
+        <div className={`grid grid-cols-1 gap-4 ${showFocus && showAudit ? "lg:grid-cols-2 items-stretch" : ""}`}>
+          {org?.weekly_focus && (
+            <Link
+              href="/culture"
+              className="flex items-center gap-3 bg-gold-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
+            >
+              <Sparkle size={16} className="text-[#b45309] shrink-0" />
+              <span className="text-sm text-[#b45309]">
+                <span className="font-semibold">This week&apos;s pre-shift focus:</span> {org.weekly_focus}
+              </span>
+            </Link>
+          )}
 
-      {latestAudit && auditConstraint && (
-        <Link
-          href="/audit"
-          className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
-        >
-          <ClipboardCheck size={16} className="text-brick shrink-0" />
-          <span className="flex items-center gap-2 text-sm text-ink flex-1 min-w-0">
-            <span className={`inline-flex items-center gap-1.5 font-semibold ${scoreTone(latestAudit.health_score).fg}`}>
-              <span className={`w-2 h-2 rounded-full ${scoreTone(latestAudit.health_score).dot}`} />
-              Health Score {latestAudit.health_score}
-            </span>
-            <span className="text-muted-2">·</span>
-            <span className="text-muted truncate">
-              Fix first: <span className="font-semibold text-ink">{auditConstraint.label}</span>
-            </span>
-          </span>
-          <span className="text-sm font-semibold text-brick whitespace-nowrap flex items-center gap-1">
-            Open audit <ArrowUpRight size={13} />
-          </span>
-        </Link>
+          {latestAudit && auditConstraint && (
+            <Link
+              href="/audit"
+              className="flex items-center gap-3 bg-white border border-line rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
+            >
+              <ClipboardCheck size={16} className="text-brick shrink-0" />
+              <span className="flex items-center gap-2 text-sm text-ink flex-1 min-w-0">
+                <span className={`inline-flex items-center gap-1.5 font-semibold ${scoreTone(latestAudit.health_score).fg}`}>
+                  <span className={`w-2 h-2 rounded-full ${scoreTone(latestAudit.health_score).dot}`} />
+                  Health Score {latestAudit.health_score}
+                </span>
+                <span className="text-muted-2">·</span>
+                <span className="text-muted truncate">
+                  Fix first: <span className="font-semibold text-ink">{auditConstraint.label}</span>
+                </span>
+              </span>
+              <span className="text-sm font-semibold text-brick whitespace-nowrap flex items-center gap-1">
+                Open audit <ArrowUpRight size={13} />
+              </span>
+            </Link>
+          )}
+        </div>
       )}
 
       {isEmptyDashboard ? (
@@ -478,6 +492,8 @@ export default async function DashboardPage({
           </div>
         </div>
       )}
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Retention &amp; operations</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm" data-tour="retention">
