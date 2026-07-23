@@ -1,7 +1,12 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AccessRole, PermissionOverrides } from "./permissions";
 import { normalizeLang, type Lang } from "@/lib/i18n";
+
+// Demo-only "Staff View" cookie: when set to "staff" on a demo org, the session
+// is treated as the staff role so a sales rep can show the team-member experience.
+export const DEMO_VIEW_COOKIE = "wm_demo_view";
 
 export type CurrentProfile = {
   userId: string;
@@ -83,7 +88,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null; demo_expires_at: string | null } | null;
   };
 
-  return {
+  const base: CurrentProfile = {
     userId: user.id,
     email: user.email,
     fullName: profile.full_name,
@@ -105,4 +110,17 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     franchiseGroupId: franchiseRow?.group_id ?? null,
     franchiseRole: franchiseRow?.role ?? null,
   };
+
+  // Demo-only "Staff View": on a demo org a sales rep can flip the session into
+  // the staff role to show what a team member sees. Gated strictly to demo orgs
+  // and read from an HttpOnly cookie, so it can never affect a real account.
+  // (RLS still runs as the underlying owner — fine for a read-only showcase.)
+  if (base.isDemo) {
+    const cookieStore = await cookies();
+    if (cookieStore.get(DEMO_VIEW_COOKIE)?.value === "staff") {
+      return { ...base, accessRole: "staff", allLocations: false, isPlatformAdmin: false, platformAccess: [] };
+    }
+  }
+
+  return base;
 }
