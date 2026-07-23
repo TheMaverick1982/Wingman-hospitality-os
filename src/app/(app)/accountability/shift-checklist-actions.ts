@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { localDate } from "@/lib/local-date";
 import { getChecklistItems } from "./template-actions";
 
 export type PreshiftState = { error: string | null; done?: boolean };
@@ -29,7 +30,10 @@ async function completeMyChecklist(type: string, formData: FormData): Promise<Pr
   const completedCount = checked.filter(Boolean).length;
   if (completedCount === 0) return { error: "Check off what you completed before submitting." };
 
-  const today = new Date().toISOString().slice(0, 10);
+  // "Today" is the local business day at the person's location, so the checklist
+  // resets at the restaurant's midnight (not UTC's, which is mid-evening in the
+  // Americas and would roll the day over during service).
+  const today = localDate(profile.locationTimezone);
   const supabase = await createClient();
 
   // Upsert this person's completion for today (one per person per type per day).

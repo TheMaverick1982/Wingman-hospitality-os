@@ -319,7 +319,9 @@ export function GuestsClient({
       </div>
 
       {(winBackList.length > 0 || readyToRefer.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Action lists</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Clock size={16} className="text-[#D97706]" />
@@ -382,7 +384,10 @@ export function GuestsClient({
             )}
           </div>
         </div>
+        </>
       )}
+
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Visit funnel &amp; referrals</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
@@ -511,6 +516,8 @@ export function GuestsClient({
           </div>
         </div>
       </div>
+
+      <div className="hidden lg:block text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">All guests</div>
 
       <div className="hidden lg:flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg max-w-md w-full bg-white border border-line">

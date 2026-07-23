@@ -129,6 +129,8 @@ export function AuditClient({
             <ActionPlan text={latest.action_plan || "No action plan recorded."} />
           </div>
 
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Score breakdown</div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
               <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">5-Gap Diagnosis</div>
@@ -176,6 +178,8 @@ export function AuditClient({
           </div>
 
           {audits.length > 1 && (
+            <>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Audit history</div>
             <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-sm">
               <table className="w-full text-sm">
                 <thead>
@@ -201,6 +205,7 @@ export function AuditClient({
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       ) : (

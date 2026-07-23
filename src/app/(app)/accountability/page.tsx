@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { aggregateBy, computeSpotCheckAverages, stageOf, type Discount, type SpotCheck } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
+import { localDate } from "@/lib/local-date";
 import { canEditSection } from "@/lib/auth/permissions";
 import { Card } from "@/components/ui/card";
 import { Pill } from "@/components/ui/pill";
@@ -177,7 +178,10 @@ export default async function AccountabilityPage({
   const accountabilityScore = components.length > 0 ? Math.round(components.reduce((a, b) => a + b, 0) / components.length) : 0;
 
   // --- Per-staff checklists: personal cards + manager reports (pre-shift + FOH loyalty) ---
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // The local business day at the viewer's location, so a checklist reads as
+  // "done today" through the restaurant's whole day and resets at its midnight,
+  // not UTC's. (Matches how the completion is written in shift-checklist-actions.)
+  const todayStr = localDate(profile.locationTimezone);
 
   // Custom (owner-created) role checklists + their items.
   const { data: customRows } = await supabase.from("custom_checklists").select("id, title, departments, sort_order").order("sort_order");

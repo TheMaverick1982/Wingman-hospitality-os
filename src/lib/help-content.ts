@@ -553,6 +553,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "For managers" },
       { kind: "p", text: "The \"Pre-shift checklist completion\" panel shows who completed today (with the time), plus a 30-day view of each person's last completion and total." },
       { kind: "note", text: "Wingman has no schedule, so no one is ever marked \"missing\" for a day they didn't work — completion is the signal. The 30-day view is how you spot someone genuinely falling off." },
+      { kind: "note", text: "Checklists reset once a day at your location's local midnight (set each store's timezone under Settings → Locations), so a checklist stays \"done\" through the whole business day and comes back fresh for the next day's shift." },
       { kind: "tip", text: "Assign it to roles: under the owner's \"Checklist templates\", each built-in checklist (pre-shift, server, loyalty) has an \"Assign roles\" control — pick which roles see it on login, or leave it for all staff." },
     ],
   },

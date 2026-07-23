@@ -15,6 +15,10 @@ export type CurrentProfile = {
   accessRole: AccessRole;
   locationId: string | null;
   locationName: string | null;
+  // IANA timezone of the user's home location (e.g. "America/New_York"), used to
+  // compute the local business day for day-scoped features like checklists.
+  // Null when the user has no home location or it has no timezone set.
+  locationTimezone: string | null;
   orgId: string;
   orgName: string;
   isPlatformAdmin: boolean;
@@ -59,7 +63,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const [{ data }, { data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
     admin
       .from("profiles")
-      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name), organizations(name, permission_overrides, is_demo, demo_expires_at)")
+      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, locations!location_id(name, timezone), organizations(name, permission_overrides, is_demo, demo_expires_at)")
       .eq("id", user.id)
       .maybeSingle(),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
@@ -84,7 +88,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     is_platform_admin: boolean;
     platform_access: string[] | null;
     all_locations: boolean;
-    locations: { name: string } | null;
+    locations: { name: string; timezone: string | null } | null;
     organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null; demo_expires_at: string | null } | null;
   };
 
@@ -95,6 +99,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     accessRole: profile.access_role,
     locationId: profile.location_id,
     locationName: profile.locations?.name ?? null,
+    locationTimezone: profile.locations?.timezone ?? null,
     orgId: profile.org_id,
     orgName: profile.organizations?.name ?? "",
     isPlatformAdmin: profile.is_platform_admin,

@@ -283,6 +283,7 @@ export function PartnersClient({
   // reachable first on a phone — same idea as Guest Bounce Back).
   const metricCards = (
     <>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">At a glance</div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Total contacts" value={contacts.length} sub="businesses you're tracking" />
         <StatTile
