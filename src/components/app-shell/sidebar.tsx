@@ -79,9 +79,21 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
 
 const NAV_STATE_KEY = "wm.nav.openGroups";
 
-// The group whose section matches the current route (or null on Dashboard/Reporting).
-function activeGroupId(pathname: string): string | null {
-  const g = NAV_GROUPS.find((grp) => grp.items.some((it) => pathname.startsWith(it.href)));
+// Items shown for a group in a given variant. On mobile, Guest Bounce Back is
+// surfaced as a pinned shortcut above the Guests group, so it's removed from the
+// group itself there — otherwise it would appear (and highlight) twice.
+function groupItemsFor(group: { id: string; items: NavItem[] }, variant: "desktop" | "drawer"): NavItem[] {
+  if (variant === "drawer" && group.id === "guests") {
+    return group.items.filter((it) => it.href !== BOUNCEBACK_ITEM.href);
+  }
+  return group.items;
+}
+
+// The group whose section matches the current route (or null on Dashboard/
+// Reporting). Uses the variant's visible items, so on mobile Bounce Back doesn't
+// count toward — and needlessly auto-open — the Guests group.
+function activeGroupId(pathname: string, variant: "desktop" | "drawer"): string | null {
+  const g = NAV_GROUPS.find((grp) => groupItemsFor(grp, variant).some((it) => pathname.startsWith(it.href)));
   return g?.id ?? null;
 }
 
@@ -129,7 +141,7 @@ export function Sidebar({
   // markup — then load the visitor's saved open/closed choices on the client.
   // The active group is always forced open so the current page is never hidden.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map((g) => [g.id, g.id === activeGroupId(pathname)]))
+    Object.fromEntries(NAV_GROUPS.map((g) => [g.id, g.id === activeGroupId(pathname, variant)]))
   );
   useEffect(() => {
     try {
@@ -137,7 +149,7 @@ export function Sidebar({
       setOpenGroups((prev) => {
         const merged = { ...prev };
         for (const g of NAV_GROUPS) if (g.id in saved) merged[g.id] = saved[g.id];
-        const active = activeGroupId(pathname);
+        const active = activeGroupId(pathname, variant);
         if (active) merged[active] = true;
         return merged;
       });
@@ -148,9 +160,9 @@ export function Sidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    const active = activeGroupId(pathname);
+    const active = activeGroupId(pathname, variant);
     if (active) setOpenGroups((prev) => (prev[active] ? prev : { ...prev, [active]: true }));
-  }, [pathname]);
+  }, [pathname, variant]);
   const toggleGroup = (id: string) => {
     setOpenGroups((prev) => {
       const next = { ...prev, [id]: !prev[id] };
@@ -213,7 +225,7 @@ export function Sidebar({
         )}
 
         {NAV_GROUPS.map((group) => {
-          const items = group.items.filter((it) => canSee(it.section));
+          const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
           if (items.length === 0) return null; // hide a group the role can't see into
           const open = openGroups[group.id];
           const hasActive = items.some((it) => pathname.startsWith(it.href));
