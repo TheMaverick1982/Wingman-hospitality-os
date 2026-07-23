@@ -14,7 +14,6 @@ import { ScrollReset } from "@/components/app-shell/scroll-reset";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoViewToggle } from "@/components/app-shell/demo-view-toggle";
-import { DemoTour } from "@/components/demo/demo-tour";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { FirstLoginLanguage } from "@/components/app-shell/first-login-language";
 import { CloverFinalize } from "@/components/app-shell/clover-finalize";
@@ -116,8 +115,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <AssistantWidget />
-      {profile.isDemoSandbox && <DemoTour email={profile.demoLeadEmail} />}
-      {!profile.languageChosen && <FirstLoginLanguage />}
+      {/* Demos skip onboarding entirely: no product-tour coach marks (whose last
+          step pushes a premature "create your account"), and no first-login
+          language prompt. A rep is showing the product, and a self-serve visitor
+          should get straight into it — not a signup wall. Real customers still
+          get the language chooser on their first login. */}
+      {!profile.isDemo && !profile.languageChosen && <FirstLoginLanguage />}
       {hasPendingClover && <CloverFinalize />}
     </div>
   );
