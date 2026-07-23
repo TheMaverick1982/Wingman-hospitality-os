@@ -45,6 +45,20 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const leaderboardEnabled = (lbOrg as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
   const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, profile.allLocations ? null : effectiveLocation)).slice(0, 3) : [];
 
+  // Staff see only their own department's training — resolve it from their roster row.
+  const isStaff = profile.accessRole === "staff";
+  let myDept: string | null = null;
+  if (isStaff) {
+    const { data: myStaffRow } = await leaderAdmin
+      .from("staff_members")
+      .select("department")
+      .eq("profile_id", profile.userId)
+      .eq("org_id", profile.orgId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    myDept = (myStaffRow as { department: string } | null)?.department ?? null;
+  }
+
   const supabase = await createClient();
   let signoffsQ = supabase
     .from("training_signoffs")
@@ -108,7 +122,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // the wizard, managed here). Show only those; fall back to all if none exist.
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
   const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
-  const renderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
+  const baseRenderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
+  // Staff: restrict to their own department so they never see other roles' training.
+  const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
 
   const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
@@ -147,20 +163,26 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            <ClipboardList size={14} /> Build &amp; manage tests
-          </Link>
-          <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            <Route size={14} /> Learning paths
-          </Link>
+          {!isStaff && (
+            <>
+              <Link href="/training/tests" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+                <ClipboardList size={14} /> Build &amp; manage tests
+              </Link>
+              <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+                <Route size={14} /> Learning paths
+              </Link>
+            </>
+          )}
           {leaderboardEnabled && (
             <Link href="/training/leaderboard" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
               <Trophy size={14} /> Leaderboard
             </Link>
           )}
-          <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
-            Print / PDF
-          </a>
+          {!isStaff && (
+            <a href="/print/training" target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+              Print / PDF
+            </a>
+          )}
           {!canEdit && <Pill>View only</Pill>}
           {canEdit && <StartTrainingButton staff={staff} locations={locations} departments={renderDepts as Department[]} small />}
         </div>
@@ -238,11 +260,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
+      {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
 
       <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
 
-      <SignoffLog signoffs={allSignoffs} />
+      {!isStaff && <SignoffLog signoffs={allSignoffs} />}
     </>
   );
 }
