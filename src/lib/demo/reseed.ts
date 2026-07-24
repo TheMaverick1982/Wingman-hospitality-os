@@ -715,7 +715,14 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       forStaff("Nadia Khan", { status: "assigned", current_day: 1 }),
     ].filter(Boolean) as Record<string, unknown>[];
     if (assignments.length) {
-      const { error: aErr } = await admin.from("test_assignments").insert(assignments);
+      // These rows have heterogeneous keys (only some set attempts_used /
+      // locked_alerted). On a BULK insert PostgREST unions the keys and fills a
+      // row's missing ones with NULL — not the column default — so a NOT NULL
+      // column like attempts_used or locked_alerted that only some rows set would
+      // fail the WHOLE batch, leaving the demo viewer with zero tests. Give every
+      // row the NOT NULL-defaulted columns explicitly so the key set is uniform.
+      const rows = assignments.map((a) => ({ attempts_used: 0, locked_alerted: false, ...a }));
+      const { error: aErr } = await admin.from("test_assignments").insert(rows);
       if (aErr) console.error("[demo] test_assignments insert failed:", aErr.message);
     }
   } else {
