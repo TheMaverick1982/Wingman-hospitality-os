@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
-import { Upload, Trash2, Sparkles, Plus, ChevronRight, Pencil, X, BookOpen, RotateCcw } from "lucide-react";
+import { Upload, Trash2, Sparkles, Plus, ChevronRight, Pencil, X, BookOpen, RotateCcw, Clock } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
@@ -16,6 +16,7 @@ import {
   deleteMenuItemPermanently,
   updateMenuItem,
   addCustomMenuItem,
+  setMenuItemsLto,
   type MenuUploadState,
   type AddCustomDishState,
   type EditMenuItemState,
@@ -35,7 +36,12 @@ export type MenuItem = {
   profit_amount: number | null;
   archived_at?: string | null;
   recipeStepCount?: number;
+  // Limited Time Offer: rotating monthly special, pinned to its own section.
+  is_lto?: boolean;
 };
+
+// The label for the pinned Limited Time Offers section (used as its group key).
+const LTO_SECTION = "Limited Time Offers";
 
 const uploadInitial: MenuUploadState = { error: null };
 const addInitial: AddCustomDishState = { error: null };
@@ -76,6 +82,14 @@ export function MenuTrainingSection({
     if (!confirm(`Archive ${ids.length} menu item${ids.length === 1 ? "" : "s"}? They'll drop off the menu but keep their recipe, and you can restore them anytime.`)) return;
     startBulk(async () => {
       await deleteMenuItems(ids);
+      clearSelected();
+    });
+  };
+  const setLtoSelected = (isLto: boolean) => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    startBulk(async () => {
+      await setMenuItemsLto(ids, isLto);
       clearSelected();
     });
   };
@@ -170,16 +184,30 @@ export function MenuTrainingSection({
           <span className="text-[13px] font-semibold text-brick-dark">
             {selected.size} selected
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <button onClick={clearSelected} className="text-[13px] font-semibold text-muted-2 hover:text-ink">
               Clear
+            </button>
+            <button
+              onClick={() => setLtoSelected(true)}
+              disabled={bulkPending}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#b45309] border border-gold/40 bg-gold-tint rounded-full px-3.5 py-1.5 hover:bg-gold-tint/70 disabled:opacity-50 transition-colors"
+            >
+              <Clock size={13} /> Mark as LTO
+            </button>
+            <button
+              onClick={() => setLtoSelected(false)}
+              disabled={bulkPending}
+              className="text-[13px] font-semibold text-muted-2 hover:text-ink disabled:opacity-50"
+            >
+              Remove LTO
             </button>
             <button
               onClick={deleteSelected}
               disabled={bulkPending}
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-danger rounded-full px-3.5 py-1.5 hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              <Trash2 size={13} /> {bulkPending ? "Archiving…" : "Archive selected"}
+              <Trash2 size={13} /> {bulkPending ? "Working…" : "Archive selected"}
             </button>
           </div>
         </div>
@@ -194,6 +222,11 @@ export function MenuTrainingSection({
           <input name="description" placeholder="Description" className={`${inputClass} col-span-2`} />
           <input name="pairing_suggestion" placeholder="Pairing suggestion" className={inputClass} />
           <input name="upsell_suggestion" placeholder="Upsell suggestion" className={inputClass} />
+          <label className="col-span-2 flex items-center gap-2 text-[13px] text-charcoal-2">
+            <input type="checkbox" name="is_lto" className="w-4 h-4 accent-[#b45309]" />
+            <Clock size={14} className="text-[#b45309]" />
+            Limited Time Offer — pin to its own &ldquo;{LTO_SECTION}&rdquo; section
+          </label>
           {addState.error && <p className="text-sm text-danger col-span-2">{addState.error}</p>}
           <div className="col-span-2 flex justify-end">
             <Btn small type="submit" disabled={addPending}>
@@ -207,35 +240,51 @@ export function MenuTrainingSection({
         <p className="text-sm text-muted">No menu items yet — upload a menu to get started.</p>
       ) : (
         (() => {
-          const groups = groupByCategory(activeItems);
-          // Not categorized yet (e.g. an older menu uploaded before categories) —
-          // a flat list reads fine and re-uploading will group it.
-          if (groups.length <= 1) {
-            return (
-              <div className="flex flex-col gap-2.5">
-                {activeItems.map((item) => (
-                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} showRecipe={showRecipe} />
-                ))}
-              </div>
-            );
-          }
+          // Limited Time Offers rotate constantly, so they get their own pinned
+          // section at the top, separate from the standing categories. A dish
+          // keeps its category, so clearing the flag drops it back into place.
+          const ltoItems = activeItems.filter((i) => i.is_lto);
+          const regularItems = activeItems.filter((i) => !i.is_lto);
+          const groups = groupByCategory(regularItems);
+          const renderRow = (item: MenuItem) => (
+            <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} showRecipe={showRecipe} />
+          );
           return (
             <div className="flex flex-col gap-2">
-              {groups.map(([cat, catItems]) => (
-                <details key={cat} className="group border border-line rounded-2xl bg-panel/40 overflow-hidden">
-                  <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-panel transition-colors">
-                    <ChevronRight size={15} className="text-muted-2 shrink-0 transition-transform group-open:rotate-90" />
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-charcoal-2">{cat}</span>
-                    <span className="ml-1 text-xs text-muted-2 tabular-nums">{catItems.length}</span>
-                    <span className="ml-auto text-[11px] font-medium text-muted-2 group-open:hidden">Tap to view</span>
+              {ltoItems.length > 0 && (
+                <details open className="group border border-gold/40 rounded-2xl bg-gold-tint/40 overflow-hidden">
+                  <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-gold-tint/60 transition-colors">
+                    <ChevronRight size={15} className="text-[#b45309] shrink-0 transition-transform group-open:rotate-90" />
+                    <Clock size={13} className="text-[#b45309] shrink-0" />
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#b45309]">{LTO_SECTION}</span>
+                    <span className="ml-1 text-xs text-[#b45309]/70 tabular-nums">{ltoItems.length}</span>
+                    <span className="ml-auto text-[11px] font-medium text-[#b45309]/70">rotating specials</span>
                   </summary>
                   <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
-                    {catItems.map((item) => (
-                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} showRecipe={showRecipe} />
-                    ))}
+                    {ltoItems.map(renderRow)}
                   </div>
                 </details>
-              ))}
+              )}
+              {/* Not categorized yet (e.g. an older menu uploaded before
+                  categories) — a flat list reads fine and re-uploading groups it.
+                  Only fall back to flat when there are no LTOs pulling focus. */}
+              {groups.length <= 1 && ltoItems.length === 0 ? (
+                <div className="flex flex-col gap-2.5">{regularItems.map(renderRow)}</div>
+              ) : (
+                groups.map(([cat, catItems]) => (
+                  <details key={cat} className="group border border-line rounded-2xl bg-panel/40 overflow-hidden">
+                    <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-panel transition-colors">
+                      <ChevronRight size={15} className="text-muted-2 shrink-0 transition-transform group-open:rotate-90" />
+                      <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-charcoal-2">{cat}</span>
+                      <span className="ml-1 text-xs text-muted-2 tabular-nums">{catItems.length}</span>
+                      <span className="ml-auto text-[11px] font-medium text-muted-2 group-open:hidden">Tap to view</span>
+                    </summary>
+                    <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
+                      {catItems.map(renderRow)}
+                    </div>
+                  </details>
+                ))
+              )}
             </div>
           );
         })()
@@ -388,6 +437,11 @@ function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: 
         <input name="description" defaultValue={item.description} placeholder="Description" className={`${inputClass} col-span-2`} />
         <input name="pairing_suggestion" defaultValue={item.pairing_suggestion} placeholder="Pairing suggestion" className={inputClass} />
         <input name="upsell_suggestion" defaultValue={item.upsell_suggestion} placeholder="Upsell suggestion" className={inputClass} />
+        <label className="col-span-2 flex items-center gap-2 text-[13px] text-charcoal-2">
+          <input type="checkbox" name="is_lto" defaultChecked={!!item.is_lto} className="w-4 h-4 accent-[#b45309]" />
+          <Clock size={14} className="text-[#b45309]" />
+          Limited Time Offer — pin to its own &ldquo;{LTO_SECTION}&rdquo; section
+        </label>
         {editState.error && <p className="text-sm text-danger col-span-2">{editState.error}</p>}
         <div className="col-span-2 flex items-center justify-end gap-2">
           <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted-2 hover:text-ink">
@@ -415,6 +469,7 @@ function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: 
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span className="text-sm font-semibold text-ink">{item.name}</span>
             {item.price != null && <span className="text-xs font-mono text-muted">${item.price}</span>}
+            {item.is_lto && <Pill tone="gold">LTO</Pill>}
             <Pill tone={item.source === "wingman" ? "brick" : "muted"}>{item.source === "wingman" ? "Wingman" : "Custom"}</Pill>
           </div>
         </div>

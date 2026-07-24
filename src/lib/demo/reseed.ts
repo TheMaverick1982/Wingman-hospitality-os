@@ -391,7 +391,13 @@ const MENU_ITEMS: {
   { department: "Bartender", name: "Lantern Old Fashioned", description: "Toasted-pecan bourbon, demerara, black walnut bitters.", category: "Cocktails", price: 16, allergens: "—", pairing: "Bavette Steak Frites", upsell: "Rare-barrel pour (+$8)", popularity: 88, profit: 12.5 },
   { department: "Bartender", name: "Riverside Spritz", description: "Aperitivo, cava, grapefruit oil, rosemary.", category: "Cocktails", price: 14, allergens: "—", pairing: "Beet Salad", upsell: "Make it a carafe for the table (+$26)", popularity: 69, profit: 10.5 },
   { department: "Bartender", name: "Garden Gimlet", description: "Cucumber gin, lime cordial, basil.", category: "Cocktails", price: 15, allergens: "—", pairing: "Little Gem Caesar", upsell: "Zero-proof version available", popularity: 52, profit: 11 },
-  { department: "Chef", name: "Tasting of the Hearth", description: "Chef's five-course seasonal tasting.", category: "Tasting Menu", price: 95, allergens: "Varies — ask server", pairing: "Wine pairing (+$55)", upsell: "Add the wine pairing (+$55)", popularity: 31, profit: 52 },
+  // Food, not a "Chef-only" dish: the tasting lives on the shared food menu, so
+  // both the Server view (knowledge) and the Chef view (knowledge + recipe) show
+  // it. Its recipe is seeded below and is what the demo Chef view surfaces.
+  { department: "Server", name: "Tasting of the Hearth", description: "Chef's five-course seasonal tasting.", category: "Tasting Menu", price: 95, allergens: "Varies — ask server", pairing: "Wine pairing (+$55)", upsell: "Add the wine pairing (+$55)", popularity: 31, profit: 52 },
+  // A monthly Limited Time Offer — flagged is_lto below so it shows in its own
+  // pinned "Limited Time Offers" section, demonstrating the rotating-special flow.
+  { department: "Server", name: "October: Braised Short Rib", description: "This month only — red-wine braised short rib, celery-root purée, gremolata.", category: "Mains", price: 36, allergens: "—", pairing: "Barolo", upsell: "Add a glass of the Barolo (+$16)", popularity: 24, profit: 26 },
 ];
 
 const CULTURE_MOMENTS: [string, string, "Ownership" | "Guest Connection" | "Teamwork" | "Went Above", string, number][] = [
@@ -555,8 +561,10 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
     // real customers upload their own photos. image_path is a /public path; the
     // recipe data layer returns absolute/rooted paths as-is instead of hitting
     // storage.
-    const recipes: Record<string, { instruction: string; image: string }[]> = {
-      // A Server-menu dish (shown when the owner tabs to Server training).
+    const recipes: Record<string, { instruction: string; image?: string }[]> = {
+      // Food dishes live on the shared menu — both the Server view (knowledge)
+      // and the Chef view (knowledge + recipe) show them; the Chef view is the
+      // one that surfaces these recipes.
       "Cast-Iron Half Chicken": [
         { instruction: "Pull the half chicken from brine and pat it completely dry — dry skin is crisp skin.", image: "/recipe-demo/chicken-1.webp" },
         { instruction: "Season both sides with salt; season the cavity side a touch lighter.", image: "/recipe-demo/chicken-2.webp" },
@@ -564,23 +572,40 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
         { instruction: "Flip and finish in a 425°F oven, ~12–15 min, to 165°F at the thigh.", image: "/recipe-demo/chicken-4.webp" },
         { instruction: "Rest 5 minutes, then plate over the confit potato, spoon the lemon-thyme jus around, and garnish.", image: "/recipe-demo/chicken-5.webp" },
       ],
-      // A Chef-menu dish — this is what the demo "Chef view" surfaces.
       "Tasting of the Hearth": [
         { instruction: "Mise en place: confirm every course is prepped to its card and the hearth is up to temp before service.", image: "/recipe-demo/tasting-1.webp" },
         { instruction: "Fire the courses in sequence off the pass — one course goes out complete before the next is started.", image: "/recipe-demo/tasting-2.webp" },
         { instruction: "Plate to the photo every time: same components, same placement, on every cover.", image: "/recipe-demo/tasting-3.webp" },
         { instruction: "Wipe the rims, add the final garnish, and call the runner — the table's covers go out together and hot.", image: "/recipe-demo/tasting-4.webp" },
       ],
+      // A drink — this is what the demo "Bartender view" surfaces: the bar's own
+      // how-to-make-it recipe layer. (Text steps for now; real bars upload photos
+      // of each build the same way the kitchen does.)
+      "Lantern Old Fashioned": [
+        { instruction: "Add the toasted-pecan bourbon, demerara syrup, and 3 dashes black walnut bitters to a mixing glass." },
+        { instruction: "Fill with ice and stir 25–30 seconds — you're chilling and diluting to the house spec, not shaking." },
+        { instruction: "Strain over one large clear cube in a rocks glass." },
+        { instruction: "Express an orange peel over the top, wipe the rim, and drop it in. Serve with the branded pick." },
+      ],
     };
     const byName = new Map(((insertedMenu ?? []) as { id: string; name: string }[]).map((m) => [m.name, m.id]));
-    const recipeRows: { org_id: string; menu_item_id: string; step_number: number; instruction: string; image_path: string }[] = [];
+    const recipeRows: { org_id: string; menu_item_id: string; step_number: number; instruction: string; image_path: string | null }[] = [];
     for (const [name, steps] of Object.entries(recipes)) {
       const id = byName.get(name);
-      if (id) steps.forEach((s, i) => recipeRows.push({ org_id: orgId, menu_item_id: id, step_number: i + 1, instruction: s.instruction, image_path: s.image }));
+      if (id) steps.forEach((s, i) => recipeRows.push({ org_id: orgId, menu_item_id: id, step_number: i + 1, instruction: s.instruction, image_path: s.image ?? null }));
     }
     if (recipeRows.length) await admin.from("recipe_steps").insert(recipeRows);
   } catch {
     // recipe_steps not migrated yet — skip the demo recipe.
+  }
+
+  // Flag the monthly special as a Limited Time Offer so the demo shows the pinned
+  // "Limited Time Offers" section. Guarded: is_lto lands with migration 0144, so a
+  // not-yet-migrated environment just skips it rather than failing the reseed.
+  try {
+    await admin.from("menu_items").update({ is_lto: true }).eq("org_id", orgId).eq("name", "October: Braised Short Rib");
+  } catch {
+    // is_lto not migrated yet — skip the demo LTO flag.
   }
   await admin.from("menu_references").insert([
     { org_id: orgId, department: "Server", content: "Seasonal hearth-driven American menu. Signature: Cast-Iron Half Chicken, Bavette Steak Frites. Tasting menu available with wine pairing." },

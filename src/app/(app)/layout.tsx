@@ -90,7 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
-        {profile.isDemo && <DemoViewToggle view={profile.accessRole === "staff" ? (profile.demoDept === "Chef" ? "chef" : "server") : "owner"} />}
+        {profile.isDemo && <DemoViewToggle view={profile.accessRole === "staff" ? (profile.demoDept === "Chef" ? "chef" : profile.demoDept === "Bartender" ? "bartender" : "server") : "owner"} />}
         <MobileNav
           accessRole={profile.accessRole}
           fullName={profile.fullName}

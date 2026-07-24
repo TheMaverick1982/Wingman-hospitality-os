@@ -22,6 +22,22 @@ export const WIZARD_DEFAULT_DEPARTMENTS: Department[] = ["Host", "Server", "Bart
 // at the table/bar. Used to target the FOH loyalty checklist.
 export const FOH_DEPARTMENTS: Department[] = ["Host", "Server", "Busser", "Food Runner", "Bartender", "Barista", "Expo", "Sommelier"];
 
+// Menu grouping. The restaurant has ONE food menu and ONE bar menu; a dish's
+// department places it in a group rather than siloing it to a single role.
+// Front-of-house (Server) and the kitchen (Chef) SHARE the food menu — servers
+// learn the knowledge to sell it, the kitchen also gets the "how to make it"
+// recipe. Bartenders/Baristas own the bar menu. So a role sees its group's menu.
+export const BAR_MENU_DEPARTMENTS: Department[] = ["Bartender", "Barista"];
+export function menuGroup(dept: string): "food" | "bar" {
+  return BAR_MENU_DEPARTMENTS.includes(dept as Department) ? "bar" : "food";
+}
+
+// The roles that see a dish's "how to make it" recipe layer — the people who
+// MAKE the item. The kitchen makes food; the bartender makes drinks. So each
+// maker gets recipes for their own group's dishes. Managers/owners see and edit
+// every recipe separately, via their edit permission.
+export const RECIPE_MAKER_ROLES: Department[] = ["Chef", "Bartender"];
+
 export const DISCOUNT_CATEGORIES = [
   "Food Quality Issue",
   "Temperature Issue",

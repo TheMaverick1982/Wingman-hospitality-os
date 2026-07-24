@@ -7,12 +7,12 @@ import { getCurrentProfile, DEMO_VIEW_COOKIE } from "@/lib/auth/profile";
 // Flip the demo between the owner view and a staff view (as a Server or a Chef).
 // Strictly a no-op outside a demo org, so a stray cookie can never downgrade a
 // real account.
-export async function setDemoView(role: "owner" | "server" | "chef") {
+export async function setDemoView(role: "owner" | "server" | "chef" | "bartender") {
   const profile = await getCurrentProfile();
   if (!profile?.isDemo) return;
 
   const cookieStore = await cookies();
-  if (role === "server" || role === "chef") {
+  if (role === "server" || role === "chef" || role === "bartender") {
     cookieStore.set(DEMO_VIEW_COOKIE, role, {
       httpOnly: true,
       sameSite: "lax",

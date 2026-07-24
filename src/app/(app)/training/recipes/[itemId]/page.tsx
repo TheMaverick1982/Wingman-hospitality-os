@@ -6,12 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { getRecipeSteps } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
+import { RECIPE_MAKER_ROLES, type Department } from "@/lib/constants";
 import { RecipeEditor } from "./recipe-editor";
 import { RecipeTestButton } from "./recipe-test-button";
-
-// Roles that can VIEW a recipe (managers/owners also edit). Keep in sync with the
-// list in the Training page.
-const RECIPE_VIEW_ROLES = ["Chef"];
 
 // Server actions here upload/resize photos; give them room past the short default.
 export const maxDuration = 60;
@@ -29,12 +26,13 @@ export default async function RecipePage({ params }: { params: Promise<{ itemId:
   if (!item) notFound();
   const dish = item as { id: string; name: string; department: string };
 
-  // Managers/owners edit; Chef staff view (demo-aware, so a demo Chef view can
-  // open it too). Anyone else is sent back to Training.
+  // Managers/owners edit; the item's "maker" role views — the kitchen (Chef) for
+  // food, the Bartender for drinks (demo-aware, so a demo maker view can open it
+  // too). Anyone else is sent back to Training.
   let canView = canEdit;
   if (!canView && profile.accessRole === "staff") {
     const my = await resolveMyStaff(profile);
-    canView = !!my && RECIPE_VIEW_ROLES.includes(my.department);
+    canView = !!my && RECIPE_MAKER_ROLES.includes(my.department as Department);
   }
   if (!canView) redirect("/training");
 
