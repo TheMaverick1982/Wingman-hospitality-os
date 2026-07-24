@@ -28,6 +28,11 @@ export type CurrentProfile = {
   accessibleLocationIds: string[];
   // Any demo org (the shared sales-rep master OR an ephemeral visitor sandbox).
   isDemo: boolean;
+  // Demo "View as staff" department: in a demo, the staff view can be shown as a
+  // Server or a Chef so a rep can demo each role (e.g. the Chef's recipes). Null
+  // outside a demo staff view. The staff experience resolves "my staff record" by
+  // this department in demo mode instead of the single linked account.
+  demoDept: string | null;
   // Only an ephemeral, self-serve visitor sandbox (has a demo_expires_at). The
   // shared wingmandemo master used for sales calls is NOT a sandbox, so
   // conversion nudges and the global demo AI cap key off this, not isDemo.
@@ -107,6 +112,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     permissionOverrides: profile.organizations?.permission_overrides ?? {},
     allLocations: profile.all_locations ?? false,
     accessibleLocationIds: ((locRows ?? []) as { location_id: string }[]).map((r) => r.location_id),
+    demoDept: null,
     isDemo: profile.organizations?.is_demo ?? false,
     isDemoSandbox: !!profile.organizations?.demo_expires_at,
     demoLeadEmail: (user.user_metadata?.lead_email as string | null) ?? null,
@@ -122,8 +128,11 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   // (RLS still runs as the underlying owner — fine for a read-only showcase.)
   if (base.isDemo) {
     const cookieStore = await cookies();
-    if (cookieStore.get(DEMO_VIEW_COOKIE)?.value === "staff") {
-      return { ...base, accessRole: "staff", allLocations: false, isPlatformAdmin: false, platformAccess: [] };
+    const view = cookieStore.get(DEMO_VIEW_COOKIE)?.value;
+    // "server"/"chef" pick the role to demo; "staff" is the legacy value (= Server).
+    if (view === "server" || view === "chef" || view === "staff") {
+      const demoDept = view === "chef" ? "Chef" : "Server";
+      return { ...base, accessRole: "staff", demoDept, allLocations: false, isPlatformAdmin: false, platformAccess: [] };
     }
   }
 

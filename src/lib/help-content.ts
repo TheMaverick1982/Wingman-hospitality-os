@@ -349,6 +349,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Recipes — how to make each dish" },
       { kind: "p", text: "Every dish has a Recipe — tap \"Recipe\" on a menu item to open a step-by-step \"how to make it,\" with an optional real photo on each step. Number the steps, write the instruction, and snap or upload a photo (from a phone or computer). Your line cooks pull these up mid-service so every plate goes out to spec." },
       { kind: "note", text: "Recipes are visible to managers, owners, and the Chef role (kitchen), and editable by managers and owners. Deleting a dish never loses its recipe — it's archived with the dish and comes back if you restore it." },
+      { kind: "p", text: "Turn a recipe into a test: on the recipe page, tap \"Turn into a test\" and Wingman writes a short learn-then-quiz straight from your steps — the cook reads the method, then answers a handful of questions (sequence, temps and times, plating) to prove they can make the dish to spec. It lands in your prebuilt tests, ready to review, edit, and assign like any other test. Change the recipe and tap \"Update the recipe test\" to regenerate it — there's one test per dish, so it never makes duplicates." },
     ],
     links: [{ label: "Tests & exams", href: "/help/tests-and-exams" }, { label: "Hiring criteria", href: "/help/hiring-criteria" }, { label: "Guest Journey", href: "/help/guest-journey" }],
   },

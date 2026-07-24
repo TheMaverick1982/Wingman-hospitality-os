@@ -5,29 +5,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { StaffTests } from "@/components/dashboard/staff-tests";
 import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
+import { resolveMyStaff } from "@/lib/data/my-staff";
+import type { CurrentProfile } from "@/lib/auth/profile";
 
 // Personal dashboard for the staff role — their own tests to take, training,
 // checklist, and this week's focus, instead of the restaurant-wide manager view.
-export async function StaffDashboard({
-  userId,
-  orgId,
-  fullName,
-}: {
-  userId: string;
-  orgId: string;
-  fullName: string;
-}) {
+export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
   const supabase = await createClient();
   const admin = createAdminClient();
-  const firstName = fullName.split(" ")[0] || "there";
+  const firstName = profile.fullName.split(" ")[0] || "there";
 
-  const { data: myStaff } = await admin
-    .from("staff_members")
-    .select("id, department")
-    .eq("profile_id", userId)
-    .eq("org_id", orgId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const myStaff = await resolveMyStaff(profile);
 
   if (!myStaff) {
     return (

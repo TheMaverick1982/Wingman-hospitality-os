@@ -5,7 +5,9 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { getRecipeSteps } from "@/lib/data/recipes";
+import { resolveMyStaff } from "@/lib/data/my-staff";
 import { RecipeEditor } from "./recipe-editor";
+import { RecipeTestButton } from "./recipe-test-button";
 
 // Roles that can VIEW a recipe (managers/owners also edit). Keep in sync with the
 // list in the Training page.
@@ -27,21 +29,30 @@ export default async function RecipePage({ params }: { params: Promise<{ itemId:
   if (!item) notFound();
   const dish = item as { id: string; name: string; department: string };
 
-  // Managers/owners edit; Chef staff view. Anyone else is sent back to Training.
+  // Managers/owners edit; Chef staff view (demo-aware, so a demo Chef view can
+  // open it too). Anyone else is sent back to Training.
   let canView = canEdit;
   if (!canView && profile.accessRole === "staff") {
-    const { data: myStaff } = await supabase
-      .from("staff_members")
-      .select("department")
-      .eq("profile_id", profile.userId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    const dept = (myStaff as { department?: string } | null)?.department ?? null;
-    canView = !!dept && RECIPE_VIEW_ROLES.includes(dept);
+    const my = await resolveMyStaff(profile);
+    canView = !!my && RECIPE_VIEW_ROLES.includes(my.department);
   }
   if (!canView) redirect("/training");
 
   const steps = await getRecipeSteps(itemId);
+
+  // Managers/owners get a one-click "turn this recipe into a test". Show whether
+  // one already exists so the button reads "Update" vs "Turn into a test".
+  // Guarded: the source_menu_item_id column lands with a migration, so a
+  // not-yet-migrated environment just treats it as "no test yet".
+  let hasRecipeTest = false;
+  if (canEdit) {
+    try {
+      const { data: existingTest } = await supabase.from("tests").select("id").eq("source_menu_item_id", itemId).maybeSingle();
+      hasRecipeTest = !!existingTest;
+    } catch {
+      hasRecipeTest = false;
+    }
+  }
 
   return (
     <>
@@ -53,6 +64,14 @@ export default async function RecipePage({ params }: { params: Promise<{ itemId:
         <p className="text-base text-muted mt-1">
           Recipe — step by step, with photos, so any cook can make it to spec.
         </p>
+        {canEdit && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-[13px] text-muted-2">
+              Ready to check they know it? Turn this recipe into a quick learn-then-quiz test.
+            </p>
+            <RecipeTestButton menuItemId={dish.id} hasTest={hasRecipeTest} hasSteps={steps.length > 0} />
+          </div>
+        )}
       </div>
       <RecipeEditor menuItemId={dish.id} steps={steps} canEdit={canEdit} />
     </>
