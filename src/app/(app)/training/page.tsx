@@ -12,6 +12,7 @@ import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
+import { MenuTrainingSection } from "./menu-training-section";
 import { SignoffLog } from "./signoff-log";
 import { StaffTests } from "@/components/dashboard/staff-tests";
 import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
@@ -229,8 +230,27 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </>
         )}
 
+        {myDept && (data[myDept as Department]?.hasMenu ?? false) && (
+          <>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">
+              {canViewRecipes ? "Your menu — tap any item for how to make it" : "Your menu"}
+            </div>
+            {canViewRecipes && (
+              <p className="text-[13px] text-muted -mt-2">
+                Every item, grouped by section. Tap a dish or drink to open its step-by-step recipe with photos.
+              </p>
+            )}
+            <MenuTrainingSection
+              department={myDept}
+              items={data[myDept as Department].menuItems}
+              canEdit={false}
+              canViewRecipes={canViewRecipes}
+            />
+          </>
+        )}
+
         <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
-        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} />
+        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hideMenu />
       </>
     );
   }
