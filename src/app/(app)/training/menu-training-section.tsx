@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Upload, Trash2, Sparkles, Plus, ChevronRight } from "lucide-react";
+import { useActionState, useState, useTransition } from "react";
+import { Upload, Trash2, Sparkles, Plus, ChevronRight, Pencil, X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
@@ -10,9 +10,12 @@ import {
   uploadAndParseMenu,
   updateMenuItemMetrics,
   deleteMenuItem,
+  deleteMenuItems,
+  updateMenuItem,
   addCustomMenuItem,
   type MenuUploadState,
   type AddCustomDishState,
+  type EditMenuItemState,
 } from "./menu-items-actions";
 
 export type MenuItem = {
@@ -46,6 +49,27 @@ export function MenuTrainingSection({
   const [addState, addAction, addPending] = useActionState(addCustomMenuItem, addInitial);
   useCloseOnSuccess(addPending, addState.error, () => setShowAdd(false));
 
+  // Bulk-select for delete (owner view only).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, startBulk] = useTransition();
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const clearSelected = () => setSelected(new Set());
+  const deleteSelected = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} menu item${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    startBulk(async () => {
+      await deleteMenuItems(ids);
+      clearSelected();
+    });
+  };
+
   const engineered = items.filter((i) => i.popularity_pct != null && i.profit_amount != null);
   const avgPopularity = engineered.length
     ? engineered.reduce((s, i) => s + (i.popularity_pct ?? 0), 0) / engineered.length
@@ -78,7 +102,9 @@ export function MenuTrainingSection({
           </div>
           <p className="text-xs mb-3 text-[#b45309]">
             Upload a photo or PDF of the {department.toLowerCase()} menu. Wingman reads it and builds
-            pairing, allergen, and upsell training automatically.
+            category, pairing, allergen, and upsell training automatically. Re-uploading updates items
+            that already exist (matched by name) instead of duplicating them, and keeps your
+            popularity/profit numbers.
           </p>
           <form action={uploadAction} className="flex items-center gap-2">
             <input type="hidden" name="department" value={department} />
@@ -124,6 +150,26 @@ export function MenuTrainingSection({
         )}
       </div>
 
+      {canEdit && selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-brick-tint border border-brick/30 rounded-xl px-4 py-2.5 mb-3">
+          <span className="text-[13px] font-semibold text-brick-dark">
+            {selected.size} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={clearSelected} className="text-[13px] font-semibold text-muted-2 hover:text-ink">
+              Clear
+            </button>
+            <button
+              onClick={deleteSelected}
+              disabled={bulkPending}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-danger rounded-full px-3.5 py-1.5 hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              <Trash2 size={13} /> {bulkPending ? "Deleting…" : "Delete selected"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <form action={addAction} className="bg-panel border border-line rounded-2xl p-4 mb-3 grid grid-cols-2 gap-3">
           <input type="hidden" name="department" value={department} />
@@ -153,7 +199,7 @@ export function MenuTrainingSection({
             return (
               <div className="flex flex-col gap-2.5">
                 {items.map((item) => (
-                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} />
+                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} />
                 ))}
               </div>
             );
@@ -170,7 +216,7 @@ export function MenuTrainingSection({
                   </summary>
                   <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
                     {catItems.map((item) => (
-                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} />
+                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} />
                     ))}
                   </div>
                 </details>
@@ -252,26 +298,69 @@ function QuadrantCard({
   );
 }
 
-function MenuItemRow({ item, canEdit }: { item: MenuItem; canEdit: boolean }) {
+const editInitial: EditMenuItemState = { error: null };
+
+function MenuItemRow({ item, canEdit, selected, onToggle }: { item: MenuItem; canEdit: boolean; selected?: boolean; onToggle?: () => void }) {
   const [popularity, setPopularity] = useState(item.popularity_pct?.toString() ?? "");
   const [profit, setProfit] = useState(item.profit_amount?.toString() ?? "");
+  const [editing, setEditing] = useState(false);
+  const [editState, editAction, editPending] = useActionState(updateMenuItem, editInitial);
+  useCloseOnSuccess(editPending, editState.error, () => setEditing(false));
 
   function save() {
     updateMenuItemMetrics(item.id, popularity === "" ? null : Number(popularity), profit === "" ? null : Number(profit));
   }
 
+  if (editing) {
+    return (
+      <form action={editAction} className="bg-panel border border-brick/40 rounded-2xl p-4 grid grid-cols-2 gap-3">
+        <input type="hidden" name="id" value={item.id} />
+        <input name="name" defaultValue={item.name} placeholder="Dish name" required className={inputClass} />
+        <input name="category" defaultValue={item.category} placeholder="Category (e.g. Mains)" className={inputClass} />
+        <input name="price" defaultValue={item.price ?? ""} type="number" step="0.01" placeholder="Price" className={inputClass} />
+        <input name="allergens" defaultValue={item.allergens} placeholder="Allergens (comma separated)" className={inputClass} />
+        <input name="description" defaultValue={item.description} placeholder="Description" className={`${inputClass} col-span-2`} />
+        <input name="pairing_suggestion" defaultValue={item.pairing_suggestion} placeholder="Pairing suggestion" className={inputClass} />
+        <input name="upsell_suggestion" defaultValue={item.upsell_suggestion} placeholder="Upsell suggestion" className={inputClass} />
+        {editState.error && <p className="text-sm text-danger col-span-2">{editState.error}</p>}
+        <div className="col-span-2 flex items-center justify-end gap-2">
+          <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted-2 hover:text-ink">
+            <X size={14} /> Cancel
+          </button>
+          <Btn small type="submit" disabled={editPending}>{editPending ? "Saving…" : "Save"}</Btn>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <div className="bg-panel border border-line rounded-2xl p-4">
+    <div className={`bg-panel border rounded-2xl p-4 ${selected ? "border-brick" : "border-line"}`}>
       <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-ink">{item.name}</span>
-          {item.price != null && <span className="text-xs font-mono text-muted">${item.price}</span>}
-          <Pill tone={item.source === "wingman" ? "brick" : "muted"}>{item.source === "wingman" ? "Wingman" : "Custom"}</Pill>
+        <div className="flex items-start gap-2.5 min-w-0">
+          {canEdit && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={onToggle}
+              className="mt-0.5 w-4 h-4 accent-brick shrink-0 cursor-pointer"
+              aria-label={`Select ${item.name}`}
+            />
+          )}
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="text-sm font-semibold text-ink">{item.name}</span>
+            {item.price != null && <span className="text-xs font-mono text-muted">${item.price}</span>}
+            <Pill tone={item.source === "wingman" ? "brick" : "muted"}>{item.source === "wingman" ? "Wingman" : "Custom"}</Pill>
+          </div>
         </div>
         {canEdit && (
-          <button onClick={() => deleteMenuItem(item.id)} className="text-muted-2 hover:text-danger transition-colors">
-            <Trash2 size={14} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setEditing(true)} className="text-muted-2 hover:text-ink transition-colors" aria-label="Edit item">
+              <Pencil size={14} />
+            </button>
+            <button onClick={() => deleteMenuItem(item.id)} className="text-muted-2 hover:text-danger transition-colors" aria-label="Delete item">
+              <Trash2 size={14} />
+            </button>
+          </div>
         )}
       </div>
       {item.description && <p className="text-xs text-muted mb-2">{item.description}</p>}

@@ -120,26 +120,48 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  // Re-parsing replaces the previously auto-parsed items but leaves any
-  // manually added "custom" items untouched.
-  await supabase.from("menu_items").delete().eq("org_id", org.id).eq("department", department).eq("source", "wingman");
+  // Smart merge, not wipe-and-replace: match each parsed dish to an existing item
+  // by name (case-insensitive, within this department) and UPDATE it in place —
+  // so a re-upload refreshes the details without creating duplicates and without
+  // throwing away an owner's popularity/profit numbers or their manual edits.
+  // Genuinely new dishes are inserted; items no longer on the menu are left
+  // alone (the owner can remove them with the bulk-delete controls).
+  const { data: existingRows } = await supabase
+    .from("menu_items")
+    .select("id, name")
+    .eq("org_id", org.id)
+    .eq("department", department);
+  const byName = new Map(
+    ((existingRows ?? []) as { id: string; name: string }[]).map((e) => [e.name.trim().toLowerCase(), e.id])
+  );
 
-  const { error: insertError } = await supabase.from("menu_items").insert(
-    dishes.map((d, i) => ({
-      org_id: org.id,
-      department,
-      name: d.name,
+  const updatePlan: { id: string; fields: Record<string, unknown> }[] = [];
+  const toInsert: Record<string, unknown>[] = [];
+  dishes.forEach((d, i) => {
+    const fields = {
       description: d.description ?? "",
       category: (d.category ?? "").trim(),
       price: d.price,
       allergens: d.allergens ?? "",
       pairing_suggestion: d.pairing_suggestion ?? "",
       upsell_suggestion: d.upsell_suggestion ?? "",
-      source: "wingman",
       sort_order: i,
-    }))
+    };
+    const key = (d.name ?? "").trim().toLowerCase();
+    const existingId = key ? byName.get(key) : undefined;
+    if (existingId) {
+      updatePlan.push({ id: existingId, fields });
+    } else {
+      toInsert.push({ org_id: org.id, department, name: d.name, source: "wingman", ...fields });
+    }
+  });
+
+  const updateResults = await Promise.all(
+    updatePlan.map((u) => supabase.from("menu_items").update(u.fields).eq("id", u.id))
   );
-  if (insertError) return { error: insertError.message };
+  const insertResult = toInsert.length ? await supabase.from("menu_items").insert(toInsert) : null;
+  const firstErr = [...updateResults, insertResult].find((r) => r != null && r.error != null);
+  if (firstErr && firstErr.error) return { error: firstErr.error.message };
 
   revalidatePath("/training");
   return { error: null, parsedCount: dishes.length };
@@ -158,6 +180,49 @@ export async function deleteMenuItem(id: string) {
   const supabase = await createClient();
   await supabase.from("menu_items").delete().eq("id", id);
   revalidatePath("/training");
+}
+
+// Bulk-delete several menu items at once (the checkbox selection). RLS scopes
+// the delete to the caller's org, so a stray id from another org is a no-op.
+export async function deleteMenuItems(ids: string[]) {
+  const clean = [...new Set(ids.filter(Boolean))];
+  if (clean.length === 0) return;
+  const supabase = await createClient();
+  await supabase.from("menu_items").delete().in("id", clean);
+  revalidatePath("/training");
+}
+
+export type EditMenuItemState = { error: string | null };
+
+// Inline-edit a single item's details. Only the fields the owner can change are
+// touched; popularity/profit metrics have their own save path.
+export async function updateMenuItem(_prev: EditMenuItemState, formData: FormData): Promise<EditMenuItemState> {
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+  if (!id) return { error: "Missing item." };
+  if (!name) return { error: "Dish name is required." };
+
+  const priceRaw = String(formData.get("price") || "").trim();
+  const price = priceRaw === "" ? null : Number(priceRaw);
+  if (price != null && !Number.isFinite(price)) return { error: "Price must be a number." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("menu_items")
+    .update({
+      name,
+      category: String(formData.get("category") || "").trim(),
+      description: String(formData.get("description") || ""),
+      allergens: String(formData.get("allergens") || ""),
+      pairing_suggestion: String(formData.get("pairing_suggestion") || ""),
+      upsell_suggestion: String(formData.get("upsell_suggestion") || ""),
+      price,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/training");
+  return { error: null };
 }
 
 export type AddCustomDishState = { error: string | null };

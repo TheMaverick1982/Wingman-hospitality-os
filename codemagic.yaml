@@ -30,6 +30,20 @@ workflows:
         script: npx capacitor-assets generate --android
       - name: Sync Capacitor into the native project
         script: npx cap sync android
+      - name: Set a unique versionCode (Play rejects a re-used one)
+        # Capacitor regenerates android/app/build.gradle with `versionCode 1`
+        # every build, but Google Play refuses a versionCode it has already seen
+        # (that's the "Version code 1 has already been used" error). Derive a
+        # unique, always-increasing code from Codemagic's build number. The `+ 2`
+        # clears the original `1` even on the very first run through this step.
+        script: |
+          cd "$CM_BUILD_DIR/android"
+          VC=$(( ${BUILD_NUMBER:-0} + 2 ))
+          sed -i.bak "s/versionCode [0-9][0-9]*/versionCode $VC/" app/build.gradle
+          sed -i.bak "s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD_NUMBER:-0}\"/" app/build.gradle
+          rm -f app/build.gradle.bak
+          echo "versionCode set to $VC"
+          grep -E "versionCode|versionName" app/build.gradle
       - name: Point Gradle at the Android SDK
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
       - name: Build release bundle (.aab)
