@@ -129,9 +129,10 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (base.isDemo) {
     const cookieStore = await cookies();
     const view = cookieStore.get(DEMO_VIEW_COOKIE)?.value;
-    // "server"/"chef" pick the role to demo; "staff" is the legacy value (= Server).
-    if (view === "server" || view === "chef" || view === "staff") {
-      const demoDept = view === "chef" ? "Chef" : "Server";
+    // "server"/"chef"/"bartender" pick the role to demo; "staff" is the legacy
+    // value (= Server). Chef and Bartender additionally see their recipe layer.
+    if (view === "server" || view === "chef" || view === "bartender" || view === "staff") {
+      const demoDept = view === "chef" ? "Chef" : view === "bartender" ? "Bartender" : "Server";
       return { ...base, accessRole: "staff", demoDept, allLocations: false, isPlatformAdmin: false, platformAccess: [] };
     }
   }

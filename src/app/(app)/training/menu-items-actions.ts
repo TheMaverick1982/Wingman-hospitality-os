@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, menuGroup, type Department } from "@/lib/constants";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
@@ -121,18 +121,23 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
   if (!org) return { error: "Organization not found." };
 
   // Smart merge, not wipe-and-replace: match each parsed dish to an existing item
-  // by name (case-insensitive, within this department) and UPDATE it in place —
-  // so a re-upload refreshes the details without creating duplicates and without
-  // throwing away an owner's popularity/profit numbers or their manual edits.
-  // Genuinely new dishes are inserted; items no longer on the menu are left
-  // alone (the owner can remove them with the bulk-delete controls).
+  // by name (case-insensitive) and UPDATE it in place — so a re-upload refreshes
+  // the details without creating duplicates and without throwing away an owner's
+  // popularity/profit numbers or their manual edits. Genuinely new dishes are
+  // inserted; items no longer on the menu are left alone (the owner can remove
+  // them with the bulk-delete controls). Matching is scoped to the same MENU
+  // GROUP (food vs bar), not the exact department — the food menu is shared
+  // across the Server and Chef tabs, so re-uploading it from either tab dedupes
+  // against the one shared list instead of duplicating every dish.
+  const group = menuGroup(department);
   const { data: existingRows } = await supabase
     .from("menu_items")
-    .select("id, name")
-    .eq("org_id", org.id)
-    .eq("department", department);
+    .select("id, name, department")
+    .eq("org_id", org.id);
   const byName = new Map(
-    ((existingRows ?? []) as { id: string; name: string }[]).map((e) => [e.name.trim().toLowerCase(), e.id])
+    ((existingRows ?? []) as { id: string; name: string; department: string }[])
+      .filter((e) => menuGroup(e.department) === group)
+      .map((e) => [e.name.trim().toLowerCase(), e.id])
   );
 
   const updatePlan: { id: string; fields: Record<string, unknown> }[] = [];
@@ -242,8 +247,42 @@ export async function updateMenuItem(_prev: EditMenuItemState, formData: FormDat
     .eq("id", id);
   if (error) return { error: error.message };
 
+  // LTO flag written separately and guarded: its column (0144) only lands on the
+  // prod branch, so folding it into the update above would break inline edit on a
+  // not-yet-migrated preview. On preview it simply no-ops.
+  await setMenuItemLtoSafe(supabase, id, formData.get("is_lto") === "on");
+
   revalidatePath("/training");
   return { error: null };
+}
+
+// Set is_lto without letting a missing column (pre-migration preview) fail the
+// caller's main write. Errors are swallowed on purpose.
+async function setMenuItemLtoSafe(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+  isLto: boolean
+): Promise<void> {
+  try {
+    await supabase.from("menu_items").update({ is_lto: isLto }).eq("id", id);
+  } catch {
+    // is_lto not migrated yet — ignore.
+  }
+}
+
+// Bulk mark/unmark dishes as Limited Time Offers (the checkbox selection).
+// Guarded like the single-item path so a pre-migration preview no-ops instead of
+// erroring. RLS scopes it to the caller's org.
+export async function setMenuItemsLto(ids: string[], isLto: boolean) {
+  const clean = [...new Set(ids.filter(Boolean))];
+  if (clean.length === 0) return;
+  const supabase = await createClient();
+  try {
+    await supabase.from("menu_items").update({ is_lto: isLto }).in("id", clean);
+  } catch {
+    // is_lto not migrated yet — ignore.
+  }
+  revalidatePath("/training");
 }
 
 export type AddCustomDishState = { error: string | null };
@@ -258,7 +297,7 @@ export async function addCustomMenuItem(_prev: AddCustomDishState, formData: For
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  const { error } = await supabase.from("menu_items").insert({
+  const { data: inserted, error } = await supabase.from("menu_items").insert({
     org_id: org.id,
     department,
     name,
@@ -268,8 +307,12 @@ export async function addCustomMenuItem(_prev: AddCustomDishState, formData: For
     pairing_suggestion: String(formData.get("pairing_suggestion") || ""),
     upsell_suggestion: String(formData.get("upsell_suggestion") || ""),
     source: "custom",
-  });
+  }).select("id").single();
   if (error) return { error: error.message };
+
+  if (formData.get("is_lto") === "on" && inserted?.id) {
+    await setMenuItemLtoSafe(supabase, inserted.id as string, true);
+  }
 
   revalidatePath("/training");
   return { error: null };

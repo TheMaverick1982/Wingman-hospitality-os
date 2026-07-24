@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLeaderboard } from "@/lib/leaderboard";
 import { canEditSection } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
@@ -129,10 +129,21 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // Staff: restrict to their own department so they never see other roles' training.
   const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
 
-  // Who can open a dish's recipe: managers/owners (who also edit) and the Chef
-  // role (view-only). Easy to widen to Line Cook / Expo later.
-  const RECIPE_VIEW_ROLES = ["Chef"];
-  const canViewRecipes = canEdit || (isStaff && !!myDept && RECIPE_VIEW_ROLES.includes(myDept));
+  // Who can open a dish's recipe: managers/owners (who also edit) and the roles
+  // that MAKE the item — the kitchen (Chef) for food, the Bartender for drinks.
+  const canViewRecipes = canEdit || (isStaff && !!myDept && RECIPE_MAKER_ROLES.includes(myDept as Department));
+
+  // LTO flag lives behind a migration (0144) that only lands on the prod branch,
+  // so read it in its own guarded query — naming is_lto in the main menu select
+  // above would 500 the whole page on a not-yet-migrated preview. Degrades to
+  // "no LTOs" until migrated.
+  const ltoIds = new Set<string>();
+  try {
+    const { data: ltoRows } = await supabase.from("menu_items").select("id").eq("is_lto", true);
+    for (const r of (ltoRows ?? []) as { id: string }[]) ltoIds.add(r.id);
+  } catch {
+    // is_lto not migrated yet — no LTO grouping until it lands.
+  }
 
   const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
@@ -144,9 +155,13 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       trainingItems: (trainingItems ?? []).filter((t) => t.department === d).map((t) => ({ id: t.id, item: t.item, source: t.source })),
       trackLabel: metaRow?.track_label ?? null,
       hasMenu: metaRow?.has_menu ?? false,
+      // One shared menu per group: the Server and Chef tabs both render the whole
+      // FOOD menu (same dishes — servers get the knowledge, the kitchen also gets
+      // the recipe); the Bartender tab renders the BAR menu. So a dish is shared
+      // across its group's roles instead of being siloed to one department.
       menuItems: (menuItems ?? [])
-        .filter((m) => m.department === d)
-        .map((m) => ({ ...m, recipeStepCount: recipeCounts.get(m.id) ?? 0 })),
+        .filter((m) => menuGroup(m.department) === menuGroup(d))
+        .map((m) => ({ ...m, recipeStepCount: recipeCounts.get(m.id) ?? 0, is_lto: ltoIds.has(m.id) })),
     };
 
     const deptSignoffs = allSignoffs.filter((s) => s.department === d);
