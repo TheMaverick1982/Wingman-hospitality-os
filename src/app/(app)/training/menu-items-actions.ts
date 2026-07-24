@@ -13,6 +13,7 @@ export type MenuUploadState = { error: string | null; parsedCount?: number };
 type ParsedDish = {
   name: string;
   description: string;
+  category: string;
   price: number | null;
   allergens: string;
   pairing_suggestion: string;
@@ -53,12 +54,13 @@ export async function uploadAndParseMenu(_prev: MenuUploadState, formData: FormD
   const prompt = `This is a photo or PDF of a restaurant's ${department.toLowerCase()} menu. Read every dish/drink on it and extract structured data for each one.
 
 For each item, also write:
+- A menu category / section for grouping (e.g. "Appetizers", "Salads", "Mains", "Sides", "Desserts", "Cocktails", "Wine", "Beer", "Non-Alcoholic"). If the menu is already divided into sections, use those section names. If it is NOT sectioned, infer the best category for each item from what the item actually is. Keep the category names short, in Title Case, and reuse the same wording across items so they group cleanly.
 - A one-sentence pairing suggestion (what to recommend alongside it, e.g. a wine or side)
 - A one-sentence upsell suggestion (a specific, natural way staff can suggest a bigger or add-on version)
 - A short comma-separated list of likely allergens based on typical ingredients (best guess is fine, note "verify with kitchen" is implied, don't add that text)
 
 Respond with ONLY a valid JSON array, no markdown fences, no commentary, matching exactly this shape:
-[{"name": string, "description": string, "price": number or null, "allergens": string, "pairing_suggestion": string, "upsell_suggestion": string}]`;
+[{"name": string, "description": string, "category": string, "price": number or null, "allergens": string, "pairing_suggestion": string, "upsell_suggestion": string}]`;
 
   let dishes: ParsedDish[];
   try {
@@ -128,6 +130,7 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
       department,
       name: d.name,
       description: d.description ?? "",
+      category: (d.category ?? "").trim(),
       price: d.price,
       allergens: d.allergens ?? "",
       pairing_suggestion: d.pairing_suggestion ?? "",
@@ -174,6 +177,7 @@ export async function addCustomMenuItem(_prev: AddCustomDishState, formData: For
     department,
     name,
     description: String(formData.get("description") || ""),
+    category: String(formData.get("category") || "").trim(),
     allergens: String(formData.get("allergens") || ""),
     pairing_suggestion: String(formData.get("pairing_suggestion") || ""),
     upsell_suggestion: String(formData.get("upsell_suggestion") || ""),

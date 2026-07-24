@@ -91,7 +91,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     supabase.from("department_meta").select("department, track_label, has_menu"),
     supabase
       .from("menu_items")
-      .select("id, department, name, description, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
+      .select("id, department, name, description, category, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
       .order("sort_order"),
     signoffsQ,
     canEdit ? supabase.from("tests").select("id, title, target_departments, day_count, rotates_monthly, mode").eq("active", true).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
