@@ -718,6 +718,9 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   progressFor("Nadia Khan", 0.85, 0.75, "strong");
   progressFor("Sofia Marin", 0.35, 0.25, "coaching");
   progressFor("Sam Turner", 1.0, 0.9, "strong");
+  // The demo Chef view resolves to Andre Costa (longest-tenured Chef), so give him
+  // training progress too — otherwise the Chef view shows 0% and reads empty.
+  progressFor("Andre Costa", 1.0, 0.85, "strong");
   if (progressRows.length) await admin.from("staff_training_progress").insert(progressRows);
 
   // Training sign-offs.
@@ -792,6 +795,18 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       forStaff("Elena Vasquez", { status: "locked", current_day: 1, attempts_used: 2, best_score: 60, last_score: 60, locked_at: isoTs(1), locked_alerted: true }),
       forStaff("Sofia Marin", { status: "in_progress", current_day: 2, attempts_used: 0 }),
       forStaff("Nadia Khan", { status: "assigned", current_day: 1 }),
+      // The demo role views resolve to the longest-tenured staffer of each
+      // department (see resolveMyStaff): Maya (Server), Andre Costa (Chef), Sam
+      // Turner (Bartender). Give each of those exact people a test to take + a
+      // passed result so EVERY role view (not just Server) shows real content.
+      // Test ids differ per row, so there's no (test, staff) collision with above.
+      ltoTestId ? forStaff("Maya Rivera", { test_id: ltoTestId, status: "assigned", current_day: 1 }) : null,
+      kitchenTestId ? forStaff("Andre Costa", { test_id: kitchenTestId, status: "assigned", current_day: 1 }) : null,
+      ltoTestId ? forStaff("Andre Costa", { test_id: ltoTestId, status: "assigned", current_day: 1 }) : null,
+      foodTestId ? forStaff("Andre Costa", { test_id: foodTestId, status: "passed", current_day: 1, attempts_used: 1, best_score: 90, last_score: 90, passed_at: isoTs(9) }) : null,
+      bartenderTestId ? forStaff("Sam Turner", { test_id: bartenderTestId, status: "assigned", current_day: 1 }) : null,
+      ltoTestId ? forStaff("Sam Turner", { test_id: ltoTestId, status: "assigned", current_day: 1 }) : null,
+      foodTestId ? forStaff("Sam Turner", { test_id: foodTestId, status: "passed", current_day: 1, attempts_used: 1, best_score: 87, last_score: 87, passed_at: isoTs(11) }) : null,
     ].filter(Boolean) as Record<string, unknown>[];
     if (assignments.length) {
       // These rows have heterogeneous keys (only some set attempts_used /
