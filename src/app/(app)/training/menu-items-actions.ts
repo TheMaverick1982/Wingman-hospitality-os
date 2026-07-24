@@ -146,6 +146,9 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
       pairing_suggestion: d.pairing_suggestion ?? "",
       upsell_suggestion: d.upsell_suggestion ?? "",
       sort_order: i,
+      // Re-uploading a menu that includes a previously-archived dish brings it
+      // (and its recipe) back to the active menu.
+      archived_at: null,
     };
     const key = (d.name ?? "").trim().toLowerCase();
     const existingId = key ? byName.get(key) : undefined;
@@ -176,19 +179,37 @@ export async function updateMenuItemMetrics(id: string, popularityPct: number | 
   revalidatePath("/training");
 }
 
+// "Delete" a menu item = archive it (soft delete). The dish drops off the active
+// menu but stays in the database with its recipe intact, so it can be restored
+// later. Never a hard delete — that would take the recipe with it.
 export async function deleteMenuItem(id: string) {
   const supabase = await createClient();
-  await supabase.from("menu_items").delete().eq("id", id);
+  await supabase.from("menu_items").update({ archived_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/training");
 }
 
-// Bulk-delete several menu items at once (the checkbox selection). RLS scopes
-// the delete to the caller's org, so a stray id from another org is a no-op.
+// Bulk-archive several menu items at once (the checkbox selection). RLS scopes
+// it to the caller's org, so a stray id from another org is a no-op.
 export async function deleteMenuItems(ids: string[]) {
   const clean = [...new Set(ids.filter(Boolean))];
   if (clean.length === 0) return;
   const supabase = await createClient();
-  await supabase.from("menu_items").delete().in("id", clean);
+  await supabase.from("menu_items").update({ archived_at: new Date().toISOString() }).in("id", clean);
+  revalidatePath("/training");
+}
+
+// Bring an archived dish (and its recipe) back to the active menu.
+export async function restoreMenuItem(id: string) {
+  const supabase = await createClient();
+  await supabase.from("menu_items").update({ archived_at: null }).eq("id", id);
+  revalidatePath("/training");
+}
+
+// Permanent delete from the archive — the one path that actually removes the
+// row (its recipe_steps cascade away too). Deliberate and irreversible.
+export async function deleteMenuItemPermanently(id: string) {
+  const supabase = await createClient();
+  await supabase.from("menu_items").delete().eq("id", id);
   revalidatePath("/training");
 }
 

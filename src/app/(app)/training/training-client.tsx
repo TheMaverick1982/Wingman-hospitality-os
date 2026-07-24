@@ -32,6 +32,7 @@ export function TrainingClient({
   staff,
   locations,
   roleTestDepts,
+  canViewRecipes,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
@@ -40,6 +41,7 @@ export function TrainingClient({
   staff: StaffMember[];
   locations: Location[];
   roleTestDepts: string[];
+  canViewRecipes?: boolean;
 }) {
   const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [activeRole, setActiveRole] = useState<Department>(roles[0]);
@@ -80,7 +82,7 @@ export function TrainingClient({
       </div>
 
       {dept.hasMenu && (
-        <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} />
+        <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} canViewRecipes={canViewRecipes} />
       )}
 
       <RoleChecklist

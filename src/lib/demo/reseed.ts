@@ -536,13 +536,34 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   );
 
   // Menu (structured items + free-text references + engineering grid).
-  await admin.from("menu_items").insert(
+  const { data: insertedMenu } = await admin.from("menu_items").insert(
     MENU_ITEMS.map((m, i) => ({
       org_id: orgId, department: m.department, name: m.name, description: m.description, category: m.category,
       price: m.price, allergens: m.allergens, pairing_suggestion: m.pairing, upsell_suggestion: m.upsell,
       source: "wingman", popularity_pct: m.popularity, profit_amount: m.profit, sort_order: i,
     }))
-  );
+  ).select("id, name");
+
+  // Seed a recipe on one dish so the demo shows the "how to cook it" flow.
+  // Wrapped: the recipe_steps table lands with a migration, so a not-yet-migrated
+  // environment just skips this instead of failing the whole reseed. (recipe_steps
+  // cascades from menu_items, so the wipe doesn't need to clear it separately.)
+  try {
+    const chickenId = ((insertedMenu ?? []) as { id: string; name: string }[]).find((m) => m.name === "Cast-Iron Half Chicken")?.id;
+    if (chickenId) {
+      await admin.from("recipe_steps").insert(
+        [
+          "Pull the half chicken from brine and pat it completely dry — dry skin is crisp skin.",
+          "Season both sides with salt; season the cavity side a touch lighter.",
+          "Sear skin-side down in the cast iron over medium-high, pressed with a weight, ~8 min until deep golden.",
+          "Flip and finish in a 425°F oven, ~12–15 min, to 165°F at the thigh.",
+          "Rest 5 minutes, then plate over the confit potato, spoon the lemon-thyme jus around, and garnish.",
+        ].map((instruction, i) => ({ org_id: orgId, menu_item_id: chickenId, step_number: i + 1, instruction }))
+      );
+    }
+  } catch {
+    // recipe_steps not migrated yet — skip the demo recipe.
+  }
   await admin.from("menu_references").insert([
     { org_id: orgId, department: "Server", content: "Seasonal hearth-driven American menu. Signature: Cast-Iron Half Chicken, Bavette Steak Frites. Tasting menu available with wine pairing." },
     { org_id: orgId, department: "Bartender", content: "Barrel-aged and hearth-smoked cocktails. Signature: Lantern Old Fashioned. Full zero-proof program." },
