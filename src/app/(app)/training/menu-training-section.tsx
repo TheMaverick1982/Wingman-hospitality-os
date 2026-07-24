@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Upload, Trash2, Sparkles, Plus } from "lucide-react";
+import { Upload, Trash2, Sparkles, Plus, ChevronRight } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
@@ -19,6 +19,7 @@ export type MenuItem = {
   id: string;
   name: string;
   description: string;
+  category: string;
   price: number | null;
   allergens: string;
   pairing_suggestion: string;
@@ -127,7 +128,8 @@ export function MenuTrainingSection({
         <form action={addAction} className="bg-panel border border-line rounded-2xl p-4 mb-3 grid grid-cols-2 gap-3">
           <input type="hidden" name="department" value={department} />
           <input name="name" placeholder="Dish name" required className={inputClass} />
-          <input name="allergens" placeholder="Allergens (comma separated)" className={inputClass} />
+          <input name="category" placeholder="Category (e.g. Mains, Cocktails)" className={inputClass} />
+          <input name="allergens" placeholder="Allergens (comma separated)" className={`${inputClass} col-span-2`} />
           <input name="description" placeholder="Description" className={`${inputClass} col-span-2`} />
           <input name="pairing_suggestion" placeholder="Pairing suggestion" className={inputClass} />
           <input name="upsell_suggestion" placeholder="Upsell suggestion" className={inputClass} />
@@ -143,14 +145,69 @@ export function MenuTrainingSection({
       {items.length === 0 ? (
         <p className="text-sm text-muted">No menu items yet — upload a menu to get started.</p>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {items.map((item) => (
-            <MenuItemRow key={item.id} item={item} canEdit={canEdit} />
-          ))}
-        </div>
+        (() => {
+          const groups = groupByCategory(items);
+          // Not categorized yet (e.g. an older menu uploaded before categories) —
+          // a flat list reads fine and re-uploading will group it.
+          if (groups.length <= 1) {
+            return (
+              <div className="flex flex-col gap-2.5">
+                {items.map((item) => (
+                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} />
+                ))}
+              </div>
+            );
+          }
+          return (
+            <div className="flex flex-col gap-2">
+              {groups.map(([cat, catItems]) => (
+                <details key={cat} className="group border border-line rounded-2xl bg-panel/40 overflow-hidden">
+                  <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-panel transition-colors">
+                    <ChevronRight size={15} className="text-muted-2 shrink-0 transition-transform group-open:rotate-90" />
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-charcoal-2">{cat}</span>
+                    <span className="ml-1 text-xs text-muted-2 tabular-nums">{catItems.length}</span>
+                    <span className="ml-auto text-[11px] font-medium text-muted-2 group-open:hidden">Tap to view</span>
+                  </summary>
+                  <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
+                    {catItems.map((item) => (
+                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} />
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          );
+        })()
       )}
     </div>
   );
+}
+
+// Canonical menu order so sections read top-to-bottom like a real menu. Anything
+// the AI names that isn't in this list sorts after these (alphabetically), and
+// uncategorized items group under "Other" at the very end.
+const CATEGORY_ORDER = [
+  "Appetizers", "Starters", "Small Plates", "Shareables", "Snacks",
+  "Soups", "Salads", "Sandwiches", "Tacos", "Handhelds",
+  "Pizza", "Pasta", "Entrées", "Entrees", "Mains", "Tasting Menu",
+  "Sides", "Desserts",
+  "Cocktails", "Wine", "Beer", "Non-Alcoholic", "Beverages", "Drinks",
+];
+
+function groupByCategory(items: MenuItem[]): [string, MenuItem[]][] {
+  const groups = new Map<string, MenuItem[]>();
+  for (const it of items) {
+    const key = it.category?.trim() || "Other";
+    const arr = groups.get(key) ?? [];
+    arr.push(it);
+    groups.set(key, arr);
+  }
+  const rank = (name: string) => {
+    if (name === "Other") return 100000;
+    const i = CATEGORY_ORDER.findIndex((c) => c.toLowerCase() === name.toLowerCase());
+    return i === -1 ? 10000 : i;
+  };
+  return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
 }
 
 const TITLE_TONE_CLASSES = {

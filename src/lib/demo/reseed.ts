@@ -379,19 +379,19 @@ const HIRING_TRAITS: [Dept, string, string, string, string][] = [
 ];
 
 const MENU_ITEMS: {
-  department: Dept; name: string; description: string; price: number; allergens: string;
+  department: Dept; name: string; description: string; category: string; price: number; allergens: string;
   pairing: string; upsell: string; popularity: number; profit: number;
 }[] = [
-  { department: "Server", name: "Charred Hearth Bread", description: "Wood-oven sourdough, cultured butter, smoked sea salt.", price: 9, allergens: "Gluten, Dairy", pairing: "Glass of Grüner Veltliner", upsell: "Add whipped 'nduja butter (+$4)", popularity: 74, profit: 6.5 },
-  { department: "Server", name: "Little Gem Caesar", description: "Little gems, white anchovy, aged parmesan, rye crumb.", price: 15, allergens: "Fish, Dairy, Gluten", pairing: "Sauvignon Blanc", upsell: "Add grilled chicken (+$8) or shrimp (+$11)", popularity: 61, profit: 10 },
-  { department: "Server", name: "Cast-Iron Half Chicken", description: "Brick-pressed, lemon-thyme jus, confit potato.", price: 29, allergens: "—", pairing: "Pinot Noir", upsell: "Add charred broccolini (+$9)", popularity: 82, profit: 19 },
-  { department: "Server", name: "Coal-Roasted Beet Salad", description: "Golden & red beets, whipped chèvre, hazelnut, citrus.", price: 16, allergens: "Dairy, Tree Nuts", pairing: "Dry rosé", upsell: "Add burrata (+$6)", popularity: 44, profit: 11.5 },
-  { department: "Server", name: "Bavette Steak Frites", description: "Grilled bavette, bordelaise, hand-cut fries.", price: 34, allergens: "—", pairing: "Malbec", upsell: "Add peppercorn or bone-marrow butter (+$4)", popularity: 78, profit: 21 },
-  { department: "Server", name: "Vanilla Bean Pot de Crème", description: "Dark chocolate shell, sea salt, olive oil.", price: 12, allergens: "Dairy, Egg", pairing: "Tawny Port", upsell: "Affogato style with espresso (+$3)", popularity: 57, profit: 9 },
-  { department: "Bartender", name: "Lantern Old Fashioned", description: "Toasted-pecan bourbon, demerara, black walnut bitters.", price: 16, allergens: "—", pairing: "Bavette Steak Frites", upsell: "Rare-barrel pour (+$8)", popularity: 88, profit: 12.5 },
-  { department: "Bartender", name: "Riverside Spritz", description: "Aperitivo, cava, grapefruit oil, rosemary.", price: 14, allergens: "—", pairing: "Beet Salad", upsell: "Make it a carafe for the table (+$26)", popularity: 69, profit: 10.5 },
-  { department: "Bartender", name: "Garden Gimlet", description: "Cucumber gin, lime cordial, basil.", price: 15, allergens: "—", pairing: "Little Gem Caesar", upsell: "Zero-proof version available", popularity: 52, profit: 11 },
-  { department: "Chef", name: "Tasting of the Hearth", description: "Chef's five-course seasonal tasting.", price: 95, allergens: "Varies — ask server", pairing: "Wine pairing (+$55)", upsell: "Add the wine pairing (+$55)", popularity: 31, profit: 52 },
+  { department: "Server", name: "Charred Hearth Bread", description: "Wood-oven sourdough, cultured butter, smoked sea salt.", category: "Starters", price: 9, allergens: "Gluten, Dairy", pairing: "Glass of Grüner Veltliner", upsell: "Add whipped 'nduja butter (+$4)", popularity: 74, profit: 6.5 },
+  { department: "Server", name: "Little Gem Caesar", description: "Little gems, white anchovy, aged parmesan, rye crumb.", category: "Salads", price: 15, allergens: "Fish, Dairy, Gluten", pairing: "Sauvignon Blanc", upsell: "Add grilled chicken (+$8) or shrimp (+$11)", popularity: 61, profit: 10 },
+  { department: "Server", name: "Cast-Iron Half Chicken", description: "Brick-pressed, lemon-thyme jus, confit potato.", category: "Mains", price: 29, allergens: "—", pairing: "Pinot Noir", upsell: "Add charred broccolini (+$9)", popularity: 82, profit: 19 },
+  { department: "Server", name: "Coal-Roasted Beet Salad", description: "Golden & red beets, whipped chèvre, hazelnut, citrus.", category: "Salads", price: 16, allergens: "Dairy, Tree Nuts", pairing: "Dry rosé", upsell: "Add burrata (+$6)", popularity: 44, profit: 11.5 },
+  { department: "Server", name: "Bavette Steak Frites", description: "Grilled bavette, bordelaise, hand-cut fries.", category: "Mains", price: 34, allergens: "—", pairing: "Malbec", upsell: "Add peppercorn or bone-marrow butter (+$4)", popularity: 78, profit: 21 },
+  { department: "Server", name: "Vanilla Bean Pot de Crème", description: "Dark chocolate shell, sea salt, olive oil.", category: "Desserts", price: 12, allergens: "Dairy, Egg", pairing: "Tawny Port", upsell: "Affogato style with espresso (+$3)", popularity: 57, profit: 9 },
+  { department: "Bartender", name: "Lantern Old Fashioned", description: "Toasted-pecan bourbon, demerara, black walnut bitters.", category: "Cocktails", price: 16, allergens: "—", pairing: "Bavette Steak Frites", upsell: "Rare-barrel pour (+$8)", popularity: 88, profit: 12.5 },
+  { department: "Bartender", name: "Riverside Spritz", description: "Aperitivo, cava, grapefruit oil, rosemary.", category: "Cocktails", price: 14, allergens: "—", pairing: "Beet Salad", upsell: "Make it a carafe for the table (+$26)", popularity: 69, profit: 10.5 },
+  { department: "Bartender", name: "Garden Gimlet", description: "Cucumber gin, lime cordial, basil.", category: "Cocktails", price: 15, allergens: "—", pairing: "Little Gem Caesar", upsell: "Zero-proof version available", popularity: 52, profit: 11 },
+  { department: "Chef", name: "Tasting of the Hearth", description: "Chef's five-course seasonal tasting.", category: "Tasting Menu", price: 95, allergens: "Varies — ask server", pairing: "Wine pairing (+$55)", upsell: "Add the wine pairing (+$55)", popularity: 31, profit: 52 },
 ];
 
 const CULTURE_MOMENTS: [string, string, "Ownership" | "Guest Connection" | "Teamwork" | "Went Above", string, number][] = [
@@ -538,7 +538,7 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   // Menu (structured items + free-text references + engineering grid).
   await admin.from("menu_items").insert(
     MENU_ITEMS.map((m, i) => ({
-      org_id: orgId, department: m.department, name: m.name, description: m.description,
+      org_id: orgId, department: m.department, name: m.name, description: m.description, category: m.category,
       price: m.price, allergens: m.allergens, pairing_suggestion: m.pairing, upsell_suggestion: m.upsell,
       source: "wingman", popularity_pct: m.popularity, profit_amount: m.profit, sort_order: i,
     }))
