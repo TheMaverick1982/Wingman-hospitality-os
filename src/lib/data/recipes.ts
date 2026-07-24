@@ -11,9 +11,12 @@ export type RecipeStep = {
 };
 
 // Public URL for a recipe photo. The bucket is public, so this is a plain CDN
-// URL — no signing needed.
+// URL — no signing needed. A path that is already an absolute URL or a bundled
+// /public asset (used only for the seeded demo's illustrated steps) is returned
+// as-is; real uploads are bucket object keys resolved to their CDN URL.
 function publicUrl(path: string | null): string | null {
   if (!path) return null;
+  if (/^https?:\/\//.test(path) || path.startsWith("/")) return path;
   const admin = createAdminClient();
   return admin.storage.from("recipe-images").getPublicUrl(path).data.publicUrl;
 }

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Pat the brined chicken completely dry">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBF6EF"/><stop offset="1" stop-color="#F3E7D6"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg1)"/>
+  <ellipse cx="400" cy="430" rx="300" ry="34" fill="#000" opacity="0.05"/>
+  <!-- wooden board -->
+  <rect x="150" y="300" width="500" height="120" rx="18" fill="#C9A06A"/>
+  <rect x="150" y="300" width="500" height="120" rx="18" fill="#000" opacity="0.06"/>
+  <line x1="230" y1="300" x2="230" y2="420" stroke="#000" opacity="0.06" stroke-width="6"/>
+  <line x1="330" y1="300" x2="330" y2="420" stroke="#000" opacity="0.06" stroke-width="6"/>
+  <line x1="470" y1="300" x2="470" y2="420" stroke="#000" opacity="0.06" stroke-width="6"/>
+  <line x1="570" y1="300" x2="570" y2="420" stroke="#000" opacity="0.06" stroke-width="6"/>
+  <!-- raw half chicken -->
+  <ellipse cx="380" cy="300" rx="150" ry="86" fill="#F0C59A"/>
+  <ellipse cx="380" cy="290" rx="150" ry="80" fill="#EFB98A"/>
+  <path d="M250 300 q60 -70 150 -66 q100 4 138 52 q-70 40 -150 40 q-90 0 -138 -26z" fill="#F4CDA6"/>
+  <ellipse cx="330" cy="276" rx="30" ry="18" fill="#F8DDBE" opacity="0.7"/>
+  <!-- drumstick bone -->
+  <rect x="500" y="286" width="54" height="18" rx="9" fill="#FBEFDD" transform="rotate(-14 527 295)"/>
+  <circle cx="548" cy="278" r="10" fill="#FBEFDD"/>
+  <!-- paper towel -->
+  <rect x="470" y="150" width="150" height="120" rx="10" fill="#FFFFFF" stroke="#E7DDCB" stroke-width="3"/>
+  <line x1="470" y1="180" x2="620" y2="180" stroke="#EFE6D6" stroke-width="4"/>
+  <line x1="470" y1="210" x2="620" y2="210" stroke="#EFE6D6" stroke-width="4"/>
+  <line x1="470" y1="240" x2="620" y2="240" stroke="#EFE6D6" stroke-width="4"/>
+  <!-- water droplets lifting away -->
+  <path d="M300 150 q10 16 0 26 q-10 -10 0 -26z" fill="#8FB8D6"/>
+  <path d="M250 190 q8 13 0 21 q-8 -8 0 -21z" fill="#8FB8D6"/>
+  <path d="M340 120 q7 11 0 18 q-7 -7 0 -18z" fill="#8FB8D6"/>
+  <text x="400" y="470" text-anchor="middle" font-family="Georgia, serif" font-size="26" fill="#8A6A4A">Pat it bone-dry — dry skin crisps</text>
+</svg>

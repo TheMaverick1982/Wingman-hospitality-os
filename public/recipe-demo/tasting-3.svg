@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Plate to the photo every time — same placement on every cover">
+  <defs>
+    <linearGradient id="tbg3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBF6EF"/><stop offset="1" stop-color="#F3E7D6"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#tbg3)"/>
+  <!-- reference photo card, pinned -->
+  <g transform="rotate(-4 250 210)">
+    <rect x="120" y="120" width="260" height="200" rx="10" fill="#FFFFFF" stroke="#E4DBC9" stroke-width="4"/>
+    <rect x="120" y="120" width="260" height="150" rx="8" fill="#F1EADD"/>
+    <ellipse cx="250" cy="200" rx="90" ry="48" fill="#FBFAF7"/><ellipse cx="250" cy="200" rx="90" ry="48" fill="none" stroke="#E4DBC9" stroke-width="2"/>
+    <ellipse cx="235" cy="205" rx="34" ry="18" fill="#6E7A4B"/>
+    <ellipse cx="278" cy="196" rx="24" ry="13" fill="#C98A5A"/>
+    <circle cx="255" cy="185" r="4" fill="#E0A63C"/>
+    <text x="250" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#8A6A4A">Plating standard</text>
+    <circle cx="250" cy="120" r="7" fill="#B4472E"/>
+  </g>
+  <!-- arrow -->
+  <path d="M410 220 h60 m0 0 l-16 -12 m16 12 l-16 12" stroke="#B4472E" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- the actual plate matching -->
+  <ellipse cx="590" cy="240" rx="150" ry="96" fill="#FFFFFF"/>
+  <ellipse cx="590" cy="240" rx="150" ry="96" fill="#000" opacity="0.04"/>
+  <ellipse cx="590" cy="240" rx="112" ry="70" fill="#FBFAF7"/><ellipse cx="590" cy="240" rx="112" ry="70" fill="none" stroke="#EAE2D4" stroke-width="3"/>
+  <ellipse cx="572" cy="248" rx="40" ry="22" fill="#6E7A4B"/>
+  <ellipse cx="622" cy="236" rx="28" ry="16" fill="#C98A5A"/>
+  <circle cx="596" cy="222" r="5" fill="#E0A63C"/>
+  <!-- check mark -->
+  <circle cx="680" cy="176" r="24" fill="#6E7A4B"/>
+  <path d="M669 176 l8 9 l14 -18" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="400" y="466" text-anchor="middle" font-family="Georgia, serif" font-size="26" fill="#8A6A4A">Plate to the photo — same components, every cover</text>
+</svg>

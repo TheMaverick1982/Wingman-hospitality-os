@@ -93,7 +93,9 @@ function StepCard({
   const [pending, start] = useTransition();
   const [uploading, setUploading] = useState(false);
   const [text, setText] = useState(step.instruction);
+  const [imgFailed, setImgFailed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const hasImage = !!step.imageUrl && !imgFailed;
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -120,10 +122,10 @@ function StepCard({
         </div>
         <div className="flex-1 min-w-0">
           {/* Photo */}
-          {step.imageUrl ? (
+          {hasImage ? (
             <div className="relative mb-3 rounded-xl overflow-hidden border border-line max-w-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={step.imageUrl} alt={`Step ${index + 1}`} className="w-full h-auto block" />
+              <img src={step.imageUrl!} alt={`Step ${index + 1}`} onError={() => setImgFailed(true)} className="w-full h-auto block" />
               {canEdit && (
                 <button
                   onClick={() => start(() => removeRecipeStepImage(step.id, menuItemId))}
@@ -146,7 +148,7 @@ function StepCard({
               </button>
             )
           )}
-          {canEdit && step.imageUrl && (
+          {canEdit && hasImage && (
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}

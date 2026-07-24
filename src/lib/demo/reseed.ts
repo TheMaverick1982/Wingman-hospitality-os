@@ -549,28 +549,33 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   // environment just skips this instead of failing the whole reseed. (recipe_steps
   // cascades from menu_items, so the wipe doesn't need to clear it separately.)
   try {
-    const recipes: Record<string, string[]> = {
+    // Each step carries a fixed, illustrated demo graphic from /public/recipe-demo
+    // (a bundled SVG, not a storage upload) so the demo shows real "here's the
+    // step, here's the picture" flow. These are demo-only visuals — customers
+    // upload their own real photos. image_path is a /public path; the recipe
+    // data layer returns absolute/rooted paths as-is instead of hitting storage.
+    const recipes: Record<string, { instruction: string; image: string }[]> = {
       // A Server-menu dish (shown when the owner tabs to Server training).
       "Cast-Iron Half Chicken": [
-        "Pull the half chicken from brine and pat it completely dry — dry skin is crisp skin.",
-        "Season both sides with salt; season the cavity side a touch lighter.",
-        "Sear skin-side down in the cast iron over medium-high, pressed with a weight, ~8 min until deep golden.",
-        "Flip and finish in a 425°F oven, ~12–15 min, to 165°F at the thigh.",
-        "Rest 5 minutes, then plate over the confit potato, spoon the lemon-thyme jus around, and garnish.",
+        { instruction: "Pull the half chicken from brine and pat it completely dry — dry skin is crisp skin.", image: "/recipe-demo/chicken-1.svg" },
+        { instruction: "Season both sides with salt; season the cavity side a touch lighter.", image: "/recipe-demo/chicken-2.svg" },
+        { instruction: "Sear skin-side down in the cast iron over medium-high, pressed with a weight, ~8 min until deep golden.", image: "/recipe-demo/chicken-3.svg" },
+        { instruction: "Flip and finish in a 425°F oven, ~12–15 min, to 165°F at the thigh.", image: "/recipe-demo/chicken-4.svg" },
+        { instruction: "Rest 5 minutes, then plate over the confit potato, spoon the lemon-thyme jus around, and garnish.", image: "/recipe-demo/chicken-5.svg" },
       ],
       // A Chef-menu dish — this is what the demo "Chef view" surfaces.
       "Tasting of the Hearth": [
-        "Mise en place: confirm every course is prepped to its card and the hearth is up to temp before service.",
-        "Fire the courses in sequence off the pass — one course goes out complete before the next is started.",
-        "Plate to the photo every time: same components, same placement, on every cover.",
-        "Wipe the rims, add the final garnish, and call the runner — the table's covers go out together and hot.",
+        { instruction: "Mise en place: confirm every course is prepped to its card and the hearth is up to temp before service.", image: "/recipe-demo/tasting-1.svg" },
+        { instruction: "Fire the courses in sequence off the pass — one course goes out complete before the next is started.", image: "/recipe-demo/tasting-2.svg" },
+        { instruction: "Plate to the photo every time: same components, same placement, on every cover.", image: "/recipe-demo/tasting-3.svg" },
+        { instruction: "Wipe the rims, add the final garnish, and call the runner — the table's covers go out together and hot.", image: "/recipe-demo/tasting-4.svg" },
       ],
     };
     const byName = new Map(((insertedMenu ?? []) as { id: string; name: string }[]).map((m) => [m.name, m.id]));
-    const recipeRows: { org_id: string; menu_item_id: string; step_number: number; instruction: string }[] = [];
+    const recipeRows: { org_id: string; menu_item_id: string; step_number: number; instruction: string; image_path: string }[] = [];
     for (const [name, steps] of Object.entries(recipes)) {
       const id = byName.get(name);
-      if (id) steps.forEach((instruction, i) => recipeRows.push({ org_id: orgId, menu_item_id: id, step_number: i + 1, instruction }));
+      if (id) steps.forEach((s, i) => recipeRows.push({ org_id: orgId, menu_item_id: id, step_number: i + 1, instruction: s.instruction, image_path: s.image }));
     }
     if (recipeRows.length) await admin.from("recipe_steps").insert(recipeRows);
   } catch {

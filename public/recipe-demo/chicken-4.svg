@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Finish in a hot oven to 165 degrees at the thigh">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBF6EF"/><stop offset="1" stop-color="#F3E7D6"/>
+    </linearGradient>
+    <linearGradient id="ovenglow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6C463"/><stop offset="1" stop-color="#E08A2C"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg4)"/>
+  <!-- oven body -->
+  <rect x="230" y="120" width="340" height="300" rx="20" fill="#8A8580"/>
+  <rect x="230" y="120" width="340" height="46" rx="20" fill="#6E6964"/>
+  <circle cx="270" cy="143" r="10" fill="#B4472E"/>
+  <circle cx="305" cy="143" r="10" fill="#CFC8BE"/>
+  <!-- oven cavity -->
+  <rect x="262" y="186" width="276" height="200" rx="12" fill="url(#ovenglow)"/>
+  <rect x="262" y="186" width="276" height="200" rx="12" fill="#B4472E" opacity="0.12"/>
+  <!-- rack -->
+  <line x1="278" y1="330" x2="522" y2="330" stroke="#7A5A2A" stroke-width="6" opacity="0.5"/>
+  <!-- chicken roasting -->
+  <ellipse cx="400" cy="316" rx="118" ry="52" fill="#C6702B"/>
+  <path d="M290 320 q52 -46 112 -42 q82 4 108 40 q-56 20 -112 20 q-64 0 -108 -18z" fill="#D98A3D"/>
+  <ellipse cx="360" cy="300" rx="24" ry="12" fill="#E8A857" opacity="0.7"/>
+  <!-- thermometer -->
+  <rect x="430" y="236" width="10" height="90" rx="5" fill="#CFC8BE" transform="rotate(24 435 281)"/>
+  <circle cx="466" cy="248" r="26" fill="#FFFFFF" stroke="#CFC8BE" stroke-width="4"/>
+  <text x="466" y="255" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#B4472E">165°</text>
+  <!-- glass reflection -->
+  <rect x="278" y="196" width="60" height="180" rx="10" fill="#FFFFFF" opacity="0.12"/>
+  <text x="400" y="466" text-anchor="middle" font-family="Georgia, serif" font-size="26" fill="#8A6A4A">Finish in a 425° oven to 165° at the thigh</text>
+</svg>
