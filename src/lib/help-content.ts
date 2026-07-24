@@ -345,6 +345,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "The menu (for Servers & Bartenders)" },
       { kind: "p", text: "Server and Bartender programs include a Menu items section — each dish or drink with its description, allergens, a pairing, and an upsell. Upload a photo or PDF of your menu and Wingman reads every item and fills these in for you (it also assigns each item a category — using your menu's own sections when it has them, and inferring one when it doesn't)." },
       { kind: "note", text: "Menu items are grouped by category (Appetizers, Salads, Mains, Desserts, Cocktails…) into collapsible sections, so a long menu is easy to scan on a phone mid-shift. Each section starts collapsed — tap its header to open it (and tap again to close). Staff see the same grouped view." },
+      { kind: "note", text: "Managing the list: tap the pencil on any item to edit its details inline (name, category, price, allergens, pairing, upsell). Tick the checkboxes to select several and remove them with \"Delete selected.\" And re-uploading a menu is safe — Wingman matches items by name and updates them in place (keeping your popularity/profit numbers) rather than creating duplicates." },
     ],
     links: [{ label: "Tests & exams", href: "/help/tests-and-exams" }, { label: "Hiring criteria", href: "/help/hiring-criteria" }, { label: "Guest Journey", href: "/help/guest-journey" }],
   },
