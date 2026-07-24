@@ -33,6 +33,7 @@ export function TrainingClient({
   locations,
   roleTestDepts,
   canViewRecipes,
+  hideMenu,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
@@ -42,6 +43,9 @@ export function TrainingClient({
   locations: Location[];
   roleTestDepts: string[];
   canViewRecipes?: boolean;
+  // The staff view renders its own dedicated Menu section above, so it suppresses
+  // the inline one here to avoid showing the menu twice.
+  hideMenu?: boolean;
 }) {
   const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [activeRole, setActiveRole] = useState<Department>(roles[0]);
@@ -81,7 +85,7 @@ export function TrainingClient({
         })}
       </div>
 
-      {dept.hasMenu && (
+      {dept.hasMenu && !hideMenu && (
         <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} canViewRecipes={canViewRecipes} />
       )}
 
