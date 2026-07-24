@@ -4,7 +4,13 @@
   "webDir": "native/www",
   "server": {
     "url": "https://www.joinwingman.app",
-    "cleartext": false
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "joinwingman.app",
+      "www.joinwingman.app",
+      "*.joinwingman.app"
+    ]
   },
   "ios": {
     "contentInset": "always"
