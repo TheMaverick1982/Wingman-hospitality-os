@@ -1,6 +1,6 @@
 # Wingman iOS App — Build & Upload Guide (Capacitor)
 
-This wraps the live Wingman web app (`https://www.joinwingman.app`) in a native
+This wraps the live Wingman web app (`https://joinwingman.app`) in a native
 iOS shell using Capacitor, so it can go in the App Store. The native project isn't
 committed — you generate it on your Mac (it's large and machine-specific), then
 build and upload from Xcode.
@@ -8,7 +8,7 @@ build and upload from Xcode.
 Config lives in `capacitor.config.json`:
 - **App name:** Wingman
 - **Bundle ID:** `com.joinwingman.app` ← register this exact ID in Apple Developer
-- **Loads:** `https://www.joinwingman.app` (the live app)
+- **Loads:** `https://joinwingman.app` (the live app — the naked domain is primary; www redirects to it)
 
 ---
 

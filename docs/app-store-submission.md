@@ -13,7 +13,7 @@ the final "Submit" steps.
 | App name | **Wingman** |
 | Bundle ID (iOS) / Package name (Android) | **`app.joinwingman`** |
 | Primary category | **Business** |
-| What loads | `https://www.joinwingman.app` (hosted native shell) |
+| What loads | `https://joinwingman.app` (hosted native shell — naked domain is primary; www redirects to it) |
 
 Register the **exact** bundle ID `app.joinwingman` in both Apple Developer and
 Google Play. It's permanent after first submission.
