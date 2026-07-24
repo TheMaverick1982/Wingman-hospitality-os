@@ -36,6 +36,10 @@ export function TakeClient(props: {
   const [dayDone, setDayDone] = useState<number | null>(null); // the next day, once this one's submitted
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Learn-then-quiz tests get a distinct reading step first; exam-mode (or a day
+  // with no learning content) goes straight to the questions.
+  const hasLearnStep = props.mode === "study_quiz" && !!props.dayContent;
+  const [phase, setPhase] = useState<"learn" | "quiz">(hasLearnStep ? "learn" : "quiz");
 
   const answered = props.questions.every((q) => answers[q.id] != null);
 
@@ -118,12 +122,42 @@ export function TakeClient(props: {
     );
   }
 
+  // Step 1 — Learn: read the material, then advance to the quiz. Questions are
+  // hidden until they choose to start, so it reads as two clear screens.
+  if (hasLearnStep && phase === "learn") {
+    return (
+      <div className="flex flex-col gap-5">
+        <div>
+          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-ink">{props.title}</h1>
+          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[13px] text-muted">
+            <span className="font-semibold text-brick">{tr("test.learnStep")}</span>
+            <span>·</span><span>{tr("test.dayOf", { n: props.dayNumber, count: props.dayCount })}</span>
+          </div>
+          <p className="text-[14px] text-muted mt-1">{tr("test.readFirst")}</p>
+        </div>
+
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          {props.dayTitle && <div className="text-[16px] font-semibold text-ink mb-2">{props.dayTitle}</div>}
+          <div className="text-[14px] text-charcoal-2 whitespace-pre-wrap leading-relaxed">{props.dayContent}</div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={() => setPhase("quiz")} className="inline-flex items-center gap-2 text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-2.5 hover:bg-brick-dark transition-colors">
+            {tr("test.startQuiz")} <ArrowRight size={15} />
+          </button>
+          <Link href="/training/tests" className="text-[14px] font-semibold text-muted-2 hover:text-ink">{tr("test.finishLater")}</Link>
+        </div>
+      </div>
+    );
+  }
+
   const isLastDay = props.dayNumber >= props.dayCount;
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-[28px] font-bold tracking-[-0.02em] text-ink">{props.title}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[13px] text-muted">
+          {hasLearnStep && <><span className="font-semibold text-brick">{tr("test.quizStep")}</span><span>·</span></>}
           <span className="font-semibold text-charcoal-2">{tr("test.dayOf", { n: props.dayNumber, count: props.dayCount })}</span>
           <span>·</span><span>{tr("test.pass", { pct: props.passPct })}</span>
           <span>·</span><span className="inline-flex items-center gap-1"><Clock size={12} /> {props.dueLabel}</span>
@@ -131,11 +165,10 @@ export function TakeClient(props: {
         </div>
       </div>
 
-      {props.mode === "study_quiz" && props.dayContent && (
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          {props.dayTitle && <div className="text-[16px] font-semibold text-ink mb-2">{props.dayTitle}</div>}
-          <div className="text-[14px] text-charcoal-2 whitespace-pre-wrap leading-relaxed">{props.dayContent}</div>
-        </div>
+      {hasLearnStep && (
+        <button onClick={() => setPhase("learn")} className="self-start inline-flex items-center gap-1.5 text-[13px] font-semibold text-brick hover:text-brick-dark transition-colors">
+          <ArrowRight size={14} className="rotate-180" /> {tr("test.reviewMaterial")}
+        </button>
       )}
 
       <div className="flex flex-col gap-4">

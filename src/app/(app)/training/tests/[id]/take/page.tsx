@@ -80,6 +80,7 @@ export default async function TakeTestPage({ params }: { params: Promise<{ id: s
 
   return shell(
     <TakeClient
+      key={day}
       assignmentId={a.id}
       testId={id}
       title={title}

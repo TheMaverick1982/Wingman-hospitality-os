@@ -67,6 +67,12 @@ const STRINGS: Record<string, Entry> = {
   },
   "test.keepGoing": { en: "Keep going to Day {next}", es: "Seguir al Día {next}" },
   "test.finishLater": { en: "I’ll finish later", es: "Termino después" },
+  // Learn-then-quiz (study_quiz) two-step flow
+  "test.learnStep": { en: "Step 1 — Learn", es: "Paso 1 — Aprende" },
+  "test.quizStep": { en: "Step 2 — Quiz", es: "Paso 2 — Examen" },
+  "test.readFirst": { en: "Read this first, then take the quiz.", es: "Lee esto primero, luego haz el examen." },
+  "test.startQuiz": { en: "Start the quiz", es: "Empezar el examen" },
+  "test.reviewMaterial": { en: "Review the material", es: "Repasar el material" },
 
   // Staff checklist cards (pre-shift + FOH loyalty)
   "checklist.preshift.title": { en: "Your pre-shift checklist", es: "Tu lista de antes del turno" },
