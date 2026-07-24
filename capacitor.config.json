@@ -3,7 +3,7 @@
   "appName": "Wingman",
   "webDir": "native/www",
   "server": {
-    "url": "https://www.joinwingman.app",
+    "url": "https://joinwingman.app",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [
