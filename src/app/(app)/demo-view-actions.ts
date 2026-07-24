@@ -4,15 +4,16 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getCurrentProfile, DEMO_VIEW_COOKIE } from "@/lib/auth/profile";
 
-// Flip the demo between the owner view and the staff view. Strictly a no-op
-// outside a demo org, so a stray cookie can never downgrade a real account.
-export async function setDemoView(role: "owner" | "staff") {
+// Flip the demo between the owner view and a staff view (as a Server or a Chef).
+// Strictly a no-op outside a demo org, so a stray cookie can never downgrade a
+// real account.
+export async function setDemoView(role: "owner" | "server" | "chef") {
   const profile = await getCurrentProfile();
   if (!profile?.isDemo) return;
 
   const cookieStore = await cookies();
-  if (role === "staff") {
-    cookieStore.set(DEMO_VIEW_COOKIE, "staff", {
+  if (role === "server" || role === "chef") {
+    cookieStore.set(DEMO_VIEW_COOKIE, role, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

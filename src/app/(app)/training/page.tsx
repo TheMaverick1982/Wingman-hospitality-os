@@ -9,11 +9,12 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
+import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
 import { StaffTests } from "@/components/dashboard/staff-tests";
-import { getMyTests, isTestToDo } from "@/lib/data/staff-tests";
+import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { StartTrainingButton } from "./start-training-button";
 import { StartTestButton, type TestOption } from "./start-test-button";
@@ -49,25 +50,15 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const leaderboardEnabled = (lbOrg as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
   const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, profile.allLocations ? null : effectiveLocation)).slice(0, 3) : [];
 
-  // Staff see only their own department's training — resolve it from their roster row.
+  // Staff see only their own department's training. Resolve "my staff record"
+  // (demo-aware: a demo Server/Chef view resolves to that role, not the single
+  // linked account) — anyone on the roster (staff OR manager) also gets their own
+  // assigned tests + scores from it.
   const isStaff = profile.accessRole === "staff";
-  let myDept: string | null = null;
-  let myStaffId: string | null = null;
-  if (isStaff) {
-    const { data: myStaffRow } = await leaderAdmin
-      .from("staff_members")
-      .select("id, department")
-      .eq("profile_id", profile.userId)
-      .eq("org_id", profile.orgId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    const row = myStaffRow as { id: string; department: string } | null;
-    myStaffId = row?.id ?? null;
-    myDept = row?.department ?? null;
-  }
-
-  // Anyone on the roster (staff OR manager) sees their own assigned tests + scores.
-  const myTests = await getMyTests(profile.userId, profile.orgId);
+  const myStaff = await resolveMyStaff(profile);
+  const myStaffId = isStaff ? (myStaff?.id ?? null) : null;
+  const myDept = isStaff ? (myStaff?.department ?? null) : null;
+  const myTests = myStaff ? await getStaffTests(myStaff.id) : [];
 
   const supabase = await createClient();
   let signoffsQ = supabase

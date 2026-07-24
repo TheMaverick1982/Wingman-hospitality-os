@@ -70,7 +70,7 @@ export default async function DashboardPage({
   // not the restaurant-wide manager view. Branch out before the heavy manager
   // data fetching below.
   if (profile.accessRole === "staff") {
-    return <StaffDashboard userId={profile.userId} orgId={profile.orgId} fullName={profile.fullName} />;
+    return <StaffDashboard profile={profile} />;
   }
   const isSuperAdmin = profile.accessRole === "super_admin";
 

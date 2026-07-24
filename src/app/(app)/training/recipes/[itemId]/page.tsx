@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { canEditSection } from "@/lib/auth/permissions";
 import { getRecipeSteps } from "@/lib/data/recipes";
+import { resolveMyStaff } from "@/lib/data/my-staff";
 import { RecipeEditor } from "./recipe-editor";
 
 // Roles that can VIEW a recipe (managers/owners also edit). Keep in sync with the
@@ -27,17 +28,12 @@ export default async function RecipePage({ params }: { params: Promise<{ itemId:
   if (!item) notFound();
   const dish = item as { id: string; name: string; department: string };
 
-  // Managers/owners edit; Chef staff view. Anyone else is sent back to Training.
+  // Managers/owners edit; Chef staff view (demo-aware, so a demo Chef view can
+  // open it too). Anyone else is sent back to Training.
   let canView = canEdit;
   if (!canView && profile.accessRole === "staff") {
-    const { data: myStaff } = await supabase
-      .from("staff_members")
-      .select("department")
-      .eq("profile_id", profile.userId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    const dept = (myStaff as { department?: string } | null)?.department ?? null;
-    canView = !!dept && RECIPE_VIEW_ROLES.includes(dept);
+    const my = await resolveMyStaff(profile);
+    canView = !!my && RECIPE_VIEW_ROLES.includes(my.department);
   }
   if (!canView) redirect("/training");
 
