@@ -372,7 +372,7 @@ export const ARTICLES: HelpArticle[] = [
         "Retakes — how many times they can retake it (default 1). After that it locks and needs a manager to unlock, with coaching first.",
         "Complete within — give them a deadline in hours or days.",
         "Which roles must take it — all staff, or specific roles only.",
-        "Format — a straight exam, or \"learn, then quiz\" that teaches first (great for a new LTO or menu) and quizzes at the end to confirm they retained it. In learn-then-quiz mode the staffer gets two clear steps: first they read the learning material (Step 1 — Learn), then tap \"Start the quiz\" to move to the questions (Step 2 — Quiz), and they can tap \"Review the material\" to flip back. A learn-then-quiz test can be set to rotate monthly and go out to everyone.",
+        "Format — a straight exam, or \"learn, then quiz\" that teaches first (great for a new LTO or menu) and quizzes at the end to confirm they retained it. Whenever a test day includes learning material, the staffer gets two clear steps: first they read the material (Step 1 — Learn), then tap \"Start the quiz\" to move to the questions (Step 2 — Quiz), and they can tap \"Review the material\" to flip back. (A day with no learning section goes straight to its questions.) A learn-then-quiz test can be set to rotate monthly and go out to everyone.",
       ] },
       { kind: "h", text: "Continuing education — training that repeats every month" },
       { kind: "p", text: "Great hospitality is a habit, not a one-time program. On the Training page, the \"Make great hospitality a habit\" banner opens a dedicated Continuing Education area for building short monthly refreshers." },

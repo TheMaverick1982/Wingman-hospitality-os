@@ -36,9 +36,11 @@ export function TakeClient(props: {
   const [dayDone, setDayDone] = useState<number | null>(null); // the next day, once this one's submitted
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  // Learn-then-quiz tests get a distinct reading step first; exam-mode (or a day
-  // with no learning content) goes straight to the questions.
-  const hasLearnStep = props.mode === "study_quiz" && !!props.dayContent;
+  // Any test day that carries learning material gets a distinct reading step
+  // first (read → then quiz), regardless of the test's mode label — that's how
+  // every test should read. A day with no learning content goes straight to the
+  // questions.
+  const hasLearnStep = !!props.dayContent?.trim();
   const [phase, setPhase] = useState<"learn" | "quiz">(hasLearnStep ? "learn" : "quiz");
 
   const answered = props.questions.every((q) => answers[q.id] != null);
