@@ -582,13 +582,13 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
         { instruction: "Wipe the rims, add the final garnish, and call the runner — the table's covers go out together and hot.", image: "/recipe-demo/tasting-4.webp" },
       ],
       // A drink — this is what the demo "Bartender view" surfaces: the bar's own
-      // how-to-make-it recipe layer. (Text steps for now; real bars upload photos
-      // of each build the same way the kitchen does.)
+      // how-to-make-it recipe layer, with a photo on each build step, exactly like
+      // the kitchen recipes.
       "Lantern Old Fashioned": [
-        { instruction: "Add the toasted-pecan bourbon, demerara syrup, and 3 dashes black walnut bitters to a mixing glass." },
-        { instruction: "Fill with ice and stir 25–30 seconds — you're chilling and diluting to the house spec, not shaking." },
-        { instruction: "Strain over one large clear cube in a rocks glass." },
-        { instruction: "Express an orange peel over the top, wipe the rim, and drop it in. Serve with the branded pick." },
+        { instruction: "Add the toasted-pecan bourbon, demerara syrup, and 3 dashes black walnut bitters to a mixing glass.", image: "/recipe-demo/cocktail-1.webp" },
+        { instruction: "Fill with ice and stir 25–30 seconds — you're chilling and diluting to the house spec, not shaking.", image: "/recipe-demo/cocktail-2.webp" },
+        { instruction: "Strain over one large clear cube in a rocks glass.", image: "/recipe-demo/cocktail-3.webp" },
+        { instruction: "Express an orange peel over the top, wipe the rim, and drop it in. Serve with the branded pick.", image: "/recipe-demo/cocktail-4.webp" },
       ],
     };
     const byName = new Map(((insertedMenu ?? []) as { id: string; name: string }[]).map((m) => [m.name, m.id]));
