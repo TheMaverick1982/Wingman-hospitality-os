@@ -593,8 +593,8 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       // The bar's monthly LTO — a short recipe, with the smoked-glass finish as
       // the hero shot.
       "October: Smoked Maple Old Fashioned": [
-        { instruction: "Build in a mixing glass: applewood-smoked bourbon, a barspoon of grade-A maple syrup, and 2 dashes aromatic bitters." },
-        { instruction: "Add ice and stir 25–30 seconds to chill and dilute to spec." },
+        { instruction: "Build in a mixing glass: applewood-smoked bourbon, a barspoon of grade-A maple syrup, and 2 dashes aromatic bitters.", image: "/recipe-demo/cocktail-1.webp" },
+        { instruction: "Add ice and stir 25–30 seconds to chill and dilute to spec.", image: "/recipe-demo/cocktail-2.webp" },
         { instruction: "Torch an applewood chip and trap the smoke under an inverted rocks glass for ~10 seconds, so the smoke lines the glass." },
         { instruction: "Strain over a large cube into the smoked glass, express an orange peel over the top, and serve while it's still gently wisping.", image: "/recipe-demo/cocktail-lto.webp" },
       ],

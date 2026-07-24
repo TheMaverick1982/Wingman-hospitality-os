@@ -470,7 +470,6 @@ function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: 
             <span className="text-sm font-semibold text-ink">{item.name}</span>
             {item.price != null && <span className="text-xs font-mono text-muted">${item.price}</span>}
             {item.is_lto && <Pill tone="gold">LTO</Pill>}
-            <Pill tone={item.source === "wingman" ? "brick" : "muted"}>{item.source === "wingman" ? "Wingman" : "Custom"}</Pill>
           </div>
         </div>
         {canEdit && (
