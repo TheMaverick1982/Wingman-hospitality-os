@@ -391,6 +391,9 @@ const MENU_ITEMS: {
   { department: "Bartender", name: "Lantern Old Fashioned", description: "Toasted-pecan bourbon, demerara, black walnut bitters.", category: "Cocktails", price: 16, allergens: "—", pairing: "Bavette Steak Frites", upsell: "Rare-barrel pour (+$8)", popularity: 88, profit: 12.5 },
   { department: "Bartender", name: "Riverside Spritz", description: "Aperitivo, cava, grapefruit oil, rosemary.", category: "Cocktails", price: 14, allergens: "—", pairing: "Beet Salad", upsell: "Make it a carafe for the table (+$26)", popularity: 69, profit: 10.5 },
   { department: "Bartender", name: "Garden Gimlet", description: "Cucumber gin, lime cordial, basil.", category: "Cocktails", price: 15, allergens: "—", pairing: "Little Gem Caesar", upsell: "Zero-proof version available", popularity: 52, profit: 11 },
+  // A monthly LTO on the BAR menu — shows the Limited Time Offers section works
+  // for drinks too, not just food (flagged is_lto below).
+  { department: "Bartender", name: "October: Smoked Maple Old Fashioned", description: "This month only — applewood-smoked bourbon, maple, aromatic bitters.", category: "Cocktails", price: 18, allergens: "—", pairing: "Cast-Iron Half Chicken", upsell: "Add a smoked cinnamon rim (+$3)", popularity: 20, profit: 13 },
   // Food, not a "Chef-only" dish: the tasting lives on the shared food menu, so
   // both the Server view (knowledge) and the Chef view (knowledge + recipe) show
   // it. Its recipe is seeded below and is what the demo Chef view surfaces.
@@ -603,9 +606,13 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
   // "Limited Time Offers" section. Guarded: is_lto lands with migration 0144, so a
   // not-yet-migrated environment just skips it rather than failing the reseed.
   try {
-    await admin.from("menu_items").update({ is_lto: true }).eq("org_id", orgId).eq("name", "October: Braised Short Rib");
+    await admin
+      .from("menu_items")
+      .update({ is_lto: true })
+      .eq("org_id", orgId)
+      .in("name", ["October: Braised Short Rib", "October: Smoked Maple Old Fashioned"]);
   } catch {
-    // is_lto not migrated yet — skip the demo LTO flag.
+    // is_lto not migrated yet — skip the demo LTO flags.
   }
   await admin.from("menu_references").insert([
     { org_id: orgId, department: "Server", content: "Seasonal hearth-driven American menu. Signature: Cast-Iron Half Chicken, Bavette Steak Frites. Tasting menu available with wine pairing." },
