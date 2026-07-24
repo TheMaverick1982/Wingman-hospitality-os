@@ -135,7 +135,7 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
     ((existingRows ?? []) as { id: string; name: string }[]).map((e) => [e.name.trim().toLowerCase(), e.id])
   );
 
-  const updates: Promise<unknown>[] = [];
+  const updatePlan: { id: string; fields: Record<string, unknown> }[] = [];
   const toInsert: Record<string, unknown>[] = [];
   dishes.forEach((d, i) => {
     const fields = {
@@ -150,18 +150,18 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
     const key = (d.name ?? "").trim().toLowerCase();
     const existingId = key ? byName.get(key) : undefined;
     if (existingId) {
-      updates.push(supabase.from("menu_items").update(fields).eq("id", existingId));
+      updatePlan.push({ id: existingId, fields });
     } else {
       toInsert.push({ org_id: org.id, department, name: d.name, source: "wingman", ...fields });
     }
   });
 
-  const results = await Promise.all([
-    ...updates,
-    ...(toInsert.length ? [supabase.from("menu_items").insert(toInsert)] : []),
-  ]);
-  const firstErr = results.find((r) => (r as { error?: { message: string } | null })?.error);
-  if (firstErr) return { error: (firstErr as { error: { message: string } }).error.message };
+  const updateResults = await Promise.all(
+    updatePlan.map((u) => supabase.from("menu_items").update(u.fields).eq("id", u.id))
+  );
+  const insertResult = toInsert.length ? await supabase.from("menu_items").insert(toInsert) : null;
+  const firstErr = [...updateResults, insertResult].find((r) => r != null && r.error != null);
+  if (firstErr && firstErr.error) return { error: firstErr.error.message };
 
   revalidatePath("/training");
   return { error: null, parsedCount: dishes.length };
