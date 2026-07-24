@@ -10,6 +10,7 @@ import { recordAiUsage } from "@/lib/ai/usage";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { EXAMPLE_TESTS, type QuestionKind, type TestMode, type TestQuestion, type TestSettings } from "@/lib/tests";
+import { getRecipeSteps } from "@/lib/data/recipes";
 
 async function canBuild() {
   const p = await getCurrentProfile();
@@ -247,7 +248,7 @@ ${schema}`;
 }
 
 // Persist a reviewed/approved test (settings + its days + questions).
-export async function applyTest(settings: TestSettings, days: ProposedDay[], source = "ai", sourceDepartment?: string): Promise<{ error: string | null; id?: string }> {
+export async function applyTest(settings: TestSettings, days: ProposedDay[], source = "ai", sourceDepartment?: string, sourceMenuItemId?: string): Promise<{ error: string | null; id?: string }> {
   const profile = await canBuild();
   if (!profile) return { error: "Not authorized." };
   if (!settings.title?.trim()) return { error: "Give the test a title." };
@@ -275,6 +276,8 @@ export async function applyTest(settings: TestSettings, days: ProposedDay[], sou
   // Only reference the column when set, so the common build paths don't depend
   // on the source_department migration having landed.
   if (sourceDepartment) insertObj.source_department = sourceDepartment;
+  // Same guard for the per-dish recipe source (0143 migration).
+  if (sourceMenuItemId) insertObj.source_menu_item_id = sourceMenuItemId;
 
   const { data: test, error } = await supabase.from("tests").insert(insertObj).select("id").single();
   if (error) return { error: error.message };
@@ -449,6 +452,100 @@ ${schema}`;
   };
   const res = await applyTest(settings, days, "training", department);
   revalidatePath("/training");
+  return res.id ? { error: null, id: res.id, updated: false } : { error: res.error };
+}
+
+// One-click "turn this recipe into a test" (or update the one already made from
+// it), straight from a dish's recipe page. The AI writes a learn-then-quiz from
+// the recipe's own steps so a cook can prove they know how to make the dish to
+// spec. Keeps a single test per dish via source_menu_item_id.
+export async function createOrUpdateTestFromRecipe(menuItemId: string): Promise<{ error: string | null; id?: string; updated?: boolean }> {
+  const profile = await canBuild();
+  if (!profile) return { error: "You don't have access to build tests." };
+  if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  // RLS scopes this to the caller's org, so an id from another org resolves to nothing.
+  const { data: item } = await supabase.from("menu_items").select("id, name, department, description, allergens").eq("id", menuItemId).maybeSingle();
+  if (!item) return { error: "That dish couldn't be found." };
+  const dish = item as { id: string; name: string; department: string; description: string | null; allergens: string | null };
+  if (!ALL_DEPARTMENTS.includes(dish.department as Department)) return { error: "That dish has no role assigned." };
+
+  const steps = await getRecipeSteps(menuItemId);
+  if (steps.length === 0) return { error: "Add some recipe steps first — there's nothing to build a test from yet." };
+  const material = [
+    `Dish: ${dish.name}`,
+    dish.description ? `Description: ${dish.description}` : null,
+    dish.allergens && dish.allergens !== "—" ? `Allergens: ${dish.allergens}` : null,
+    "",
+    "Recipe steps:",
+    ...steps.map((s) => `${s.stepNumber}. ${s.instruction}`),
+  ].filter((l) => l !== null).join("\n");
+
+  const schema = `{"days": [{"day_number": 1, "title": string, "content": string, "questions": [{"kind": "multiple_choice" | "true_false", "prompt": string, "options": [string], "correct_index": number, "explanation": string}]}]}`;
+  const prompt = `Build a learn-then-quiz that checks a cook truly knows how to make "${dish.name}" to spec, based ONLY on this restaurant's own recipe below.
+Give ONE day with:
+- "title": a short focus, e.g. "${dish.name} — cook to spec".
+- "content": clear teaching/study text the cook reads BEFORE the questions — restate the method in a few tight paragraphs or ordered steps so someone could learn the recipe from it and then pass. This is the learning section.
+- "questions": 6-10 fair, auto-scored questions (multiple_choice with one correct option, or true_false with options exactly ["True","False"]) that check they know the sequence, techniques, temperatures/times, and plating for this dish. Prefer questions about the specifics that matter (order of steps, target temps/times, what "to spec" looks like) over trivia. Set correct_index (0-based) and a one-line explanation each.
+
+Recipe:
+"""
+${material.slice(0, 8000)}
+"""
+
+Respond with ONLY valid JSON, matching exactly:
+${schema}`;
+
+  let days: ProposedDay[];
+  try {
+    const text = await callModel(TEST_SYSTEM, prompt, 7000, profile.orgId);
+    const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
+    days = normalizeDays(parsed.days ?? [], 1, "study_quiz");
+    if (!days[0] || days[0].questions.length === 0) throw new Error("Couldn't write questions from that recipe. Try again.");
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
+  }
+
+  // Already made into a test? Replace its content, keep its settings. Guarded so a
+  // not-yet-migrated environment (no source_menu_item_id) just makes a new test.
+  let existingId: string | null = null;
+  try {
+    const { data: existing } = await supabase.from("tests").select("id").eq("org_id", org.id).eq("source_menu_item_id", menuItemId).maybeSingle();
+    existingId = (existing as { id: string } | null)?.id ?? null;
+  } catch {
+    existingId = null;
+  }
+  if (existingId) {
+    const testId = existingId;
+    await supabase.from("test_questions").delete().eq("test_id", testId);
+    await supabase.from("test_days").delete().eq("test_id", testId);
+    await supabase.from("test_days").insert(days.map((d) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, title: d.title.slice(0, 120), content: (d.content || "").slice(0, 4000) })));
+    const qRows = days.flatMap((d) => d.questions.map((q, i) => ({ test_id: testId, org_id: org.id, day_number: d.day_number, sort_order: i, kind: q.kind, prompt: q.prompt.slice(0, 500), options: q.options, correct_index: q.correct_index, explanation: (q.explanation || "").slice(0, 400) })));
+    if (qRows.length > 0) await supabase.from("test_questions").insert(qRows);
+    await supabase.from("tests").update({ day_count: 1, mode: "study_quiz", updated_at: new Date().toISOString() }).eq("id", testId);
+    revalidatePath(`/training/recipes/${menuItemId}`);
+    revalidatePath("/training/tests");
+    return { error: null, id: testId, updated: true };
+  }
+
+  const settings: TestSettings = {
+    title: `${dish.name} — Recipe Test`,
+    description: `Learn how to make ${dish.name} to spec, then get quizzed on it.`,
+    mode: "study_quiz",
+    target_departments: [dish.department],
+    day_count: 1,
+    pass_pct: 80,
+    max_retakes: 1,
+    complete_within_amount: 3,
+    complete_within_unit: "days",
+    rotates_monthly: false,
+  };
+  const res = await applyTest(settings, days, "recipe", dish.department, menuItemId);
+  revalidatePath(`/training/recipes/${menuItemId}`);
   return res.id ? { error: null, id: res.id, updated: false } : { error: res.error };
 }
 
