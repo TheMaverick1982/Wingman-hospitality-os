@@ -161,11 +161,12 @@ export function MenuTrainingSection({
           return (
             <div className="flex flex-col gap-2">
               {groups.map(([cat, catItems]) => (
-                <details key={cat} open className="group border border-line rounded-2xl bg-panel/40 overflow-hidden">
+                <details key={cat} className="group border border-line rounded-2xl bg-panel/40 overflow-hidden">
                   <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-panel transition-colors">
                     <ChevronRight size={15} className="text-muted-2 shrink-0 transition-transform group-open:rotate-90" />
                     <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-charcoal-2">{cat}</span>
                     <span className="ml-1 text-xs text-muted-2 tabular-nums">{catItems.length}</span>
+                    <span className="ml-auto text-[11px] font-medium text-muted-2 group-open:hidden">Tap to view</span>
                   </summary>
                   <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
                     {catItems.map((item) => (

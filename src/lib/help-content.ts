@@ -344,7 +344,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "note", text: "Every role's program includes a purpose-and-pride behavior — why that role matters and taking genuine pride in it. It's the In-N-Out / Chick-fil-A idea: teams with high morale and workplace pride are the ones with the best guest experience and the lowest turnover. Ask \"Refine with AI\" to add more of these if you want to lean into it." },
       { kind: "h", text: "The menu (for Servers & Bartenders)" },
       { kind: "p", text: "Server and Bartender programs include a Menu items section — each dish or drink with its description, allergens, a pairing, and an upsell. Upload a photo or PDF of your menu and Wingman reads every item and fills these in for you (it also assigns each item a category — using your menu's own sections when it has them, and inferring one when it doesn't)." },
-      { kind: "note", text: "Menu items are grouped by category (Appetizers, Salads, Mains, Desserts, Cocktails…) into collapsible sections, so a long menu is easy to scan on a phone mid-shift — tap a section to expand or collapse it. Staff see the same grouped view." },
+      { kind: "note", text: "Menu items are grouped by category (Appetizers, Salads, Mains, Desserts, Cocktails…) into collapsible sections, so a long menu is easy to scan on a phone mid-shift. Each section starts collapsed — tap its header to open it (and tap again to close). Staff see the same grouped view." },
     ],
     links: [{ label: "Tests & exams", href: "/help/tests-and-exams" }, { label: "Hiring criteria", href: "/help/hiring-criteria" }, { label: "Guest Journey", href: "/help/guest-journey" }],
   },
