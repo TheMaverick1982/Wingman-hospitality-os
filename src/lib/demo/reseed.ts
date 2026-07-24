@@ -590,6 +590,14 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
         { instruction: "Strain over one large clear cube in a rocks glass.", image: "/recipe-demo/cocktail-3.webp" },
         { instruction: "Express an orange peel over the top, wipe the rim, and drop it in. Serve with the branded pick.", image: "/recipe-demo/cocktail-4.webp" },
       ],
+      // The bar's monthly LTO — a short recipe, with the smoked-glass finish as
+      // the hero shot.
+      "October: Smoked Maple Old Fashioned": [
+        { instruction: "Build in a mixing glass: applewood-smoked bourbon, a barspoon of grade-A maple syrup, and 2 dashes aromatic bitters." },
+        { instruction: "Add ice and stir 25–30 seconds to chill and dilute to spec." },
+        { instruction: "Torch an applewood chip and trap the smoke under an inverted rocks glass for ~10 seconds, so the smoke lines the glass." },
+        { instruction: "Strain over a large cube into the smoked glass, express an orange peel over the top, and serve while it's still gently wisping.", image: "/recipe-demo/cocktail-lto.webp" },
+      ],
     };
     const byName = new Map(((insertedMenu ?? []) as { id: string; name: string }[]).map((m) => [m.name, m.id]));
     const recipeRows: { org_id: string; menu_item_id: string; step_number: number; instruction: string; image_path: string | null }[] = [];
