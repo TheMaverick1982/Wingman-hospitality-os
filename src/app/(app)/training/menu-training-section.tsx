@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
-import { Upload, Trash2, Sparkles, Plus, ChevronRight, Pencil, X } from "lucide-react";
+import { Upload, Trash2, Sparkles, Plus, ChevronRight, Pencil, X, BookOpen, RotateCcw } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Pill } from "@/components/ui/pill";
 import { inputClass } from "@/components/ui/field";
@@ -11,6 +12,8 @@ import {
   updateMenuItemMetrics,
   deleteMenuItem,
   deleteMenuItems,
+  restoreMenuItem,
+  deleteMenuItemPermanently,
   updateMenuItem,
   addCustomMenuItem,
   type MenuUploadState,
@@ -30,6 +33,8 @@ export type MenuItem = {
   source: "wingman" | "custom";
   popularity_pct: number | null;
   profit_amount: number | null;
+  archived_at?: string | null;
+  recipeStepCount?: number;
 };
 
 const uploadInitial: MenuUploadState = { error: null };
@@ -39,11 +44,16 @@ export function MenuTrainingSection({
   department,
   items,
   canEdit,
+  canViewRecipes,
 }: {
   department: string;
   items: MenuItem[];
   canEdit: boolean;
+  canViewRecipes?: boolean;
 }) {
+  // Show the per-dish "Recipe" link to editors (managers/owners) and to the
+  // roles allowed to view recipes (Chef).
+  const showRecipe = canEdit || !!canViewRecipes;
   const [uploadState, uploadAction, uploadPending] = useActionState(uploadAndParseMenu, uploadInitial);
   const [showAdd, setShowAdd] = useState(false);
   const [addState, addAction, addPending] = useActionState(addCustomMenuItem, addInitial);
@@ -63,14 +73,19 @@ export function MenuTrainingSection({
   const deleteSelected = () => {
     const ids = [...selected];
     if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} menu item${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    if (!confirm(`Archive ${ids.length} menu item${ids.length === 1 ? "" : "s"}? They'll drop off the menu but keep their recipe, and you can restore them anytime.`)) return;
     startBulk(async () => {
       await deleteMenuItems(ids);
       clearSelected();
     });
   };
 
-  const engineered = items.filter((i) => i.popularity_pct != null && i.profit_amount != null);
+  // Archived dishes stay in the data (with their recipe) but drop off the active
+  // menu until restored.
+  const activeItems = items.filter((i) => !i.archived_at);
+  const archivedItems = items.filter((i) => i.archived_at);
+
+  const engineered = activeItems.filter((i) => i.popularity_pct != null && i.profit_amount != null);
   const avgPopularity = engineered.length
     ? engineered.reduce((s, i) => s + (i.popularity_pct ?? 0), 0) / engineered.length
     : 0;
@@ -164,7 +179,7 @@ export function MenuTrainingSection({
               disabled={bulkPending}
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-danger rounded-full px-3.5 py-1.5 hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              <Trash2 size={13} /> {bulkPending ? "Deleting…" : "Delete selected"}
+              <Trash2 size={13} /> {bulkPending ? "Archiving…" : "Archive selected"}
             </button>
           </div>
         </div>
@@ -188,18 +203,18 @@ export function MenuTrainingSection({
         </form>
       )}
 
-      {items.length === 0 ? (
+      {activeItems.length === 0 ? (
         <p className="text-sm text-muted">No menu items yet — upload a menu to get started.</p>
       ) : (
         (() => {
-          const groups = groupByCategory(items);
+          const groups = groupByCategory(activeItems);
           // Not categorized yet (e.g. an older menu uploaded before categories) —
           // a flat list reads fine and re-uploading will group it.
           if (groups.length <= 1) {
             return (
               <div className="flex flex-col gap-2.5">
-                {items.map((item) => (
-                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} />
+                {activeItems.map((item) => (
+                  <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} showRecipe={showRecipe} />
                 ))}
               </div>
             );
@@ -216,7 +231,7 @@ export function MenuTrainingSection({
                   </summary>
                   <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1">
                     {catItems.map((item) => (
-                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} />
+                      <MenuItemRow key={item.id} item={item} canEdit={canEdit} selected={selected.has(item.id)} onToggle={() => toggleSelected(item.id)} showRecipe={showRecipe} />
                     ))}
                   </div>
                 </details>
@@ -225,6 +240,57 @@ export function MenuTrainingSection({
           );
         })()
       )}
+
+      {canEdit && archivedItems.length > 0 && (
+        <details className="group mt-4 border border-line rounded-2xl bg-panel/30 overflow-hidden">
+          <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-4 py-3 hover:bg-panel transition-colors">
+            <ChevronRight size={15} className="text-muted-2 shrink-0 transition-transform group-open:rotate-90" />
+            <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2">Archived dishes</span>
+            <span className="ml-1 text-xs text-muted-2 tabular-nums">{archivedItems.length}</span>
+            <span className="ml-auto text-[11px] font-medium text-muted-2">kept with their recipe · restore anytime</span>
+          </summary>
+          <div className="flex flex-col gap-2 px-3 pb-3 pt-1">
+            {archivedItems.map((item) => (
+              <ArchivedRow key={item.id} item={item} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ArchivedRow({ item }: { item: MenuItem }) {
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex items-center justify-between gap-3 bg-panel border border-line rounded-xl px-4 py-2.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-medium text-charcoal-2 truncate">{item.name}</span>
+        {(item.recipeStepCount ?? 0) > 0 && (
+          <span className="text-[11px] text-muted-2 shrink-0">· recipe: {item.recipeStepCount} step{item.recipeStepCount === 1 ? "" : "s"}</span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => start(() => restoreMenuItem(item.id))}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brick hover:text-brick-dark disabled:opacity-50"
+        >
+          <RotateCcw size={13} /> Restore
+        </button>
+        <button
+          onClick={() => {
+            if (confirm(`Permanently delete "${item.name}"? This removes the dish AND its recipe for good — it can't be restored.`)) {
+              start(() => deleteMenuItemPermanently(item.id));
+            }
+          }}
+          disabled={pending}
+          className="text-muted-2 hover:text-danger transition-colors disabled:opacity-50"
+          aria-label="Delete permanently"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -300,7 +366,7 @@ function QuadrantCard({
 
 const editInitial: EditMenuItemState = { error: null };
 
-function MenuItemRow({ item, canEdit, selected, onToggle }: { item: MenuItem; canEdit: boolean; selected?: boolean; onToggle?: () => void }) {
+function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: MenuItem; canEdit: boolean; selected?: boolean; onToggle?: () => void; showRecipe?: boolean }) {
   const [popularity, setPopularity] = useState(item.popularity_pct?.toString() ?? "");
   const [profit, setProfit] = useState(item.profit_amount?.toString() ?? "");
   const [editing, setEditing] = useState(false);
@@ -364,6 +430,17 @@ function MenuItemRow({ item, canEdit, selected, onToggle }: { item: MenuItem; ca
         )}
       </div>
       {item.description && <p className="text-xs text-muted mb-2">{item.description}</p>}
+      {showRecipe && (
+        <Link
+          href={`/training/recipes/${item.id}`}
+          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brick hover:text-brick-dark mb-2.5"
+        >
+          <BookOpen size={13} />
+          {(item.recipeStepCount ?? 0) > 0
+            ? `Recipe · ${item.recipeStepCount} step${item.recipeStepCount === 1 ? "" : "s"}`
+            : canEdit ? "Add recipe (how to make it)" : "No recipe yet"}
+        </Link>
+      )}
       <div className="grid grid-cols-2 gap-3 text-xs mb-3">
         <div>
           <span className="font-semibold text-charcoal-2">Allergens: </span>

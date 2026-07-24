@@ -8,6 +8,7 @@ import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
+import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { Pill } from "@/components/ui/pill";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { SignoffLog } from "./signoff-log";
@@ -85,19 +86,21 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     { data: testQ },
     locations,
     staff,
+    recipeCounts,
   ] = await Promise.all([
     supabase.from("department_standards").select("id, department, item, sort_order, source").order("sort_order"),
     supabase.from("department_training_items").select("id, department, item, sort_order, source").order("sort_order"),
     supabase.from("department_meta").select("department, track_label, has_menu"),
     supabase
       .from("menu_items")
-      .select("id, department, name, description, category, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount")
+      .select("id, department, name, description, category, price, allergens, pairing_suggestion, upsell_suggestion, source, popularity_pct, profit_amount, archived_at")
       .order("sort_order"),
     signoffsQ,
     canEdit ? supabase.from("tests").select("id, title, target_departments, day_count, rotates_monthly, mode").eq("active", true).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
     canEdit ? supabase.from("test_questions").select("test_id") : Promise.resolve({ data: [] }),
     getOrgLocations(),
     getStaffMembers(effectiveLocation),
+    getRecipeStepCounts(),
   ]);
 
   // Tests available to hand out via the "Start a test" flow (managers only).
@@ -135,6 +138,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   // Staff: restrict to their own department so they never see other roles' training.
   const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
 
+  // Who can open a dish's recipe: managers/owners (who also edit) and the Chef
+  // role (view-only). Easy to widen to Line Cook / Expo later.
+  const RECIPE_VIEW_ROLES = ["Chef"];
+  const canViewRecipes = canEdit || (isStaff && !!myDept && RECIPE_VIEW_ROLES.includes(myDept));
+
   const allSignoffs = signoffs ?? [];
   const data = {} as Record<Department, DeptData>;
   const summaries = {} as Record<Department, RoleSummary>;
@@ -145,7 +153,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       trainingItems: (trainingItems ?? []).filter((t) => t.department === d).map((t) => ({ id: t.id, item: t.item, source: t.source })),
       trackLabel: metaRow?.track_label ?? null,
       hasMenu: metaRow?.has_menu ?? false,
-      menuItems: (menuItems ?? []).filter((m) => m.department === d),
+      menuItems: (menuItems ?? [])
+        .filter((m) => m.department === d)
+        .map((m) => ({ ...m, recipeStepCount: recipeCounts.get(m.id) ?? 0 })),
     };
 
     const deptSignoffs = allSignoffs.filter((s) => s.department === d);
@@ -214,7 +224,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         )}
 
         <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
-        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
+        <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} />
       </>
     );
   }
@@ -336,7 +346,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
 
       {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
 
-      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} />
+      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} />
 
       {!isStaff && <SignoffLog signoffs={allSignoffs} />}
     </>
