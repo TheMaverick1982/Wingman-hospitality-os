@@ -7,6 +7,10 @@ import { ApplyForm } from "./apply-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+// Submitting grades the screening answers with an AI call, so give the route room
+// past the short default function timeout.
+export const maxDuration = 60;
+
 // Public, unauthenticated application form. Reached at /apply/{org-slug} and,
 // with ?embed=1, rendered bare for embedding in the restaurant's own site.
 export default async function ApplyPage({
@@ -44,6 +48,21 @@ export default async function ApplyPage({
   const departments = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => (m as { department: string }).department === d));
   const roleOptions = departments.length ? departments : [...ALL_DEPARTMENTS];
 
+  // Per-role screening questions, grouped by department for role-reactive display.
+  // Guarded (the table lands with a migration) so the form still works if it
+  // hasn't been applied yet — it just shows no screening step.
+  const screeningByRole: Record<string, { id: string; prompt: string }[]> = {};
+  {
+    const { data: sqRows } = await admin
+      .from("screening_questions")
+      .select("id, department, prompt, sort_order")
+      .eq("org_id", org.id)
+      .order("sort_order");
+    for (const r of (sqRows ?? []) as { id: string; department: string; prompt: string }[]) {
+      (screeningByRole[r.department] ??= []).push({ id: r.id, prompt: r.prompt });
+    }
+  }
+
   const preRole = role && roleOptions.includes(role as (typeof roleOptions)[number]) ? role : "";
   const preLocation = location && locations.some((l) => l.id === location) ? location : "";
 
@@ -63,6 +82,7 @@ export default async function ApplyPage({
       preLocation={preLocation}
       embed={isEmbed}
       config={formConfig}
+      screeningByRole={screeningByRole}
     />
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { CheckCircle2, Paperclip } from "lucide-react";
 import { submitApplication, type ApplyState } from "./actions";
 import { builtinSetting, type ApplicationFormConfig, type CustomField } from "@/lib/application-form";
@@ -53,6 +53,7 @@ export function ApplyForm({
   preLocation,
   embed,
   config,
+  screeningByRole,
 }: {
   slug: string;
   orgName: string;
@@ -63,8 +64,12 @@ export function ApplyForm({
   preLocation: string;
   embed: boolean;
   config: ApplicationFormConfig;
+  screeningByRole: Record<string, { id: string; prompt: string }[]>;
 }) {
   const [state, formAction, pending] = useActionState(submitApplication.bind(null, slug), initial);
+  // The role drives which screening questions show, so it's controlled.
+  const [role, setRole] = useState(preRole);
+  const screeningQuestions = (role && screeningByRole[role]) || [];
 
   const email = builtinSetting(config, "email");
   const phone = builtinSetting(config, "phone");
@@ -129,7 +134,7 @@ export function ApplyForm({
             {department.enabled && (
               <div>
                 <label className={label}>{department.label}<Req on={department.required} /></label>
-                <select name="department" required={department.required} defaultValue={preRole} className={field}>
+                <select name="department" required={department.required} value={role} onChange={(e) => setRole(e.target.value)} className={field}>
                   <option value="">{department.required ? "Select a role…" : "Any role"}</option>
                   {roles.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
@@ -170,6 +175,20 @@ export function ApplyForm({
         )}
 
         {config.custom.map((f) => <CustomFieldInput key={f.id} f={f} />)}
+
+        {screeningQuestions.length > 0 && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-line bg-paper/60 p-4 sm:p-5">
+            <p className="text-[13px] text-muted-2">
+              A few quick questions for the <span className="font-semibold text-charcoal-2">{role}</span> role — a sentence or two each is perfect. We review every application and will reach out if we&rsquo;d like to set up an interview.
+            </p>
+            {screeningQuestions.map((q, i) => (
+              <div key={q.id}>
+                <label className={label}>{i + 1}. {q.prompt}</label>
+                <textarea name={`screen_${q.id}`} rows={3} className={field} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {resume.enabled && (
           <div>

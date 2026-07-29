@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
 import { builtinSetting, normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
+import { gradeScreeningAnswers } from "@/lib/hiring/screening-grader";
+import { isScreeningAxis, type ScreeningAnswer } from "@/lib/screening";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -114,6 +116,46 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
   // skipped rather than blocking the whole application.
   if (customAnswers.length > 0) {
     await admin.from("job_applications").update({ custom_answers: customAnswers }).eq("id", appId);
+  }
+
+  // Pre-interview screening: capture the role's screening answers and grade them
+  // so the manager gets a read before deciding on an interview. All of it is
+  // guarded/best-effort — the screening_questions table and the two application
+  // columns land with a migration, and grading is an external AI call, so none of
+  // it can ever block a real applicant's submission.
+  if (department) {
+    let questions: { id: string; prompt: string; axis: string }[] = [];
+    const { data: qRows } = await admin
+      .from("screening_questions")
+      .select("id, prompt, axis, sort_order")
+      .eq("org_id", org.id)
+      .eq("department", department)
+      .order("sort_order");
+    questions = (qRows ?? []) as { id: string; prompt: string; axis: string }[];
+
+    const screeningAnswers: ScreeningAnswer[] = questions
+      .map((q) => ({
+        id: q.id,
+        prompt: q.prompt,
+        axis: isScreeningAxis(q.axis) ? q.axis : ("hospitality" as const),
+        value: String(formData.get(`screen_${q.id}`) || "").trim().slice(0, 3000),
+      }))
+      .filter((a) => a.value);
+
+    if (screeningAnswers.length > 0) {
+      await admin.from("job_applications").update({ screening_answers: screeningAnswers }).eq("id", appId);
+      // Grade, capped per-org-per-day so the public form can't run up AI cost.
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { count } = await admin
+        .from("job_applications")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", org.id)
+        .gte("created_at", since);
+      if ((count ?? 0) <= 300) {
+        const grade = await gradeScreeningAnswers({ orgId: org.id, department, answers: screeningAnswers });
+        if (grade) await admin.from("job_applications").update({ screening_grade: grade }).eq("id", appId);
+      }
+    }
   }
 
   // Optional resume upload to the private bucket.
