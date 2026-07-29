@@ -489,7 +489,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Application form & applicants",
     summary: "A public form to collect applications, plus a tracker to schedule visits and move people to hiring.",
     categoryId: "team",
-    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields"],
+    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields", "screening questions", "screen candidates", "pre-interview", "grade applicants", "ai screening"],
     body: [
       { kind: "p", text: "Wingman gives you a ready-made application form so candidates can apply online — no website required. Every submission lands in an Applicants tracker inside Hiring." },
       { kind: "h", text: "Share it, or embed it on your site" },
@@ -515,6 +515,14 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "p", text: "Answers to your custom questions show right on each applicant's card in the tracker, so you see them at a glance alongside everything else." },
       { kind: "tip", text: "We always keep at least an email or phone so you can reach people — even if you make both optional, applicants must give one." },
+      { kind: "h", text: "Screening questions — a read before you interview" },
+      { kind: "p", text: "On the Hiring page, \"Screening questions\" lets you set a few short questions per role that a candidate answers on the application form after they pick that role. Wingman drafts them from your hiring criteria for that role — three guest-experience scenarios plus one that quietly checks whether they follow directions — and you can edit, add, remove, or regenerate any of them before they go live." },
+      { kind: "list", items: [
+        "Pick a role, tap \"Generate with AI,\" review the draft, and Save. Regenerating only replaces the AI questions — anything you added by hand stays.",
+        "Candidates see the questions only once they've selected that role; other roles show their own set (or none, if you haven't set any).",
+        "When someone applies, Wingman reads their answers and puts a quick read on their card — a Strong fit / Worth a look / Probably pass tier, plus a 1–5 score for guest-experience instinct and for following instructions, each with a one-line reason. Tap to read their actual answers.",
+      ] },
+      { kind: "note", text: "The screen is decision support, not a gatekeeper — it never rejects anyone or changes their status. It's there to help you decide who's worth an interview; you always make the call." },
       { kind: "h", text: "Applications → Interview → Candidate" },
       { kind: "p", text: "Applications live in their own \"Applications\" section on the Hiring page, right above your candidates (there's a \"See Applications\" button up top to jump to it). The flow moves in one direction:" },
       { kind: "list", items: [

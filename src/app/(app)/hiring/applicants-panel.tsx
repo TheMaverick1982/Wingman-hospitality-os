@@ -5,6 +5,7 @@ import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus
 import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
+import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer } from "@/lib/screening";
 
 export type Applicant = {
   id: string;
@@ -23,7 +24,64 @@ export type Applicant = {
   status: string;
   createdAt: string;
   customAnswers: CustomAnswer[];
+  screeningGrade: ScreeningGrade | null;
+  screeningAnswers: ScreeningAnswer[];
 };
+
+// The pre-interview screening read: a tier chip, a per-axis 1–5 score with the
+// AI's one-line reasoning, and the candidate's own answers on demand. Advisory —
+// it never changes the applicant's status; the manager still decides.
+function ScreeningGradeBlock({ grade, answers }: { grade: ScreeningGrade; answers: ScreeningAnswer[] }) {
+  const [showAnswers, setShowAnswers] = useState(false);
+  const tier = TIER_META[grade.tier];
+  const axes: { key: "hospitality" | "follows_instructions"; g: { score: number; rationale: string } }[] = [
+    { key: "hospitality", g: grade.hospitality },
+    { key: "follows_instructions", g: grade.followsInstructions },
+  ];
+  return (
+    <div className="mt-3 rounded-xl border border-line bg-paper/60 p-3.5">
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${tier.bg} ${tier.fg}`}>{tier.label}</span>
+        <span className="text-[11.5px] font-semibold text-charcoal-2">Screen · {grade.overall}/5</span>
+        <span className="text-[11px] text-muted-2">pre-interview read</span>
+      </div>
+      {grade.summary && <p className="text-[13px] text-charcoal-2 mb-2.5">{grade.summary}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {axes.map(({ key, g }) => (
+          <div key={key} className="rounded-lg bg-white border border-line px-3 py-2">
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-[12px] font-semibold text-ink">{AXIS_LABEL[key]}</span>
+              <span className="text-[12px] font-semibold text-muted tabular-nums">{g.score}/5</span>
+            </div>
+            <div className="flex gap-1 mb-1.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span key={i} className={`flex-1 h-1 rounded-full ${i < g.score ? "bg-brick" : "bg-line"}`} />
+              ))}
+            </div>
+            {g.rationale && <p className="text-[12px] text-muted leading-snug">{g.rationale}</p>}
+          </div>
+        ))}
+      </div>
+      {answers.length > 0 && (
+        <>
+          <button onClick={() => setShowAnswers((v) => !v)} className="mt-2.5 text-[12px] font-semibold text-brick hover:text-brick-dark">
+            {showAnswers ? "Hide their answers" : `Read their ${answers.length} answer${answers.length === 1 ? "" : "s"}`}
+          </button>
+          {showAnswers && (
+            <div className="mt-2 flex flex-col gap-2">
+              {answers.map((a) => (
+                <div key={a.id} className="text-[12.5px]">
+                  <div className="font-semibold text-charcoal-2">{a.prompt}</div>
+                  <div className="text-muted whitespace-pre-wrap">{a.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
@@ -269,6 +327,20 @@ function ApplicantCard({ a }: { a: Applicant }) {
           ))}
         </div>
       )}
+
+      {a.screeningGrade ? (
+        <ScreeningGradeBlock grade={a.screeningGrade} answers={a.screeningAnswers} />
+      ) : a.screeningAnswers.length > 0 ? (
+        <div className="mt-2 flex flex-col gap-1.5">
+          <div className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2">Screening answers</div>
+          {a.screeningAnswers.map((s) => (
+            <div key={s.id} className="text-[12.5px]">
+              <div className="font-semibold text-charcoal-2">{s.prompt}</div>
+              <div className="text-muted whitespace-pre-wrap">{s.value}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-3 pt-3 border-t border-line">
         {!scheduling ? (

@@ -6,6 +6,8 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
+import type { ScreeningGrade, ScreeningAnswer, ScreeningQuestion } from "@/lib/screening";
+import { ScreeningQuestionsPanel } from "./screening-questions-panel";
 import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
@@ -86,6 +88,7 @@ export default async function HiringPage({
       .order("sort_order"),
     supabase.from("hiring_traits").select("id, department, title, question, green_flag, red_flag, source").order("sort_order"),
     supabase.from("department_meta").select("department"),
+
     candidatesQ,
     applicationsQ,
     getOrgLocations(),
@@ -118,6 +121,30 @@ export default async function HiringPage({
     }
   }
 
+  // Screening answers + AI grade live in columns added by a later migration. Read
+  // them in an isolated, guarded query so a not-yet-applied migration degrades to
+  // "no screening" instead of breaking the whole applicants list.
+  const screeningById = new Map<string, { grade: ScreeningGrade | null; answers: ScreeningAnswer[] }>();
+  {
+    const { data: sgRows } = await supabase.from("job_applications").select("id, screening_grade, screening_answers");
+    for (const r of (sgRows ?? []) as { id: string; screening_grade: ScreeningGrade | null; screening_answers: ScreeningAnswer[] | null }[]) {
+      screeningById.set(r.id, { grade: r.screening_grade ?? null, answers: Array.isArray(r.screening_answers) ? r.screening_answers : [] });
+    }
+  }
+
+  // Per-role screening questions for the authoring panel (guarded — the table
+  // lands with a migration, so this degrades to "none" until then).
+  const screeningQuestionsByDept: Record<string, ScreeningQuestion[]> = {};
+  {
+    const { data: sqRows } = await supabase
+      .from("screening_questions")
+      .select("id, department, prompt, axis, sort_order, source")
+      .order("sort_order");
+    for (const r of (sqRows ?? []) as ScreeningQuestion[]) {
+      (screeningQuestionsByDept[r.department] ??= []).push(r);
+    }
+  }
+
   const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
     availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
@@ -139,6 +166,8 @@ export default async function HiringPage({
     status: a.status,
     createdAt: a.created_at,
     customAnswers: customAnswersById.get(a.id) ?? [],
+    screeningGrade: screeningById.get(a.id)?.grade ?? null,
+    screeningAnswers: screeningById.get(a.id)?.answers ?? [],
   }));
   // Unconfirmed applications stay in "Applications"; a confirmed interview moves
   // the person into the candidates area until they're scored.
@@ -268,6 +297,8 @@ export default async function HiringPage({
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
+
+      {canEdit && <ScreeningQuestionsPanel departments={activeDepts} questionsByDept={screeningQuestionsByDept} />}
 
       <div className="lg:max-w-md">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
