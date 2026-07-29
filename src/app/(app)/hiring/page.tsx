@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
@@ -15,6 +16,7 @@ import { CandidatesPanel } from "./candidate-scorecards";
 import { ApplicantsPanel, type Applicant } from "./applicants-panel";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
+import { ScrollToButton } from "./scroll-to-button";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
   "Strong fit": { fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
@@ -69,15 +71,25 @@ export default async function HiringPage({
   });
 
   const supabase = await createClient();
+  // Candidates + applications are read with the service-role client scoped to
+  // this org. The page has already authorized the viewer for Hiring
+  // (getSectionAccess above), but the job_applications/candidates RLS gates reads
+  // behind is_manager_or_above() — a PER-ORG role — so a platform admin (or any
+  // hiring-authorized user who isn't a manager in this specific org) would see the
+  // page yet get zero applications. Reading own-org hiring data by org_id here
+  // keeps everyone who's allowed on the page seeing the same data. Never widen
+  // beyond profile.orgId.
+  const hiringAdmin = createAdminClient();
 
-  let candidatesQ = supabase.from("candidates").select("*").order("occurred_on", { ascending: false });
+  let candidatesQ = hiringAdmin.from("candidates").select("*").eq("org_id", profile.orgId).order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
   // Incoming applications, scoped to the viewed location (plus any not tied to a
   // location) so a store manager sees their own pipeline.
-  let applicationsQ = supabase
+  let applicationsQ = hiringAdmin
     .from("job_applications")
     .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, interview_at, interview_details, status, created_at")
+    .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
   if (effectiveLocation) applicationsQ = applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
 
@@ -115,7 +127,7 @@ export default async function HiringPage({
   // answers" instead of breaking the whole applicants list.
   const customAnswersById = new Map<string, CustomAnswer[]>();
   {
-    const { data: caRows } = await supabase.from("job_applications").select("id, custom_answers");
+    const { data: caRows } = await hiringAdmin.from("job_applications").select("id, custom_answers").eq("org_id", profile.orgId);
     for (const r of (caRows ?? []) as { id: string; custom_answers: CustomAnswer[] | null }[]) {
       if (Array.isArray(r.custom_answers) && r.custom_answers.length) customAnswersById.set(r.id, r.custom_answers);
     }
@@ -126,7 +138,7 @@ export default async function HiringPage({
   // "no screening" instead of breaking the whole applicants list.
   const screeningById = new Map<string, { grade: ScreeningGrade | null; answers: ScreeningAnswer[] }>();
   {
-    const { data: sgRows } = await supabase.from("job_applications").select("id, screening_grade, screening_answers");
+    const { data: sgRows } = await hiringAdmin.from("job_applications").select("id, screening_grade, screening_answers").eq("org_id", profile.orgId);
     for (const r of (sgRows ?? []) as { id: string; screening_grade: ScreeningGrade | null; screening_answers: ScreeningAnswer[] | null }[]) {
       screeningById.set(r.id, { grade: r.screening_grade ?? null, answers: Array.isArray(r.screening_answers) ? r.screening_answers : [] });
     }
@@ -174,7 +186,7 @@ export default async function HiringPage({
   const applicants = allApplications.filter((a) => a.status !== "interviewing" && a.status !== "hired");
   const interviews = allApplications.filter((a) => a.status === "interviewing");
 
-  const { data: hiredStaff } = await supabase.from("staff_members").select("candidate_id").not("candidate_id", "is", null);
+  const { data: hiredStaff } = await hiringAdmin.from("staff_members").select("candidate_id").eq("org_id", profile.orgId).not("candidate_id", "is", null);
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
 
   // Public application link (no subdomain — a path slug on the main site).
@@ -211,19 +223,19 @@ export default async function HiringPage({
         </div>
         <div className="shrink-0 flex items-center gap-2 flex-wrap justify-end">
           {canEdit && (
-            <a
-              href="#applications"
+            <ScrollToButton
+              targetId="applications"
               className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
             >
               <Inbox size={15} /> See Applications{applicants.length > 0 ? ` (${applicants.length})` : ""}
-            </a>
+            </ScrollToButton>
           )}
-          <a
-            href="#candidate-scorecards"
+          <ScrollToButton
+            targetId="candidate-scorecards"
             className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
           >
             <Users size={15} /> See candidates{allCandidates.length > 0 ? ` (${allCandidates.length})` : ""}
-          </a>
+          </ScrollToButton>
           <CandidateModalButton
             universalTraits={(coreValues ?? []).map((v) => ({
               title: v.title,
