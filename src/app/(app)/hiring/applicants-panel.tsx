@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal } from "lucide-react";
-import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo } from "./applicant-actions";
+import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug } from "./applicant-actions";
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer } from "@/lib/screening";
@@ -98,7 +98,7 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
+export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applySlug: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
@@ -110,8 +110,27 @@ export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl,
   const [logo, setLogo] = useState(logoUrl);
   const [logoMsg, setLogoMsg] = useState<string | null>(null);
   const [logoPending, startLogo] = useTransition();
+  const [slug, setSlug] = useState(applySlug ?? "");
+  const [slugDraft, setSlugDraft] = useState(applySlug ?? "");
+  const [editingSlug, setEditingSlug] = useState(false);
+  const [slugMsg, setSlugMsg] = useState<string | null>(null);
+  const [slugPending, startSlug] = useTransition();
+  const [showForwarding, setShowForwarding] = useState(false);
 
-  const embedCode = applyUrl ? `<iframe src="${applyUrl}?embed=1" title="Job application" style="width:100%;max-width:640px;border:0;min-height:760px"></iframe>` : "";
+  // The link prefix (https://…/apply/) so we can show/edit just the slug part.
+  const applyBase = applyUrl && slug ? applyUrl.slice(0, applyUrl.length - slug.length) : "";
+  const liveUrl = applyBase ? `${applyBase}${slug}` : applyUrl;
+
+  function saveSlug() {
+    setSlugMsg(null);
+    startSlug(async () => {
+      const res = await updateApplySlug(slugDraft);
+      if (res.error) setSlugMsg(res.error);
+      else { setSlug(res.slug ?? slugDraft); setEditingSlug(false); setSlugMsg("Saved. Your old link no longer works."); setTimeout(() => setSlugMsg(null), 4000); }
+    });
+  }
+
+  const embedCode = liveUrl ? `<iframe src="${liveUrl}?embed=1" title="Job application" style="width:100%;max-width:640px;border:0;min-height:760px"></iframe>` : "";
 
   function uploadLogo(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -135,8 +154,8 @@ export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl,
   const shown = filter === "all" ? applicants : applicants.filter((a) => a.status === filter);
 
   function copyLink() {
-    if (!applyUrl) return;
-    navigator.clipboard.writeText(applyUrl).then(() => {
+    if (!liveUrl) return;
+    navigator.clipboard.writeText(liveUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -197,6 +216,53 @@ export function ApplicantsPanel({ applicants, applyUrl, applicationsCc, logoUrl,
           </div>
           <textarea readOnly value={embedCode} onFocus={(e) => e.currentTarget.select()} rows={2} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[12.5px] font-mono text-charcoal-2 outline-none" />
           <p className="text-[12px] text-muted-2 mt-1.5">Paste this into your site&rsquo;s HTML to show the application form inline — no Wingman branding.</p>
+        </div>
+      )}
+
+      {applyUrl && (
+        <div className="bg-white border border-line rounded-2xl p-4 shadow-sm mb-4">
+          <div className="text-[13px] font-semibold text-ink mb-1">Your application link</div>
+          {!editingSlug ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[13.5px] text-charcoal-2 font-mono break-all">{(liveUrl || "").replace(/^https?:\/\//, "")}</span>
+              <button onClick={() => { setSlugDraft(slug); setEditingSlug(true); setSlugMsg(null); }} className="text-[12.5px] font-semibold text-brick hover:text-brick-dark">Edit</button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[13px] text-muted-2 font-mono">{applyBase.replace(/^https?:\/\//, "")}</span>
+                <input
+                  value={slugDraft}
+                  onChange={(e) => setSlugDraft(e.target.value.toLowerCase())}
+                  placeholder="your-restaurant"
+                  className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-[13.5px] font-mono text-ink outline-none focus:border-brick min-w-[180px]"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={saveSlug} disabled={slugPending || !slugDraft.trim()} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark disabled:opacity-50">
+                  {slugPending ? "Saving…" : "Save link"}
+                </button>
+                <button onClick={() => { setEditingSlug(false); setSlugMsg(null); }} className="text-[12.5px] font-semibold text-muted-2 hover:text-ink">Cancel</button>
+              </div>
+              <p className="text-[12px] text-muted-2">Lowercase letters, numbers, and hyphens. Changing it retires your old link.</p>
+            </div>
+          )}
+          {slugMsg && <p className="text-[12px] text-olive font-semibold mt-1.5">{slugMsg}</p>}
+
+          <button onClick={() => setShowForwarding((v) => !v)} className="mt-3 text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">
+            {showForwarding ? "Hide" : "Use your own domain (e.g. careers.yourrestaurant.com) →"}
+          </button>
+          {showForwarding && (
+            <div className="mt-2 rounded-xl bg-paper border border-line p-3 text-[12.5px] text-muted leading-relaxed">
+              <p className="mb-1.5">Want applicants to visit a link on <strong>your</strong> domain? Point a subdomain at this link with a free URL forward at your domain registrar (GoDaddy, Namecheap, Google Domains, etc.):</p>
+              <ol className="list-decimal ml-4 space-y-1">
+                <li>In your registrar, add a <strong>subdomain</strong> like <span className="font-mono">careers</span> or <span className="font-mono">jobs</span>.</li>
+                <li>Set up a <strong>URL forward (redirect)</strong> from that subdomain to your link above.</li>
+                <li>Share <span className="font-mono">careers.yourrestaurant.com</span> — it lands on your Wingman form.</li>
+              </ol>
+              <p className="mt-1.5 text-muted-2">Prefer the form embedded directly on your own website instead? Use the <strong>Embed</strong> option above.</p>
+            </div>
+          )}
         </div>
       )}
 

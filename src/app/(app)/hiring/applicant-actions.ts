@@ -98,6 +98,31 @@ export async function updateApplicationsCc(value: string): Promise<{ error: stri
   return { error: null };
 }
 
+// Set a clean, custom "vanity" slug for the public application link
+// (joinwingman.app/apply/<slug>). Validated and checked for uniqueness across all
+// orgs (public_slug is globally unique). Changing it retires the old link.
+const RESERVED_SLUGS = new Set(["apply", "embed", "admin", "api", "login", "signup", "wingman"]);
+export async function updateApplySlug(value: string): Promise<{ error: string | null; slug?: string }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  const slug = String(value || "").trim().toLowerCase().replace(/\s+/g, "-");
+  if (!/^[a-z0-9-]+$/.test(slug)) return { error: "Use only lowercase letters, numbers, and hyphens." };
+  if (slug.length < 3 || slug.length > 40) return { error: "Keep it between 3 and 40 characters." };
+  if (slug.startsWith("-") || slug.endsWith("-") || slug.includes("--")) return { error: "No leading, trailing, or double hyphens." };
+  if (RESERVED_SLUGS.has(slug)) return { error: "That word is reserved — pick another." };
+
+  const admin = createAdminClient();
+  // Globally unique — check across orgs (RLS would only see our own).
+  const { data: clash } = await admin.from("organizations").select("id").eq("public_slug", slug).maybeSingle();
+  if (clash && (clash as { id: string }).id !== profile.orgId) {
+    return { error: "That link is already taken — try another." };
+  }
+  const { error } = await admin.from("organizations").update({ public_slug: slug }).eq("id", profile.orgId);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null, slug };
+}
+
 // Upload (or replace) the org logo shown on the public application form.
 export async function uploadOrgLogo(formData: FormData): Promise<{ error: string | null; url?: string }> {
   const profile = await gate();
