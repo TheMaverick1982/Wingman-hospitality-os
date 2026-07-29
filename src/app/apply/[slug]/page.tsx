@@ -5,7 +5,26 @@ import { ALL_DEPARTMENTS } from "@/lib/constants";
 import { normalizeFormConfig } from "@/lib/application-form";
 import { ApplyForm } from "./apply-form";
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
+// Social/link preview for the application page: use the restaurant's OWN logo and
+// name (the one they uploaded for this form) instead of the generic Wingman image,
+// so a shared apply link looks like the restaurant's job post — not a Wingman ad.
+// Falls back to the site default only when they haven't uploaded a logo.
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const admin = createAdminClient();
+  const { data } = await admin.from("organizations").select("name, logo_url").eq("public_slug", slug).maybeSingle();
+  const org = data as { name: string; logo_url: string | null } | null;
+  const title = org ? `Join the ${org.name} team` : "Join the team";
+  const description = org ? `Apply to work at ${org.name}.` : "Apply to join the team.";
+  const images = org?.logo_url ? [{ url: org.logo_url }] : undefined;
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: { title, description, ...(images ? { images } : {}) },
+    twitter: { card: images ? "summary" : "summary_large_image", title, description, ...(images ? { images } : {}) },
+  };
+}
 
 // Submitting grades the screening answers with an AI call, so give the route room
 // past the short default function timeout.
