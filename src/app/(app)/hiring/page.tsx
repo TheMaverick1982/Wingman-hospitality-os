@@ -84,14 +84,30 @@ export default async function HiringPage({
   let candidatesQ = hiringAdmin.from("candidates").select("*").eq("org_id", profile.orgId).order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
-  // Incoming applications, scoped to the viewed location (plus any not tied to a
-  // location) so a store manager sees their own pipeline.
+  // Incoming applications are org-wide intake. An owner or all-locations manager
+  // sees every application; a location-locked member sees the locations they can
+  // actually reach plus any unassigned application. We deliberately do NOT narrow
+  // the intake to the single location picked in the top-bar switcher — an applicant
+  // who chose one store must never disappear from someone focused on another, or a
+  // real candidate is silently lost (the notification email still goes out, but the
+  // inbox looks empty).
+  //
+  // Only 0084 base columns are selected here. interview_at / interview_details are
+  // added by migration 0087 and are read separately in a guarded query below, so a
+  // not-yet-applied migration degrades to "no interview info" instead of erroring
+  // this whole query and blanking the applicants list — the same defensive pattern
+  // used for custom_answers / screening / form config throughout this page.
   let applicationsQ = hiringAdmin
     .from("job_applications")
-    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, interview_at, interview_details, status, created_at")
+    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at")
     .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
-  if (effectiveLocation) applicationsQ = applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
+  const spansAllLocations = profile.accessRole === "super_admin" || profile.allLocations;
+  if (!spansAllLocations) {
+    const reachable = [profile.locationId, ...profile.accessibleLocationIds].filter(Boolean) as string[];
+    const clauses = [...reachable.map((id) => `location_id.eq.${id}`), "location_id.is.null"];
+    applicationsQ = applicationsQ.or(clauses.join(","));
+  }
 
   const [{ data: coreValues }, { data: hiringTraits }, { data: meta }, { data: candidates }, { data: applications }, locations, staff] = await Promise.all([
     supabase
@@ -133,6 +149,17 @@ export default async function HiringPage({
     }
   }
 
+  // Interview scheduling columns land with migration 0087. Read them in isolation
+  // so a not-yet-applied migration degrades to "no interview scheduled" instead of
+  // erroring the applications query and blanking the whole list.
+  const interviewById = new Map<string, { at: string | null; details: string }>();
+  {
+    const { data: ivRows } = await hiringAdmin.from("job_applications").select("id, interview_at, interview_details").eq("org_id", profile.orgId);
+    for (const r of (ivRows ?? []) as { id: string; interview_at: string | null; interview_details: string | null }[]) {
+      interviewById.set(r.id, { at: r.interview_at ?? null, details: r.interview_details ?? "" });
+    }
+  }
+
   // Screening answers + AI grade live in columns added by a later migration. Read
   // them in an isolated, guarded query so a not-yet-applied migration degrades to
   // "no screening" instead of breaking the whole applicants list.
@@ -160,7 +187,7 @@ export default async function HiringPage({
   const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
     availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
-    interview_at: string | null; interview_details: string | null; status: string; created_at: string;
+    status: string; created_at: string;
   }[]).map((a) => ({
     id: a.id,
     name: a.name,
@@ -173,8 +200,8 @@ export default async function HiringPage({
     message: a.message,
     hasResume: Boolean(a.resume_path),
     preferredVisitAt: a.preferred_visit_at,
-    interviewAt: a.interview_at,
-    interviewDetails: a.interview_details ?? "",
+    interviewAt: interviewById.get(a.id)?.at ?? null,
+    interviewDetails: interviewById.get(a.id)?.details ?? "",
     status: a.status,
     createdAt: a.created_at,
     customAnswers: customAnswersById.get(a.id) ?? [],
