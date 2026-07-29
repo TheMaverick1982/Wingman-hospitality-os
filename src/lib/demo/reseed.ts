@@ -378,6 +378,73 @@ const HIRING_TRAITS: [Dept, string, string, string, string][] = [
   ["Manager", "Decision-making under conflict", "A guest and a server disagree about what was ordered. What do you do?", "Investigates fairly, protects the guest experience without throwing staff under the bus.", "Automatically sides with one party, no real investigation."],
 ];
 
+// Pre-interview screening questions shown on the application form, per role.
+type ScreenAxis = "hospitality" | "follows_instructions";
+const SCREENING_QUESTIONS: Record<string, { prompt: string; axis: ScreenAxis }[]> = {
+  Server: [
+    { prompt: "A regular comes in and their usual table is taken. How do you handle it so they still feel like a regular?", axis: "hospitality" },
+    { prompt: "A guest seems quietly unhappy but hasn't said anything. What do you do?", axis: "hospitality" },
+    { prompt: "Tell us about a time you turned a rough moment for a guest into a good one.", axis: "hospitality" },
+    { prompt: "In no more than two sentences, and beginning your answer with the word \"Absolutely\", tell us why you'd be great on a busy Friday.", axis: "follows_instructions" },
+  ],
+  Bartender: [
+    { prompt: "The bar is three deep and one guest has been waiting a while. How do you keep them happy while you catch up?", axis: "hospitality" },
+    { prompt: "A guest orders a cocktail and clearly doesn't love it. What do you do?", axis: "hospitality" },
+    { prompt: "How do you make a guest sitting alone at the bar feel taken care of?", axis: "hospitality" },
+    { prompt: "Answer in exactly two sentences: what does \"made to spec, every time\" mean to you behind the bar?", axis: "follows_instructions" },
+  ],
+  Chef: [
+    { prompt: "A plate comes back to the line. Walk us through exactly what you do next.", axis: "hospitality" },
+    { prompt: "How do you keep quality up when the kitchen is slammed and you're short a cook?", axis: "hospitality" },
+    { prompt: "What does taking \"ownership\" look like on the line during a bad rush?", axis: "hospitality" },
+    { prompt: "Begin your answer with the word \"Chef\" and, in two sentences, tell us how you keep your station to standard all night.", axis: "follows_instructions" },
+  ],
+};
+
+// A couple of already-graded applicants so the demo shows the manager's read.
+const SCREENED_APPLICANTS: {
+  name: string; department: Dept; email: string; phone: string; availability: string;
+  answers: { id: string; prompt: string; axis: ScreenAxis; value: string }[];
+  grade: {
+    hospitality: { score: number; rationale: string };
+    followsInstructions: { score: number; rationale: string };
+    overall: number; tier: string; summary: string;
+  };
+}[] = [
+  {
+    name: "Jordan Ellis", department: "Server", email: "jordan.ellis@email.com", phone: "(512) 555-0471",
+    availability: "Nights & weekends, can start now",
+    answers: [
+      { id: "s1", prompt: SCREENING_QUESTIONS.Server[0].prompt, axis: "hospitality", value: "I'd greet them by name, own it right away — \"give me two minutes and I'll get your spot ready\" — and maybe bring their usual drink while they wait so it still feels like their place." },
+      { id: "s2", prompt: SCREENING_QUESTIONS.Server[1].prompt, axis: "hospitality", value: "Read the table — if drinks are low or they've gone quiet, I check in early with a genuine \"how's everything really?\" so I catch it before it becomes a real problem." },
+      { id: "s3", prompt: SCREENING_QUESTIONS.Server[2].prompt, axis: "hospitality", value: "A couple's anniversary dessert got forgotten on a slam. I comped it, brought it out with a candle and a quick apology, and they left saying it was still their best night out in a while." },
+      { id: "s4", prompt: SCREENING_QUESTIONS.Server[3].prompt, axis: "follows_instructions", value: "Absolutely — I actually move faster when it's busy because I get into a rhythm and I read tables quickly. Guests never feel the rush because I stay warm even when I'm moving." },
+    ],
+    grade: {
+      hospitality: { score: 5, rationale: "Specific, guest-first instincts in every answer — ownership, reading the table, and a real recovery story." },
+      followsInstructions: { score: 5, rationale: "Followed the format exactly: two sentences, opened with \"Absolutely.\"" },
+      overall: 5, tier: "strong",
+      summary: "Warm, specific, and coachable — clearly worth an interview.",
+    },
+  },
+  {
+    name: "Casey Monroe", department: "Bartender", email: "casey.monroe@email.com", phone: "(512) 555-0492",
+    availability: "Weekends",
+    answers: [
+      { id: "s1", prompt: SCREENING_QUESTIONS.Bartender[0].prompt, axis: "hospitality", value: "Make eye contact and let them know I see them so they're not stuck wondering. Then knock them out as fast as I can." },
+      { id: "s2", prompt: SCREENING_QUESTIONS.Bartender[1].prompt, axis: "hospitality", value: "Remake it or make them something else, no attitude." },
+      { id: "s3", prompt: SCREENING_QUESTIONS.Bartender[2].prompt, axis: "hospitality", value: "Chat with them a bit if they seem up for it." },
+      { id: "s4", prompt: SCREENING_QUESTIONS.Bartender[3].prompt, axis: "follows_instructions", value: "It means every drink is consistent so guests know what they're getting. Same pour, same glass, same garnish every single time no matter how busy we are which is what builds trust." },
+    ],
+    grade: {
+      hospitality: { score: 3, rationale: "Right instincts (acknowledge the wait, remake without attitude) but thin — little detail or ownership beyond the basics." },
+      followsInstructions: { score: 4, rationale: "Close to the two-sentence limit; the spec answer is solid and specific." },
+      overall: 3.5, tier: "worth_a_look",
+      summary: "Decent fundamentals, short on depth — a manager should decide.",
+    },
+  },
+];
+
 const MENU_ITEMS: {
   department: Dept; name: string; description: string; category: string; price: number; allergens: string;
   pairing: string; upsell: string; popularity: number; profit: number;
@@ -543,6 +610,31 @@ async function populateDemoOrg(ctx: DemoContext): Promise<void> {
       org_id: orgId, department, title, question, green_flag, red_flag, sort_order: i, source: "wingman",
     }))
   );
+
+  // Pre-interview screening: seed a few questions per role and two already-graded
+  // applicants, so the demo shows both sides — authoring and the read a manager
+  // gets. Guarded + not in the hard wipe list (the table/columns land with
+  // migration 0145), so a not-yet-migrated environment just skips this. Delete
+  // first to stay idempotent across reseeds.
+  try {
+    await admin.from("screening_questions").delete().eq("org_id", orgId);
+    const sqRows: { org_id: string; department: Dept; prompt: string; axis: string; sort_order: number; source: string }[] = [];
+    for (const [department, qs] of Object.entries(SCREENING_QUESTIONS)) {
+      qs.forEach((q, i) => sqRows.push({ org_id: orgId, department: department as Dept, prompt: q.prompt, axis: q.axis, sort_order: i, source: "wingman" }));
+    }
+    if (sqRows.length) await admin.from("screening_questions").insert(sqRows);
+
+    await admin.from("job_applications").delete().eq("org_id", orgId);
+    await admin.from("job_applications").insert(
+      SCREENED_APPLICANTS.map((a) => ({
+        org_id: orgId, location_id: downtown, department: a.department, name: a.name, email: a.email, phone: a.phone,
+        availability: a.availability, message: "", status: "new", source: "link",
+        screening_answers: a.answers, screening_grade: a.grade,
+      }))
+    );
+  } catch {
+    // screening_questions / screening columns not migrated yet — skip.
+  }
 
   // Menu (structured items + free-text references + engineering grid).
   const { data: insertedMenu } = await admin.from("menu_items").insert(
