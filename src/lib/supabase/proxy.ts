@@ -5,6 +5,11 @@ const PUBLIC_PREFIXES = [
   "/login",
   "/signup",
   "/auth",
+  // Public job-application form (/apply/<org-slug>, incl. ?embed=1). Applicants
+  // and embedded iframes have no session, so this MUST be reachable logged-out —
+  // otherwise the middleware bounces them to /login (which is frame-locked, so an
+  // embed just shows "refused to connect").
+  "/apply",
   // Forgot-password is used by people who are NOT logged in, so it must be
   // reachable without a session (otherwise the middleware bounces them to
   // /login and the link looks dead).

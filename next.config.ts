@@ -10,28 +10,43 @@ import type { NextConfig } from "next";
 //   * form-action 'self'      -> forms can't be repointed to an attacker endpoint
 // A full script-src/style-src policy is still deferred: it needs nonces tuned
 // against Next.js + Supabase + analytics against the live app before enforcing.
-const contentSecurityPolicy = [
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "form-action 'self'",
-].join("; ");
+const cspBaseDirectives = ["base-uri 'self'", "object-src 'none'", "form-action 'self'"];
+// Most of the app must never be framed (clickjacking protection).
+const cspFrameLocked = [...cspBaseDirectives, "frame-ancestors 'none'"].join("; ");
+// The public application form is deliberately embeddable on customers' own sites
+// (the "Embed" option builds an <iframe src=".../apply/<slug>?embed=1">), so it
+// must be allowed to load inside a frame on any origin.
+const cspEmbeddable = [...cspBaseDirectives, "frame-ancestors *"].join("; ");
 
-// Baseline security headers applied to every response.
-const securityHeaders = [
+// Baseline security headers applied to every response (framing handled below).
+const commonSecurityHeaders = [
   // Force HTTPS for two years, including subdomains. Vercel already serves
   // everything over HTTPS, so this only hardens against downgrade attacks.
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   // Stop browsers from MIME-sniffing a response into a different content type.
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // Don't allow the app (including authenticated dashboards) to be framed.
-  { key: "X-Frame-Options", value: "DENY" },
   // Send only the origin (not the full path) on cross-origin navigations.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Deny powerful browser features the app doesn't use.
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
-  // Safe subset of CSP (see note above).
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+];
+
+// Everything EXCEPT the embeddable /apply form: deny framing entirely
+// (including authenticated dashboards) — X-Frame-Options + CSP frame-ancestors.
+const lockedSecurityHeaders = [
+  ...commonSecurityHeaders,
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Content-Security-Policy", value: cspFrameLocked },
+];
+
+// The /apply form: same protections, but framable on any origin so restaurants
+// can embed it on their own sites, and never indexed. Deliberately NO
+// X-Frame-Options — the legacy header has no "allow any origin" value, so CSP
+// frame-ancestors is what governs framing here.
+const applyEmbedHeaders = [
+  ...commonSecurityHeaders,
+  { key: "Content-Security-Policy", value: cspEmbeddable },
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
 ];
 
 const nextConfig: NextConfig = {
@@ -54,13 +69,15 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
-      // Public customer application forms (/apply/<org-slug>, incl. ?embed=1) must
-      // never be indexed. The page already emits a noindex <meta>; this header is
-      // a second, crawler-proof layer (also covers non-HTML crawlers). We do NOT
-      // robots.txt-disallow /apply — that would stop Google from crawling the page
-      // and reading the noindex, which is counterproductive.
-      { source: "/apply/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      // The public application form is embeddable on customers' own sites (Hiring
+      // → Embed builds an <iframe src=".../apply/<slug>?embed=1">), so it must
+      // allow cross-origin framing and stay noindex (crawler-proof header layer on
+      // top of the page's noindex <meta>). We do NOT robots.txt-disallow /apply —
+      // that would stop Google from reading the noindex, which is counterproductive.
+      { source: "/apply/:path*", headers: applyEmbedHeaders },
+      // Everything else is frame-locked. The negative lookahead excludes /apply so
+      // the two rules never apply conflicting frame headers to the same request.
+      { source: "/((?!apply/).*)", headers: lockedSecurityHeaders },
       // The service worker must never be cached by the browser/CDN, so a new
       // deploy's sw.js is fetched immediately and the update flow can run.
       {
