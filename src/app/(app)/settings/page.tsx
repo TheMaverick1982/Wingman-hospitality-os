@@ -34,6 +34,7 @@ import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments"
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
 import { StaffActivityPanel } from "./staff-activity-panel";
 import { listActivity } from "@/lib/activity-log";
+import { isNativeIOS } from "@/lib/native/platform";
 import type { ApiKeyRow } from "./api-actions";
 
 export default async function SettingsPage() {
@@ -553,6 +554,11 @@ export default async function SettingsPage() {
   const { rows: activity, hasMore: activityHasMore } = await listActivity(profile.orgId, 0);
   const activityStaff = allMembers.map((m) => ({ id: m.id, name: m.full_name }));
 
+  // App Review compliance (guideline 3.1.1): hide the Billing tab (plan pricing,
+  // add-a-card, subscription management) inside the native iOS app. Billing is
+  // managed on the web.
+  const nativeIOS = await isNativeIOS();
+
   return (
     <>
       <div>
@@ -566,7 +572,7 @@ export default async function SettingsPage() {
           { key: "locations", label: "Locations", content: locationsContent },
           { key: "partners", label: "Partners", content: partnersContent },
           { key: "notifications", label: "Notifications", content: notificationContent },
-          { key: "billing", label: "Billing", content: billingContent },
+          ...(nativeIOS ? [] : [{ key: "billing", label: "Billing", content: billingContent }]),
           { key: "api", label: "API access", content: (
             <div className="flex flex-col gap-6">
               <DirectIntegrations

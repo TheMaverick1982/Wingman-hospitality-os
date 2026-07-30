@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { isNativeIOS } from "@/lib/native/platform";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
 import { markCustomerByEmail } from "@/lib/crm-sequences";
 import { redeemCouponForOrg } from "@/lib/coupons";
@@ -15,6 +16,11 @@ export const metadata: Metadata = {
 export default async function OnboardingPage() {
   const existingProfile = await getCurrentProfile();
   if (existingProfile) redirect("/dashboard");
+
+  // App Review compliance (guideline 3.1.1): the native iOS app must not create
+  // business/organization accounts. Existing users land on /dashboard above;
+  // anyone else reaching onboarding inside the app is sent to login.
+  if (await isNativeIOS()) redirect("/login");
 
   const supabase = await createClient();
   const {
