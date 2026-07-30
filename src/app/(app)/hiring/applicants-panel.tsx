@@ -130,7 +130,10 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
     });
   }
 
-  const embedCode = liveUrl ? `<iframe src="${liveUrl}?embed=1" title="Job application" style="width:100%;max-width:640px;border:0;min-height:760px"></iframe>` : "";
+  const embedCode = liveUrl
+    ? `<iframe id="wingman-apply" src="${liveUrl}?embed=1" title="Job application" scrolling="no" style="width:100%;max-width:640px;border:0;display:block;margin:0 auto;min-height:760px"></iframe>
+<script>window.addEventListener("message",function(e){var h=e&&e.data&&e.data.wingmanApplyHeight;if(typeof h==="number"&&h>0&&h<20000){var f=document.getElementById("wingman-apply");if(f){f.style.minHeight="0";f.style.height=h+"px";}}});</script>`
+    : "";
 
   function uploadLogo(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -214,8 +217,8 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
               {embedCopied ? <Check size={13} className="text-[#15803d]" /> : <Code2 size={13} />} {embedCopied ? "Copied" : "Copy code"}
             </button>
           </div>
-          <textarea readOnly value={embedCode} onFocus={(e) => e.currentTarget.select()} rows={2} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[12.5px] font-mono text-charcoal-2 outline-none" />
-          <p className="text-[12px] text-muted-2 mt-1.5">Paste this into your site&rsquo;s HTML to show the application form inline — no Wingman branding.</p>
+          <textarea readOnly value={embedCode} onFocus={(e) => e.currentTarget.select()} rows={5} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[12.5px] font-mono text-charcoal-2 outline-none" />
+          <p className="text-[12px] text-muted-2 mt-1.5">Paste this into an HTML / custom-code block on your site (in GoHighLevel, use a &ldquo;Custom HTML&rdquo; element). The form centers, resizes to fit with no scrollbar, and shows no Wingman branding.</p>
         </div>
       )}
 
