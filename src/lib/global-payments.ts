@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import * as heartland from "@/lib/billing/heartland";
 
 // ---------------------------------------------------------------------------
 // Thin Global Payments (GP API / Unified Commerce Platform) REST client.
@@ -33,11 +34,29 @@ const GP_APP_KEY = (process.env.GP_APP_KEY ?? "").trim();
 // can leave this unset and GP will pick it; otherwise name it explicitly.
 const GP_ACCOUNT_NAME = (process.env.GP_ACCOUNT_NAME ?? "").trim();
 
+// Provider switch. Wingman's live processor is Heartland/Portico (SecureSubmit,
+// certified). Set BILLING_PROVIDER=heartland to route card storage + charges
+// through that path; the default keeps the original GP-API path, so behavior is
+// unchanged until this is intentionally flipped. Callers import the same gp*
+// functions either way — only the implementation swaps underneath.
+const USE_HEARTLAND = (process.env.BILLING_PROVIDER ?? "gpapi").toLowerCase() === "heartland";
+
 export function gpConfigured(): boolean {
+  if (USE_HEARTLAND) return heartland.heartlandConfigured();
   return Boolean(GP_APP_ID && GP_APP_KEY);
 }
 export function gpIsSandbox(): boolean {
+  if (USE_HEARTLAND) return heartland.heartlandIsSandbox();
   return IS_SANDBOX;
+}
+// Which processor the billing UI/routes are talking to right now.
+export function billingProvider(): "heartland" | "gpapi" {
+  return USE_HEARTLAND ? "heartland" : "gpapi";
+}
+// Publishable key for the Heartland SecureSubmit browser tokenizer (empty on the
+// GP-API path, which uses a server-minted client token instead).
+export function heartlandBrowserPublicKey(): string {
+  return heartland.heartlandPublicKey();
 }
 // The API version the browser hosted-fields library must be configured with —
 // it has to match the version our server calls use.
@@ -178,6 +197,7 @@ function parseStoredCard(d: GpCardResponse): StoredCard {
 // multi-use payment token. This is the PCI-safe production path: the raw PAN
 // never touches our servers.
 export async function gpStoreCardFromSingleUseToken(singleUseToken: string, reference: string): Promise<StoredCard> {
+  if (USE_HEARTLAND) return heartland.heartlandStoreCardFromSingleUseToken(singleUseToken);
   const token = await gpAccessToken();
   const body: Record<string, unknown> = {
     reference,
@@ -203,6 +223,7 @@ export async function gpStoreTestCard(input: {
   name?: string;
   reference: string;
 }): Promise<StoredCard> {
+  if (USE_HEARTLAND) return heartland.heartlandStoreTestCard(input);
   if (!IS_SANDBOX) throw new Error("Raw-card storage is only permitted in the sandbox.");
   const token = await gpAccessToken();
   const body: Record<string, unknown> = {
@@ -233,6 +254,7 @@ export type ChargeResult = {
 
 // Charge a stored payment token for a subscription payment. Amount is in cents.
 export async function gpChargeStored(input: { token: string; amountCents: number; reference: string; currency?: string }): Promise<ChargeResult> {
+  if (USE_HEARTLAND) return heartland.heartlandChargeStored(input);
   const { token, accounts } = await gpAuth();
   const body: Record<string, unknown> = {
     type: "SALE",
@@ -266,6 +288,7 @@ export async function gpChargeStored(input: { token: string; amountCents: number
 
 // Best-effort: delete a stored token when the customer removes their card.
 export async function gpDeleteStoredCard(storedToken: string): Promise<void> {
+  if (USE_HEARTLAND) return heartland.heartlandDeleteStoredCard();
   try {
     const token = await gpAccessToken();
     await gpPost(`/payment-methods/${encodeURIComponent(storedToken)}/delete`, token, {});
