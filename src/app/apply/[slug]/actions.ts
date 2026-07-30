@@ -6,6 +6,7 @@ import { isNotificationEnabled } from "@/lib/notifications";
 import { builtinSetting, normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 import { gradeScreeningAnswers } from "@/lib/hiring/screening-grader";
 import { isScreeningAxis, type ScreeningAnswer } from "@/lib/screening";
+import { guardPublicForm } from "@/lib/public-form-guard";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -20,6 +21,16 @@ function esc(s: string): string {
 // (there's no logged-in user), validating the org strictly by its public slug
 // and only writing to that org's rows.
 export async function submitApplication(slug: string, _prev: ApplyState, formData: FormData): Promise<ApplyState> {
+  // Spam protection before we touch the database. A tripped honeypot is reported
+  // as a silent success (the bot sees the same "sent" screen a real applicant
+  // does) so it gets no signal; a failed CAPTCHA or a flood is surfaced as an
+  // error the applicant can recover from. Keyed per-slug+IP so one restaurant's
+  // form can't be used to rate-limit another's.
+  const guard = await guardPublicForm(formData, { rateKey: `apply:${slug}`, max: 20, windowSeconds: 3600 });
+  if (!guard.ok) {
+    return guard.reason === "honeypot" ? { error: null, ok: true } : { error: guard.message };
+  }
+
   const admin = createAdminClient();
   const { data: orgRow } = await admin.from("organizations").select("id, name, apply_enabled, applications_cc").eq("public_slug", slug).maybeSingle();
   const org = orgRow as { id: string; name: string; apply_enabled: boolean; applications_cc: string | null } | null;
