@@ -13,7 +13,9 @@ const GP_JS_URL = process.env.NEXT_PUBLIC_GP_JS_URL || "https://js.globalpay.com
 
 type GpForm = { on: (event: string, cb: (detail: Record<string, unknown>) => void) => void };
 type GpGlobal = {
-  configure: (opts: { accessToken: string; apiVersion: string; env: string }) => void;
+  // GP-API uses { accessToken, apiVersion, env }; Heartland/Portico uses
+  // { publicApiKey } (the pkapi_ key) — the same library tokenizes for both.
+  configure: (opts: { accessToken?: string; apiVersion?: string; env?: string; publicApiKey?: string }) => void;
   ui: { form: (opts: Record<string, unknown>) => GpForm };
 };
 
@@ -51,14 +53,23 @@ export function GpHostedFields() {
     (async () => {
       try {
         const res = await fetch("/api/billing/gp-client-token");
-        const data = (await res.json()) as { token?: string; env?: string; apiVersion?: string; error?: string };
-        if (!res.ok || !data.token) throw new Error(data.error || "Could not start secure card entry.");
+        const data = (await res.json()) as { provider?: string; token?: string; publicKey?: string; env?: string; apiVersion?: string; error?: string };
+        if (!res.ok) throw new Error(data.error || "Could not start secure card entry.");
         await loadGpScript();
         if (cancelled) return;
         const GlobalPayments = (window as unknown as { GlobalPayments?: GpGlobal }).GlobalPayments;
         if (!GlobalPayments) throw new Error("Secure card library unavailable.");
 
-        GlobalPayments.configure({ accessToken: data.token, apiVersion: data.apiVersion || "2021-03-22", env: data.env || "sandbox" });
+        if (data.provider === "heartland") {
+          // Heartland/Portico: the library tokenizes client-side with the
+          // publishable pkapi_ key. No server access token is involved.
+          if (!data.publicKey) throw new Error("Could not start secure card entry.");
+          GlobalPayments.configure({ publicApiKey: data.publicKey });
+        } else {
+          // GP-API: a server-minted, tokenization-only access token.
+          if (!data.token) throw new Error("Could not start secure card entry.");
+          GlobalPayments.configure({ accessToken: data.token, apiVersion: data.apiVersion || "2021-03-22", env: data.env || "sandbox" });
+        }
         const form = GlobalPayments.ui.form({
           fields: {
             "card-number": { target: "#gp-card-number", placeholder: "•••• •••• •••• ••••" },

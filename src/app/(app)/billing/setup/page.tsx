@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { effectiveMonthlyCents } from "@/lib/pricing";
 import { isNativeIOS } from "@/lib/native/platform";
+import { gpConfigured } from "@/lib/global-payments";
+import { GpHostedFields } from "../../settings/gp-hosted-fields";
 
 export const metadata: Metadata = {
   title: "Set up billing",
@@ -38,6 +40,7 @@ export default async function BillingSetupPage() {
 
   const price = await effectiveMonthlyCents(o, locationCount ?? 1);
   const hasCard = Boolean(o?.card_last4);
+  const cardEntryReady = gpConfigured();
 
   return (
     <div className="max-w-xl w-full mx-auto">
@@ -61,6 +64,8 @@ export default async function BillingSetupPage() {
           <p className="text-[15px] text-ink">
             {o?.card_brand ?? "Card"} ending in ····{o?.card_last4} on file.
           </p>
+        ) : cardEntryReady ? (
+          <GpHostedFields />
         ) : (
           <div className="flex flex-col items-center text-center py-6">
             <div className="w-12 h-12 rounded-full bg-brick-tint flex items-center justify-center mb-4">
