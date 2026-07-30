@@ -171,6 +171,55 @@ export async function setOrgBillingMode(orgId: string, paid: boolean): Promise<B
 // zeroes the billing flags so nothing lingers. Keeps is_free_account as-is
 // (only clears the transactional state around it). Platform-admin only,
 // service-role write (bypasses the billing guard).
+// Refund an approved charge (partial or full) against its original gateway
+// transaction id — the certified referenced-return. Platform-admin only. The
+// refund is recorded as a negative approved billing_charges row, so revenue
+// rollups net it out.
+export async function refundCharge(chargeId: string, amountCents: number): Promise<BillingAdminState> {
+  const me = await platformSectionActor("organizations");
+  if (!me) return { error: "Not authorized.", ok: false };
+  const cents = Math.round(amountCents);
+  if (!chargeId) return { error: "Missing charge.", ok: false };
+  if (!Number.isFinite(cents) || cents <= 0) return { error: "Enter a refund amount.", ok: false };
+
+  const admin = createAdminClient();
+  const { data: chgRow } = await admin
+    .from("billing_charges")
+    .select("org_id, provider, environment, transaction_id, amount_cents, approved")
+    .eq("id", chargeId)
+    .maybeSingle();
+  const charge = chgRow as
+    | { org_id: string; provider: string; environment: string; transaction_id: string | null; amount_cents: number; approved: boolean }
+    | null;
+  if (!charge) return { error: "Charge not found.", ok: false };
+  if (!charge.approved || charge.amount_cents <= 0) return { error: "Only an approved charge can be refunded.", ok: false };
+  if (!charge.transaction_id) return { error: "This charge has no gateway transaction id to refund against.", ok: false };
+  if (cents > charge.amount_cents) return { error: "Refund can't exceed the original charge.", ok: false };
+
+  let result: { approved: boolean; transactionId: string; status: string };
+  try {
+    const { gpRefundTransaction } = await import("@/lib/global-payments");
+    result = await gpRefundTransaction({ transactionId: charge.transaction_id, amountCents: cents });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Refund failed.", ok: false };
+  }
+
+  await admin.from("billing_charges").insert({
+    org_id: charge.org_id,
+    provider: charge.provider,
+    environment: charge.environment,
+    transaction_id: result.transactionId || null,
+    amount_cents: -cents, // negative: money returned, nets out of revenue rollups
+    status: result.approved ? "REFUND" : "REFUND_DECLINED",
+    approved: result.approved,
+    reference: `REFUND:${charge.transaction_id}`,
+  });
+
+  if (!result.approved) return { error: `Refund not approved (${result.status}).`, ok: false };
+  revalidatePath(`/admin/organizations/${charge.org_id}`);
+  return { error: null, ok: true };
+}
+
 export async function resetOrgBilling(orgId: string): Promise<BillingAdminState> {
   const me = await platformSectionActor("organizations");
   if (!me) return { error: "Not authorized.", ok: false };

@@ -58,6 +58,26 @@ export default async function AdminOrganizationDetailPage({
       .order("full_name"),
   ]);
 
+  // Recent billing charges (and refunds) for this org, for the admin refund UI.
+  const { data: chargeRows } = await admin
+    .from("billing_charges")
+    .select("id, transaction_id, amount_cents, currency, status, approved, reference, created_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(24);
+  const charges = ((chargeRows ?? []) as {
+    id: string; transaction_id: string | null; amount_cents: number; currency: string; status: string; approved: boolean; reference: string | null; created_at: string;
+  }[]).map((c) => ({
+    id: c.id,
+    transactionId: c.transaction_id,
+    amountCents: c.amount_cents,
+    currency: c.currency,
+    status: c.status,
+    approved: c.approved,
+    reference: c.reference,
+    createdAt: c.created_at,
+  }));
+
   type ProfileRow = { id: string; full_name: string; access_role: AccessRole; location_id: string | null; locations: { name: string } | null };
 
   // Customer health: setup progress + login activity across the team.
@@ -208,6 +228,7 @@ export default async function AdminOrganizationDetailPage({
         billingStatus={billing.billing_status}
         cardBrand={billing.card_brand}
         cardLast4={billing.card_last4}
+        charges={charges}
       />
 
       <div className="bg-white border border-line rounded-2xl p-6">

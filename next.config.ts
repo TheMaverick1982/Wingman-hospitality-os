@@ -56,6 +56,10 @@ const nextConfig: NextConfig = {
   // trivially de-minified back to readable source. (This is Next.js's default;
   // pinning it makes the intent explicit and guards against a config drift.)
   productionBrowserSourceMaps: false,
+  // The Global Payments Node SDK (Heartland/Portico billing) is a Node library —
+  // keep it external so it's loaded from node_modules at runtime instead of being
+  // bundled into the server output.
+  serverExternalPackages: ["globalpayments-api"],
   experimental: {
     serverActions: {
       // Menu photo/PDF uploads (Role Training) and bulk social-post image
