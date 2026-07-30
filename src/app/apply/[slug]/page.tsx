@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
 import { normalizeFormConfig } from "@/lib/application-form";
 import { ApplyForm } from "./apply-form";
+import { EmbedResizer } from "./embed-resizer";
 
 // Social/link preview for the application page: use the restaurant's OWN logo and
 // name (the one they uploaded for this form) instead of the generic Wingman image,
@@ -107,6 +108,7 @@ export default async function ApplyPage({
 
   return (
     <div className={isEmbed ? "p-4 sm:p-6 bg-transparent" : "min-h-screen bg-paper p-4 sm:p-8"}>
+      {isEmbed && <EmbedResizer />}
       <div className="max-w-xl mx-auto">{content}</div>
     </div>
   );
