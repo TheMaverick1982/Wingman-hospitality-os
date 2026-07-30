@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { LaunchDemoForm } from "@/components/demo/launch-demo-form";
+import { isNativeIOS } from "@/lib/native/platform";
 
 export const metadata: Metadata = {
   title: "Try the live demo — Wingman",
@@ -19,7 +21,11 @@ const HIGHLIGHTS = [
   "Click into anything and change it — it's your own private copy",
 ];
 
-export default function DemoPage() {
+export default async function DemoPage() {
+  // App Review compliance (guideline 3.1.1): spinning up a demo workspace is
+  // account creation, so it's disabled inside the native iOS app.
+  if (await isNativeIOS()) redirect("/login");
+
   return (
     <div className="min-h-full flex flex-col force-light bg-panel" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F7 100%)" }}>
       <div className="max-w-[1180px] w-full mx-auto px-6 sm:px-10 py-6 flex items-center justify-between">

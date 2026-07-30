@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { CreditCard } from "lucide-react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { effectiveMonthlyCents } from "@/lib/pricing";
+import { isNativeIOS } from "@/lib/native/platform";
 
 export const metadata: Metadata = {
   title: "Set up billing",
@@ -12,6 +14,9 @@ export const metadata: Metadata = {
 export default async function BillingSetupPage() {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  // App Review compliance (guideline 3.1.1): no external purchase surfaces in
+  // the native iOS app. Billing is managed on the web.
+  if (await isNativeIOS()) redirect("/settings");
 
   const supabase = await createClient();
   const [{ data: org }, { count: locationCount }] = await Promise.all([

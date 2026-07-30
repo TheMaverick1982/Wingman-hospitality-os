@@ -13,7 +13,8 @@
     ]
   },
   "ios": {
-    "contentInset": "always"
+    "contentInset": "always",
+    "appendUserAgentString": "WingmanNativeIOS"
   },
   "backgroundColor": "#0a6cff",
   "plugins": {
