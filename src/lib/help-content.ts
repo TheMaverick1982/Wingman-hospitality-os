@@ -489,7 +489,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Application form & applicants",
     summary: "A public form to collect applications, plus a tracker to schedule visits and move people to hiring.",
     categoryId: "team",
-    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields", "screening questions", "screen candidates", "pre-interview", "grade applicants", "ai screening"],
+    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields", "screening questions", "screen candidates", "pre-interview", "grade applicants", "ai screening", "spam", "bot", "captcha", "junk applications"],
     body: [
       { kind: "p", text: "Wingman gives you a ready-made application form so candidates can apply online — no website required. Every submission lands in an Applicants tracker inside Hiring." },
       { kind: "h", text: "Share it, or embed it on your site" },
@@ -515,6 +515,7 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "p", text: "Answers to your custom questions show right on each applicant's card in the tracker, so you see them at a glance alongside everything else." },
       { kind: "tip", text: "We always keep at least an email or phone so you can reach people — even if you make both optional, applicants must give one." },
+      { kind: "note", text: "Spam is filtered automatically. Every application form — on your Wingman link and your embed — is protected by an invisible bot check, so junk submissions are dropped before they ever reach your Applicants tracker. Real applicants never see a step; there's nothing to turn on." },
       { kind: "h", text: "Screening questions — a read before you interview" },
       { kind: "p", text: "On the Hiring page, \"Screening questions\" lets you set a few short questions per role that a candidate answers on the application form after they pick that role. Wingman drafts them from your hiring criteria for that role — three guest-experience scenarios plus one that quietly checks whether they follow directions — and you can edit, add, remove, or regenerate any of them before they go live." },
       { kind: "list", items: [

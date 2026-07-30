@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { CheckCircle2, Paperclip } from "lucide-react";
 import { submitApplication, type ApplyState } from "./actions";
 import { builtinSetting, type ApplicationFormConfig, type CustomField } from "@/lib/application-form";
+import { HoneypotField } from "@/components/honeypot-field";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const initial: ApplyState = { error: null };
 const field = "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none focus:border-brick";
@@ -105,6 +107,7 @@ export function ApplyForm({
       </div>
 
       <form action={formAction} className="flex flex-col gap-4">
+        <HoneypotField />
         {embed && <input type="hidden" name="embed" value="1" />}
 
         <div>
@@ -204,6 +207,8 @@ export function ApplyForm({
             </label>
           </div>
         )}
+
+        <TurnstileWidget />
 
         {state.error && <p className="text-[14px] text-danger">{state.error}</p>}
 
