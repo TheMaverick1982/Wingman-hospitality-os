@@ -286,6 +286,23 @@ export async function gpChargeStored(input: { token: string; amountCents: number
   };
 }
 
+export type RefundResult = { approved: boolean; transactionId: string; status: string };
+
+// Refund a prior charge by its gateway transaction id (a referenced return).
+// On Heartland this is the certified path; on the GP-API it refunds the
+// transaction directly. Amount in cents (partial allowed).
+export async function gpRefundTransaction(input: { transactionId: string; amountCents: number }): Promise<RefundResult> {
+  if (USE_HEARTLAND) return heartland.heartlandRefundByTransaction(input.transactionId, input.amountCents);
+  const { token, accounts } = await gpAuth();
+  const body: Record<string, unknown> = { amount: String(Math.round(input.amountCents)), currency: "USD" };
+  const acct = accountNameFor(accounts, "TRN_");
+  if (acct) body.account_name = acct;
+  const d = await gpPost<{ id?: string; status?: string }>(`/transactions/${encodeURIComponent(input.transactionId)}/refund`, token, body);
+  const status = String(d.status ?? "UNKNOWN").toUpperCase();
+  const approved = status === "CAPTURED" || status === "SUCCESS";
+  return { approved, transactionId: String(d.id ?? ""), status };
+}
+
 // Best-effort: delete a stored token when the customer removes their card.
 export async function gpDeleteStoredCard(storedToken: string): Promise<void> {
   if (USE_HEARTLAND) return heartland.heartlandDeleteStoredCard();

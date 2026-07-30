@@ -114,21 +114,15 @@ export async function heartlandChargeStored(input: { token: string; amountCents:
   };
 }
 
-// Refund/return money to a stored token (standalone Credit Return). Cents.
-export async function heartlandRefundStored(input: { token: string; amountCents: number; currency?: string }): Promise<ChargeResult> {
+// Refund against the ORIGINAL charge by its gateway transaction id — a
+// *referenced* Credit Return, which is the path Heartland certified (a
+// standalone card return is rejected in cert). Amount in cents (partial allowed).
+export async function heartlandRefundByTransaction(transactionId: string, amountCents: number): Promise<{ approved: boolean; transactionId: string; status: string }> {
   configure();
-  const card = new CreditCardData();
-  card.token = input.token;
-  const amount = (Math.round(input.amountCents) / 100).toFixed(2);
-  const r = await exec(card.refund(amount).withCurrency(input.currency ?? "USD").withAllowDuplicates(true));
+  const amount = (Math.round(amountCents) / 100).toFixed(2);
+  const r = await exec(Transaction.fromId(transactionId).refund(amount).withCurrency("USD"));
   const approved = r.responseCode === APPROVED;
-  return {
-    transactionId: String(r.transactionId ?? ""),
-    status: approved ? "REFUNDED" : `DECLINED_${r.responseCode ?? "??"}`,
-    approved,
-    brand: r.cardType ?? null,
-    last4: r.cardLast4 != null ? String(r.cardLast4) : null,
-  };
+  return { approved, transactionId: String(r.transactionId ?? ""), status: approved ? "REFUND" : `DECLINED_${r.responseCode ?? "??"}` };
 }
 
 // Void / reverse a not-yet-settled transaction by its id.
