@@ -1,23 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { HeartHandshake, ClipboardCheck, ArrowLeft } from "lucide-react";
+import { HeartHandshake, ClipboardCheck, ArrowLeft, Eye } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { resolveMyStaff } from "@/lib/data/my-staff";
+import { getActiveDepartments } from "@/lib/roles";
+import { canEditSection } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Your role" };
 
 // Staff-facing role guide: the standard a person is held to (guest-experience
-// behaviors) and what they own (role duties), so they can always see what's
-// expected of them. Reads the same per-role content managers author on Training
-// (department_standards + department_training_items), keyed by the viewer's own
-// department. No manager metrics here — just their role, made easy to see.
-export default async function MyRolePage() {
+// behaviors) and what they own (role duties). Reads the same per-role content
+// managers author on Training (department_standards + department_training_items),
+// keyed by department. Staff see their own role; managers/owners can preview any
+// active role's guide via ?department= (a role-switcher lets them flip through).
+export default async function MyRolePage({ searchParams }: { searchParams: Promise<{ department?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
+  const { department: deptParam } = await searchParams;
 
-  const myStaff = await resolveMyStaff(profile);
-  if (!myStaff) {
+  // Managers/owners can preview any role's guide (oversight + "what staff see").
+  const canPreview =
+    canEditSection(profile.accessRole, "training", profile.permissionOverrides) ||
+    canEditSection(profile.accessRole, "staff", profile.permissionOverrides);
+  const activeDepts = canPreview ? await getActiveDepartments() : [];
+  const validParam = deptParam && (ALL_DEPARTMENTS as readonly string[]).includes(deptParam) && activeDepts.includes(deptParam as Department);
+
+  let department: string | null = null;
+  let previewMode = false;
+  if (canPreview && validParam) {
+    department = deptParam!;
+    previewMode = true;
+  } else {
+    const myStaff = await resolveMyStaff(profile);
+    if (myStaff) {
+      department = myStaff.department;
+    } else if (canPreview && activeDepts.length > 0) {
+      // A manager without a staff record lands in preview mode on the first role.
+      department = activeDepts[0];
+      previewMode = true;
+    }
+  }
+
+  if (!department) {
     return (
       <div className="max-w-2xl">
         <h1 className="text-[26px] font-bold tracking-[-0.02em] text-ink mb-1.5">Your role</h1>
@@ -31,7 +57,6 @@ export default async function MyRolePage() {
     );
   }
 
-  const department = myStaff.department;
   const supabase = await createClient();
   const [{ data: standardRows }, { data: dutyRows }, { data: meta }] = await Promise.all([
     supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
@@ -45,22 +70,48 @@ export default async function MyRolePage() {
 
   return (
     <div className="max-w-3xl">
-      <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-2 hover:text-ink mb-4">
-        <ArrowLeft size={15} /> Dashboard
+      <Link
+        href={previewMode ? "/training" : "/dashboard"}
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-2 hover:text-ink mb-4"
+      >
+        <ArrowLeft size={15} /> {previewMode ? "Training & standards" : "Dashboard"}
       </Link>
 
+      {previewMode && (
+        <div className="mb-5 rounded-2xl border border-brick/25 bg-brick-tint/50 px-5 py-4">
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-brick mb-3">
+            <Eye size={15} /> Preview — this is exactly what a team member in this role sees. Edit it in Training &amp; Standards.
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {activeDepts.map((d) => (
+              <Link
+                key={d}
+                href={`/my-role?department=${encodeURIComponent(d)}`}
+                className={`text-[12.5px] font-semibold rounded-full px-3 py-1 border transition-colors ${
+                  d === department ? "border-brick text-white bg-brick" : "border-line text-charcoal-2 bg-white hover:border-brick"
+                }`}
+              >
+                {d}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.12] text-ink mb-1">
-        Your role: {department}
+        {previewMode ? `${department} — role guide` : `Your role: ${department}`}
       </h1>
       <p className="text-base text-muted mb-6">
-        {trackLabel ? `${trackLabel} · ` : ""}What great looks like in your role — the standard you&rsquo;re held to, and what we count on you for.
+        {trackLabel ? `${trackLabel} · ` : ""}What great looks like in {previewMode ? "this" : "your"} role — the standard {previewMode ? "they're" : "you're"} held to, and what we count on {previewMode ? "them" : "you"} for.
       </p>
 
       {nothingYet ? (
         <div className="bg-white border border-line rounded-2xl p-8 shadow-sm text-center">
-          <p className="text-[15px] text-ink font-semibold">Your role guide is being set up.</p>
+          <p className="text-[15px] text-ink font-semibold">{previewMode ? "This role guide is empty." : "Your role guide is being set up."}</p>
           <p className="text-sm text-muted mt-1.5 max-w-md mx-auto">
-            Your manager is still adding what&rsquo;s expected for the {department} role. Check back soon — it&rsquo;ll show up right here.
+            {previewMode
+              ? `Add ${department} standards and duties in Training & Standards and they'll show up here.`
+              : `Your manager is still adding what's expected for the ${department} role. Check back soon — it'll show up right here.`}
           </p>
         </div>
       ) : (
@@ -68,16 +119,16 @@ export default async function MyRolePage() {
           <RoleSection
             icon={<HeartHandshake size={18} className="text-brick" />}
             title="Guest experience — how we make people feel"
-            blurb="The hospitality standard for your role. This is what every guest should feel from you."
+            blurb="The hospitality standard for this role. This is what every guest should feel."
             items={behaviors}
-            emptyLabel="No guest-experience standards added yet for your role."
+            emptyLabel="No guest-experience standards added yet for this role."
           />
           <RoleSection
             icon={<ClipboardCheck size={18} className="text-brick" />}
-            title="Your responsibilities — what you own"
-            blurb="The tasks and duties you're counted on for, every shift."
+            title="Responsibilities — what you own"
+            blurb="The tasks and duties counted on, every shift."
             items={duties}
-            emptyLabel="No role responsibilities added yet for your role."
+            emptyLabel="No responsibilities added yet for this role."
           />
         </div>
       )}
