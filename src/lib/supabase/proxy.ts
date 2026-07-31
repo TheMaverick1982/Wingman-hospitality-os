@@ -59,6 +59,9 @@ const PUBLIC_PREFIXES = [
   "/affiliates",
   // Referral link entry point (/r/<code>) — visitors aren't logged in.
   "/r",
+  // Job-opening short links (/j/<code> and /j/<code>/qr) — a public apply link
+  // and its QR image; the visitor is a job applicant, not logged in.
+  "/j",
   // Public lead-magnet tools.
   "/calculator",
   "/scorecard",

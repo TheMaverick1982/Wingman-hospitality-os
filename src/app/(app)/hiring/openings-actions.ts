@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,7 +20,7 @@ export type OpeningInput = {
   employmentType?: string;
   adCopy: string;
 };
-export type OpeningResult = { error: string | null; id?: string };
+export type OpeningResult = { error: string | null; id?: string; code?: string | null };
 export type AdResult = { error: string | null; adCopy?: string };
 
 function callAnthropic(apiKey: string, body: Record<string, unknown>) {
@@ -140,8 +141,29 @@ export async function saveOpening(input: OpeningInput): Promise<OpeningResult> {
     .select("id")
     .single();
   if (error || !data) return { error: error?.message ?? "Could not create the opening." };
+  const newId = (data as { id: string }).id;
+
+  // Assign a unique short code for the /j/<code> link. Best-effort with a retry
+  // on the (astronomically rare) collision; if the code column isn't there yet
+  // (migration lag) it just stays null and the opening falls back to its full
+  // apply link.
+  let assignedCode: string | null = null;
+  for (let i = 0; i < 5; i++) {
+    const candidate = randomBytes(5).toString("hex").slice(0, 7);
+    const { error: codeErr } = await admin
+      .from("job_openings")
+      .update({ code: candidate })
+      .eq("id", newId)
+      .eq("org_id", profile.orgId)
+      .is("code", null);
+    if (!codeErr) {
+      assignedCode = candidate;
+      break;
+    }
+  }
+
   revalidatePath("/hiring");
-  return { error: null, id: (data as { id: string }).id };
+  return { error: null, id: newId, code: assignedCode };
 }
 
 export async function setOpeningStatus(id: string, status: "open" | "closed"): Promise<{ error: string | null }> {
