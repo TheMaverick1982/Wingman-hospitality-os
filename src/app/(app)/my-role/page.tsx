@@ -59,15 +59,27 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
   }
 
   const supabase = await createClient();
-  const [{ data: standardRows }, { data: dutyRows }, { data: meta }] = await Promise.all([
+  const [{ data: standardRows }, { data: dutyRows }] = await Promise.all([
     supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
     supabase.from("department_training_items").select("item").eq("department", department).order("sort_order"),
-    supabase.from("department_meta").select("track_label, description").eq("department", department).maybeSingle(),
   ]);
   const behaviors = ((standardRows ?? []) as { item: string }[]).map((r) => r.item).filter(Boolean);
   const duties = ((dutyRows ?? []) as { item: string }[]).map((r) => r.item).filter(Boolean);
-  const trackLabel = (meta as { track_label?: string | null } | null)?.track_label ?? null;
-  const description = (meta as { description?: string | null } | null)?.description?.trim() || null;
+
+  // department_meta.description is added by migration 0146. Read it guarded so a
+  // not-yet-applied migration (or a lagging migrate job) can never break the
+  // guide — fall back to just the track label if the column isn't there yet.
+  let trackLabel: string | null = null;
+  let description: string | null = null;
+  const metaFull = await supabase.from("department_meta").select("track_label, description").eq("department", department).maybeSingle();
+  if (metaFull.error) {
+    const metaBase = await supabase.from("department_meta").select("track_label").eq("department", department).maybeSingle();
+    trackLabel = (metaBase.data as { track_label?: string | null } | null)?.track_label ?? null;
+  } else {
+    const m = metaFull.data as { track_label?: string | null; description?: string | null } | null;
+    trackLabel = m?.track_label ?? null;
+    description = m?.description?.trim() || null;
+  }
   const nothingYet = behaviors.length === 0 && duties.length === 0;
 
   return (
