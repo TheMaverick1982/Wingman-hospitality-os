@@ -70,8 +70,59 @@ const PUBLIC_PREFIXES = [
   "/founders",
 ];
 
+// Native iOS is a login-only client for existing business customers. Every
+// marketing, account/organization registration, pricing, or external-purchase /
+// lead-capture surface must be kept OUT of the app (App Store guideline 3.1.1;
+// business model established under 2.1(b)). In the app these all redirect to
+// /login; the authenticated product (dashboard, hiring, training, settings, …)
+// is untouched, and account creation + billing happen on the web only.
+//
+// Detected via the WingmanNativeIOS user-agent token baked into the iOS build
+// (capacitor.config.json → ios.appendUserAgentString). Everything here is a
+// no-op for the website, which never carries that token.
+const IOS_NATIVE_UA_TOKEN = "WingmanNativeIOS";
+const IOS_BLOCKED_PREFIXES = [
+  "/signup",
+  "/onboarding",
+  "/demo",
+  "/pricing",
+  "/how-it-works",
+  "/guest-journey",
+  "/book-a-demo",
+  "/book",
+  "/playbook",
+  "/affiliates",
+  "/r",
+  "/calculator",
+  "/scorecard",
+  "/links",
+  "/launch",
+  "/founders",
+  "/download",
+  "/api-guide",
+  "/contact",
+];
+
+function isBlockedInNativeIOS(request: NextRequest): boolean {
+  if (!(request.headers.get("user-agent") ?? "").includes(IOS_NATIVE_UA_TOKEN)) return false;
+  const p = request.nextUrl.pathname;
+  // The marketing homepage is the app's entry point, so it must redirect too.
+  if (p === "/") return true;
+  return IOS_BLOCKED_PREFIXES.some((path) => p === path || p.startsWith(path + "/"));
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  // Keep registration/marketing/pricing out of the native iOS app before doing
+  // anything else. Redirecting to /login (which forwards signed-in users on to
+  // their dashboard) leaves a clean login-only experience for App Review.
+  if (isBlockedInNativeIOS(request)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
