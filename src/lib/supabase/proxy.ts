@@ -71,6 +71,8 @@ const PUBLIC_PREFIXES = [
   "/launch",
   // Founders funnel (unindexed, unlinked landing page).
   "/founders",
+  // Retention Guarantee offer (unindexed, unlinked landing page).
+  "/guarantee",
 ];
 
 // The native apps (iOS + Android) are login-only clients for existing business
@@ -115,6 +117,7 @@ const IOS_BLOCKED_PREFIXES = [
   "/links",
   "/launch",
   "/founders",
+  "/guarantee",
   "/download",
   "/api-guide",
   "/contact",
