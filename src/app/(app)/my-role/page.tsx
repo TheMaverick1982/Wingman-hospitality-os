@@ -7,6 +7,7 @@ import { getActiveDepartments } from "@/lib/roles";
 import { canEditSection } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { RoleOverviewEditor } from "./role-overview-editor";
 
 export const metadata: Metadata = { title: "Your role" };
 
@@ -61,11 +62,12 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
   const [{ data: standardRows }, { data: dutyRows }, { data: meta }] = await Promise.all([
     supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
     supabase.from("department_training_items").select("item").eq("department", department).order("sort_order"),
-    supabase.from("department_meta").select("track_label").eq("department", department).maybeSingle(),
+    supabase.from("department_meta").select("track_label, description").eq("department", department).maybeSingle(),
   ]);
   const behaviors = ((standardRows ?? []) as { item: string }[]).map((r) => r.item).filter(Boolean);
   const duties = ((dutyRows ?? []) as { item: string }[]).map((r) => r.item).filter(Boolean);
   const trackLabel = (meta as { track_label?: string | null } | null)?.track_label ?? null;
+  const description = (meta as { description?: string | null } | null)?.description?.trim() || null;
   const nothingYet = behaviors.length === 0 && duties.length === 0;
 
   return (
@@ -101,9 +103,19 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
       <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.12] text-ink mb-1">
         {previewMode ? `${department} — role guide` : `Your role: ${department}`}
       </h1>
-      <p className="text-base text-muted mb-6">
-        {trackLabel ? `${trackLabel} · ` : ""}What great looks like in {previewMode ? "this" : "your"} role — the standard {previewMode ? "they're" : "you're"} held to, and what we count on {previewMode ? "them" : "you"} for.
-      </p>
+      {trackLabel && (
+        <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-4">{trackLabel}</p>
+      )}
+
+      {previewMode ? (
+        <RoleOverviewEditor department={department} initial={description ?? ""} />
+      ) : description ? (
+        <p className="text-[16px] leading-[1.6] text-charcoal-2 mb-6">{description}</p>
+      ) : (
+        <p className="text-base text-muted mb-6">
+          What great looks like in your role — the standard you&rsquo;re held to, and what we count on you for.
+        </p>
+      )}
 
       {nothingYet ? (
         <div className="bg-white border border-line rounded-2xl p-8 shadow-sm text-center">
