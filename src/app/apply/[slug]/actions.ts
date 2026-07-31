@@ -102,6 +102,15 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     return { error: `Please attach your ${resumeF.label.toLowerCase()}.` };
   }
 
+  // If the link carried a job-opening id, validate it belongs to THIS org (so a
+  // forged id can't attach) before tagging the application to it below.
+  let openingId: string | null = null;
+  const openingParam = String(formData.get("opening") || "").trim();
+  if (openingParam) {
+    const { data: op } = await admin.from("job_openings").select("id").eq("id", openingParam).eq("org_id", org.id).maybeSingle();
+    if (op) openingId = (op as { id: string }).id;
+  }
+
   const { data: inserted, error } = await admin
     .from("job_applications")
     .insert({
@@ -120,6 +129,12 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     .single();
   if (error || !inserted) return { error: "Something went wrong submitting your application. Please try again." };
   const appId = (inserted as { id: string }).id;
+
+  // opening_id lands with a later migration — write it in an isolated, best-effort
+  // update so a not-yet-applied column can never block a real application.
+  if (openingId) {
+    await admin.from("job_applications").update({ opening_id: openingId }).eq("id", appId);
+  }
 
   // Persist custom answers separately and defensively: custom_answers is added by
   // a later migration, so keep it out of the core insert (which must never fail)

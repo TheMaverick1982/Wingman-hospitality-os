@@ -525,6 +525,13 @@ export const ARTICLES: HelpArticle[] = [
         "Prefer it on your own website? Click \"Embed\" for a copy-paste snippet that drops the form right into your site, with no Wingman branding.",
         "Pre-fill a role and location by adding them to the link, so an \"Apply for Server\" button lands already set.",
       ] },
+      { kind: "h", text: "Post specific openings (by role & location)" },
+      { kind: "p", text: "On the Hiring page, \"Job openings\" lets you post for a specific role at a specific location (or all locations). Tap \"Create opening,\" pick the role and location, add pay/type and anything to highlight, then \"Generate ad with AI\" writes a full job ad grounded in that role's standards, duties, and hiring criteria — or paste your existing ad and it sharpens it. Edit it, save, and you get copy-ready ad text plus a unique apply link." },
+      { kind: "list", items: [
+        "Post the ad anywhere you hire — Indeed, Craigslist, Facebook — and use the opening's apply link as the \"apply\" URL.",
+        "Anyone who applies through it lands with the role and location already set, and shows up tagged to that opening (with an applicant count), so you can see which post is working.",
+        "Close an opening when it's filled, reopen or delete it anytime — applicants who already applied are always kept.",
+      ] },
       { kind: "h", text: "Add your logo & a catch-all copy" },
       { kind: "list", items: [
         "Upload your logo (under Applicants) to brand the form.",
