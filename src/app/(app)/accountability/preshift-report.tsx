@@ -55,15 +55,15 @@ export function PreshiftReport({
       <div className="px-6 py-4">
         <div className="text-[11.5px] font-semibold text-muted uppercase tracking-[0.03em] mb-3">Last 30 days</div>
         {roster.length > 0 ? (
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm">
             <tbody>
               {roster.map((r, i) => (
                 <tr key={i} className="border-b border-[#F5F5F5] last:border-0">
-                  <td className="py-2.5 text-ink">{r.name}</td>
-                  <td className="py-2.5 text-right text-[13px] text-muted tabular-nums">
+                  <td className="py-2.5 text-ink pr-2">{r.name}</td>
+                  <td className="py-2.5 text-right text-[13px] text-muted tabular-nums whitespace-nowrap">
                     {r.count30d} completed
                   </td>
-                  <td className="py-2.5 text-right text-[13px] tabular-nums pl-4">
+                  <td className="py-2.5 text-right text-[13px] tabular-nums pl-3 whitespace-nowrap">
                     {r.lastCompleted ? (
                       <span className="text-muted-2">
                         last {new Date(r.lastCompleted).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
