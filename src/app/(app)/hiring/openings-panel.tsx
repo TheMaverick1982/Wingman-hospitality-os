@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Plus, Copy, Check, X, Megaphone, Pencil, Trash2 } from "lucide-react";
+import { Sparkles, Plus, Copy, Check, X, Megaphone, Pencil, Trash2, QrCode } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
@@ -17,6 +17,8 @@ export type OpeningRow = {
   employment_type: string | null;
   status: string;
   created_at: string;
+  code: string | null;
+  click_count: number | null;
 };
 
 type LocOpt = { id: string; name: string };
@@ -29,6 +31,7 @@ export function OpeningsPanel({
   locations,
   departments,
   applyUrl,
+  siteUrl,
   canEdit,
 }: {
   openings: OpeningRow[];
@@ -36,14 +39,18 @@ export function OpeningsPanel({
   locations: LocOpt[];
   departments: string[];
   applyUrl: string | null;
+  siteUrl: string;
   canEdit: boolean;
 }) {
   const [editing, setEditing] = useState<OpeningRow | "new" | null>(null);
   const [busyId, startBusy] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const locName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "A location" : "All locations");
-  const linkFor = (id: string) => (applyUrl ? `${applyUrl}?opening=${id}` : "");
+  // Prefer the short branded link (/j/<code>); fall back to the full apply URL for
+  // any opening that doesn't have a code yet.
+  const shortLink = (o: OpeningRow) => (o.code ? `${siteUrl}/j/${o.code}` : applyUrl ? `${applyUrl}?opening=${o.id}` : "");
 
   async function copy(text: string, key: string) {
     try {
@@ -82,6 +89,7 @@ export function OpeningsPanel({
           {[...open, ...closed].map((o) => {
             const isClosed = o.status !== "open";
             const count = counts[o.id] ?? 0;
+            const clicks = o.click_count ?? 0;
             return (
               <div key={o.id} className={`rounded-xl border p-3.5 ${isClosed ? "border-line bg-paper/40 opacity-75" : "border-line"}`}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -96,14 +104,24 @@ export function OpeningsPanel({
                       {o.department}
                       {o.pay_note ? ` · ${o.pay_note}` : ""}
                       {o.employment_type ? ` · ${o.employment_type}` : ""}
-                      {count > 0 ? ` · ${count} applicant${count === 1 ? "" : "s"}` : ""}
                     </div>
+                    {(clicks > 0 || count > 0) && (
+                      <div className="text-[12px] text-muted-2 mt-0.5 tabular-nums">
+                        {clicks} click{clicks === 1 ? "" : "s"} · {count} applicant{count === 1 ? "" : "s"}
+                        {clicks > 0 ? ` · ${Math.round((count / clicks) * 100)}% applied` : ""}
+                      </div>
+                    )}
                   </div>
                   {canEdit && (
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {!isClosed && applyUrl && (
-                        <button type="button" onClick={() => copy(linkFor(o.id), `link:${o.id}`)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick">
+                      {!isClosed && shortLink(o) && (
+                        <button type="button" onClick={() => copy(shortLink(o), `link:${o.id}`)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick">
                           {copiedId === `link:${o.id}` ? <Check size={12} /> : <Copy size={12} />} {copiedId === `link:${o.id}` ? "Copied" : "Apply link"}
+                        </button>
+                      )}
+                      {!isClosed && o.code && (
+                        <button type="button" aria-label="QR code" onClick={() => setQrCode(o.code)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick">
+                          <QrCode size={12} /> QR
                         </button>
                       )}
                       {o.ad_copy && (
@@ -139,8 +157,22 @@ export function OpeningsPanel({
           locations={locations}
           departments={departments}
           applyUrl={applyUrl}
+          siteUrl={siteUrl}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {qrCode && (
+        <Modal title="QR code" sub="Scan to open the pre-filled apply form — great for a window sign, table tent, or flyer." onClose={() => setQrCode(null)}>
+          <div className="flex flex-col items-center gap-3 py-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/j/${qrCode}/qr`} alt="Opening QR code" width={240} height={240} className="rounded-xl border border-line" />
+            <div className="text-[12px] text-muted-2 font-mono break-all text-center">{siteUrl}/j/{qrCode}</div>
+            <a href={`/j/${qrCode}/qr`} download={`opening-${qrCode}.svg`} className="text-[13px] font-semibold text-brick hover:opacity-70">
+              Download QR (SVG)
+            </a>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -151,12 +183,14 @@ function OpeningEditor({
   locations,
   departments,
   applyUrl,
+  siteUrl,
   onClose,
 }: {
   opening: OpeningRow | null;
   locations: LocOpt[];
   departments: string[];
   applyUrl: string | null;
+  siteUrl: string;
   onClose: () => void;
 }) {
   const [department, setDepartment] = useState(opening?.department ?? departments[0] ?? "");
@@ -170,9 +204,11 @@ function OpeningEditor({
   const [savePending, startSave] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(opening?.id ?? null);
+  const [savedCode, setSavedCode] = useState<string | null>(opening?.code ?? null);
   const [copied, setCopied] = useState(false);
 
-  const link = savedId && applyUrl ? `${applyUrl}?opening=${savedId}` : "";
+  // Prefer the short branded link; fall back to the full apply URL until a code exists.
+  const link = savedCode ? `${siteUrl}/j/${savedCode}` : savedId && applyUrl ? `${applyUrl}?opening=${savedId}` : "";
 
   function generate() {
     setError(null);
@@ -202,7 +238,10 @@ function OpeningEditor({
         adCopy,
       });
       if (res.error) setError(res.error);
-      else setSavedId(res.id ?? opening?.id ?? null);
+      else {
+        setSavedId(res.id ?? opening?.id ?? null);
+        if (res.code) setSavedCode(res.code);
+      }
     });
   }
 
@@ -272,6 +311,11 @@ function OpeningEditor({
               </button>
             </div>
             <p className="text-[11.5px] text-muted-2 mt-1.5">Paste the ad on Indeed/Craigslist and use this link as the &ldquo;apply&rdquo; URL — applicants land pre-set to this role &amp; location, and show up tagged to this opening.</p>
+            {savedCode && (
+              <a href={`/j/${savedCode}/qr`} download={`opening-${savedCode}.svg`} className="inline-flex items-center gap-1 text-[12px] font-semibold text-brick hover:opacity-70 mt-2">
+                <QrCode size={12} /> Download QR code
+              </a>
+            )}
           </div>
         )}
 

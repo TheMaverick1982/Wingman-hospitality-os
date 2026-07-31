@@ -530,8 +530,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "On the Hiring page, \"Job openings\" lets you post for a specific role at a specific location (or all locations). Tap \"Create opening,\" pick the role and location, add pay/type and anything to highlight, then \"Generate ad with AI\" writes a full job ad grounded in that role's standards, duties, and hiring criteria — or paste your existing ad and it sharpens it. Edit it, save, and you get copy-ready ad text plus a unique apply link." },
       { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },
       { kind: "list", items: [
-        "Post the ad anywhere you hire — Indeed, Craigslist, Facebook — and use the opening's apply link as the \"apply\" URL.",
-        "Anyone who applies through it lands with the role and location already set, and shows up tagged to that opening (with an applicant count), so you can see which post is working.",
+        "Each opening gets a short, branded link (joinwingman.app/j/…) and a QR code — post the ad anywhere you hire (Indeed, Craigslist, Facebook) and use the short link as the \"apply\" URL, or print the QR on a window sign or table tent.",
+        "Anyone who applies lands with the role and location already set, and shows up tagged to that opening. Wingman counts clicks and applications per opening, so you can see which post is actually working (e.g. 120 clicks → 9 applied).",
         "Close an opening when it's filled, reopen or delete it anytime — applicants who already applied are always kept.",
       ] },
       { kind: "h", text: "Add your logo & a catch-all copy" },

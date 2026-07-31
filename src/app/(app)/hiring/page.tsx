@@ -242,7 +242,7 @@ export default async function HiringPage({
   if (canEdit) {
     const { data: opRows } = await supabase
       .from("job_openings")
-      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at")
+      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count")
       .order("created_at", { ascending: false });
     if (opRows) {
       openings.push(...(opRows as OpeningRow[]));
@@ -369,6 +369,7 @@ export default async function HiringPage({
           locations={openingLocations}
           departments={activeDepts}
           applyUrl={applyUrl}
+          siteUrl={SITE}
           canEdit={canEdit}
         />
       )}
