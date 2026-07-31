@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, CalendarClock, ArrowRight, Route, Trophy } from "lucide-react";
+import { ClipboardList, CalendarClock, ArrowRight, Route, Trophy, Eye } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -273,6 +273,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
               <Link href="/training/paths" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
                 <Route size={14} /> Learning paths
               </Link>
+              {activeDepts.length > 0 && (
+                <Link href={`/my-role?department=${encodeURIComponent(activeDepts[0])}`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick transition-colors">
+                  <Eye size={14} /> Preview role guide
+                </Link>
+              )}
             </>
           )}
           {leaderboardEnabled && (

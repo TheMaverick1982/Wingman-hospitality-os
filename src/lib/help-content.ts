@@ -365,6 +365,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["your role", "my role", "role guide", "role description", "what's expected", "expectations", "staff role", "responsibilities", "standards", "job description", "what do I do"],
     body: [
       { kind: "p", text: "Every team member has a \"Your role\" page — a simple, read-only guide to what's expected of them in their role. It's there so anyone can check what great looks like before a shift, without digging through training." },
+      { kind: "image", src: "/help/your-role.png", alt: "The Your role page for a Server", caption: "A staff member's role guide — the guest-experience standard and the responsibilities they own." },
       { kind: "h", text: "Where staff find it" },
       { kind: "p", text: "It's a \"Your role\" card on their dashboard (the home screen they land on when they log in). Tapping it opens their role guide." },
       { kind: "h", text: "What's on it" },
@@ -375,6 +376,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Where the content comes from" },
       { kind: "p", text: "Straight from what you set in Training & Standards for each role (its hospitality behaviors and role duties). You don't maintain it twice — update a role's standards or duties and every person in that role sees the change on their guide automatically." },
       { kind: "note", text: "It's read-only for staff and shows no metrics — just their role. A team member only sees it once their login is linked to their staff profile (connect it on the Staff page); until then the page prompts them to ask a manager to link their account." },
+      { kind: "note", text: "Managers & owners can preview any role's guide from Training & Standards → \"Preview role guide\" (top of the page). Flip between roles to see exactly what each one sees — a quick way to check it reads right." },
     ],
     links: [{ label: "Building training programs", href: "/help/training-programs" }, { label: "Application form & applicants", href: "/help/application-form" }],
   },
