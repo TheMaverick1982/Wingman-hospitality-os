@@ -185,7 +185,7 @@ export function ApplyForm({
         {screeningQuestions.length > 0 && (
           <div className="flex flex-col gap-4 rounded-2xl border border-line bg-paper/60 p-4 sm:p-5">
             <p className="text-[13px] text-muted-2">
-              A few quick questions for the <span className="font-semibold text-charcoal-2">{role}</span> role — a sentence or two each is perfect. We review every application and will reach out if we&rsquo;d like to set up an interview.
+              A few quick questions for the <span className="font-semibold text-charcoal-2">{role}</span>{" "}role — a sentence or two each is perfect. We review every application and will reach out if we&rsquo;d like to set up an interview.
             </p>
             {screeningQuestions.map((q, i) => (
               <div key={q.id}>
