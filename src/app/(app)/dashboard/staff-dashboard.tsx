@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Sparkle, ArrowRight, ListChecks } from "lucide-react";
+import { ClipboardList, Sparkle, ArrowRight, ListChecks, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -102,6 +102,20 @@ export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
 
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your day</div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <Link
+          href="/my-role"
+          className="flex items-center gap-4 bg-white border border-line rounded-2xl p-6 shadow-sm hover:border-brick transition-colors group"
+        >
+          <span className="w-11 h-11 rounded-[12px] bg-brick-tint text-brick flex items-center justify-center shrink-0">
+            <BookOpen size={20} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[15px] font-semibold text-ink">Your role</div>
+            <div className="text-[13px] text-muted-2">What&rsquo;s expected of you — the standard and your responsibilities.</div>
+          </div>
+          <ArrowRight size={17} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
+        </Link>
+
         <Link
           href="/accountability"
           className="flex items-center gap-4 bg-white border border-line rounded-2xl p-6 shadow-sm hover:border-brick transition-colors group"
