@@ -77,10 +77,24 @@ const PUBLIC_PREFIXES = [
 // /login; the authenticated product (dashboard, hiring, training, settings, …)
 // is untouched, and account creation + billing happen on the web only.
 //
-// Detected via the WingmanNativeIOS user-agent token baked into the iOS build
-// (capacitor.config.json → ios.appendUserAgentString). Everything here is a
-// no-op for the website, which never carries that token.
+// How we know a request is the native app (either is sufficient):
+//   1. A durable cookie stamped on first launch. The app's capacitor server.url
+//      points at NATIVE_APP_ENTRY, an app-only URL that sets this cookie and
+//      redirects to /login. Cookies ride on every subsequent request and persist
+//      across launches, so this works even when the webview user-agent doesn't
+//      carry our token. This is the reliable primary signal.
+//   2. The WingmanNativeIOS user-agent token (capacitor.config.json →
+//      ios.appendUserAgentString) — kept as a secondary signal.
+// Both are things only the app ever presents, so this is a no-op for the website.
 const IOS_NATIVE_UA_TOKEN = "WingmanNativeIOS";
+const NATIVE_APP_COOKIE = "wm_native";
+const NATIVE_APP_ENTRY = "/app-entry";
+
+function isNativeApp(request: NextRequest): boolean {
+  if (request.cookies.get(NATIVE_APP_COOKIE)?.value === "ios") return true;
+  return (request.headers.get("user-agent") ?? "").includes(IOS_NATIVE_UA_TOKEN);
+}
+
 const IOS_BLOCKED_PREFIXES = [
   "/signup",
   "/onboarding",
@@ -104,7 +118,7 @@ const IOS_BLOCKED_PREFIXES = [
 ];
 
 function isBlockedInNativeIOS(request: NextRequest): boolean {
-  if (!(request.headers.get("user-agent") ?? "").includes(IOS_NATIVE_UA_TOKEN)) return false;
+  if (!isNativeApp(request)) return false;
   const p = request.nextUrl.pathname;
   // The marketing homepage is the app's entry point, so it must redirect too.
   if (p === "/") return true;
@@ -112,6 +126,25 @@ function isBlockedInNativeIOS(request: NextRequest): boolean {
 }
 
 export async function updateSession(request: NextRequest) {
+  // The native iOS app boots into this app-only URL (capacitor server.url).
+  // Stamp the durable native cookie, then hand off to the login-only experience.
+  // Doing it here means the very first request the app makes marks it as native,
+  // independent of whether the webview user-agent token survives.
+  if (request.nextUrl.pathname === NATIVE_APP_ENTRY) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    const res = NextResponse.redirect(url);
+    res.cookies.set(NATIVE_APP_COOKIE, "ios", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365 * 5,
+    });
+    return res;
+  }
+
   let response = NextResponse.next({ request });
 
   // Keep registration/marketing/pricing out of the native iOS app before doing
