@@ -14,6 +14,7 @@ import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { CandidatesPanel } from "./candidate-scorecards";
 import { ApplicantsPanel, type Applicant } from "./applicants-panel";
+import { OpeningsPanel, type OpeningRow } from "./openings-panel";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
@@ -232,6 +233,28 @@ export default async function HiringPage({
     if (cfgRow) formConfig = normalizeFormConfig((cfgRow as { application_form_config: unknown }).application_form_config);
   }
 
+  // Job openings (the job_openings table + job_applications.opening_id land with
+  // migration 0147 — every read here is guarded so a not-yet-applied migration can
+  // never take down the hiring page).
+  const openings: OpeningRow[] = [];
+  const openingCounts: Record<string, number> = {};
+  let openingLocations: { id: string; name: string }[] = [];
+  if (canEdit) {
+    const { data: opRows } = await supabase
+      .from("job_openings")
+      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at")
+      .order("created_at", { ascending: false });
+    if (opRows) {
+      openings.push(...(opRows as OpeningRow[]));
+      const { data: appCounts } = await supabase.from("job_applications").select("opening_id").not("opening_id", "is", null);
+      for (const r of (appCounts ?? []) as { opening_id: string | null }[]) {
+        if (r.opening_id) openingCounts[r.opening_id] = (openingCounts[r.opening_id] ?? 0) + 1;
+      }
+    }
+    const { data: locRows } = await supabase.from("locations").select("id, name").order("name");
+    openingLocations = (locRows ?? []) as { id: string; name: string }[];
+  }
+
   const latestCandidate = allCandidates[0];
   const latestScorecard =
     latestCandidate && coreValues
@@ -338,6 +361,17 @@ export default async function HiringPage({
       <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
 
       {canEdit && <ScreeningQuestionsPanel departments={activeDepts} questionsByDept={screeningQuestionsByDept} />}
+
+      {canEdit && (
+        <OpeningsPanel
+          openings={openings}
+          counts={openingCounts}
+          locations={openingLocations}
+          departments={activeDepts}
+          applyUrl={applyUrl}
+          canEdit={canEdit}
+        />
+      )}
 
       <div className="lg:max-w-md">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">

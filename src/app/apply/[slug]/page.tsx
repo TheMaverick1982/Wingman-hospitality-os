@@ -38,10 +38,10 @@ export default async function ApplyPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ embed?: string; role?: string; location?: string }>;
+  searchParams: Promise<{ embed?: string; role?: string; location?: string; opening?: string }>;
 }) {
   const { slug } = await params;
-  const { embed, role, location } = await searchParams;
+  const { embed, role, location, opening } = await searchParams;
   const isEmbed = embed === "1";
 
   const admin = createAdminClient();
@@ -83,8 +83,32 @@ export default async function ApplyPage({
     }
   }
 
-  const preRole = role && roleOptions.includes(role as (typeof roleOptions)[number]) ? role : "";
-  const preLocation = location && locations.some((l) => l.id === location) ? location : "";
+  // A job-opening link (?opening=<id>) pre-fills the role + location it was posted
+  // for and tags the application back to that opening. Guarded: the job_openings
+  // table lands with a migration, so a not-yet-applied migration just yields no
+  // opening (the query returns null) and the form behaves as a plain apply link.
+  let openingId: string | null = null;
+  let openingRole: string | null = null;
+  let openingLocation: string | null = null;
+  if (opening) {
+    const { data: op } = await admin
+      .from("job_openings")
+      .select("id, department, location_id, status")
+      .eq("id", opening)
+      .eq("org_id", org.id)
+      .maybeSingle();
+    const o = op as { id: string; department: string; location_id: string | null; status: string } | null;
+    if (o && o.status === "open") {
+      openingId = o.id;
+      openingRole = o.department;
+      openingLocation = o.location_id;
+    }
+  }
+
+  const rolePick = openingRole ?? role;
+  const preRole = rolePick && roleOptions.includes(rolePick as (typeof roleOptions)[number]) ? rolePick : "";
+  const locPick = openingLocation ?? location;
+  const preLocation = locPick && locations.some((l) => l.id === locPick) ? locPick : "";
 
   const content = !org.apply_enabled ? (
     <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
@@ -103,6 +127,7 @@ export default async function ApplyPage({
       embed={isEmbed}
       config={formConfig}
       screeningByRole={screeningByRole}
+      openingId={openingId}
     />
   );
 
