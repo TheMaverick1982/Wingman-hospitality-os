@@ -61,8 +61,18 @@ export function DownloadClient() {
     // This is the intended "mounted gate" pattern, so the set-state-in-effect
     // rule doesn't apply here.
     /* eslint-disable react-hooks/set-state-in-effect */
+    // Opened as an installed app (home-screen icon / PWA)? Don't show install
+    // instructions — send them into the product. /login forwards signed-in users
+    // straight to their dashboard. This is what makes the installed icon open to
+    // login instead of dead-ending here: iOS starts an added-to-home-screen app
+    // on the page it was added from (this one), and this also covers Android.
+    if (isStandalone()) {
+      setInstalled(true);
+      setMounted(true);
+      window.location.replace("/login");
+      return;
+    }
     setPlatform(detectPlatform());
-    setInstalled(isStandalone());
     setMounted(true);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
@@ -89,10 +99,8 @@ export function DownloadClient() {
         <div className="h-40" />
       ) : installed ? (
         <div className="w-full rounded-2xl border border-line bg-panel p-8">
-          <p className="text-lg font-semibold text-ink mb-1">You&apos;re all set 🎉</p>
-          <p className="text-base text-muted-2">
-            Wingman is already installed. Open it from your home screen.
-          </p>
+          <p className="text-lg font-semibold text-ink mb-1">Opening Wingman…</p>
+          <p className="text-base text-muted-2">Taking you to sign in.</p>
         </div>
       ) : APPS_LIVE ? (
         <div className="w-full flex flex-col sm:flex-row gap-3 justify-center">

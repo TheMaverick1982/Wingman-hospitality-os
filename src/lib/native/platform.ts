@@ -1,5 +1,5 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 // Detecting the native iOS app (a Capacitor WKWebView that loads the live site).
 // The token is baked into the iOS build via capacitor.config.json
@@ -19,9 +19,13 @@ import { headers } from "next/headers";
 // NOTE: this token only takes effect in a REBUILT iOS binary (cap sync + rebuild).
 // Resubmitting the old binary without rebuilding will not carry the token.
 const IOS_NATIVE_UA_TOKEN = "WingmanNativeIOS";
+// Durable cookie the app stamps on first launch (see middleware /app-entry). It's
+// the reliable signal; the user-agent token is a secondary fallback.
+const NATIVE_APP_COOKIE = "wm_native";
 
 /** True when the current request comes from the native iOS app. */
 export async function isNativeIOS(): Promise<boolean> {
+  if ((await cookies()).get(NATIVE_APP_COOKIE)?.value === "ios") return true;
   const ua = (await headers()).get("user-agent") ?? "";
   return ua.includes(IOS_NATIVE_UA_TOKEN);
 }
