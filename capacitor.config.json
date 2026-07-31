@@ -16,6 +16,9 @@
     "contentInset": "always",
     "appendUserAgent": "WingmanNativeIOS"
   },
+  "android": {
+    "appendUserAgent": "WingmanNativeAndroid"
+  },
   "backgroundColor": "#0a6cff",
   "plugins": {
     "SplashScreen": {

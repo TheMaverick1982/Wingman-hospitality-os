@@ -70,29 +70,29 @@ const PUBLIC_PREFIXES = [
   "/founders",
 ];
 
-// Native iOS is a login-only client for existing business customers. Every
-// marketing, account/organization registration, pricing, or external-purchase /
-// lead-capture surface must be kept OUT of the app (App Store guideline 3.1.1;
-// business model established under 2.1(b)). In the app these all redirect to
-// /login; the authenticated product (dashboard, hiring, training, settings, …)
-// is untouched, and account creation + billing happen on the web only.
+// The native apps (iOS + Android) are login-only clients for existing business
+// customers. Every marketing, account/organization registration, pricing, or
+// external-purchase / lead-capture surface must be kept OUT of the app (App
+// Store guideline 3.1.1; business model established under 2.1(b)). In the app
+// these all redirect to /login; the authenticated product (dashboard, hiring,
+// training, settings, …) is untouched, and account creation + billing happen on
+// the web only.
 //
-// How we know a request is the native app (either is sufficient):
-//   1. A durable cookie stamped on first launch. The app's capacitor server.url
-//      points at NATIVE_APP_ENTRY, an app-only URL that sets this cookie and
-//      redirects to /login. Cookies ride on every subsequent request and persist
-//      across launches, so this works even when the webview user-agent doesn't
-//      carry our token. This is the reliable primary signal.
-//   2. The WingmanNativeIOS user-agent token (capacitor.config.json →
-//      ios.appendUserAgentString) — kept as a secondary signal.
+// How we know a request is a native app (either is sufficient):
+//   1. The "WingmanNative" user-agent marker appended by Capacitor
+//      (capacitor.config.json → ios.appendUserAgent = "WingmanNativeIOS",
+//      android.appendUserAgent = "WingmanNativeAndroid"). Matching the shared
+//      "WingmanNative" prefix covers both platforms.
+//   2. A durable cookie stamped on first launch via NATIVE_APP_ENTRY — a
+//      secondary fallback for the case where the UA marker doesn't reach us.
 // Both are things only the app ever presents, so this is a no-op for the website.
-const IOS_NATIVE_UA_TOKEN = "WingmanNativeIOS";
+const NATIVE_UA_MARKER = "WingmanNative";
 const NATIVE_APP_COOKIE = "wm_native";
 const NATIVE_APP_ENTRY = "/app-entry";
 
 function isNativeApp(request: NextRequest): boolean {
   if (request.cookies.get(NATIVE_APP_COOKIE)?.value === "ios") return true;
-  return (request.headers.get("user-agent") ?? "").includes(IOS_NATIVE_UA_TOKEN);
+  return (request.headers.get("user-agent") ?? "").includes(NATIVE_UA_MARKER);
 }
 
 const IOS_BLOCKED_PREFIXES = [
