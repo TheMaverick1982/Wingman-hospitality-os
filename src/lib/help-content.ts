@@ -378,6 +378,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "Straight from what you set in Training & Standards for each role (its hospitality behaviors and role duties). You don't maintain it twice — update a role's standards or duties and every person in that role sees the change on their guide automatically." },
       { kind: "note", text: "It's read-only for staff and shows no metrics — just their role. A team member only sees it once their login is linked to their staff profile (connect it on the Staff page); until then the page prompts them to ask a manager to link their account." },
       { kind: "note", text: "Managers & owners can preview any role's guide from Training & Standards → \"Preview role guide\" (top of the page). Flip between roles to see exactly what each one sees. It's also where you write the role overview: tap \"Generate with AI\" to draft one from that role's standards and duties, edit it however you like, and Save — it then shows at the top of the guide for everyone in that role." },
+      { kind: "image", src: "/help/role-overview.png", alt: "The manager role-guide preview with the AI role overview editor and role switcher", caption: "Managers preview any role and write its overview with AI — it shows at the top of the guide every staff member in that role sees." },
     ],
     links: [{ label: "Building training programs", href: "/help/training-programs" }, { label: "Application form & applicants", href: "/help/application-form" }],
   },
@@ -527,6 +528,7 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Post specific openings (by role & location)" },
       { kind: "p", text: "On the Hiring page, \"Job openings\" lets you post for a specific role at a specific location (or all locations). Tap \"Create opening,\" pick the role and location, add pay/type and anything to highlight, then \"Generate ad with AI\" writes a full job ad grounded in that role's standards, duties, and hiring criteria — or paste your existing ad and it sharpens it. Edit it, save, and you get copy-ready ad text plus a unique apply link." },
+      { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },
       { kind: "list", items: [
         "Post the ad anywhere you hire — Indeed, Craigslist, Facebook — and use the opening's apply link as the \"apply\" URL.",
         "Anyone who applies through it lands with the role and location already set, and shows up tagged to that opening (with an applicant count), so you can see which post is working.",
