@@ -476,6 +476,23 @@ export default async function DashboardPage({
         </div>
       )}
 
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your shift</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <Link
+          href="/accountability"
+          className="flex items-center gap-4 bg-white border border-line rounded-2xl p-6 shadow-sm hover:border-brick transition-colors group"
+        >
+          <span className="w-11 h-11 rounded-[12px] bg-brick-tint text-brick flex items-center justify-center shrink-0">
+            <ClipboardCheck size={20} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[15px] font-semibold text-ink">Your pre-shift checklist</div>
+            <div className="text-[13px] text-muted-2">Run your own checklist before the shift — just like the rest of the team.</div>
+          </div>
+          <ArrowRight size={17} className="text-muted-2 shrink-0 group-hover:text-brick transition-colors" />
+        </Link>
+      </div>
+
       {programRevenue.billedVisits > 0 && (
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">

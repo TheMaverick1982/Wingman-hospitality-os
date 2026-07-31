@@ -190,8 +190,12 @@ export default async function AccountabilityPage({
   let customLists = customChecklists.map((c, i) => ({ ...c, departments: c.departments ?? [], items: customItemsRaw[i].map((it) => it.item) }));
   const customIds = customLists.map((c) => c.id);
   // The viewer's own department decides which role checklists they personally run.
+  // A manager/owner without a staff record still runs their own checklists — treat
+  // them as the "Manager" role so pre-shift and any Manager-assigned checklist
+  // reaches them, just like servers/hosts/kitchen get theirs.
   const { data: myStaffRow } = await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle();
-  const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? null;
+  const isManagement = profile.accessRole === "manager" || profile.accessRole === "shift_lead" || profile.accessRole === "super_admin";
+  const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? (isManagement ? "Manager" : null);
 
   let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
   let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
@@ -231,6 +235,9 @@ export default async function AccountabilityPage({
   ]);
   const rolesInUse = ((): string[] => {
     const present = new Set<string>([
+      // Managers run their own checklists too — keep the role assignable so owners
+      // can create and target a Manager pre-shift/closing checklist.
+      "Manager",
       ...((staffRosterRows ?? []) as { department: string }[]).map((s) => s.department),
       ...((stdDeptRows ?? []) as { department: string }[]).map((d) => d.department),
       ...((trainDeptRows ?? []) as { department: string }[]).map((d) => d.department),
