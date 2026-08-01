@@ -33,6 +33,86 @@ function Check() {
   );
 }
 
+// Simple inline stroke icons (no external assets — theme-safe, currentColor).
+const iconProps = {
+  width: 26,
+  height: 26,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.7,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function IconTraining() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5" />
+    </svg>
+  );
+}
+function IconAccountability() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <rect x="4" y="4" width="16" height="17" rx="2" />
+      <path d="M9 3.5h6v3H9zM8.5 12l2 2 4-4.5" />
+    </svg>
+  );
+}
+function IconBounceback() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M3 11a8 8 0 0 1 14-5l3 3M20 4v3.5h-3.5" />
+      <path d="M21 13a8 8 0 0 1-14 5l-3-3M4 20v-3.5h3.5" />
+    </svg>
+  );
+}
+function IconRegulars() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c0-3 2.7-5 6-5s6 2 6 5" />
+      <path d="M16.5 6.5l1 2 2 .3-1.5 1.5.4 2.2-1.9-1-1.9 1 .4-2.2L13 8.8l2-.3 1-2Z" />
+    </svg>
+  );
+}
+
+const FLOW = [
+  { icon: <IconTraining />, title: "Culture & training", sub: "A standard, taught and signed off" },
+  { icon: <IconAccountability />, title: "Shift accountability", sub: "Checklists run, every shift" },
+  { icon: <IconBounceback />, title: "Guest bounce-back", sub: "Win-backs & referrals, automatic" },
+  { icon: <IconRegulars />, title: "More regulars", sub: "First visits become repeat visits" },
+];
+
+function FlowStrip() {
+  return (
+    <section className="bg-paper border-b border-line">
+      <div className="max-w-[980px] mx-auto px-5 py-10 sm:py-12">
+        <div className="text-center text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-2 mb-7">
+          What we install
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-2">
+          {FLOW.map((step, i) => (
+            <div key={step.title} className="flex flex-col sm:flex-row items-center gap-3 sm:gap-2">
+              <div className="flex flex-col items-center text-center gap-2 rounded-2xl bg-white border border-line px-5 py-6 w-full sm:w-[176px] shadow-sm">
+                <span className="w-12 h-12 rounded-full bg-brick-tint text-brick flex items-center justify-center">
+                  {step.icon}
+                </span>
+                <div className="text-[14.5px] font-semibold text-ink leading-tight">{step.title}</div>
+                <div className="text-[12.5px] text-muted leading-snug">{step.sub}</div>
+              </div>
+              {i < FLOW.length - 1 && (
+                <span aria-hidden className="text-brick/50 text-[20px] font-bold rotate-90 sm:rotate-0 shrink-0">→</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function GuaranteePage() {
   return (
     <main className="min-h-screen bg-paper text-ink">
@@ -51,12 +131,15 @@ export default function GuaranteePage() {
             guest bounce-back — and we put our money where our mouth is: run it as designed and your repeat-guest rate
             improves, guaranteed. If it doesn&rsquo;t, Wingman is free until it does.
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
+          <div className="flex flex-col items-center gap-3 mt-2">
             <CTA />
-            <span className="text-[13.5px] text-muted-2">30-day, no-questions money back · Keep your training system either way</span>
+            <span className="text-[13.5px] text-muted-2 text-center">30-day, no-questions money back · Keep your training system either way</span>
           </div>
         </div>
       </section>
+
+      {/* ---- What we install (visual flow) ---- */}
+      <FlowStrip />
 
       {/* ---- The stakes ---- */}
       <section className="max-w-[820px] mx-auto px-5 py-14 sm:py-20 text-center">
@@ -64,7 +147,7 @@ export default function GuaranteePage() {
           You already paid to get them in the door. Most of them never come back — and you never find out why.
         </h2>
         <p className="text-[17px] text-muted leading-relaxed max-w-[640px] mx-auto">
-          A first visit costs you ad spend, a discount, a table. A <span className="text-ink font-semibold">second</span> visit
+          A first visit costs you ad spend, a discount, a table. A <span className="text-ink font-semibold">second</span>{" "}visit
           costs you nothing and is worth everything — it&rsquo;s where the profit lives. But the moment the owner isn&rsquo;t
           watching, the standard slips, the follow-up never happens, and the guest quietly disappears. That leak is the most
           expensive thing in your restaurant, and it&rsquo;s invisible on a P&amp;L.
