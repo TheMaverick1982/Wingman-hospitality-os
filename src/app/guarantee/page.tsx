@@ -72,17 +72,23 @@ function IconBounceback() {
 function IconRegulars() {
   return (
     <svg {...iconProps} aria-hidden>
-      <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c0-3 2.7-5 6-5s6 2 6 5" />
-      <path d="M16.5 6.5l1 2 2 .3-1.5 1.5.4 2.2-1.9-1-1.9 1 .4-2.2L13 8.8l2-.3 1-2Z" />
+      <path d="M20.8 5.6a4.5 4.5 0 0 0-6.4 0l-.9.9-.9-.9a4.5 4.5 0 1 0-6.4 6.4l7.3 7.3 7.3-7.3a4.5 4.5 0 0 0 0-6.4Z" />
+    </svg>
+  );
+}
+function IconManager() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" />
     </svg>
   );
 }
 
 const FLOW = [
-  { icon: <IconTraining />, title: "Culture & training", sub: "A standard, taught and signed off" },
-  { icon: <IconAccountability />, title: "Shift accountability", sub: "Checklists run, every shift" },
-  { icon: <IconBounceback />, title: "Guest bounce-back", sub: "Win-backs & referrals, automatic" },
-  { icon: <IconRegulars />, title: "More regulars", sub: "First visits become repeat visits" },
+  { icon: <IconTraining />, title: "Train the standard", sub: "Role-by-role, taught & signed off" },
+  { icon: <IconAccountability />, title: "Run every shift", sub: "Checklists that hold the line" },
+  { icon: <IconBounceback />, title: "Bring guests back", sub: "Win-backs & referrals, on autopilot" },
+  { icon: <IconRegulars />, title: "Make regulars", sub: "First visits turn into repeat visits" },
 ];
 
 function FlowStrip() {
@@ -110,6 +116,102 @@ function FlowStrip() {
         </div>
       </div>
     </section>
+  );
+}
+
+// Illustrative product panel for the "four things" section — a stylized view of
+// the live guarantee status, not a real customer record. Rendered on-device with
+// tokens so it stays crisp and theme-safe (no screenshot to keep in sync).
+const DASH_ROWS = [
+  {
+    icon: <IconManager />,
+    title: "GMs active",
+    desc: "A manager in the system at every location",
+    metric: "8 / 8 locations",
+    pill: "All in",
+  },
+  {
+    icon: <IconTraining />,
+    title: "Training deployed",
+    desc: "Role-specific training completed & verified",
+    metric: "92%",
+    pill: "On track",
+    progress: 92,
+  },
+  {
+    icon: <IconAccountability />,
+    title: "Accountability running",
+    desc: "Shift checklists run across all locations",
+    metric: "26 / 30 days",
+    pill: "On track",
+  },
+  {
+    icon: <IconBounceback />,
+    title: "Bounce-back live",
+    desc: "Win-back & referral engine on since week 2",
+    metric: "Active",
+    pill: "Live",
+  },
+];
+
+function GuaranteeDashboard() {
+  return (
+    <div className="max-w-[680px] mx-auto rounded-2xl bg-white text-ink shadow-2xl border border-black/5 overflow-hidden">
+      {/* window chrome */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-paper">
+        <span className="flex gap-1.5" aria-hidden>
+          <span className="w-2.5 h-2.5 rounded-full bg-brick/50" />
+          <span className="w-2.5 h-2.5 rounded-full bg-gold/60" />
+          <span className="w-2.5 h-2.5 rounded-full bg-olive/60" />
+        </span>
+        <span className="flex-1 text-center text-[12.5px] font-semibold text-muted-2">Guarantee status</span>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-olive">
+          <span className="w-1.5 h-1.5 rounded-full bg-olive animate-pulse" aria-hidden /> Live
+        </span>
+      </div>
+
+      {/* summary band */}
+      <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
+        <div>
+          <div className="text-[12px] text-muted-2 font-medium">90-day guarantee window</div>
+          <div className="text-[15px] font-semibold text-ink">Day 47 of 90</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[12px] text-muted-2 font-medium">Requirements met</div>
+          <div className="text-[22px] font-bold tracking-tight text-olive leading-none mt-0.5">4 / 4</div>
+        </div>
+      </div>
+
+      {/* rows */}
+      <div className="divide-y divide-line">
+        {DASH_ROWS.map((r) => (
+          <div key={r.title} className="flex items-center gap-3.5 px-5 sm:px-6 py-3.5">
+            <span className="w-9 h-9 rounded-lg bg-brick-tint text-brick flex items-center justify-center shrink-0">
+              {r.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold text-ink leading-tight">{r.title}</div>
+              <div className="text-[12.5px] text-muted leading-snug truncate">{r.desc}</div>
+              {typeof r.progress === "number" && (
+                <div className="mt-1.5 h-1.5 rounded-full bg-line overflow-hidden max-w-[180px]">
+                  <div className="h-full rounded-full bg-olive" style={{ width: `${r.progress}%` }} />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className="text-[13px] font-semibold text-ink tabular-nums">{r.metric}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-olive-tint text-olive text-[10.5px] font-semibold px-2 py-0.5">
+                <span className="w-1 h-1 rounded-full bg-olive" aria-hidden /> {r.pill}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="px-5 sm:px-6 py-2.5 bg-paper text-center text-[11px] text-muted-2 border-t border-line">
+        Example view · your real locations and data
+      </div>
+    </div>
   );
 }
 
@@ -228,19 +330,7 @@ export default function GuaranteePage() {
               never anything to argue about.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              ["1 · Your GMs are in", "Every location has a manager actually in the system and using it — the person who makes it stick when you're not on the floor."],
-              ["2 · Training is deployed", "Your team completes their role-specific training, so the standard is taught and verified — not assumed."],
-              ["3 · Accountability runs", "Shift checklists get run on most days, at every location. Standards get inspected, not hoped for."],
-              ["4 · Bounce-back is live", "The guest win-back engine is on and running from week two — the machine that actually moves repeat rate."],
-            ].map(([t, d]) => (
-              <div key={t} className="rounded-2xl bg-white/5 border border-white/10 p-6">
-                <div className="text-[16px] font-semibold mb-1.5">{t}</div>
-                <div className="text-[14px] text-white/70 leading-relaxed">{d}</div>
-              </div>
-            ))}
-          </div>
+          <GuaranteeDashboard />
           <p className="text-center text-[15px] text-white/80 mt-8 max-w-[640px] mx-auto">
             We&rsquo;re betting on you doing those four things. Do them, and the results follow. That&rsquo;s the whole trade.
           </p>
