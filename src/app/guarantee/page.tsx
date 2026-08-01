@@ -308,7 +308,9 @@ const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
         exactly the way it would from a POS feed. A POS connection is easier and less error-prone, so we&rsquo;ll help you set one up if you
         can &mdash; but <span className="text-ink font-semibold">consistent daily logging is a fully supported fallback</span>, so no group gets
         excluded over technology. For the guarantee, what matters is that repeat visits are captured consistently &mdash; whether that&rsquo;s
-        automatic or hand-entered, it counts.
+        automatic or hand-entered, it counts. And the easiest way to keep it consistent is to
+        <span className="text-ink font-semibold"> fold guest logging into the shift checklist your team already runs</span> &mdash; it rides
+        the same daily habit that&rsquo;s one of your four requirements, so one routine covers both.
       </p>
     ),
   },
