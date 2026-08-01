@@ -292,10 +292,23 @@ const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
     q: "What do we need in place for the guarantee to apply?",
     a: (
       <p>
-        Three things: <span className="text-ink font-semibold">3+ locations</span>, a POS or guest system that can identify repeat visits,
-        and enough volume to be meaningful &mdash; at least <span className="text-ink font-semibold">500 identified first-time guests</span> in
+        Three things: <span className="text-ink font-semibold">3+ locations</span>, a way to identify repeat visits &mdash; a POS/guest
+        integration, or a manager logging them daily in Wingman &mdash; and enough volume to be meaningful &mdash; at least <span className="text-ink font-semibold">500 identified first-time guests</span> in
         your baseline month. Below that, the numbers are too noisy to promise against, so the performance guarantee doesn&rsquo;t apply &mdash;
         you still get the full platform and the 30-day money-back.
+      </p>
+    ),
+  },
+  {
+    q: "What if our POS doesn’t integrate — or we don’t have one?",
+    a: (
+      <p>
+        You&rsquo;re not shut out. Wingman has a built-in guest tracker &mdash; assign a manager to log first-time and returning guests each
+        day (a name plus a phone or email), or bulk-import from a spreadsheet, and the platform builds the repeat-visit history from that,
+        exactly the way it would from a POS feed. A POS connection is easier and less error-prone, so we&rsquo;ll help you set one up if you
+        can &mdash; but <span className="text-ink font-semibold">consistent daily logging is a fully supported fallback</span>, so no group gets
+        excluded over technology. For the guarantee, what matters is that repeat visits are captured consistently &mdash; whether that&rsquo;s
+        automatic or hand-entered, it counts.
       </p>
     ),
   },
@@ -487,7 +500,7 @@ export default function GuaranteePage() {
             <ul className="flex flex-col gap-3">
               {[
                 "You run 3+ locations and want them held to one standard.",
-                "You can connect a POS or guest system that identifies repeat visits.",
+                "You can identify repeat visits — a POS/guest integration, or a manager logging them daily.",
                 "You have an ops person (or you) who'll make it stick — not just buy it.",
                 "You're ready to get your GMs in and run accountability most days.",
               ].map((t) => (
