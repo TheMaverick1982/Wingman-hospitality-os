@@ -6,10 +6,28 @@ import { WingmanLogo } from "@/components/ui/wingman-logo";
 // around the Retention Guarantee. A private link to push in outreach — not in
 // the nav, not in search. The offer is by application (a qualification call), so
 // every CTA points at the demo/booking flow rather than self-serve signup.
+const OG_TITLE = "Turn first-time guests into regulars in 90 days — or you stop paying until you do.";
+const OG_DESC =
+  "The Retention Guarantee: run Wingman as designed and your repeat-guest rate improves in 90 days, or it's free until it does.";
+
 export const metadata: Metadata = {
   title: "The Full House Install — Wingman",
   description: "Turn first-time guests into regulars in 90 days — guaranteed, or you stop paying until you do.",
+  // Keep it out of search, but let link scrapers still read the share card when
+  // the private URL is pasted into a message.
   robots: { index: false, follow: false },
+  openGraph: {
+    title: OG_TITLE,
+    description: OG_DESC,
+    url: "/guarantee",
+    siteName: "Wingman",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESC,
+  },
 };
 
 const BOOK = "/book-a-demo";
