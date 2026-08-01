@@ -233,6 +233,126 @@ function GuaranteeDashboard() {
   );
 }
 
+function Faq({ q, a }: { q: string; a: React.ReactNode }) {
+  return (
+    <details className="group rounded-2xl border border-line bg-white px-5 sm:px-6 open:shadow-sm">
+      <summary className="flex items-center justify-between gap-4 cursor-pointer list-none py-5 [&::-webkit-details-marker]:hidden">
+        <span className="text-[15.5px] sm:text-[16.5px] font-semibold text-ink leading-snug">{q}</span>
+        <span
+          aria-hidden
+          className="shrink-0 w-6 h-6 rounded-full border border-line text-muted-2 flex items-center justify-center text-[17px] leading-none transition-transform duration-200 group-open:rotate-45"
+        >
+          +
+        </span>
+      </summary>
+      <div className="pb-6 -mt-0.5 text-[14.5px] text-muted leading-relaxed">{a}</div>
+    </details>
+  );
+}
+
+const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
+  {
+    q: "What exactly does “run it as designed” mean?",
+    a: (
+      <>
+        <p>Four things — all timestamped on your dashboard from day one, so there are no judgment calls and nothing fuzzy:</p>
+        <ul className="mt-2.5 flex flex-col gap-1.5 list-disc pl-5 marker:text-brick/50">
+          <li><span className="text-ink font-semibold">GMs active</span> — a manager logs in at least 4× a month, at every location.</li>
+          <li><span className="text-ink font-semibold">Training deployed</span> — 90%+ of assigned staff finish their role-specific training.</li>
+          <li><span className="text-ink font-semibold">Accountability running</span> — shift checklists get run on at least 60 of the 90 days, at every location.</li>
+          <li><span className="text-ink font-semibold">Bounce-back live</span> — your guest win-back offer runs continuously from day 15 onward.</li>
+        </ul>
+        <p className="mt-2.5">Miss the odd day and there&rsquo;s grace built in (below). Do these four, and the results follow — that&rsquo;s the whole trade.</p>
+      </>
+    ),
+  },
+  {
+    q: "When does the 90-day clock actually start?",
+    a: (
+      <p>
+        Not at signing. The guarantee <span className="text-ink font-semibold">activates on Day 30</span>, and only after a clean install:
+        every location created, every GM logged in at least once, your training published, guest-visit data flowing from your POS, and
+        shift accountability switched on everywhere. Your first 30 days (the install month) become your baseline; the 90-day measurement
+        window runs Days 31&ndash;120, and you get a written result on Day 121. If a delay is on us, we extend the install window 15 days.
+      </p>
+    ),
+  },
+  {
+    q: "How do you measure “repeat-guest rate”?",
+    a: (
+      <p>
+        It&rsquo;s the share of your identified first-time guests who come back at least once within 60 days &mdash; measured across your
+        <span className="text-ink font-semibold"> whole portfolio</span>, on your real connected POS/guest data, against your own baseline
+        month. &ldquo;Improvement&rdquo; means a lift of at least <span className="text-ink font-semibold">2.0 percentage points</span>. It&rsquo;s
+        computed automatically in the platform &mdash; not eyeballed, not from memory.
+      </p>
+    ),
+  },
+  {
+    q: "What do we need in place for the guarantee to apply?",
+    a: (
+      <p>
+        Three things: <span className="text-ink font-semibold">3+ locations</span>, a POS or guest system that can identify repeat visits,
+        and enough volume to be meaningful &mdash; at least <span className="text-ink font-semibold">500 identified first-time guests</span> in
+        your baseline month. Below that, the numbers are too noisy to promise against, so the performance guarantee doesn&rsquo;t apply &mdash;
+        you still get the full platform and the 30-day money-back.
+      </p>
+    ),
+  },
+  {
+    q: "What if we hit a rough patch mid-window?",
+    a: (
+      <p>
+        There&rsquo;s grace built in. A location you open or acquire mid-window is exempt for its first 30 days; a location that closes drops
+        out from its closing date; and accountability tolerates one 7-day gap per location for illness, an outage, or an emergency. On top of
+        that, if any requirement ever dips below the line, <span className="text-ink font-semibold">we tell you in writing within 5 business
+        days</span> &mdash; with the exact gap and the path back. You can&rsquo;t lose the guarantee without us flagging it first.
+      </p>
+    ),
+  },
+  {
+    q: "What happens if we do everything and the number still doesn’t move?",
+    a: (
+      <p>
+        You stop paying. We keep the full platform and support running <span className="text-ink font-semibold">free</span> until your
+        repeat-guest rate hits the threshold &mdash; up to six monthly cycles. If it still hasn&rsquo;t by then, you can walk with no further
+        obligation or resume at your normal rate. (The cash-back path is the 30-day window; Layer 2&rsquo;s remedy is free service, not refunds.)
+      </p>
+    ),
+  },
+  {
+    q: "What would void the guarantee?",
+    a: (
+      <p>
+        Big changes that break the measurement or the operation: selling or merging the business, migrating your POS mid-window, changing
+        menu pricing more than 15% across the portfolio, rebranding or re-concepting more than a quarter of your locations, closing or
+        remodeling more than a quarter of them for two weeks or more, a force-majeure event, or falling into breach (like non-payment).
+        Several of these are fine if you flag them up front and we agree on an adjusted baseline in writing.
+      </p>
+    ),
+  },
+  {
+    q: "Do we just have to take your word for the result?",
+    a: (
+      <p>
+        No. Everything sits on a live dashboard for the full 120 days &mdash; you watch the four requirements and your repeat rate the whole
+        time. Ask for a <span className="text-ink font-semibold">complete export of the underlying data</span> anytime and you get it. And any
+        ambiguity in how a term is defined is resolved in your favor. No black box.
+      </p>
+    ),
+  },
+  {
+    q: "And the 30-day money-back — any strings?",
+    a: (
+      <p>
+        None. If it&rsquo;s not what you expected, one email or one click inside the first 30 days and we refund everything &mdash; including any
+        install fee &mdash; within 5 business days. No exit interview. And you <span className="text-ink font-semibold">keep the culture and
+        training system</span> we built you, permanently. Yours either way.
+      </p>
+    ),
+  },
+];
+
 export default function GuaranteePage() {
   return (
     <main className="min-h-screen bg-paper text-ink">
@@ -399,6 +519,25 @@ export default function GuaranteePage() {
             We&rsquo;re betting on you running four things. If you won&rsquo;t commit to them, don&rsquo;t apply — you&rsquo;ll
             waste your money and our time.
           </p>
+        </div>
+      </section>
+
+      {/* ---- FAQ / the fine print in plain English ---- */}
+      <section className="bg-paper border-t border-line">
+        <div className="max-w-[820px] mx-auto px-5 py-16 sm:py-24">
+          <div className="text-center mb-10">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-brick mb-2">Straight answers</div>
+            <h2 className="font-display text-[30px] sm:text-[40px] font-bold tracking-[-0.02em]">What we expect from you — and how it&rsquo;s measured</h2>
+            <p className="text-[16px] text-muted mt-3 max-w-[620px] mx-auto">
+              The guarantee is a two-way deal. Here&rsquo;s exactly what your side looks like, in plain English — every number below is on
+              your dashboard from day one, and the full written terms are shared before you sign.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            {FAQ_ITEMS.map((f) => (
+              <Faq key={f.q} q={f.q} a={f.a} />
+            ))}
+          </div>
         </div>
       </section>
 
