@@ -85,13 +85,15 @@ export default async function HiringPage({
   let candidatesQ = hiringAdmin.from("candidates").select("*").eq("org_id", profile.orgId).order("occurred_on", { ascending: false });
   if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
 
-  // Incoming applications are org-wide intake. An owner or all-locations manager
-  // sees every application; a location-locked member sees the locations they can
-  // actually reach plus any unassigned application. We deliberately do NOT narrow
-  // the intake to the single location picked in the top-bar switcher — an applicant
-  // who chose one store must never disappear from someone focused on another, or a
-  // real candidate is silently lost (the notification email still goes out, but the
-  // inbox looks empty).
+  // Applications follow the same location logic as everything else on the page:
+  // the top-bar location selector scopes the intake. Pick a location and you see
+  // that location's applicants; pick "All locations" (only spanning owners/
+  // all-locations managers can) and you see every application.
+  //
+  // Safety net for members who CAN'T switch to an all-locations view (a
+  // location-locked or specific-locations member): they always keep unassigned
+  // (no-location) intake so an applicant who didn't pick a store is never lost.
+  // A spanning admin sees those unassigned applications under "All locations".
   //
   // Only 0084 base columns are selected here. interview_at / interview_details are
   // added by migration 0087 and are read separately in a guarded query below, so a
@@ -104,7 +106,11 @@ export default async function HiringPage({
     .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
   const spansAllLocations = profile.accessRole === "super_admin" || profile.allLocations;
-  if (!spansAllLocations) {
+  if (effectiveLocation) {
+    applicationsQ = spansAllLocations
+      ? applicationsQ.eq("location_id", effectiveLocation)
+      : applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
+  } else if (!spansAllLocations) {
     const reachable = [profile.locationId, ...profile.accessibleLocationIds].filter(Boolean) as string[];
     const clauses = [...reachable.map((id) => `location_id.eq.${id}`), "location_id.is.null"];
     applicationsQ = applicationsQ.or(clauses.join(","));
@@ -240,10 +246,18 @@ export default async function HiringPage({
   const openingCounts: Record<string, number> = {};
   let openingLocations: { id: string; name: string }[] = [];
   if (canEdit) {
-    const { data: opRows } = await supabase
+    // Scope openings to the selected location, same as the rest of the page. An
+    // opening posted for "All locations" (location_id null) is recruiting at every
+    // store, so it stays visible in a single-location view too. "All locations"
+    // (no effectiveLocation) shows every opening.
+    let openingsQ = supabase
       .from("job_openings")
       .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count")
       .order("created_at", { ascending: false });
+    if (effectiveLocation) {
+      openingsQ = openingsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
+    }
+    const { data: opRows } = await openingsQ;
     if (opRows) {
       openings.push(...(opRows as OpeningRow[]));
       const { data: appCounts } = await supabase.from("job_applications").select("opening_id").not("opening_id", "is", null);
