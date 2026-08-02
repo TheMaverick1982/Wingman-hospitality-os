@@ -7,7 +7,7 @@ import { ROLE_SEED } from "@/lib/role-seed";
 // A role is "active" for an org iff it has a department_meta row. That's the
 // registry of which roles this restaurant actually runs — set by the Setup
 // Wizard and managed on the Training / Hiring pages. Training and Hiring show
-// only the active roles, not all twelve built-ins.
+// only the active roles, not every built-in.
 
 export async function getActiveDepartments(): Promise<Department[]> {
   const supabase = await createClient();
