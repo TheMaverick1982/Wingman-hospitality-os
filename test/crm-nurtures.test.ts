@@ -14,8 +14,8 @@ const EXPECTED: Record<string, { days: number[]; conds: string[]; transFirst: bo
   calculator: { days: [0, 1, 3, 6, 9, 13], conds: Array(6).fill("always"), transFirst: true },
   scorecard: { days: [0, 1, 3, 6, 9, 13], conds: Array(6).fill("always"), transFirst: true },
   signup: {
-    days: [0, 1, 3, 5, 5, 8, 8, 11, 14],
-    conds: ["always", "always", "always", "activated", "not_activated", "activated", "not_activated", "activated", "always"],
+    days: [0, 1, 1, 3, 5, 5, 8, 8, 11, 14],
+    conds: ["always", "always", "always", "always", "activated", "not_activated", "activated", "not_activated", "activated", "always"],
     transFirst: true,
   },
   "demo-no-show": { days: [0, 2], conds: ["always", "always"], transFirst: false },
