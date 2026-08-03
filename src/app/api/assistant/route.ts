@@ -13,6 +13,7 @@ import {
   type AssistantMessage,
   type ReportInput,
 } from "@/lib/assistant";
+import { buildRestaurantKnowledge } from "@/lib/assistant-knowledge";
 
 export const maxDuration = 60;
 
@@ -96,11 +97,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to respond to." }, { status: 400 });
   }
 
-  // Split the system prompt so the large, static help corpus is prompt-cached
-  // across turns (the first block is small and changes with role).
+  // Ground the assistant on THIS restaurant's own content so it can answer
+  // "how do we do things here" (standards, menu, policies) — not just how to use
+  // the app. Read through the user's RLS-scoped client and guarded, so it never
+  // leaks another org's data and never takes down the assistant on a bad read.
+  const supabase = await createClient();
+  const knowledge = await buildRestaurantKnowledge(supabase, profile).catch(() => "");
+
+  // The system prompt (help corpus + this org's knowledge) is prompt-cached
+  // across turns of the conversation.
   const pricing = await getPlatformPricing();
   const system: SystemBlock[] = [
-    { type: "text", text: systemInstructions(profile.accessRole, { firstPrice: dollars(pricing.firstCents), addlPrice: dollars(pricing.addlCents) }), cache_control: { type: "ephemeral" } },
+    {
+      type: "text",
+      text: systemInstructions(profile.accessRole, {
+        pricing: { firstPrice: dollars(pricing.firstCents), addlPrice: dollars(pricing.addlCents) },
+        knowledge,
+      }),
+      cache_control: { type: "ephemeral" },
+    },
   ];
 
   try {
@@ -120,7 +135,6 @@ export async function POST(request: NextRequest) {
     if (toolUse) {
       const r = toolUse.input;
       const { subject, body } = reportToTicket(r);
-      const supabase = await createClient();
       const { data: ticket, error } = await supabase
         .from("support_tickets")
         .insert({ org_id: profile.orgId, created_by: profile.userId, subject })
