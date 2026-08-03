@@ -195,12 +195,20 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         step_order: 1,
         delay_days: 0,
         subject: "Your Wingman workspace is live — do this first",
-        body: "{{contact.first_name}} — welcome. {{contact.workspace_name}} is up and running.\n\nSkip the grand tour. Do this one thing today, because it's the fastest \"oh, I get it\" moment in the product:\n\n**Generate your culture & training system.** Tell Wingman about your concept and it drafts the standards, role training, and shift expectations your team runs on — the stuff that usually lives in a dusty binder or one great manager's head. Takes minutes, and everything else in Wingman builds on it.\n\nLog in, and it's the first thing the workspace asks you to do.\n\nI'm Brian, the founder — replies to these emails come straight to me. Use that.\n\nBrian",
+        body: "{{contact.first_name}} — welcome. {{contact.workspace_name}} is up and running.\n\nSkip the grand tour. Do this one thing today, because it's the fastest \"oh, I get it\" moment in the product:\n\n**Generate your culture & training system.** Tell Wingman about your concept and it drafts the standards, role training, and shift expectations your team runs on — the stuff that usually lives in a dusty binder or one great manager's head. Takes minutes, and everything else in Wingman builds on it.\n\nLog in, and it's the first thing the workspace asks you to do.\n\nAnd put Wingman on your phone while you're at it — it's where you'll use it every shift: joinwingman.app/download (App Store + Google Play).\n\nI'm Brian, the founder — replies to these emails come straight to me. Use that.\n\nBrian",
         transactional: true,
         send_condition: "always",
       },
       {
         step_order: 2,
+        delay_days: 1,
+        subject: "Put Wingman in your pocket",
+        body: "{{contact.first_name}} — one quick setup thing: get Wingman on your phone. That's where it actually lives during a shift — checklists, training, and guest bounce-backs, right at the pass.\n\nApp Store + Google Play, both here: joinwingman.app/download\n\nBrian",
+        transactional: false,
+        send_condition: "always",
+      },
+      {
+        step_order: 3,
         delay_days: 1,
         subject: "The binder problem (and why you just solved it)",
         body: "Every restaurant group has a version of the binder: the training doc from three years ago, the culture deck from the last offsite, the checklist taped by the POS. All written with good intentions. None of it alive on tonight's shift.\n\nWhat you generated yesterday (or will today) is different for one reason: **it's connected.** The standards feed the training, the training feeds shift-level accountability, and all of it points at one number — do first-time guests come back?\n\nToday's step: **review and edit what Wingman drafted.** It's your concept's system, not ours; make it sound like you. Ten minutes of edits now saves your managers a hundred questions later.\n\nBrian",
@@ -208,7 +216,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "always",
       },
       {
-        step_order: 3,
+        step_order: 4,
         delay_days: 3,
         subject: "Want me to set it up with you? (30 min)",
         body: "{{contact.first_name}} — an offer, not a pitch:\n\nI do free 30-minute onboarding calls with new workspaces. We set up your locations and roles, tune the training to your concept, and get shift accountability live — so you leave the call with Wingman actually running, not a to-do list.\n\nGrab a slot: {{calendar.onboarding_link}}\n\nZero obligation — the workspace is free either way. I do these because set-up-right workspaces succeed and abandoned ones don't, and honestly because I learn something from every operator I talk to.\n\nBrian",
@@ -216,7 +224,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "always",
       },
       {
-        step_order: 4,
+        step_order: 5,
         delay_days: 5,
         subject: "Wingman is a team sport",
         body: "A workspace with one user is a dashboard. A workspace with your managers in it is a system.\n\nToday's step: **invite your GMs** (Settings → Team). What changes when they're in:\n\n— Shift accountability starts running — the standard gets checked *tonight*, at every location, whether or not you're there.\n— Training gets assigned per role instead of forwarded and forgotten.\n— You start seeing consistency location by location, manager by manager.\n\nTip from watching rollouts: tell your GMs *why* before the invite lands — \"this replaces the binder and the paper checklists\" lands better than a mystery email from a new app.\n\nBrian",
@@ -224,7 +232,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "activated",
       },
       {
-        step_order: 5,
+        step_order: 6,
         delay_days: 5,
         subject: "Did we lose you at hello?",
         body: "You created {{contact.workspace_name}} a few days ago and — unless my signals are lying — haven't been back in.\n\nNo guilt; you run restaurants, the to-do list is undefeated. But an empty workspace helps nobody, so let me make re-entry stupidly easy:\n\n**One step, ten minutes:** log in and generate your culture & training system. Wingman drafts it; you just answer a few questions about your concept. That single step is where most operators go \"ah — *that's* what this is.\"\n\nOr skip the solo attempt entirely: {{calendar.onboarding_link}} — 30 minutes, I set it up with you.\n\nBrian",
@@ -232,7 +240,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "not_activated",
       },
       {
-        step_order: 6,
+        step_order: 7,
         delay_days: 8,
         subject: "Tonight's shift is the whole product",
         body: "Everything in Wingman exists for one moment: **a shift, tonight, meeting the standard even though nobody from HQ is watching.**\n\nIf your team's in and training is live, the accountability loop is what makes it stick: shifts get checked against the standard, misses become coaching moments with data attached, and patterns show up before they show up in reviews.\n\nThis week's step: run one full week of shift accountability at one location. Just one. You'll know within a week which shifts hold the standard and which ones are costing you second visits.\n\nBrian",
@@ -240,7 +248,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "activated",
       },
       {
-        step_order: 7,
+        step_order: 8,
         delay_days: 8,
         subject: "I'll do the setup for you",
         body: "Last nudge, and it's my best offer:\n\nReply to this email with your concept name, number of locations, and your biggest consistency headache — **and I'll pre-build your workspace myself.** You log in to something already shaped like your operation instead of a blank page.\n\nFounder-doing-support isn't scalable, which is exactly why I can offer it right now and the bigger tools can't.\n\nIf Wingman's just not for you, that's fine too — reply \"not for us\" and I'll leave you be.\n\nBrian\nFounder, Wingman — guest retention for restaurants",
@@ -248,7 +256,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "not_activated",
       },
       {
-        step_order: 8,
+        step_order: 9,
         delay_days: 11,
         subject: "The number all of this feeds",
         body: "Quick zoom out. Culture, training, shift accountability — they're inputs. The output is **repeat-guest rate**, and Wingman tracks it so you can manage retention like a number instead of a vibe.\n\nAs your visit data builds, watch it by location and by shift. That view is where operators find the money.\n\nOne more thing, since you're early with us: I'm selecting a handful of **design partner** groups — closer working relationship, white-glove help from me, direct input on the roadmap, in exchange for honest feedback and (if the numbers are good) a case study. If {{contact.workspace_name}} might be a fit, reply \"design partner\" and I'll send details.\n\nBrian",
@@ -256,7 +264,7 @@ export const NURTURE_SEQUENCES: NurtureSequence[] = [
         send_condition: "activated",
       },
       {
-        step_order: 9,
+        step_order: 10,
         delay_days: 14,
         subject: "Two weeks in — honest question",
         body: "{{contact.first_name}} — you're two weeks into Wingman. One question, and I genuinely want the answer either way:\n\n**Is it running, or did it stall?**\n\nIf it's running — brilliant. Reply and tell me the first thing that surprised you; it shapes what we build next.\n\nIf it stalled — even more useful. Reply with the one-word reason (time? team? confusing?) or just grab a slot and I'll unstick it with you: {{calendar.onboarding_link}}\n\nEvery restaurant group that gets value from Wingman had a moment where it almost stalled. The difference was never talent. It was a nudge at week two.\n\nConsider this the nudge.\n\nBrian",
