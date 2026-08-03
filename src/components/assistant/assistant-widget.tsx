@@ -13,14 +13,14 @@ type Msg = {
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "Hi — I'm the Wingman assistant. Ask me how to do anything in the app, and if you hit a bug or have an idea, tell me and I'll pass it straight to the team.",
+    "Hi — I'm the Wingman assistant. Ask me how to use the app, or how things work here at your restaurant — your role's standards, the menu, allergens, or your team's own policies. Hit a bug or have an idea? Tell me and I'll pass it to the team.",
 };
 
 const STARTERS = [
+  "What's expected of me in my role?",
+  "Does the [dish] have any allergens?",
   "How do I log a return visit?",
-  "How do I set up report emails?",
   "What does my repeat rate mean?",
-  "How do I invite a team member?",
 ];
 
 export function AssistantWidget() {
