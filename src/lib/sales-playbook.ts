@@ -260,6 +260,7 @@ export const MOVEMENTS: Movement[] = [
       "\"And here's how you prove they learned it, not just sat through it.\" — on the Training page, hit the big Start a test button: pick 'all staff,' check off the Food Test, send. Then open \"Assigned to you\" and take a question or two so they see the exact staff experience. Point out the results board (who passed, who's locked) and that a lock or a missed deadline emails the manager automatically. (The demo account is pre-loaded with all of this.)",
       "\"And it all rolls up under each person.\" — open anyone from Staff to show the Activity view: training %, tests passed, checklist completion, and their hiring score, all in one place. Great for the owner who asks \"how do I know where each person stands?\"",
       "\"Want to see what your servers actually see? One click.\" — hit \"View as staff\" in the top bar. The nav shrinks and the whole app becomes the staff experience: a personal home (their training, their assigned tests, this week's focus), their pre-shift checklist, and a Training page scoped to just their role and their own scores — no restaurant numbers, no one else's results. Flip \"Back to owner view\" just as fast. This is the single best answer to \"will my team actually use it?\" — you SHOW the focused staff view instead of describing it. (Demo-only toggle; it's exactly what a real staff login sees.)",
+      "\"And here's why they'll actually open it.\" — still in staff view, open the Ask Wingman assistant (bottom-right) and type a real question like \"does the [dish] have any allergens?\" or \"what's expected of me as a server?\" It answers instantly from THIS restaurant's own menu/standards and cites the source — no manager needed. Then hit \"Ask a manager\" to show the escalation: the question routes to managers (push + email), they answer in the Questions inbox, and it saves into the Team Playbook so the assistant knows it next time. Land the line: \"Every question your team asks makes this smarter — the tools that only store SOPs charge $250-400 a month for just this, and it can't bring a guest back.\"",
     ],
     doThis: [
       "Before you show anything, play their problem back until they say \"that's right.\" That's your green light — once you've got it, the demo lands. If you don't, keep listening.",
@@ -400,6 +401,14 @@ export const REFRAMES: Reframe[] = [
   {
     objection: "\"Does it really work for a place like mine?\"",
     reframe: "Don't overpromise. \"Honestly, it depends on whether you'll use it — it's a system, not magic. From what you told me about [their problem], I think it fits. But if you try it and it's not helping, I'd rather you walk than stay.\"",
+  },
+  {
+    objection: "\"New hires take forever to ramp / my managers answer the same questions all shift.\"",
+    reframe: "\"That's exactly the friction Ask Wingman kills. Every new hire has an in-app assistant that answers 'what's expected of me,' 'does this dish have nuts,' 'what's our comp policy' — from your own menu, standards, and playbook, no manager needed. When it can't answer, they tap 'ask a manager,' the answer comes back, and it's saved so nobody ever answers that question again. The tools that just document SOPs charge $250-400 a month for that one feature — you get it in the plan, and unlike them it's tied to bringing guests back.\"",
+  },
+  {
+    objection: "\"How is this different from Trainual / a training-doc tool?\"",
+    reframe: "\"Those are a searchable binder — great at storing SOPs, blind to your guests, your shifts, and your repeat rate. Wingman documents the standard AND runs it: it trains and tests your team, checks the standard every shift, answers their questions from your own content, and turns first-timers into regulars. Leave a doc tool and you lose a wiki; leave Wingman and you lose your operating brain and the engine bringing guests back.\"",
   },
 ];
 
