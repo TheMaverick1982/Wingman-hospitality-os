@@ -11,7 +11,8 @@ export type NotificationKey =
   | "test_reminders_staff"
   | "monthly_training"
   | "partner_followups"
-  | "partner_monthly_report";
+  | "partner_monthly_report"
+  | "staff_question";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -35,6 +36,13 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     group: "Hiring",
     label: "Interview day reminders",
     description: "A morning digest to each location that has an interview scheduled that day, so nobody forgets a booked interview.",
+    audience: "Location email",
+  },
+  {
+    key: "staff_question",
+    group: "Team",
+    label: "Staff question escalated",
+    description: "When a team member asks the Ask Wingman assistant a question it can't answer and escalates it, email the location's manager so they can reply.",
     audience: "Location email",
   },
   {

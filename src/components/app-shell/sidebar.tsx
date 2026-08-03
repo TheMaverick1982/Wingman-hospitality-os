@@ -27,6 +27,7 @@ import {
   Lightbulb,
   PlugZap,
   ChevronDown,
+  MessageCircleQuestion,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -63,6 +64,7 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
       { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
       { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
       { href: "/staff", label: "Staff", icon: Users, section: "staff" },
+      { href: "/questions", label: "Questions", icon: MessageCircleQuestion, section: "questions" },
     ],
   },
   {

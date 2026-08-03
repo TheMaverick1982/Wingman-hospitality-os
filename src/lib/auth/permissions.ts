@@ -16,6 +16,7 @@ export type Section =
   | "audit"
   | "partners"
   | "reporting"
+  | "questions"
   | "settings";
 
 // The permission matrix from the design handoff (README §3 / Settings ->
@@ -47,6 +48,10 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   // and staff get no access — matched by the RLS gate on ('super_admin','manager').
   partners: { super_admin: "full", manager: "full", shift_lead: "none", staff: "none", developer: "none" },
   reporting: { super_admin: "full", manager: "view", shift_lead: "none", staff: "none", developer: "none" },
+  // Staff questions: staff can view (their own escalated questions & answers);
+  // managers/owners/shift leads get the full inbox to answer. The server actions
+  // independently re-check role, so this drives visibility, not authority.
+  questions: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
   settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
 

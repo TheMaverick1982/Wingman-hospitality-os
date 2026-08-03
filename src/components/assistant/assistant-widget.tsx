@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Send, Sparkles, Check } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, Check, MessageCircleQuestion } from "lucide-react";
+import { askManager } from "@/app/(app)/questions/actions";
 
 type Msg = {
   role: "user" | "assistant";
@@ -28,6 +29,7 @@ export function AssistantWidget() {
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [escalating, setEscalating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,6 +65,38 @@ export function AssistantWidget() {
       setMessages((m) => [...m, { role: "assistant", content: "I couldn't reach the server. Please try again.", error: true }]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Escalate the most recent question to a human manager (Ask Wingman Phase 2).
+  // Sends the last thing the user asked; managers get alerted (push + email) and
+  // answer in the Questions inbox, and the answer can be saved back so the
+  // assistant handles it next time.
+  async function escalate() {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content?.trim();
+    if (!lastUser) {
+      inputRef.current?.focus();
+      return;
+    }
+    setEscalating(true);
+    try {
+      const res = await askManager(lastUser);
+      if (res.error) {
+        setMessages((m) => [...m, { role: "assistant", content: res.error ?? "Couldn't send that.", error: true }]);
+      } else {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content:
+              "Sent to your managers 👍 They'll get back to you — you'll get a notification when they do, and I'll learn the answer for next time. You can track it under Questions.",
+          },
+        ]);
+      }
+    } catch {
+      setMessages((m) => [...m, { role: "assistant", content: "I couldn't send that just now. Please try again.", error: true }]);
+    } finally {
+      setEscalating(false);
     }
   }
 
@@ -139,6 +173,18 @@ export function AssistantWidget() {
               </div>
             )}
           </div>
+
+          {/* Escalate to a human — appears once the user has asked something */}
+          {messages.some((m) => m.role === "user") && (
+            <button
+              type="button"
+              onClick={escalate}
+              disabled={escalating}
+              className="w-full text-[12.5px] font-semibold text-charcoal-2 border-t border-line py-2 hover:text-brick transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <MessageCircleQuestion size={13} /> {escalating ? "Sending to a manager…" : "Didn't get what you need? Ask a manager"}
+            </button>
+          )}
 
           {/* Input */}
           <div className="border-t border-line bg-white p-2.5">

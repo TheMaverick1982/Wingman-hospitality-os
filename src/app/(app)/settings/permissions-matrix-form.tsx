@@ -22,6 +22,7 @@ const SECTION_LABELS: Record<Section, string> = {
   audit: "Standout Audit",
   partners: "Partners",
   reporting: "Reporting",
+  questions: "Questions",
   settings: "Settings",
 };
 
