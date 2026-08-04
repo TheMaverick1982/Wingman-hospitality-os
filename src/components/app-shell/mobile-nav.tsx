@@ -17,6 +17,7 @@ type SidebarProps = {
   isFranchiseAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
+  questionsBadge?: number;
 };
 
 // Mobile-only top bar with a hamburger that opens the sidebar as a slide-in

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { getSectionAccess } from "@/lib/auth/permissions";
 import { logLoginOncePerWindow } from "@/lib/activity-log";
 import { getOrgLocations } from "@/lib/data/locations";
 import { createClient } from "@/lib/supabase/server";
@@ -74,6 +75,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? computeRepeatRate(guestRows, null)
     : computeRepeatRate(guestRows, homeLocation?.id ?? profile.locationId ?? null);
 
+  // Badge on the Questions nav: how many staff questions are waiting for a
+  // manager. Only computed for those who can answer (RLS already scopes the
+  // count to this org); guarded so a not-yet-applied migration can't break the
+  // whole app shell.
+  let openQuestions = 0;
+  if (getSectionAccess(profile.accessRole, "questions", profile.permissionOverrides) === "full") {
+    try {
+      const { count } = await supabase
+        .from("staff_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "open")
+        .is("deleted_at", null);
+      openQuestions = count ?? 0;
+    } catch {
+      openQuestions = 0;
+    }
+  }
+
   return (
     <div className="fixed inset-0 flex overflow-hidden">
       <Sidebar
@@ -86,6 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isFranchiseAdmin={!!profile.franchiseGroupId}
         permissionOverrides={profile.permissionOverrides}
         showStartHere={!!launch && !launch.allDone}
+        questionsBadge={openQuestions}
       />
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
@@ -97,6 +117,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           locationStats={locationStats}
           fallbackLocationName={fallbackLocationName}
           fallbackRepeatRate={fallbackRepeatRate}
+          questionsBadge={openQuestions}
           isPlatformAdmin={profile.isPlatformAdmin}
           isFranchiseAdmin={!!profile.franchiseGroupId}
           permissionOverrides={profile.permissionOverrides}
