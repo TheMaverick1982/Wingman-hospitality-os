@@ -116,6 +116,7 @@ export function Sidebar({
   isFranchiseAdmin,
   permissionOverrides,
   showStartHere,
+  questionsBadge = 0,
   variant = "desktop",
 }: {
   accessRole: AccessRole;
@@ -127,6 +128,7 @@ export function Sidebar({
   isFranchiseAdmin?: boolean;
   permissionOverrides?: PermissionOverrides;
   showStartHere?: boolean;
+  questionsBadge?: number;
   variant?: "desktop" | "drawer";
 }) {
   const pathname = usePathname();
@@ -180,6 +182,7 @@ export function Sidebar({
 
   const navLink = (item: NavItem) => {
     const active = pathname.startsWith(item.href);
+    const badge = item.href === "/questions" && questionsBadge > 0 ? questionsBadge : 0;
     return (
       <Link
         key={item.href}
@@ -189,7 +192,16 @@ export function Sidebar({
         }`}
       >
         <item.icon size={19} strokeWidth={2} className={active ? "text-white/90" : "text-muted-2"} />
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {badge > 0 && (
+          <span
+            className={`shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+              active ? "bg-white/25 text-white" : "bg-brick text-white"
+            }`}
+          >
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
       </Link>
     );
   };
