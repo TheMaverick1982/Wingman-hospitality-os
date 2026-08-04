@@ -119,7 +119,7 @@ export function AssistantWidget() {
               </div>
               <div className="leading-tight">
                 <div className="text-[14px] font-semibold text-ink">Ask Wingman</div>
-                <div className="text-[11px] text-muted-2">Help &amp; how-to</div>
+                <div className="text-[11px] text-muted-2">Help &amp; your restaurant</div>
               </div>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="text-muted-2 hover:text-ink p-1">
