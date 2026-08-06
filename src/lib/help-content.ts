@@ -851,7 +851,7 @@ export const ARTICLES: HelpArticle[] = [
     body: [
       { kind: "p", text: "Owners manage the team under Settings → Team & permissions." },
       { kind: "steps", items: [
-        "Invite: click \"Invite team member\", set their name, email, job role (Host, Server, …), access level, and location. They get an email to set a password.",
+        "Invite: click \"Invite team member\", set their name, email, job role (Host, Server, …), access level, and location. They get a short welcome email (what Wingman is + a link to download the app), plus a separate email to set their password. Once they've set it, they log in on the app and land on their role guide.",
         "Edit: click \"Edit\" on any member to change their name, access level, or which locations they can access.",
         "Remove: remove a member to revoke their access entirely.",
       ] },
