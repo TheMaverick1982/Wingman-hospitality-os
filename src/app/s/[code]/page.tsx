@@ -41,11 +41,12 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   const [{ data: orgRow }, { data: locRow }, { data: staffRows }] = await Promise.all([
     admin.from("organizations").select("name, logo_url").eq("id", link.org_id).maybeSingle(),
     admin.from("locations").select("name").eq("id", link.location_id).maybeSingle(),
+    // All active staff in the org — we pick the best set to show below, so the
+    // dropdown isn't empty just because a location has no FOH role assigned.
     admin
       .from("staff_members")
-      .select("id, full_name, department")
+      .select("id, full_name, department, location_id")
       .eq("org_id", link.org_id)
-      .eq("location_id", link.location_id)
       .eq("status", "active"),
   ]);
 
@@ -53,8 +54,17 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   const logoUrl = (orgRow as { logo_url?: string | null } | null)?.logo_url ?? null;
   const locationName = (locRow as { name?: string } | null)?.name ?? "";
 
-  const servers: ServerOption[] = ((staffRows ?? []) as { id: string; full_name: string; department: string }[])
-    .filter((s) => (FOH_DEPARTMENTS as readonly string[]).includes(s.department))
+  // Who to offer in "Who took care of you?", preferring the most relevant set
+  // but never showing an empty dropdown when staff exist: FOH at this location →
+  // FOH org-wide → anyone at this location → anyone active.
+  const active = ((staffRows ?? []) as { id: string; full_name: string; department: string; location_id: string | null }[]);
+  const isFoh = (d: string) => (FOH_DEPARTMENTS as readonly string[]).includes(d);
+  const fohAtLoc = active.filter((s) => isFoh(s.department) && s.location_id === link.location_id);
+  const fohOrg = active.filter((s) => isFoh(s.department));
+  const atLoc = active.filter((s) => s.location_id === link.location_id);
+  const chosen = fohAtLoc.length ? fohAtLoc : fohOrg.length ? fohOrg : atLoc.length ? atLoc : active;
+
+  const servers: ServerOption[] = chosen
     .map((s) => ({ id: s.id, firstName: (s.full_name || "").trim().split(/\s+/)[0] || s.full_name }))
     .filter((s) => s.firstName)
     .sort((a, b) => a.firstName.localeCompare(b.firstName));
