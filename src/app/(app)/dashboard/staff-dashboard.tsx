@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { GuestSentimentCard } from "@/components/dashboard/guest-sentiment-card";
 import { getGuestSentiment } from "@/lib/guest-sentiment";
+import { ShiftBoardCard } from "@/components/dashboard/shift-board-card";
+import { getTodaysBoard } from "@/lib/shift-board-data";
 import { StaffTests } from "@/components/dashboard/staff-tests";
 import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
 import { resolveMyStaff } from "@/lib/data/my-staff";
@@ -67,10 +69,13 @@ export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
   const passedCount = tests.filter((t) => t.status === "passed").length;
 
   const guestSentiment = await getGuestSentiment(profile.orgId, profile.locationId);
+  const shiftBoard = await getTodaysBoard(profile.orgId, profile.locationId, profile.locationTimezone);
 
   return (
     <>
       <StaffGreeting firstName={firstName} />
+
+      <ShiftBoardCard notes={shiftBoard} />
 
       {(weeklyFocus || weeklyExperiment) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
