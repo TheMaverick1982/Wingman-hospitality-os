@@ -3,6 +3,8 @@ import { ClipboardList, Sparkle, ArrowRight, ListChecks, BookOpen } from "lucide
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { GuestSentimentCard } from "@/components/dashboard/guest-sentiment-card";
+import { getGuestSentiment } from "@/lib/guest-sentiment";
 import { StaffTests } from "@/components/dashboard/staff-tests";
 import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
 import { resolveMyStaff } from "@/lib/data/my-staff";
@@ -64,6 +66,8 @@ export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
   const toDo = tests.filter(isTestToDo);
   const passedCount = tests.filter((t) => t.status === "passed").length;
 
+  const guestSentiment = await getGuestSentiment(profile.orgId, profile.locationId);
+
   return (
     <>
       <StaffGreeting firstName={firstName} />
@@ -94,6 +98,8 @@ export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
         <KpiCard label="Tests to take" value={String(toDo.length)} sub="assigned to you" />
         <KpiCard label="Tests passed" value={String(passedCount)} sub="nice work" />
       </div>
+
+      <GuestSentimentCard sentiment={guestSentiment} />
 
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Tests to take</div>
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">

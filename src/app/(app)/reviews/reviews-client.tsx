@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Copy, Check, QrCode, Star, MessageSquare } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Copy, Check, QrCode, Star, MessageSquare, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
+import { generateReviewSummary } from "./actions";
+
+// Render **bold** markers inline without dangerouslySetInnerHTML.
+function renderInline(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((seg, i) =>
+    seg.startsWith("**") && seg.endsWith("**") ? <strong key={i} className="text-ink">{seg.slice(2, -2)}</strong> : <span key={i}>{seg}</span>
+  );
+}
 
 export type SurveyLinkRow = { locationId: string; locationName: string; code: string; scanCount: number };
 export type ReviewRow = {
@@ -31,9 +39,33 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-export function ReviewsClient({ siteUrl, links, responses }: { siteUrl: string; links: SurveyLinkRow[]; responses: ReviewRow[] }) {
+export function ReviewsClient({
+  siteUrl,
+  links,
+  responses,
+  canManage,
+  scopeLocationId,
+}: {
+  siteUrl: string;
+  links: SurveyLinkRow[];
+  responses: ReviewRow[];
+  canManage: boolean;
+  scopeLocationId: string | null;
+}) {
   const [copied, setCopied] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [summarizing, startSummary] = useTransition();
+
+  function summarize() {
+    setSummaryError(null);
+    startSummary(async () => {
+      const res = await generateReviewSummary(scopeLocationId);
+      if (res.error) setSummaryError(res.error);
+      else setSummary(res.summary ?? "");
+    });
+  }
 
   const shortLink = (code: string) => `${siteUrl}/s/${code}`;
   async function copy(text: string, key: string) {
@@ -77,6 +109,34 @@ export function ReviewsClient({ siteUrl, links, responses }: { siteUrl: string; 
           <div className="text-[26px] font-bold text-olive tabular-nums">{positives}</div>
         </div>
       </div>
+
+      {/* AI readout */}
+      {canManage && responses.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+            <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">What the feedback is telling you</div>
+            <button
+              type="button"
+              onClick={summarize}
+              disabled={summarizing}
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/40 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50"
+            >
+              <Sparkles size={13} /> {summarizing ? "Reading reviews…" : summary ? "Refresh" : "Summarize with AI"}
+            </button>
+          </div>
+          {!summary && !summaryError && (
+            <p className="text-[13px] text-muted">Let AI read your recent guest feedback and tell you what guests love and where to improve.</p>
+          )}
+          {summaryError && <p className="text-sm text-danger mt-1">{summaryError}</p>}
+          {summary && (
+            <div className="text-[14px] text-charcoal-2 leading-relaxed mt-2 flex flex-col gap-1">
+              {summary.split("\n").filter((l) => l.trim()).map((line, i) => (
+                <div key={i}>{renderInline(line)}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Share links */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
