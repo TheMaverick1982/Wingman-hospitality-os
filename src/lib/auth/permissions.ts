@@ -18,6 +18,7 @@ export type Section =
   | "reporting"
   | "questions"
   | "reviews"
+  | "shift"
   | "settings";
 
 // The permission matrix from the design handoff (README §3 / Settings ->
@@ -56,6 +57,8 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   // Guest Reviews archive (survey responses + share links) is manager-facing;
   // staff get the positive shout-outs on the dashboard, not the raw archive.
   reviews: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
+  // Shift board: managers/shift-leads post the day's board; all staff read it.
+  shift: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
   settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
 

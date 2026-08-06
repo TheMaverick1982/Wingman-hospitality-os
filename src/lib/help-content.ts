@@ -293,6 +293,23 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "shift-board",
+    title: "Shift board — today's 86s, staffing & notes",
+    summary: "Post the day's heads-up for the whole team — 86'd items, staffing, shift notes — and it clears itself each day.",
+    categoryId: "operations",
+    keywords: ["shift board", "86", "eighty-six", "staffing", "shift notes", "announcements", "today on shift"],
+    body: [
+      { kind: "p", text: "The Shift board is the day's heads-up for everyone on the floor. Managers and shift leads post what the team needs to know, and every staff member sees it — on their dashboard (\"Today on shift\") and on the Shift page. Each day archives on its own, so the board is always current." },
+      { kind: "list", items: [
+        "86'd — out of stock, e.g. \"86 the salmon.\"",
+        "Staffing — who's off the schedule or covering (keep it to scheduling, never the reason someone's out).",
+        "Note — anything else the shift should know.",
+      ] },
+      { kind: "p", text: "Open Team → Shift, tap \"Post to board,\" pick the type (and location, if you run more than one), and post. Items show under Today and roll into the archive by day. Staff see the board read-only; managers and shift leads post and remove items." },
+      { kind: "tip", text: "A quick 86 post at the start of service saves a dozen \"are we out of…?\" questions mid-shift." },
+    ],
+  },
+  {
     slug: "service-recovery",
     title: "Service Recovery — every comp has a reason",
     summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",

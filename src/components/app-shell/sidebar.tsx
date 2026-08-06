@@ -29,6 +29,7 @@ import {
   ChevronDown,
   MessageCircleQuestion,
   Star,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -61,6 +62,7 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
     id: "team",
     label: "Team",
     items: [
+      { href: "/shift", label: "Shift", icon: Megaphone, section: "shift" },
       { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
       { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
       { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },

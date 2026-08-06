@@ -24,6 +24,7 @@ const SECTION_LABELS: Record<Section, string> = {
   reporting: "Reporting",
   questions: "Questions",
   reviews: "Guest Reviews",
+  shift: "Shift Board",
   settings: "Settings",
 };
 
