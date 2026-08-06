@@ -82,6 +82,15 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
   }
   const nothingYet = behaviors.length === 0 && duties.length === 0;
 
+  // Owner's Mindset (the culture core) — shown at the top of every role guide so
+  // it's in front of the team every shift. Guarded: owner_mindset lands with
+  // migration 0151, and a missing column degrades to "not shown".
+  let ownerMindset: string | null = null;
+  {
+    const { data: orgRow } = await supabase.from("organizations").select("owner_mindset").maybeSingle();
+    ownerMindset = ((orgRow as { owner_mindset?: string | null } | null)?.owner_mindset ?? "").trim() || null;
+  }
+
   return (
     <div className="max-w-3xl">
       <Link
@@ -127,6 +136,13 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
         <p className="text-base text-muted mb-6">
           What great looks like in your role — the standard you&rsquo;re held to, and what we count on you for.
         </p>
+      )}
+
+      {ownerMindset && (
+        <div className="mb-6 rounded-2xl bg-[#0A0A0A] text-white p-6">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D97FF] mb-2.5">How we run this place</div>
+          <div className="text-[15px] leading-relaxed whitespace-pre-wrap text-white/90">{ownerMindset}</div>
+        </div>
       )}
 
       {nothingYet ? (
