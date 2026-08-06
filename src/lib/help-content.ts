@@ -259,10 +259,12 @@ export const ARTICLES: HelpArticle[] = [
     title: "Culture — your standard, in your words",
     summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
     categoryId: "operations",
-    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus"],
+    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus", "owner's mindset", "ownership"],
     body: [
       { kind: "p", text: "Culture is the standard every hire is trained to and every shift is measured against — written in your own words." },
       { kind: "image", src: "/help/culture.png", alt: "The Culture screen", caption: "Culture — your values, weekly pre-shift focus, and recognition." },
+      { kind: "h", text: "Owner's Mindset — the core" },
+      { kind: "p", text: "At the top of Culture is your Owner's Mindset: a short \"run it like you own it\" manifesto — imagine your own savings are on the line, every guest is why the doors stay open, every shift is your name on the sign. Write it in your own words, or tap \"Generate with AI\" (or \"Rewrite with AI\") to draft it from your philosophy. Every team member sees it at the top of their role guide, and it grounds the Ask Wingman assistant and Wingman's AI — so the mindset shows up in the training and answers your team actually uses. It comes pre-filled with a strong starting version; make it yours." },
       { kind: "list", items: [
         "Set this week's pre-shift focus — it shows on everyone's dashboard as the thing to rally around.",
         "Capture culture moments to recognize people living the standard.",

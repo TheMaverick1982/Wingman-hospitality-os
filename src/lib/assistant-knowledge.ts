@@ -49,7 +49,8 @@ export async function buildRestaurantKnowledge(
     scopeDepts = myStaff?.department ? [myStaff.department] : [];
   }
 
-  const [values, metas, standards, duties, menu, playbook] = await Promise.all([
+  const [org, values, metas, standards, duties, menu, playbook] = await Promise.all([
+    safeRows(supabase.from("organizations").select("philosophy, owner_mindset, x_factor")),
     safeRows(supabase.from("core_values").select("title, description").order("sort_order")),
     safeRows(supabase.from("department_meta").select("department, description")),
     safeRows(supabase.from("department_standards").select("department, item").order("sort_order")),
@@ -64,6 +65,15 @@ export async function buildRestaurantKnowledge(
   ]);
 
   const sections: string[] = [];
+
+  // Owner's Mindset + philosophy — the culture core, first so the assistant
+  // reasons from it. Everyone sees this.
+  const orgRow = org[0] ?? {};
+  const mindsetParts: string[] = [];
+  if (str(orgRow.owner_mindset)) mindsetParts.push(`Owner's Mindset (how we treat this place):\n${str(orgRow.owner_mindset)}`);
+  if (str(orgRow.philosophy)) mindsetParts.push(`Our culture statement: ${str(orgRow.philosophy)}`);
+  if (str(orgRow.x_factor)) mindsetParts.push(`What makes us stand out: ${str(orgRow.x_factor)}`);
+  if (mindsetParts.length) sections.push("### Who we are\n" + mindsetParts.join("\n\n"));
 
   // Culture / core values — shared, everyone.
   const valueLines = values

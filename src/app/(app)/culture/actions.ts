@@ -21,7 +21,7 @@ export async function updateWeeklyFocus(_prev: ActionState, formData: FormData):
   return { error: null };
 }
 
-const CULTURE_TEXT_FIELDS = { x_factor: true, weekly_experiment: true } as const;
+const CULTURE_TEXT_FIELDS = { x_factor: true, weekly_experiment: true, owner_mindset: true } as const;
 
 export async function updateCultureText(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const field = String(formData.get("field") || "");

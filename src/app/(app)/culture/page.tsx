@@ -7,6 +7,7 @@ import { SampleRibbon } from "@/components/ui/sample-ribbon";
 import { MomentModalButton } from "./moment-form";
 import { WeeklyFocusForm } from "./weekly-focus-form";
 import { CultureTextForm } from "./culture-text-form";
+import { MindsetEditor } from "./mindset-editor";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -48,7 +49,7 @@ export default async function CulturePage() {
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
   const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
-    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, system_generated").single(),
+    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, owner_mindset, system_generated").single(),
     supabase.from("core_values").select("title, description").order("sort_order"),
     supabase
       .from("culture_moments")
@@ -96,6 +97,26 @@ export default async function CulturePage() {
             &quot;{org?.philosophy}&quot;
           </div>
         </div>
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-0.5">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Owner&rsquo;s Mindset</div>
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-brick bg-brick-tint rounded-full px-2 py-0.5">The core</span>
+        </div>
+        <div className="text-[13px] text-muted mt-0.5 mb-3">
+          The heart of everything: run it like you own it. Every hire reads this, it grounds the AI assistant, and it sets
+          the bar every shift is held to.
+        </div>
+        {canEdit ? (
+          <MindsetEditor initialValue={org?.owner_mindset ?? ""} />
+        ) : org?.owner_mindset ? (
+          <div className="rounded-xl bg-paper border border-line p-5 text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
+            {org.owner_mindset}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">Not defined yet.</p>
+        )}
       </div>
 
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
