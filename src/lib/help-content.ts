@@ -274,6 +274,21 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "guest-reviews",
+    title: "Guest Reviews — a survey QR that drives feedback",
+    summary: "Collect how guests felt with a per-location QR / short link, and see it all in one archive — separate from Bounce Back.",
+    categoryId: "operations",
+    keywords: ["guest reviews", "survey", "feedback", "qr code", "ratings", "guest survey", "how guests feel"],
+    body: [
+      { kind: "p", text: "Guest Reviews collects how guests felt about their visit through a short survey. Each location gets its own QR code and short link (joinwingman.app/s/…) to put on a table tent, receipt, or window — or to text/email. It's separate from Guest Bounce Back on purpose: a survey response never adds a guest or counts as a visit, so your repeat-rate numbers stay clean." },
+      { kind: "h", text: "Getting the word out" },
+      { kind: "p", text: "Open Guests → Guest Reviews. Each location has a ready QR code and short link — copy the link, or download the QR as an SVG to print. Guests scan it, rate their visit (food, service, likelihood to return), can say who served them (first names only, for a shout-out), and leave a comment. It's about 20 seconds." },
+      { kind: "h", text: "Seeing the feedback" },
+      { kind: "p", text: "The page shows your response count, average rating, and rave-review count, plus every response — filtered by the location selector at the top. If a guest leaves contact info that matches someone already in your Bounce Back, we link it to that guest; if not, it simply lives here in the archive." },
+      { kind: "tip", text: "Put the QR where a happy guest is already looking — the check presenter or the receipt. That's where you capture the most, and the best, feedback." },
+    ],
+  },
+  {
     slug: "service-recovery",
     title: "Service Recovery — every comp has a reason",
     summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",

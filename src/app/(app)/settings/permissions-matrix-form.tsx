@@ -23,6 +23,7 @@ const SECTION_LABELS: Record<Section, string> = {
   partners: "Partners",
   reporting: "Reporting",
   questions: "Questions",
+  reviews: "Guest Reviews",
   settings: "Settings",
 };
 

@@ -28,6 +28,7 @@ import {
   PlugZap,
   ChevronDown,
   MessageCircleQuestion,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -51,6 +52,7 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
     label: "Guests",
     items: [
       BOUNCEBACK_ITEM,
+      { href: "/reviews", label: "Guest Reviews", icon: Star, section: "reviews" },
       { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
       { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey" },
     ],

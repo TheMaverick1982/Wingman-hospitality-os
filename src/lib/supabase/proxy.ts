@@ -62,6 +62,9 @@ const PUBLIC_PREFIXES = [
   // Job-opening short links (/j/<code> and /j/<code>/qr) — a public apply link
   // and its QR image; the visitor is a job applicant, not logged in.
   "/j",
+  // Guest survey short links (/s/<code> and /s/<code>/qr) — a public feedback
+  // form and its QR image; the visitor is a guest, not logged in.
+  "/s",
   // Public lead-magnet tools.
   "/calculator",
   "/scorecard",
@@ -118,6 +121,7 @@ const IOS_BLOCKED_PREFIXES = [
   "/launch",
   "/founders",
   "/guarantee",
+  "/s",
   "/download",
   "/api-guide",
   "/contact",
