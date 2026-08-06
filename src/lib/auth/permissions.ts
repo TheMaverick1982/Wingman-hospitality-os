@@ -17,6 +17,7 @@ export type Section =
   | "partners"
   | "reporting"
   | "questions"
+  | "reviews"
   | "settings";
 
 // The permission matrix from the design handoff (README §3 / Settings ->
@@ -52,6 +53,9 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   // managers/owners/shift leads get the full inbox to answer. The server actions
   // independently re-check role, so this drives visibility, not authority.
   questions: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  // Guest Reviews archive (survey responses + share links) is manager-facing;
+  // staff get the positive shout-outs on the dashboard, not the raw archive.
+  reviews: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
   settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
 
