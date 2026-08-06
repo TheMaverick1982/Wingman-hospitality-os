@@ -29,7 +29,7 @@ export default async function StaffProfilePage({
   const [{ data: staff }, locations] = await Promise.all([
     supabase
       .from("staff_members")
-      .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at, profile_id")
+      .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at, profile_id, exclude_from_survey")
       .eq("id", id)
       .maybeSingle(),
     getOrgLocations(),
