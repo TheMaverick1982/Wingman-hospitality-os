@@ -147,6 +147,16 @@ export async function updateStaffContact(
   revalidatePath(`/staff/${id}`);
 }
 
+// Toggle whether a staff member appears in the guest survey's "who served you"
+// dropdown. For team members who hold a manager role but don't work the floor
+// (marketing, catering, back office). RLS gates who can update.
+export async function setStaffSurveyExcluded(id: string, excluded: boolean) {
+  const supabase = await createClient();
+  await supabase.from("staff_members").update({ exclude_from_survey: excluded }).eq("id", id);
+  revalidatePath("/staff");
+  revalidatePath(`/staff/${id}`);
+}
+
 // Soft delete — hidden by RLS but recoverable by the owner from Settings → Trash.
 export async function deleteStaffMember(id: string) {
   const profile = await getCurrentProfile();

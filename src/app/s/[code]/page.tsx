@@ -38,17 +38,34 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
     .eq("id", link.id)
     .then(undefined, () => undefined);
 
-  const [{ data: orgRow }, { data: locRow }, { data: staffRows }] = await Promise.all([
+  const [{ data: orgRow }, { data: locRow }] = await Promise.all([
     admin.from("organizations").select("name, logo_url").eq("id", link.org_id).maybeSingle(),
     admin.from("locations").select("name").eq("id", link.location_id).maybeSingle(),
-    // All active staff in the org — we pick the best set to show below, so the
-    // dropdown isn't empty just because a location has no FOH role assigned.
-    admin
-      .from("staff_members")
-      .select("id, full_name, department, location_id")
-      .eq("org_id", link.org_id)
-      .eq("status", "active"),
   ]);
+
+  // All active staff in the org — we pick the best set to show below, so the
+  // dropdown isn't empty just because a location has no FOH role assigned.
+  // Guarded: exclude_from_survey lands with migration 0153, so fall back to the
+  // base columns if it isn't there yet (the public survey must never crash).
+  type StaffRow = { id: string; full_name: string; department: string; location_id: string | null; exclude_from_survey?: boolean };
+  let staffRows: StaffRow[] = [];
+  {
+    const withCol = await admin
+      .from("staff_members")
+      .select("id, full_name, department, location_id, exclude_from_survey")
+      .eq("org_id", link.org_id)
+      .eq("status", "active");
+    if (withCol.error) {
+      const base = await admin
+        .from("staff_members")
+        .select("id, full_name, department, location_id")
+        .eq("org_id", link.org_id)
+        .eq("status", "active");
+      staffRows = (base.data ?? []) as StaffRow[];
+    } else {
+      staffRows = (withCol.data ?? []) as StaffRow[];
+    }
+  }
 
   const orgName = (orgRow as { name?: string } | null)?.name ?? "our restaurant";
   const logoUrl = (orgRow as { logo_url?: string | null } | null)?.logo_url ?? null;
@@ -56,8 +73,9 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
 
   // Who to offer in "Who took care of you?", preferring the most relevant set
   // but never showing an empty dropdown when staff exist: FOH at this location →
-  // FOH org-wide → anyone at this location → anyone active.
-  const active = ((staffRows ?? []) as { id: string; full_name: string; department: string; location_id: string | null }[]);
+  // FOH org-wide → anyone at this location → anyone active. Hidden staff
+  // (marketing, catering, etc.) are dropped up front.
+  const active = staffRows.filter((s) => !s.exclude_from_survey);
   const isGuestFacing = (d: string) => (GUEST_FACING_DEPARTMENTS as readonly string[]).includes(d);
   const gfAtLoc = active.filter((s) => isGuestFacing(s.department) && s.location_id === link.location_id);
   const gfOrg = active.filter((s) => isGuestFacing(s.department));

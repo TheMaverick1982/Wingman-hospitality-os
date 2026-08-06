@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Heart, GraduationCap, ThumbsUp, MessageCircleWar
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
-import { updateStaffContact, updateTrainingProgress, signOffStaffTraining } from "../actions";
+import { updateStaffContact, updateTrainingProgress, signOffStaffTraining, setStaffSurveyExcluded } from "../actions";
 
 type ChecklistItem = { id: string; item: string };
 type ProgressRow = { item_type: "standard" | "training"; item_id: string; checked: boolean; rating: "" | "strong" | "coaching"; note: string };
@@ -18,6 +18,7 @@ type Staff = {
   phone: string;
   status: "active" | "inactive";
   location_id: string;
+  exclude_from_survey?: boolean;
   candidate_id: string | null;
   hired_on: string | null;
   created_at: string;
@@ -395,6 +396,25 @@ function ContactTab({ staff, locationName, canEdit }: { staff: Staff; locationNa
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
+          </div>
+        )}
+        {canEdit && (
+          <div className="pt-3 border-t border-line">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                defaultChecked={!staff.exclude_from_survey}
+                onChange={(e) => startTransition(() => setStaffSurveyExcluded(staff.id, !e.target.checked))}
+                className="accent-brick w-4 h-4 mt-0.5 shrink-0"
+              />
+              <span>
+                <span className="text-[13px] font-semibold text-ink block">Show on the guest survey</span>
+                <span className="text-[12px] text-muted-2">
+                  Appears in the &ldquo;who took care of you?&rdquo; list. Turn off for team members who don&rsquo;t work the floor
+                  (marketing, catering, back office).
+                </span>
+              </span>
+            </label>
           </div>
         )}
       </div>
