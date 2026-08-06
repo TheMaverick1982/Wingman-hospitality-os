@@ -4,7 +4,9 @@ import { canEditSection } from "@/lib/auth/permissions";
 import { getStaffMembers } from "@/lib/data/staff";
 import { Pill } from "@/components/ui/pill";
 import { SampleRibbon } from "@/components/ui/sample-ribbon";
-import { MomentModalButton } from "./moment-form";
+import { WinComposer } from "./win-composer";
+import { WinCelebrate } from "./win-celebrate";
+import { getRecentWins } from "@/lib/wins-data";
 import { WeeklyFocusForm } from "./weekly-focus-form";
 import { CultureTextForm } from "./culture-text-form";
 import { MindsetEditor } from "./mindset-editor";
@@ -64,14 +66,20 @@ export default async function CulturePage() {
   const isSample = canEdit && !(org as { system_generated?: boolean } | null)?.system_generated;
 
   const allMoments = moments ?? [];
+  // "Most recognized" counts the teammate being recognized (about) on shout-outs;
+  // pure wins have no target and don't count toward it.
   const leaderboard = Object.entries(
     allMoments.reduce<Record<string, number>>((acc, m) => {
-      acc[m.author] = (acc[m.author] ?? 0) + 1;
+      const who = (m.about || "").trim();
+      if (who) acc[who] = (acc[who] ?? 0) + 1;
       return acc;
     }, {})
   )
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
+
+  // Recent feed with celebrate counts (kind + reactions). Guarded internally.
+  const wins = await getRecentWins(profile.orgId, profile.userId, 6);
 
   return (
     <>
@@ -85,7 +93,7 @@ export default async function CulturePage() {
             Print / PDF
           </a>
           {!canEdit && <Pill>View only</Pill>}
-          {canEdit && <MomentModalButton staff={staff} />}
+          <WinComposer staff={staff} />
         </div>
       </div>
 
@@ -220,37 +228,40 @@ export default async function CulturePage() {
         </details>
       )}
 
-      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Recognition</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Wins &amp; recognition</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
-            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Culture moments</span>
+            <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Wins feed</span>
             <span className="text-[13px] font-semibold text-muted">{momentsThisQtr ?? 0} this quarter</span>
           </div>
           <div className="flex flex-col gap-4">
-            {allMoments.slice(0, 6).map((m) => {
-              const tone = toneFor(m.author);
+            {wins.map((w) => {
+              const tone = toneFor(w.author);
               return (
-                <div key={m.id} className="flex gap-3.5 items-start">
+                <div key={w.id} className="flex gap-3.5 items-start">
                   <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold ${tone.bg} ${tone.fg}`}>
-                    {initialsOf(m.author)}
+                    {initialsOf(w.author)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm leading-[1.45]">
-                      <span className="font-semibold text-ink">{m.author}</span>{" "}
-                      <span className="text-charcoal-2">recognized {m.about}: {m.message}</span>
+                      <span className="font-semibold text-ink">{w.author}</span>{" "}
+                      <span className="text-charcoal-2">
+                        {w.kind === "win" ? "shared a win" : `recognized ${w.about}`}: {w.message}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs font-semibold text-brick-dark bg-brick-tint px-2.5 py-0.5 rounded-full">{m.tag}</span>
-                      <span className="text-[12.5px] text-muted-2">{daysAgoLabel(m.occurred_on)}</span>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="text-xs font-semibold text-brick-dark bg-brick-tint px-2.5 py-0.5 rounded-full">{w.tag}</span>
+                      <WinCelebrate momentId={w.id} initialCount={w.reactions} initialReacted={w.reactedByMe} />
+                      <span className="text-[12.5px] text-muted-2">{daysAgoLabel(w.occurredOn)}</span>
                     </div>
                   </div>
                 </div>
               );
             })}
-            {allMoments.length === 0 && (
-              <p className="text-sm text-muted">No culture moments yet. Recognize someone to start the wall.</p>
+            {wins.length === 0 && (
+              <p className="text-sm text-muted">No wins yet. Share the first — a smooth shift, a big table handled, a teammate who stepped up.</p>
             )}
           </div>
         </div>

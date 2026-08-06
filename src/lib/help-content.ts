@@ -267,10 +267,27 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "At the top of Culture is your Owner's Mindset: a short \"run it like you own it\" manifesto — imagine your own savings are on the line, every guest is why the doors stay open, every shift is your name on the sign. Write it in your own words, or tap \"Generate with AI\" (or \"Rewrite with AI\") to draft it from your philosophy. Every team member sees it at the top of their role guide, and it grounds the Ask Wingman assistant and Wingman's AI — so the mindset shows up in the training and answers your team actually uses. It comes pre-filled with a strong starting version; make it yours." },
       { kind: "list", items: [
         "Set this week's pre-shift focus — it shows on everyone's dashboard as the thing to rally around.",
-        "Capture culture moments to recognize people living the standard.",
+        "Share wins and recognize teammates in the Wins feed — anyone on the team can post, and anyone can celebrate.",
         "Keep your core values front and center for the whole team.",
       ] },
       { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing." },
+    ],
+  },
+  {
+    slug: "wins-feed",
+    title: "Wins feed — team-wide recognition",
+    summary: "Anyone on the team shares a win or shouts out a teammate, everyone sees it, and anyone can celebrate it.",
+    categoryId: "operations",
+    keywords: ["wins", "wins feed", "recognition", "shout-out", "shoutout", "celebrate", "kudos", "culture moments", "most recognized"],
+    body: [
+      { kind: "p", text: "The Wins feed turns recognition into something the whole team does, not just managers. Anyone shares a win (a smooth shift, a big table handled well) or recognizes a teammate by name — and it shows up for everyone on the Culture page and on their dashboard under \"Recent wins.\"" },
+      { kind: "steps", items: [
+        "Open Culture (or the Recent wins card on your dashboard) and tap \"Share a win.\"",
+        "Pick \"Share a win\" or \"Recognize a teammate,\" add a tag, and say what happened.",
+        "Post it — it's attributed to you and appears in the feed right away.",
+      ] },
+      { kind: "p", text: "Anyone can tap 🎉 Celebrate on a post to pile on. The \"Most recognized\" list on the Culture page ranks the teammates getting the most shout-outs, so the people quietly carrying shifts get seen." },
+      { kind: "tip", text: "Specific beats generic every time — \"turned a walkout into a five-star table\" lands harder than \"great job.\" Recognition the team gives each other is some of the stickiest culture you can build." },
     ],
   },
   {

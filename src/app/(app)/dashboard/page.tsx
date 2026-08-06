@@ -22,6 +22,8 @@ import { GuestSentimentCard } from "@/components/dashboard/guest-sentiment-card"
 import { getGuestSentiment } from "@/lib/guest-sentiment";
 import { ShiftBoardCard } from "@/components/dashboard/shift-board-card";
 import { getTodaysBoard } from "@/lib/shift-board-data";
+import { WinsCard } from "@/components/dashboard/wins-card";
+import { getRecentWins } from "@/lib/wins-data";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
 import { StaffDashboard } from "./staff-dashboard";
@@ -357,12 +359,14 @@ export default async function DashboardPage({
   const showAudit = Boolean(latestAudit && auditConstraint);
   const guestSentiment = await getGuestSentiment(profile.orgId, effectiveLocation);
   const shiftBoard = await getTodaysBoard(profile.orgId, effectiveLocation, profile.locationTimezone);
+  const wins = await getRecentWins(profile.orgId, profile.userId, 4);
 
   return (
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
 
       <ShiftBoardCard notes={shiftBoard} />
+      <WinsCard wins={wins} />
       <GuestSentimentCard sentiment={guestSentiment} />
 
       {onboarding && onboarding.doneCount === 0 && (
