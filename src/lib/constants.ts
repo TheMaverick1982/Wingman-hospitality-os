@@ -27,6 +27,10 @@ export const WIZARD_DEFAULT_DEPARTMENTS: Department[] = ["Host", "Server", "Bart
 // at the table/bar. Used to target the FOH loyalty checklist.
 export const FOH_DEPARTMENTS: Department[] = ["Host", "Server", "Busser", "Food Runner", "Bartender", "Barista", "Cashier", "Expo", "Sommelier"];
 
+// Roles a guest might name as "who took care of me" on the survey — front of
+// house plus the managers who work the floor and touch tables.
+export const GUEST_FACING_DEPARTMENTS: Department[] = [...FOH_DEPARTMENTS, "Manager", "Assistant Manager"];
+
 // Menu grouping. The restaurant has ONE food menu and ONE bar menu; a dish's
 // department places it in a group rather than siloing it to a single role.
 // Front-of-house (Server) and the kitchen (Chef) SHARE the food menu — servers

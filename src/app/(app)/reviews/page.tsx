@@ -15,7 +15,9 @@ export const metadata = { title: "Guest Reviews · Wingman" };
 export default async function ReviewsPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
-  if (getSectionAccess(profile.accessRole, "reviews", profile.permissionOverrides) === "none") redirect("/dashboard");
+  const access = getSectionAccess(profile.accessRole, "reviews", profile.permissionOverrides);
+  if (access === "none") redirect("/dashboard");
+  const canManage = access === "full";
 
   const { location } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
@@ -75,5 +77,13 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
 
   const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 
-  return <ReviewsClient siteUrl={SITE} links={linkRows} responses={responses} />;
+  return (
+    <ReviewsClient
+      siteUrl={SITE}
+      links={linkRows}
+      responses={responses}
+      canManage={canManage}
+      scopeLocationId={effectiveLocation ?? null}
+    />
+  );
 }

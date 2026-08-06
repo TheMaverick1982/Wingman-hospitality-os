@@ -18,6 +18,8 @@ import { getOnboardingStatus } from "@/lib/onboarding";
 import { getMomentum } from "@/lib/momentum";
 import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { MomentumCard } from "@/components/dashboard/momentum-card";
+import { GuestSentimentCard } from "@/components/dashboard/guest-sentiment-card";
+import { getGuestSentiment } from "@/lib/guest-sentiment";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
 import { StaffDashboard } from "./staff-dashboard";
@@ -351,9 +353,13 @@ export default async function DashboardPage({
   const showMoves = Boolean(weeklyMoves);
   const showFocus = Boolean(org?.weekly_focus);
   const showAudit = Boolean(latestAudit && auditConstraint);
+  const guestSentiment = await getGuestSentiment(profile.orgId, effectiveLocation);
+
   return (
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
+
+      <GuestSentimentCard sentiment={guestSentiment} />
 
       {onboarding && onboarding.doneCount === 0 && (
         <div className="bg-[#0A0A0A] rounded-[20px] p-7 sm:p-9 text-white">

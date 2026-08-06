@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { FOH_DEPARTMENTS } from "@/lib/constants";
+import { GUEST_FACING_DEPARTMENTS } from "@/lib/constants";
 import { SurveyForm } from "./survey-form";
 
 // Public guest survey (no login), reached via the per-location QR / short link
@@ -58,11 +58,11 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   // but never showing an empty dropdown when staff exist: FOH at this location →
   // FOH org-wide → anyone at this location → anyone active.
   const active = ((staffRows ?? []) as { id: string; full_name: string; department: string; location_id: string | null }[]);
-  const isFoh = (d: string) => (FOH_DEPARTMENTS as readonly string[]).includes(d);
-  const fohAtLoc = active.filter((s) => isFoh(s.department) && s.location_id === link.location_id);
-  const fohOrg = active.filter((s) => isFoh(s.department));
+  const isGuestFacing = (d: string) => (GUEST_FACING_DEPARTMENTS as readonly string[]).includes(d);
+  const gfAtLoc = active.filter((s) => isGuestFacing(s.department) && s.location_id === link.location_id);
+  const gfOrg = active.filter((s) => isGuestFacing(s.department));
   const atLoc = active.filter((s) => s.location_id === link.location_id);
-  const chosen = fohAtLoc.length ? fohAtLoc : fohOrg.length ? fohOrg : atLoc.length ? atLoc : active;
+  const chosen = gfAtLoc.length ? gfAtLoc : gfOrg.length ? gfOrg : atLoc.length ? atLoc : active;
 
   const servers: ServerOption[] = chosen
     .map((s) => ({ id: s.id, firstName: (s.full_name || "").trim().split(/\s+/)[0] || s.full_name }))
