@@ -310,6 +310,24 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "post-shift-feedback",
+    title: "Post-shift feedback — the 30-second reflection",
+    summary: "Team members leave a quick end-of-shift note — what went well, what to improve, anything guests said — and it reports straight to their managers.",
+    categoryId: "operations",
+    keywords: ["post-shift", "post shift", "feedback", "reflection", "end of shift", "how was your shift", "shift report", "debrief"],
+    body: [
+      { kind: "p", text: "Post-shift feedback captures what only the people on the floor know. At the end of a shift, any team member opens Team → Shift and fills in a 30-second reflection: what went well, what could be better, and anything guests said. It reports straight to that location's managers — pushed in-app, and emailed to the location — so the next shift runs a little better." },
+      { kind: "steps", items: [
+        "Open Team → Shift and scroll to \"How was your shift?\"",
+        "Fill in any of the three boxes — you only need one.",
+        "Tap \"Send to managers.\" You'll see a confirmation, and can add another if you worked a double.",
+      ] },
+      { kind: "p", text: "Managers and shift leads see every reflection in the \"Team feedback\" feed on the Shift page, grouped by day, with who left it and their role. Use it to spot patterns — a station that keeps getting slammed, a dish 86'd too early, a regular worth a bounce-back." },
+      { kind: "tip", text: "Make it a closing-checklist habit: the reflections that feel small in the moment are exactly what a manager needs to fix the recurring stuff." },
+      { kind: "note", text: "Managers are always pushed in-app. The email copy to the location is controlled by Settings → Notifications → \"Post-shift feedback.\"" },
+    ],
+  },
+  {
     slug: "service-recovery",
     title: "Service Recovery — every comp has a reason",
     summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",

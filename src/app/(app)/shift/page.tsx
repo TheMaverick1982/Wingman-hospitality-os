@@ -5,6 +5,7 @@ import { getSectionAccess } from "@/lib/auth/permissions";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { localDate } from "@/lib/local-date";
 import { ShiftClient, type ShiftNoteRow } from "./shift-client";
+import { ShiftFeedbackSection, type ShiftFeedbackRow } from "./shift-feedback-section";
 
 export const metadata = { title: "Shift · Wingman" };
 
@@ -57,14 +58,68 @@ export default async function ShiftPage({ searchParams }: { searchParams: Promis
     ? locations
     : locations.filter((l) => l.id === profile.locationId || profile.accessibleLocationIds.includes(l.id));
 
+  const todayStr = localDate(profile.locationTimezone);
+
+  // Post-shift feedback (Slice 2). Managers read the whole feed; every viewer's
+  // own "already checked in today" is looked up so the composer can confirm it.
+  // Guarded so a not-yet-applied migration can't break the page.
+  let feedback: ShiftFeedbackRow[] = [];
+  let alreadySubmitted = false;
+  try {
+    if (canPost) {
+      let fq = supabase
+        .from("shift_feedback")
+        .select("id, author_name, department, went_well, improve, guest_notes, business_day, location_id, created_at")
+        .is("deleted_at", null)
+        .order("business_day", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(80);
+      if (effectiveLocation) fq = fq.eq("location_id", effectiveLocation);
+      const { data: fData } = await fq;
+      feedback = ((fData ?? []) as {
+        id: string; author_name: string; department: string; went_well: string; improve: string; guest_notes: string; business_day: string; location_id: string;
+      }[]).map((f) => ({
+        id: f.id,
+        author: f.author_name,
+        department: f.department ?? "",
+        wentWell: f.went_well ?? "",
+        improve: f.improve ?? "",
+        guestNotes: f.guest_notes ?? "",
+        businessDay: f.business_day,
+        locationName: locName(f.location_id),
+      }));
+    }
+    const { data: mine } = await supabase
+      .from("shift_feedback")
+      .select("id")
+      .eq("author_id", profile.userId)
+      .eq("business_day", todayStr)
+      .is("deleted_at", null)
+      .limit(1);
+    alreadySubmitted = (mine?.length ?? 0) > 0;
+  } catch {
+    feedback = [];
+    alreadySubmitted = false;
+  }
+
   return (
-    <ShiftClient
-      notes={notes}
-      canPost={canPost}
-      todayStr={localDate(profile.locationTimezone)}
-      locations={pickable.map((l) => ({ id: l.id, name: l.name }))}
-      defaultLocationId={effectiveLocation ?? profile.locationId ?? pickable[0]?.id ?? ""}
-      showLocation={effectiveLocation === null}
-    />
+    <div className="flex flex-col gap-10 max-w-3xl">
+      <ShiftClient
+        notes={notes}
+        canPost={canPost}
+        todayStr={todayStr}
+        locations={pickable.map((l) => ({ id: l.id, name: l.name }))}
+        defaultLocationId={effectiveLocation ?? profile.locationId ?? pickable[0]?.id ?? ""}
+        showLocation={effectiveLocation === null}
+      />
+      <ShiftFeedbackSection
+        canReadFeedback={canPost}
+        alreadySubmitted={alreadySubmitted}
+        submitLocationId={effectiveLocation ?? profile.locationId ?? pickable[0]?.id ?? ""}
+        feedback={feedback}
+        todayStr={todayStr}
+        showLocation={effectiveLocation === null}
+      />
+    </div>
   );
 }
