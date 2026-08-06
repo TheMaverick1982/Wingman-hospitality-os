@@ -12,7 +12,8 @@ export type NotificationKey =
   | "monthly_training"
   | "partner_followups"
   | "partner_monthly_report"
-  | "staff_question";
+  | "staff_question"
+  | "shift_feedback";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -43,6 +44,13 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     group: "Team",
     label: "Staff question escalated",
     description: "When a team member asks the Ask Wingman assistant a question it can't answer and escalates it, email the location's manager so they can reply.",
+    audience: "Location email",
+  },
+  {
+    key: "shift_feedback",
+    group: "Team",
+    label: "Post-shift feedback",
+    description: "When a team member leaves an end-of-shift reflection (what went well, what to improve, anything guests said), email the location so managers can read and act on it. Managers are always pushed in-app; this toggle controls the email copy.",
     audience: "Location email",
   },
   {
