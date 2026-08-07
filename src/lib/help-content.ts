@@ -303,6 +303,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Getting the word out" },
       { kind: "p", text: "Open Guests → Guest Reviews. Each location has a ready QR code and short link — copy the link, or download the QR as an SVG to print. Guests scan it, rate their visit (food, service, likelihood to return), can say who served them (first names only, for a shout-out), and leave a comment. It's about 20 seconds." },
       { kind: "image", src: "/help/guest-survey.png", alt: "The guest survey form on a phone", caption: "What the guest sees — a ~20-second rating and comment." },
+      { kind: "note", text: "Texting or posting the link shows your restaurant's own logo and name in the preview, not a generic Wingman card." },
       { kind: "h", text: "Seeing the feedback" },
       { kind: "p", text: "The page shows your response count, average rating, and rave-review count, plus every response — filtered by the location selector at the top. If a guest leaves contact info that matches someone already in your Bounce Back, we link it to that guest; if not, it simply lives here in the archive." },
       { kind: "h", text: "What the whole team sees" },
@@ -633,6 +634,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },
       { kind: "list", items: [
         "Each opening gets a short, branded link (joinwingman.app/j/…) and a QR code — post the ad anywhere you hire (Indeed, Craigslist, Facebook) and use the short link as the \"apply\" URL, or print the QR on a window sign or table tent.",
+        "Share that link on social and the preview shows your logo, the role you're hiring, and a line from your ad — not a generic Wingman card — so the post looks like yours.",
         "Anyone who applies lands with the role and location already set, and shows up tagged to that opening. Wingman counts clicks and applications per opening, so you can see which post is actually working (e.g. 120 clicks → 9 applied).",
         "Close an opening when it's filled, reopen or delete it anytime — applicants who already applied are always kept.",
       ] },
