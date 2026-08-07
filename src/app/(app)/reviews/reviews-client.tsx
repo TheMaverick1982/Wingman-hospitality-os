@@ -100,8 +100,9 @@ export function ReviewsClient({
         </div>
         <div className="bg-white border border-line rounded-2xl p-5">
           <div className="text-[12px] text-muted-2 font-medium">Avg rating</div>
-          <div className="text-[26px] font-bold text-ink tabular-nums flex items-center gap-2">
-            {overallAvg ? overallAvg.toFixed(1) : "—"} {overallAvg > 0 && <Stars value={overallAvg} />}
+          <div className="text-[26px] font-bold text-ink tabular-nums flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span>{overallAvg ? overallAvg.toFixed(1) : "—"}</span>
+            {overallAvg > 0 && <Stars value={overallAvg} />}
           </div>
         </div>
         <div className="bg-white border border-line rounded-2xl p-5">
