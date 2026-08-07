@@ -19,6 +19,7 @@ export type Section =
   | "questions"
   | "reviews"
   | "shift"
+  | "manager_channel"
   | "settings";
 
 // The permission matrix from the design handoff (README §3 / Settings ->
@@ -59,6 +60,8 @@ const SECTION_ACCESS: Record<Section, Record<AccessRole, SectionAccess>> = {
   reviews: { super_admin: "full", manager: "full", shift_lead: "view", staff: "none", developer: "none" },
   // Shift board: managers/shift-leads post the day's board; all staff read it.
   shift: { super_admin: "full", manager: "full", shift_lead: "full", staff: "view", developer: "none" },
+  // Manager channel: owners/managers/shift-leads only — staff never see it.
+  manager_channel: { super_admin: "full", manager: "full", shift_lead: "full", staff: "none", developer: "none" },
   settings: { super_admin: "full", manager: "none", shift_lead: "none", staff: "none", developer: "none" },
 };
 

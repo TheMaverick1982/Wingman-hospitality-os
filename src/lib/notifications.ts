@@ -13,7 +13,8 @@ export type NotificationKey =
   | "partner_followups"
   | "partner_monthly_report"
   | "staff_question"
-  | "shift_feedback";
+  | "shift_feedback"
+  | "manager_channel";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -52,6 +53,13 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     label: "Post-shift feedback",
     description: "When a team member leaves an end-of-shift reflection (what went well, what to improve, anything guests said), email the location so managers can read and act on it. Managers are always pushed in-app; this toggle controls the email copy.",
     audience: "Location email",
+  },
+  {
+    key: "manager_channel",
+    group: "Team",
+    label: "Manager channel posts",
+    description: "When someone posts a new message (not a reply) in the Manager channel, email the other managers so nothing important is missed. Managers are always pushed in-app; this toggle controls the email copy.",
+    audience: "Managers",
   },
   {
     key: "test_overdue",
