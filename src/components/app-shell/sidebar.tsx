@@ -87,6 +87,25 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
 
 const NAV_STATE_KEY = "wm.nav.openGroups";
 
+// Mobile only: the phone leads with the in-the-moment "on the floor" tools; the
+// setup / analysis surfaces collapse into one "Set up & manage" group (they're
+// really desktop work). Desktop keeps the full grouped nav unchanged. Ordered by
+// href; anything the role can't see (or an unknown href) simply drops out.
+const MOBILE_FLOOR_ORDER = [
+  "/dashboard",
+  "/shift",
+  "/manager-channel",
+  "/bounceback",
+  "/recovery",
+  "/reviews",
+  "/culture",
+  "/questions",
+  "/accountability",
+  "/training",
+];
+const MOBILE_MANAGE_ORDER = ["/hiring", "/staff", "/journey", "/growth", "/menu", "/audit", "/partners", "/reporting"];
+const ALL_NAV_ITEMS: NavItem[] = [DASHBOARD_ITEM, REPORTING_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
+
 // Items shown for a group in a given variant. On mobile, Guest Bounce Back is
 // surfaced as a pinned shortcut above the Guests group, so it's removed from the
 // group itself there — otherwise it would appear (and highlight) twice.
@@ -146,6 +165,17 @@ export function Sidebar({
   const canSeeSettings = accessRole === "super_admin" || accessRole === "manager" || accessRole === "shift_lead";
 
   const canSee = (section: Section) => getSectionAccess(accessRole, section, permissionOverrides) !== "none";
+
+  // Mobile drawer for managers/owners: split into "on the floor" (flat, up top)
+  // and a collapsed "Set up & manage" group. Staff already get a lean flat nav,
+  // and desktop keeps its full grouped nav — so this only reshapes the phone.
+  const isMobileZoned = variant === "drawer" && !isStaff;
+  const [manageOpen, setManageOpen] = useState(false);
+  const byHref = new Map(ALL_NAV_ITEMS.map((it) => [it.href, it] as const));
+  const resolveNav = (hrefs: string[]): NavItem[] =>
+    hrefs.map((h) => byHref.get(h)).filter((it): it is NavItem => !!it && canSee(it.section));
+  const floorItems = isMobileZoned ? resolveNav(MOBILE_FLOOR_ORDER) : [];
+  const manageItems = isMobileZoned ? resolveNav(MOBILE_MANAGE_ORDER) : [];
 
   // Collapsible nav groups. Start with only the group containing the current
   // page open — computed from the pathname so server and client render the same
@@ -237,42 +267,70 @@ export function Sidebar({
             Start here
           </Link>
         )}
-        {canSee(DASHBOARD_ITEM.section) && navLink(DASHBOARD_ITEM)}
+        {!isMobileZoned && canSee(DASHBOARD_ITEM.section) && navLink(DASHBOARD_ITEM)}
 
         {/* Mobile: pin Guest Bounce Back above the Guests group for one-tap
-            access — it's the tool staff reach for constantly on the floor. */}
-        {variant === "drawer" && canSee(BOUNCEBACK_ITEM.section) && (
+            access — it's the tool staff reach for constantly on the floor.
+            (In the manager mobile split it lives in the "on the floor" list.) */}
+        {variant === "drawer" && !isMobileZoned && canSee(BOUNCEBACK_ITEM.section) && (
           <div className="mt-1.5">{navLink(BOUNCEBACK_ITEM)}</div>
         )}
 
-        {isStaff
-          ? // Staff see only a handful of sections — show them flat, no collapsible group headers.
-            NAV_GROUPS.flatMap((group) => groupItemsFor(group, variant).filter((it) => canSee(it.section))).map((it) =>
-              navLink(it)
-            )
-          : NAV_GROUPS.map((group) => {
-              const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
-              if (items.length === 0) return null; // hide a group the role can't see into
-              const open = openGroups[group.id];
-              const hasActive = items.some((it) => pathname.startsWith(it.href));
-              return (
-                <div key={group.id} className="mt-1.5">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.id)}
-                    aria-expanded={open}
-                    className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
-                  >
-                    {/* Tint the label when its section holds the current page but is collapsed. */}
-                    <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
-                    <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
-                  </button>
-                  {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
-                </div>
-              );
-            })}
+        {isStaff ? (
+          // Staff see only a handful of sections — show them flat, no collapsible group headers.
+          NAV_GROUPS.flatMap((group) => groupItemsFor(group, variant).filter((it) => canSee(it.section))).map((it) =>
+            navLink(it)
+          )
+        ) : isMobileZoned ? (
+          // Manager/owner on the phone: "on the floor" flat, then one collapsed
+          // "Set up & manage" group for the desktop-first setup/analysis surfaces.
+          <>
+            {floorItems.map((it) => navLink(it))}
+            {manageItems.length > 0 && (
+              <div className="mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setManageOpen((o) => !o)}
+                  aria-expanded={manageOpen}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
+                >
+                  <span>Set up &amp; manage</span>
+                  <ChevronDown size={14} className={`transition-transform duration-150 ${manageOpen ? "" : "-rotate-90"}`} />
+                </button>
+                {manageOpen && (
+                  <div className="flex flex-col gap-0.5">
+                    <div className="px-3 pb-1 text-[10.5px] text-muted-2 italic">Best on a computer</div>
+                    {manageItems.map((it) => navLink(it))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          NAV_GROUPS.map((group) => {
+            const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
+            if (items.length === 0) return null; // hide a group the role can't see into
+            const open = openGroups[group.id];
+            const hasActive = items.some((it) => pathname.startsWith(it.href));
+            return (
+              <div key={group.id} className="mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={open}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
+                >
+                  {/* Tint the label when its section holds the current page but is collapsed. */}
+                  <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
+                  <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+                </button>
+                {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
+              </div>
+            );
+          })
+        )}
 
-        {canSee(REPORTING_ITEM.section) && <div className="mt-1.5">{navLink(REPORTING_ITEM)}</div>}
+        {!isMobileZoned && canSee(REPORTING_ITEM.section) && <div className="mt-1.5">{navLink(REPORTING_ITEM)}</div>}
 
         {/* Developer role: API-only. Its single home is the API access page. */}
         {isDeveloperRole && (
