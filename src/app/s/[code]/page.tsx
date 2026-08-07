@@ -4,11 +4,28 @@ import { GUEST_FACING_DEPARTMENTS } from "@/lib/constants";
 import { SurveyForm } from "./survey-form";
 
 // Public guest survey (no login), reached via the per-location QR / short link
-// /s/<code>. Not indexed — it's a link the restaurant hands to guests.
-export const metadata: Metadata = {
-  title: "How was your visit?",
-  robots: { index: false, follow: false },
-};
+// /s/<code>. Not indexed — it's a link the restaurant hands to guests. Shared
+// previews carry the restaurant's own logo + name, not the generic Wingman card.
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params;
+  const admin = createAdminClient();
+  const { data: linkRow } = await admin.from("guest_survey_links").select("org_id").eq("code", code).maybeSingle();
+  const orgId = (linkRow as { org_id?: string } | null)?.org_id ?? null;
+  const { data: orgRow } = orgId
+    ? await admin.from("organizations").select("name, logo_url").eq("id", orgId).maybeSingle()
+    : { data: null };
+  const org = orgRow as { name: string; logo_url: string | null } | null;
+  const title = org ? `How was your visit to ${org.name}?` : "How was your visit?";
+  const description = org ? `Share a quick rating and a note with the ${org.name} team — about 20 seconds.` : "Share a quick rating with the team.";
+  const images = org?.logo_url ? [{ url: org.logo_url }] : undefined;
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: { title, description, ...(images ? { images } : {}) },
+    twitter: { card: images ? "summary" : "summary_large_image", title, description, ...(images ? { images } : {}) },
+  };
+}
 
 type ServerOption = { id: string; firstName: string };
 

@@ -10,21 +10,50 @@ import { EmbedResizer } from "./embed-resizer";
 // name (the one they uploaded for this form) instead of the generic Wingman image,
 // so a shared apply link looks like the restaurant's job post — not a Wingman ad.
 // Falls back to the site default only when they haven't uploaded a logo.
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ opening?: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
+  const { opening: openingId } = await searchParams;
   const admin = createAdminClient();
-  const { data } = await admin.from("organizations").select("name, logo_url").eq("public_slug", slug).maybeSingle();
-  const org = data as { name: string; logo_url: string | null } | null;
-  const title = org ? `Join the ${org.name} team` : "Join the team";
-  const description = org ? `Apply to work at ${org.name}.` : "Apply to join the team.";
+  const { data } = await admin.from("organizations").select("id, name, logo_url").eq("public_slug", slug).maybeSingle();
+  const org = data as { id: string; name: string; logo_url: string | null } | null;
   const images = org?.logo_url ? [{ url: org.logo_url }] : undefined;
-  return {
-    title,
-    description,
+  const card = (t: string, d: string): Metadata => ({
+    title: t,
+    description: d,
     robots: { index: false, follow: false },
-    openGraph: { title, description, ...(images ? { images } : {}) },
-    twitter: { card: images ? "summary" : "summary_large_image", title, description, ...(images ? { images } : {}) },
-  };
+    openGraph: { title: t, description: d, ...(images ? { images } : {}) },
+    twitter: { card: images ? "summary" : "summary_large_image", title: t, description: d, ...(images ? { images } : {}) },
+  });
+
+  // Shared from a specific opening (the /j/<code> short link redirects here with
+  // ?opening=<id>) → a per-position preview: the client's logo, the role in the
+  // title, and a blurb pulled from the opening's own ad copy.
+  if (org && openingId) {
+    const { data: opRow } = await admin
+      .from("job_openings")
+      .select("department, title, ad_copy, pay_note, employment_type")
+      .eq("id", openingId)
+      .eq("org_id", org.id)
+      .maybeSingle();
+    const op = opRow as { department: string; title: string | null; ad_copy: string | null; pay_note: string | null; employment_type: string | null } | null;
+    if (op) {
+      const role = (op.title || op.department || "team member").trim();
+      const meta = [op.employment_type, op.pay_note].filter(Boolean).join(" · ");
+      const blurb = (op.ad_copy || "").replace(/\s+/g, " ").trim().slice(0, 180);
+      const description = [meta, blurb || `${org.name} is hiring a ${role}. Apply in a couple of minutes.`].filter(Boolean).join(" — ");
+      return card(`Now hiring: ${role} — ${org.name}`, description);
+    }
+  }
+
+  return org
+    ? card(`Join the ${org.name} team`, `Apply to work at ${org.name}.`)
+    : card("Join the team", "Apply to join the team.");
 }
 
 // Submitting grades the screening answers with an AI call, so give the route room
