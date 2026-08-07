@@ -345,6 +345,23 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "manager-channel",
+    title: "Manager channel — your management team's back room",
+    summary: "One org-wide channel for owners, managers, and shift leads to post updates and reply in threads. Staff never see it.",
+    categoryId: "operations",
+    keywords: ["manager channel", "managers", "messages", "chat", "threads", "back of house", "leadership", "manager chat"],
+    body: [
+      { kind: "p", text: "The Manager channel is a single, org-wide channel just for your leadership — owners, managers, and shift leads. Post an update, flag an issue for the other shifts, ask a question, and reply in threads. It's the one place management talk lives, instead of scattered texts. Staff never see it." },
+      { kind: "steps", items: [
+        "Open Team → Manager channel.",
+        "Write a post and hit Post — it starts a new thread and alerts the other managers.",
+        "Reply under any thread to keep a conversation together.",
+      ] },
+      { kind: "p", text: "When someone starts a new thread, every other manager gets a push (and an email, if that's on). Replies show up in-app without emailing everyone, so a back-and-forth doesn't blow up inboxes. Anyone on the management team can remove a message." },
+      { kind: "note", text: "New-post emails are controlled by Settings → Notifications → \"Manager channel posts.\" In-app push to managers is always on." },
+    ],
+  },
+  {
     slug: "service-recovery",
     title: "Service Recovery — every comp has a reason",
     summary: "Track comps and how issues were made right, so recovery becomes a habit, not a leak.",

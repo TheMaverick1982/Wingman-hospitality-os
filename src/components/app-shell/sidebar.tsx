@@ -28,6 +28,7 @@ import {
   PlugZap,
   ChevronDown,
   MessageCircleQuestion,
+  MessagesSquare,
   Star,
   Megaphone,
   type LucideIcon,
@@ -63,6 +64,7 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
     label: "Team",
     items: [
       { href: "/shift", label: "Shift", icon: Megaphone, section: "shift" },
+      { href: "/manager-channel", label: "Manager channel", icon: MessagesSquare, section: "manager_channel" },
       { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
       { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
       { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
