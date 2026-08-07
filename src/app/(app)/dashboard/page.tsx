@@ -22,8 +22,10 @@ import { GuestSentimentCard } from "@/components/dashboard/guest-sentiment-card"
 import { getGuestSentiment } from "@/lib/guest-sentiment";
 import { ShiftBoardCard } from "@/components/dashboard/shift-board-card";
 import { getTodaysBoard } from "@/lib/shift-board-data";
+import { localDate } from "@/lib/local-date";
 import { WinsCard } from "@/components/dashboard/wins-card";
 import { getRecentWins } from "@/lib/wins-data";
+import { NeedsYouNow, type NeedItem } from "@/components/dashboard/needs-you-now";
 import { getWeeklyMoves } from "@/lib/weekly-moves-data";
 import { WeeklyMovesCard } from "./weekly-moves-card";
 import { StaffDashboard } from "./staff-dashboard";
@@ -361,10 +363,28 @@ export default async function DashboardPage({
   const shiftBoard = await getTodaysBoard(profile.orgId, effectiveLocation, profile.locationTimezone);
   const wins = await getRecentWins(profile.orgId, profile.userId, 4);
 
+  // Mobile "Needs you now" — the 2–3 live things to act on right now. Each count
+  // is guarded so a not-yet-applied migration can't break the dashboard.
+  const needItems: NeedItem[] = [];
+  try {
+    const today = localDate(profile.locationTimezone);
+    const [openQ, newApps, feedbackToday] = await Promise.all([
+      supabase.from("staff_questions").select("id", { count: "exact", head: true }).eq("status", "open").is("deleted_at", null).then((r) => r.count ?? 0, () => 0),
+      supabase.from("job_applications").select("id", { count: "exact", head: true }).eq("status", "new").then((r) => r.count ?? 0, () => 0),
+      supabase.from("shift_feedback").select("id", { count: "exact", head: true }).eq("business_day", today).is("deleted_at", null).then((r) => r.count ?? 0, () => 0),
+    ]);
+    if (openQ > 0) needItems.push({ key: "questions", label: `${openQ} staff question${openQ === 1 ? "" : "s"} waiting for an answer`, href: "/questions" });
+    if (newApps > 0) needItems.push({ key: "applicants", label: `${newApps} new applicant${newApps === 1 ? "" : "s"} to review`, href: "/hiring" });
+    if (feedbackToday > 0) needItems.push({ key: "feedback", label: `${feedbackToday} post-shift note${feedbackToday === 1 ? "" : "s"} from your team today`, href: "/shift" });
+  } catch {
+    /* leave needItems empty — the card just doesn't render */
+  }
+
   return (
     <>
       <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
 
+      <NeedsYouNow items={needItems} />
       <ShiftBoardCard notes={shiftBoard} />
       <WinsCard wins={wins} />
       <GuestSentimentCard sentiment={guestSentiment} />
