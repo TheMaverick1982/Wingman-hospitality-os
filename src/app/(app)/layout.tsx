@@ -15,6 +15,8 @@ import { ScrollReset } from "@/components/app-shell/scroll-reset";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoViewToggle } from "@/components/app-shell/demo-view-toggle";
+import { DemoPhonePreview } from "@/components/app-shell/demo-phone-preview";
+import { HideWhenFramed } from "@/components/app-shell/hide-when-framed";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { FirstLoginLanguage } from "@/components/app-shell/first-login-language";
 import { CloverFinalize } from "@/components/app-shell/clover-finalize";
@@ -110,7 +112,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-x-hidden safe-inset-x safe-inset-b">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
-        {profile.isDemo && <DemoViewToggle view={profile.accessRole === "staff" ? (profile.demoDept === "Chef" ? "chef" : profile.demoDept === "Bartender" ? "bartender" : "server") : "owner"} />}
+        {profile.isDemo && (
+          <HideWhenFramed>
+            <DemoViewToggle
+              view={profile.accessRole === "staff" ? (profile.demoDept === "Chef" ? "chef" : profile.demoDept === "Bartender" ? "bartender" : "server") : "owner"}
+              action={<DemoPhonePreview />}
+            />
+          </HideWhenFramed>
+        )}
         <MobileNav
           accessRole={profile.accessRole}
           fullName={profile.fullName}

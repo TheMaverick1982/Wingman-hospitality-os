@@ -4,15 +4,17 @@ import type { NextConfig } from "next";
 // that are safe to enforce without an allowlist audit of every script/style/
 // analytics origin -- so it cannot white-screen the live app -- while still
 // closing real attack classes:
-//   * frame-ancestors 'none'  -> clickjacking (modern replacement for X-Frame-Options)
+//   * frame-ancestors 'self'  -> clickjacking (modern replacement for X-Frame-Options)
 //   * base-uri 'self'         -> blocks <base> tag hijacking of relative URLs
 //   * object-src 'none'       -> blocks plugin/Flash injection
 //   * form-action 'self'      -> forms can't be repointed to an attacker endpoint
 // A full script-src/style-src policy is still deferred: it needs nonces tuned
 // against Next.js + Supabase + analytics against the live app before enforcing.
 const cspBaseDirectives = ["base-uri 'self'", "object-src 'none'", "form-action 'self'"];
-// Most of the app must never be framed (clickjacking protection).
-const cspFrameLocked = [...cspBaseDirectives, "frame-ancestors 'none'"].join("; ");
+// The app may only be framed by our OWN origin (never a third party), so
+// clickjacking is still fully blocked while the in-app demo "phone view" preview
+// can iframe the live app at phone width. 'self' is the standard SAMEORIGIN posture.
+const cspFrameLocked = [...cspBaseDirectives, "frame-ancestors 'self'"].join("; ");
 // The public application form is deliberately embeddable on customers' own sites
 // (the "Embed" option builds an <iframe src=".../apply/<slug>?embed=1">), so it
 // must be allowed to load inside a frame on any origin.
@@ -31,11 +33,12 @@ const commonSecurityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
 ];
 
-// Everything EXCEPT the embeddable /apply form: deny framing entirely
-// (including authenticated dashboards) — X-Frame-Options + CSP frame-ancestors.
+// Everything EXCEPT the embeddable /apply form: framable only by our own origin
+// (SAMEORIGIN) so a third party still can't frame the authenticated app, while the
+// demo "phone view" preview can iframe it same-origin.
 const lockedSecurityHeaders = [
   ...commonSecurityHeaders,
-  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Content-Security-Policy", value: cspFrameLocked },
 ];
 

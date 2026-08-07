@@ -5,7 +5,13 @@ import { setDemoView } from "@/app/(app)/demo-view-actions";
 // view — as a Server, a Chef, or a Bartender — mid-call, to show what each role
 // actually sees (the Chef sees food recipes, the Bartender sees cocktail
 // recipes). Rendered only for demo orgs.
-export function DemoViewToggle({ view }: { view: "owner" | "server" | "chef" | "bartender" }) {
+export function DemoViewToggle({
+  view,
+  action,
+}: {
+  view: "owner" | "server" | "chef" | "bartender";
+  action?: React.ReactNode;
+}) {
   const chips: { role: "owner" | "server" | "chef" | "bartender"; label: string }[] = [
     { role: "owner", label: "Owner" },
     { role: "server", label: "Server" },
@@ -27,8 +33,10 @@ export function DemoViewToggle({ view }: { view: "owner" | "server" | "chef" | "
           <span className="truncate"><span className="font-semibold">Demo</span> — owner view. Flip to a staff role to show what they see.</span>
         )}
       </span>
-      <div className="flex items-center gap-1 shrink-0 bg-white/10 rounded-full p-0.5">
-        {chips.map((c) => (
+      <div className="flex items-center gap-2 shrink-0">
+        {action}
+        <div className="flex items-center gap-1 bg-white/10 rounded-full p-0.5">
+          {chips.map((c) => (
           <form key={c.role} action={setDemoView.bind(null, c.role)}>
             <button
               type="submit"
@@ -39,7 +47,8 @@ export function DemoViewToggle({ view }: { view: "owner" | "server" | "chef" | "
               {c.label}
             </button>
           </form>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
