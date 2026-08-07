@@ -7,6 +7,7 @@ import {
   approvePost, generateAndSchedule, publishAndShare, shareToFacebook, BATCH_SIZE,
   type Draft, type PostStatus,
 } from "@/lib/playbook";
+import { runDailyNewsjack } from "@/lib/newsjack";
 
 async function admin() {
   return platformSectionActor("social");
@@ -82,4 +83,17 @@ export async function generateMonthAction(): Promise<{ error: string | null; cre
   const res = await generateAndSchedule(me.userId, BATCH_SIZE);
   revalidatePath("/admin/playbook");
   return { error: res.error, created: res.created };
+}
+
+// Scan restaurant news now and draft one newsjack post for review (same as the
+// daily cron, but on demand — handy for testing or when you spot breaking news).
+export async function scanNewsNowAction(): Promise<{ error: string | null; drafted?: boolean; title?: string; considered?: number }> {
+  const me = await admin();
+  if (!me) return { error: "Not authorized." };
+  const res = await runDailyNewsjack();
+  revalidatePath("/admin/playbook");
+  if (!res.drafted) {
+    return { error: res.considered === 0 ? "No fresh restaurant news found right now — try again later." : "Scanned the news but nothing was a good, safe fit to newsjack today.", drafted: false, considered: res.considered };
+  }
+  return { error: null, drafted: true, title: res.title, considered: res.considered };
 }

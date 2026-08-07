@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Sparkles, Loader2, Save, Send, Trash2, Pencil, CalendarClock, CheckCircle2, Check, Share2 } from "lucide-react";
-import { generateDraftAction, savePostAction, setStatusAction, deletePostAction, approveAction, generateMonthAction, shareToFacebookAction } from "./actions";
+import { Sparkles, Loader2, Save, Send, Trash2, Pencil, CalendarClock, CheckCircle2, Check, Share2, Newspaper } from "lucide-react";
+import { generateDraftAction, savePostAction, setStatusAction, deletePostAction, approveAction, generateMonthAction, shareToFacebookAction, scanNewsNowAction } from "./actions";
 import type { Post, PostStatus } from "@/lib/playbook";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -72,14 +72,24 @@ export function Composer({ categories, posts, lastScheduled, pendingApproval, sc
             {lastScheduled && <span className="text-muted-2"> · booked through {fmtDT(lastScheduled)}</span>}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => { setErr(null); setNote(null); start(async () => { const r = await generateMonthAction(); if (r.error) setErr(r.error); else setNote(`Drafted and scheduled ${r.created} post${r.created === 1 ? "" : "s"}. Review and approve them below.`); }); }}
-          disabled={pending}
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-ink rounded-full px-4 py-2 hover:opacity-90 disabled:opacity-50"
-        >
-          <Sparkles size={14} /> Generate &amp; schedule a month
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => { setErr(null); setNote(null); start(async () => { const r = await scanNewsNowAction(); if (r.error) setErr(r.error); else setNote(`Newsjack draft ready: “${r.title}”. Find it below as a draft, review it, and publish.`); }); }}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink bg-white border border-line rounded-full px-4 py-2 hover:border-brick hover:text-brick disabled:opacity-50"
+          >
+            <Newspaper size={14} /> Scan news now
+          </button>
+          <button
+            type="button"
+            onClick={() => { setErr(null); setNote(null); start(async () => { const r = await generateMonthAction(); if (r.error) setErr(r.error); else setNote(`Drafted and scheduled ${r.created} post${r.created === 1 ? "" : "s"}. Review and approve them below.`); }); }}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-ink rounded-full px-4 py-2 hover:opacity-90 disabled:opacity-50"
+          >
+            <Sparkles size={14} /> Generate &amp; schedule a month
+          </button>
+        </div>
       </div>
       {note && <div className="text-[13px] text-[#15803d] font-medium">{note}</div>}
 
@@ -132,6 +142,11 @@ export function Composer({ categories, posts, lastScheduled, pendingApproval, sc
                   <div className="text-[14.5px] font-semibold text-ink truncate">{p.title}</div>
                   <div className="text-[12.5px] text-muted-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                     <span>{p.category}</span>
+                    {p.sourceUrl && (
+                      <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brick font-semibold">
+                        <Newspaper size={11} /> Newsjack source
+                      </a>
+                    )}
                     <span className={`font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>{p.status}</span>
                     {p.status === "scheduled" && p.scheduledFor && <span className="inline-flex items-center gap-1"><CalendarClock size={11} /> {fmtDT(p.scheduledFor)}</span>}
                     {p.status === "scheduled" && (p.approved ? <span className="inline-flex items-center gap-1 text-[#15803d] font-semibold"><Check size={11} /> approved</span> : <span className="text-[#B45309] font-semibold">needs approval</span>)}
