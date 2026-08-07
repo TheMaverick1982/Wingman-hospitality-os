@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { getPublishedBySlug, incrementViews, listPublished } from "@/lib/playbook";
+import { isBotRequest } from "@/lib/is-bot";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,8 @@ export default async function PlaybookArticle({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const post = await getPublishedBySlug(slug);
   if (!post) notFound();
-  await incrementViews(post.id);
+  // Count human reads only — skip crawlers, share-link scrapers, and scripts.
+  if (!(await isBotRequest())) await incrementViews(post.id);
 
   const more = (await listPublished()).filter((p) => p.slug !== post.slug).slice(0, 3);
 
