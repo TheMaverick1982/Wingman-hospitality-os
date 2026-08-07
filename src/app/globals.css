@@ -121,3 +121,28 @@
 body {
   font-feature-settings: "tnum" 0;
 }
+
+/*
+ * Never let a too-wide element create a horizontal scroll / rightward shift.
+ * On the native iOS app (viewport-fit=cover) this was leaving content flush to
+ * the right edge while the left kept its margin. Belt-and-suspenders with the
+ * app shell's overflow-x-hidden.
+ */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/*
+ * Respect the device's safe areas on the sides and bottom (top is handled by the
+ * mobile header). viewport-fit=cover draws edge-to-edge, so without this the app
+ * can sit under rounded corners / the home indicator in landscape and on the
+ * native app. max() keeps our normal padding when an inset is 0 (e.g. portrait).
+ */
+.safe-inset-x {
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
+}
+.safe-inset-b {
+  padding-bottom: env(safe-area-inset-bottom);
+}
