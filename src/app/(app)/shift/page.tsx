@@ -30,10 +30,17 @@ export default async function ShiftPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const locations = await getOrgLocations();
 
+  // The board is a daily tool — keep it to the last 7 local days so it stays
+  // short and current instead of growing into an endless archive. (The dashboard
+  // "Today on shift" card already shows only today.)
+  const todayStr = localDate(profile.locationTimezone);
+  const weekAgoStr = new Date(new Date(todayStr + "T00:00:00").getTime() - 7 * 86400000).toISOString().slice(0, 10);
+
   let q = supabase
     .from("shift_board_notes")
     .select("id, kind, body, author_name, business_day, location_id, created_at")
     .is("deleted_at", null)
+    .gte("business_day", weekAgoStr)
     .order("business_day", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(120);
@@ -57,8 +64,6 @@ export default async function ShiftPage({ searchParams }: { searchParams: Promis
   const pickable = canSpan
     ? locations
     : locations.filter((l) => l.id === profile.locationId || profile.accessibleLocationIds.includes(l.id));
-
-  const todayStr = localDate(profile.locationTimezone);
 
   // Post-shift feedback (Slice 2). Managers read the whole feed; every viewer's
   // own "already checked in today" is looked up so the composer can confirm it.

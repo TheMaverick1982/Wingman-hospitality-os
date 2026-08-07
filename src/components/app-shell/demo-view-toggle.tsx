@@ -14,7 +14,7 @@ export function DemoViewToggle({ view }: { view: "owner" | "server" | "chef" | "
   ];
   const isStaff = view !== "owner";
   return (
-    <div className={`px-5 py-2 flex items-center justify-between gap-4 text-[13px] ${isStaff ? "bg-brick text-white" : "bg-ink text-white"}`}>
+    <div className={`px-5 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[13px] ${isStaff ? "bg-brick text-white" : "bg-ink text-white"}`}>
       <span className="flex items-center gap-2 min-w-0">
         <Eye size={15} className="shrink-0" />
         {view === "chef" ? (

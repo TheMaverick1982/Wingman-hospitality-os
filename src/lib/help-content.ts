@@ -281,6 +281,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["wins", "wins feed", "recognition", "shout-out", "shoutout", "celebrate", "kudos", "culture moments", "most recognized"],
     body: [
       { kind: "p", text: "The Wins feed turns recognition into something the whole team does, not just managers. Anyone shares a win (a smooth shift, a big table handled well) or recognizes a teammate by name — and it shows up for everyone on the Culture page and on their dashboard under \"Recent wins.\"" },
+      { kind: "image", src: "/help/wins-feed.png", alt: "The Wins feed with celebrate buttons", caption: "Wins & shout-outs the whole team can post — and celebrate." },
       { kind: "steps", items: [
         "Open Culture (or the Recent wins card on your dashboard) and tap \"Share a win.\"",
         "Pick \"Share a win\" or \"Recognize a teammate,\" add a tag, and say what happened.",
@@ -298,8 +299,10 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["guest reviews", "survey", "feedback", "qr code", "ratings", "guest survey", "how guests feel"],
     body: [
       { kind: "p", text: "Guest Reviews collects how guests felt about their visit through a short survey. Each location gets its own QR code and short link (joinwingman.app/s/…) to put on a table tent, receipt, or window — or to text/email. It's separate from Guest Bounce Back on purpose: a survey response never adds a guest or counts as a visit, so your repeat-rate numbers stay clean." },
+      { kind: "image", src: "/help/guest-reviews.png", alt: "The Guest Reviews archive", caption: "Guest Reviews — response count, average rating, and every response, per location." },
       { kind: "h", text: "Getting the word out" },
       { kind: "p", text: "Open Guests → Guest Reviews. Each location has a ready QR code and short link — copy the link, or download the QR as an SVG to print. Guests scan it, rate their visit (food, service, likelihood to return), can say who served them (first names only, for a shout-out), and leave a comment. It's about 20 seconds." },
+      { kind: "image", src: "/help/guest-survey.png", alt: "The guest survey form on a phone", caption: "What the guest sees — a ~20-second rating and comment." },
       { kind: "h", text: "Seeing the feedback" },
       { kind: "p", text: "The page shows your response count, average rating, and rave-review count, plus every response — filtered by the location selector at the top. If a guest leaves contact info that matches someone already in your Bounce Back, we link it to that guest; if not, it simply lives here in the archive." },
       { kind: "h", text: "What the whole team sees" },
@@ -334,6 +337,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["post-shift", "post shift", "feedback", "reflection", "end of shift", "how was your shift", "shift report", "debrief"],
     body: [
       { kind: "p", text: "Post-shift feedback captures what only the people on the floor know. At the end of a shift, any team member opens Team → Shift and fills in a 30-second reflection: what went well, what could be better, and anything guests said. It reports straight to that location's managers — pushed in-app, and emailed to the location — so the next shift runs a little better." },
+      { kind: "image", src: "/help/post-shift-feedback.png", alt: "The post-shift feedback composer on the Shift page", caption: "“How was your shift?” — a 30-second reflection that reports to your managers." },
       { kind: "steps", items: [
         "Open Team → Shift and scroll to \"How was your shift?\"",
         "Fill in any of the three boxes — you only need one.",
@@ -352,6 +356,7 @@ export const ARTICLES: HelpArticle[] = [
     keywords: ["manager channel", "managers", "messages", "chat", "threads", "back of house", "leadership", "manager chat"],
     body: [
       { kind: "p", text: "The Manager channel is a single, org-wide channel just for your leadership — owners, managers, and shift leads. Post an update, flag an issue for the other shifts, ask a question, and reply in threads. It's the one place management talk lives, instead of scattered texts. Staff never see it." },
+      { kind: "image", src: "/help/manager-channel.png", alt: "The Manager channel with a thread", caption: "One org-wide channel for owners, managers, and shift leads — with threaded replies." },
       { kind: "steps", items: [
         "Open Team → Manager channel.",
         "Write a post and hit Post — it starts a new thread and alerts the other managers.",
