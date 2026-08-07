@@ -90,7 +90,7 @@ export function CandidatesPanel({
   const anyFilter = query || locationId || recommendation || department || datePreset;
 
   return (
-    <div id="candidate-scorecards" className="scroll-mt-6 flex flex-col gap-4">
+    <div id="candidate-scorecards" className="scroll-mt-24 flex flex-col gap-4">
       <h3 className="font-display text-lg font-semibold text-ink">Candidates</h3>
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
