@@ -22,6 +22,8 @@ export type Post = {
   publishedAt: string | null;
   facebookPostedAt: string | null;
   views: number;
+  // Set for newsjack drafts — the news story the post rides (shown in review).
+  sourceUrl: string | null;
 };
 
 export const PLAYBOOK_CATEGORIES = ["Retention", "Hiring", "Training", "Menu & LTOs", "Leadership", "Franchising"] as const;
@@ -41,6 +43,7 @@ function mapPost(r: Record<string, unknown>): Post {
     publishedAt: (r.published_at as string) ?? null,
     facebookPostedAt: (r.facebook_posted_at as string) ?? null,
     views: Number(r.views ?? 0),
+    sourceUrl: (r.source_url as string) ?? null,
   };
 }
 
@@ -95,7 +98,7 @@ export async function getPostById(id: string): Promise<Post | null> {
 
 async function uniqueSlug(base: string, ignoreId?: string): Promise<string> {
   const admin = createAdminClient();
-  let slug = base || "post";
+  const slug = base || "post";
   for (let i = 0; i < 50; i++) {
     const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
     const { data } = await admin.from("blog_posts").select("id").eq("slug", candidate).maybeSingle();
@@ -104,13 +107,14 @@ async function uniqueSlug(base: string, ignoreId?: string): Promise<string> {
   return `${slug}-${Date.now().toString(36)}`;
 }
 
-export async function createPost(userId: string, p: { title: string; excerpt: string; body: string; category: string; keywords: string[]; status?: PostStatus; scheduledFor?: string | null }): Promise<string | null> {
+export async function createPost(userId: string | null, p: { title: string; excerpt: string; body: string; category: string; keywords: string[]; status?: PostStatus; scheduledFor?: string | null; sourceUrl?: string | null }): Promise<string | null> {
   const admin = createAdminClient();
   const slug = await uniqueSlug(slugify(p.title));
   const status = p.status ?? "draft";
   const { data } = await admin.from("blog_posts").insert({
     slug, title: p.title, excerpt: p.excerpt, body: p.body, category: p.category, keywords: p.keywords,
-    status, scheduled_for: p.scheduledFor ?? null, published_at: status === "published" ? new Date().toISOString() : null, created_by: userId,
+    status, scheduled_for: p.scheduledFor ?? null, published_at: status === "published" ? new Date().toISOString() : null,
+    source_url: p.sourceUrl ?? null, created_by: userId,
   }).select("id").single();
   return (data as { id: string } | null)?.id ?? null;
 }
