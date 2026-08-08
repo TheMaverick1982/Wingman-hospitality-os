@@ -105,8 +105,11 @@ const MOBILE_FLOOR_ORDER = [
   // Hiring stays on the floor: managers review new applicants and run interviews
   // from their phone (building openings/criteria is still better on desktop).
   "/hiring",
+  // Partners is a phone task too: managers snap a business card and log a touch
+  // while they're out in the community (manager/owner-only by permission).
+  "/partners",
 ];
-const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/partners", "/reporting"];
+const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/reporting"];
 const ALL_NAV_ITEMS: NavItem[] = [DASHBOARD_ITEM, REPORTING_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
 
 // Items shown for a group in a given variant. On mobile, Guest Bounce Back is
