@@ -119,7 +119,15 @@ const NAV: NavEntry[] = [
   { kind: "item", item: { href: "/admin/team", label: "Team", icon: Users, section: "team" } },
 ];
 
-export function AdminSidebar({ fullName, platformAccess }: { fullName: string; platformAccess: string[] }) {
+export function AdminSidebar({
+  fullName,
+  platformAccess,
+  variant = "desktop",
+}: {
+  fullName: string;
+  platformAccess: string[];
+  variant?: "desktop" | "drawer";
+}) {
   const pathname = usePathname();
   const isSuper = PLATFORM_SECTIONS.every((s) => platformAccess.includes(s.key));
 
@@ -171,8 +179,15 @@ export function AdminSidebar({ fullName, platformAccess }: { fullName: string; p
     );
   };
 
+  // Desktop: a fixed sticky column, hidden below lg (a mobile drawer renders the
+  // same nav via variant="drawer"). Mirrors the customer app shell.
+  const rootClass =
+    variant === "drawer"
+      ? "w-[248px] bg-white py-5 px-4 flex flex-col h-full overflow-y-auto"
+      : "hidden lg:flex w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex-col sticky top-0 h-screen";
+
   return (
-    <div className="w-[248px] shrink-0 bg-white border-r border-line py-5 px-4 flex flex-col sticky top-0 h-screen">
+    <div className={rootClass}>
       <div className="flex items-center px-2.5 pb-1">
         <WingmanLogo className="h-6 w-auto" />
       </div>
