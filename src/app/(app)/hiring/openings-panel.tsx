@@ -72,7 +72,7 @@ export function OpeningsPanel({
           <Megaphone size={18} className="text-brick" />
           <div>
             <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">Job openings</div>
-            <p className="text-[13px] text-muted">Post a role for a location, get an AI-written ad + a link to share on Indeed, Craigslist, or social.</p>
+            <p className="text-[13px] text-muted">Post a role for a location, get an AI-written ad + a link to share on Indeed, Craigslist, or social. Counts below are applicants who came through each posting; your full applicant list (including direct applications) is further down.</p>
           </div>
         </div>
         {canEdit && (
@@ -107,8 +107,9 @@ export function OpeningsPanel({
                     </div>
                     {(clicks > 0 || count > 0) && (
                       <div className="text-[12px] text-muted-2 mt-0.5 tabular-nums">
-                        {clicks} click{clicks === 1 ? "" : "s"} · {count} applicant{count === 1 ? "" : "s"}
-                        {clicks > 0 ? ` · ${Math.round((count / clicks) * 100)}% applied` : ""}
+                        {clicks} click{clicks === 1 ? "" : "s"} · {count} applicant{count === 1 ? "" : "s"} via this posting
+                        {/* Only a valid conversion when applicants came through the tracked link — applicants can also arrive via the QR or a copied apply link, so count can exceed clicks. Show the rate only when it's ≤100%. */}
+                        {clicks > 0 && count <= clicks ? ` · ${Math.round((count / clicks) * 100)}% applied` : ""}
                       </div>
                     )}
                   </div>
