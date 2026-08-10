@@ -7,6 +7,7 @@ import { disconnectSquare, syncSquareNow, connectSquareSandboxToken } from "./sq
 import { disconnectClover, syncCloverNow } from "./clover-actions";
 import { disconnectToast, syncToastNow, connectToast } from "./toast-actions";
 import { disconnectLightspeed, syncLightspeedNow } from "./lightspeed-actions";
+import { connectHeartland, disconnectHeartland, syncHeartlandNow } from "./heartland-actions";
 
 export type SquareConnection = {
   merchantId: string;
@@ -41,6 +42,14 @@ export type LightspeedConnection = {
   lastSyncStatus: string | null;
 };
 
+export type HeartlandConnection = {
+  host: string;
+  name: string;
+  connectedAt: string;
+  lastSyncAt: string | null;
+  lastSyncStatus: string | null;
+};
+
 function fmt(iso: string | null): string {
   if (!iso) return "never";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -70,6 +79,8 @@ export function DirectIntegrations({
   toastConnections = [],
   lightspeedConfigured,
   lightspeedConnections = [],
+  heartlandConfigured,
+  heartlandConnections = [],
 }: {
   configured: boolean;
   connection: SquareConnection | null;
@@ -80,6 +91,8 @@ export function DirectIntegrations({
   toastConnections?: ToastConnection[];
   lightspeedConfigured?: boolean;
   lightspeedConnections?: LightspeedConnection[];
+  heartlandConfigured?: boolean;
+  heartlandConnections?: HeartlandConnection[];
 }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -97,6 +110,11 @@ export function DirectIntegrations({
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastErr, setToastErr] = useState<string | null>(null);
   const [toastGuid, setToastGuid] = useState("");
+
+  const [hlPending, startHl] = useTransition();
+  const [hlMsg, setHlMsg] = useState<string | null>(null);
+  const [hlErr, setHlErr] = useState<string | null>(null);
+  const [hlToken, setHlToken] = useState("");
 
   return (
     <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
@@ -202,6 +220,112 @@ export function DirectIntegrations({
             <OnboardingPill />
           </div>
         </div>
+      </div>
+
+      {/* ---------- Heartland Retail ---------- */}
+      <div className="rounded-xl border border-line p-4 mt-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#00A0B0] text-white flex items-center justify-center shrink-0 font-semibold">HR</div>
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold text-ink flex items-center gap-2">
+                Heartland Retail
+                {heartlandConnections.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#15803D] bg-[#E7F6EC] px-2 py-0.5 rounded-full">
+                    <Check size={11} /> {heartlandConnections.length} account{heartlandConnections.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              <div className="text-[12.5px] text-muted-2">Sync customers → Guests and sales → Business Health, per account</div>
+            </div>
+          </div>
+          <div className="shrink-0">
+            {!heartlandConfigured ? (
+              <OnboardingPill />
+            ) : (
+              heartlandConnections.length > 0 && (
+                <Btn
+                  small
+                  kind="ghost"
+                  icon={RefreshCw}
+                  disabled={hlPending}
+                  onClick={() => {
+                    setHlErr(null); setHlMsg(null);
+                    startHl(async () => {
+                      const res = await syncHeartlandNow(heartlandConnections[0].host);
+                      if (res.error) setHlErr(res.error);
+                      else setHlMsg(`Synced — ${res.guests} new guest${res.guests === 1 ? "" : "s"}, ${money(res.salesCents)} in sales.`);
+                    });
+                  }}
+                >
+                  {hlPending ? "Syncing…" : "Sync now"}
+                </Btn>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Connect by user access token (Heartland's OAuth is closed). */}
+        {heartlandConfigured && (
+          <div className="mt-3 pt-3 border-t border-line">
+            <label className="block text-[12.5px] font-semibold text-ink mb-1">Add an account</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                value={hlToken}
+                onChange={(e) => setHlToken(e.target.value)}
+                placeholder="Heartland Retail access token"
+                className="flex-1 min-w-[220px] rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick"
+              />
+              <button
+                type="button"
+                disabled={hlPending || !hlToken.trim()}
+                onClick={() => {
+                  setHlErr(null); setHlMsg(null);
+                  startHl(async () => {
+                    const res = await connectHeartland(hlToken);
+                    if (res.error) setHlErr(res.error);
+                    else { setHlMsg(`Connected ${res.name ?? "account"}.`); setHlToken(""); }
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark disabled:opacity-50 transition-colors"
+              >
+                <PlugZap size={14} /> {hlPending ? "Connecting…" : "Connect"}
+              </button>
+            </div>
+            <p className="text-[11.5px] text-muted-2 mt-1.5">Generate a user access token in Heartland Retail, then paste it here.</p>
+          </div>
+        )}
+
+        {heartlandConnections.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-line flex flex-col gap-2">
+            {heartlandConnections.map((c) => (
+              <div key={c.host} className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-[12.5px] text-muted-2 flex flex-wrap gap-x-4 gap-y-0.5">
+                  <span className="font-medium text-ink">{c.name || c.host}</span>
+                  <span>Last sync: {fmt(c.lastSyncAt)}</span>
+                  {c.lastSyncStatus && c.lastSyncStatus !== "ok" && <span className="text-danger">{c.lastSyncStatus}</span>}
+                </div>
+                <button
+                  type="button"
+                  disabled={hlPending}
+                  onClick={() => {
+                    if (!window.confirm(`Disconnect ${c.name || "this Heartland account"}? Wingman will stop syncing it.`)) return;
+                    setHlErr(null); setHlMsg(null);
+                    startHl(async () => {
+                      const res = await disconnectHeartland(c.host);
+                      if (res.error) setHlErr(res.error);
+                    });
+                  }}
+                  className="text-[12.5px] font-semibold text-muted-2 hover:text-danger disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {hlMsg && <p className="text-sm text-[#15803D] mt-3">{hlMsg}</p>}
+        {hlErr && <p className="text-sm text-danger mt-3">{hlErr}</p>}
       </div>
 
       {/* ---------- Lightspeed ---------- */}
