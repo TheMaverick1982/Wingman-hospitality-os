@@ -24,11 +24,12 @@ import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
-import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection } from "./square-card";
+import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection, type HeartlandConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
 import { cloverConfigured } from "@/lib/clover";
 import { toastConfigured } from "@/lib/toast";
 import { lightspeedConfigured } from "@/lib/lightspeed";
+import { heartlandConfigured } from "@/lib/heartland-retail";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
@@ -549,6 +550,28 @@ export default async function SettingsPage() {
   }));
   const lightspeedIsConfigured = lightspeedConfigured();
 
+  // Heartland Retail connections (safe columns only — the access token is a
+  // secret and is never selected to the browser).
+  const { data: heartlandRows } = await admin
+    .from("heartland_retail_connections")
+    .select("account_host, account_name, connected_at, last_sync_at, last_sync_status")
+    .eq("org_id", profile.orgId)
+    .order("connected_at", { ascending: true });
+  const heartlandConnections: HeartlandConnection[] = ((heartlandRows ?? []) as {
+    account_host: string;
+    account_name: string;
+    connected_at: string;
+    last_sync_at: string | null;
+    last_sync_status: string | null;
+  }[]).map((c) => ({
+    host: c.account_host,
+    name: c.account_name ?? "",
+    connectedAt: c.connected_at,
+    lastSyncAt: c.last_sync_at ?? null,
+    lastSyncStatus: c.last_sync_status ?? null,
+  }));
+  const heartlandIsConfigured = heartlandConfigured();
+
   // Staff activity trail (owner-only). Paginated — the first page loads here, and
   // "Load more" in the panel pulls older pages via loadMoreActivityAction.
   const { rows: activity, hasMore: activityHasMore } = await listActivity(profile.orgId, 0);
@@ -585,6 +608,8 @@ export default async function SettingsPage() {
                 toastConnections={toastConnections}
                 lightspeedConfigured={lightspeedIsConfigured}
                 lightspeedConnections={lightspeedConnections}
+                heartlandConfigured={heartlandIsConfigured}
+                heartlandConnections={heartlandConnections}
               />
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>

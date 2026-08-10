@@ -41,6 +41,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/heartland-sync",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/support-cleanup",
       "schedule": "0 5 * * *"
     },
