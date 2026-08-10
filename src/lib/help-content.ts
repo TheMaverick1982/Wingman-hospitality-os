@@ -665,6 +665,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "note", text: "The screen is decision support, not a gatekeeper — it never rejects anyone or changes their status. It's there to help you decide who's worth an interview; you always make the call." },
       { kind: "h", text: "Applications → Interview → Candidate" },
       { kind: "p", text: "Applications live in their own \"Applications\" section on the Hiring page, right above your candidates (there's a \"See Applications\" button up top to jump to it). The flow moves in one direction:" },
+      { kind: "p", text: "As applications pile up, the tracker keeps them scannable: once anyone's been screened, applicants are grouped best-to-worst by their screening tier — Strong fit, Worth a look, Not yet screened, then Probably pass — with the strongest sorted to the top of each group. \"Probably pass\" starts folded so the weak pile doesn't bury the good ones; tap any group header to fold or unfold it. Each applicant shows as a compact row (name, screening score, status); tap the row to expand the full application, screening breakdown, and interview scheduling." },
       { kind: "list", items: [
         "Each application has a status — New, Contacted, or Not a fit — plus their resume if they attached one. Filter by status to work the pipeline.",
         "When you're ready, click \"Schedule interview\", pick a date/time, add details (who's interviewing, where, what to bring), and Confirm.",

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal } from "lucide-react";
+import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug } from "./applicant-actions";
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
-import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer } from "@/lib/screening";
+import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
 
 export type Applicant = {
   id: string;
@@ -98,6 +98,27 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Applicants are grouped best→worst by their AI screening tier so the strong
+// ones surface at the top and the weak pile can be folded away. Ungraded
+// applicants (no screening questions answered) get a neutral "Not yet screened"
+// group. "pass" collapses by default — that's the scroll-killer.
+type GroupKey = ScreeningTier | "unscored";
+const GROUP_ORDER: GroupKey[] = ["strong", "worth_a_look", "unscored", "pass"];
+const GROUP_META: Record<GroupKey, { label: string; fg: string; bg: string; collapsedByDefault: boolean }> = {
+  strong: { ...TIER_META.strong, collapsedByDefault: false },
+  worth_a_look: { ...TIER_META.worth_a_look, collapsedByDefault: false },
+  unscored: { label: "Not yet screened", fg: "text-charcoal-2", bg: "bg-[#F1F1F1]", collapsedByDefault: false },
+  pass: { ...TIER_META.pass, collapsedByDefault: true },
+};
+const groupOf = (a: Applicant): GroupKey => a.screeningGrade?.tier ?? "unscored";
+// Sort within a group: highest screening score first, then most recent.
+function byScoreThenDate(a: Applicant, b: Applicant): number {
+  const sa = a.screeningGrade?.overall ?? -1;
+  const sb = b.screeningGrade?.overall ?? -1;
+  if (sb !== sa) return sb - sa;
+  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+}
+
 export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applySlug: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState(false);
@@ -116,6 +137,11 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const [slugMsg, setSlugMsg] = useState<string | null>(null);
   const [slugPending, startSlug] = useTransition();
   const [showForwarding, setShowForwarding] = useState(false);
+  // Which tier groups are collapsed (default: the "Probably pass" pile).
+  const [collapsed, setCollapsed] = useState<Set<GroupKey>>(
+    () => new Set(GROUP_ORDER.filter((g) => GROUP_META[g].collapsedByDefault)),
+  );
+  const toggleGroup = (g: GroupKey) => setCollapsed((prev) => { const n = new Set(prev); if (n.has(g)) n.delete(g); else n.add(g); return n; });
 
   // The link prefix (https://…/apply/) so we can show/edit just the slug part.
   const applyBase = applyUrl && slug ? applyUrl.slice(0, applyUrl.length - slug.length) : "";
@@ -155,6 +181,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   }
   const counts = STATUS.reduce((m, s) => ({ ...m, [s.value]: applicants.filter((a) => a.status === s.value).length }), {} as Record<string, number>);
   const shown = filter === "all" ? applicants : applicants.filter((a) => a.status === filter);
+  // Only group by tier when at least one applicant has actually been screened;
+  // otherwise a single flat (score-then-date) list reads cleaner.
+  const anyGraded = applicants.some((a) => a.screeningGrade);
 
   function copyLink() {
     if (!liveUrl) return;
@@ -329,9 +358,33 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
               : "Nothing in this status."}
           </p>
         </div>
+      ) : anyGraded ? (
+        <div className="flex flex-col gap-5">
+          {GROUP_ORDER.map((g) => {
+            const members = shown.filter((a) => groupOf(a) === g).sort(byScoreThenDate);
+            if (members.length === 0) return null;
+            const meta = GROUP_META[g];
+            const isCollapsed = collapsed.has(g);
+            return (
+              <section key={g}>
+                <button onClick={() => toggleGroup(g)} className="w-full flex items-center gap-2 mb-2.5 text-left">
+                  {isCollapsed ? <ChevronRight size={16} className="text-muted-2 shrink-0" /> : <ChevronDown size={16} className="text-muted-2 shrink-0" />}
+                  <span className={`text-[11.5px] font-bold px-2.5 py-0.5 rounded-full ${meta.bg} ${meta.fg}`}>{meta.label}</span>
+                  <span className="text-[12.5px] font-semibold text-muted tabular-nums">· {members.length}</span>
+                  {isCollapsed && <span className="text-[12px] text-muted-2">— tap to show</span>}
+                </button>
+                {!isCollapsed && (
+                  <div className="flex flex-col gap-2">
+                    {members.map((a) => <ApplicantCard key={a.id} a={a} />)}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {shown.map((a) => <ApplicantCard key={a.id} a={a} />)}
+        <div className="flex flex-col gap-2">
+          {[...shown].sort(byScoreThenDate).map((a) => <ApplicantCard key={a.id} a={a} />)}
         </div>
       )}
     </div>
@@ -339,6 +392,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
 }
 
 function ApplicantCard({ a }: { a: Applicant }) {
+  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(a.status);
   const [when, setWhen] = useState(toLocalInput(a.interviewAt));
   const [details, setDetails] = useState(a.interviewDetails);
@@ -346,6 +400,8 @@ function ApplicantCard({ a }: { a: Applicant }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const tone = toneOf(status);
+  const grade = a.screeningGrade;
+  const tierMeta = grade ? TIER_META[grade.tier] : null;
 
   function changeStatus(next: string) {
     setStatus(next);
@@ -371,20 +427,29 @@ function ApplicantCard({ a }: { a: Applicant }) {
   }
 
   return (
-    <div className="bg-white border border-line rounded-2xl p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[15px] font-semibold text-ink">{a.name}</span>
-            <span className={`text-[11.5px] font-semibold px-2.5 py-0.5 rounded-full ${tone.cls}`}>{tone.label}</span>
+    <div className="bg-white border border-line rounded-2xl shadow-sm">
+      {/* Compact header — always visible, click to expand the full application. */}
+      <div className="flex items-center gap-3 p-4">
+        <button onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 flex items-center gap-3 text-left" aria-expanded={open}>
+          {open ? <ChevronDown size={16} className="text-muted-2 shrink-0" /> : <ChevronRight size={16} className="text-muted-2 shrink-0" />}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[14.5px] font-semibold text-ink truncate">{a.name}</span>
+              {tierMeta && grade && (
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tierMeta.bg} ${tierMeta.fg}`}>{grade.overall}/5</span>
+              )}
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${tone.cls}`}>{tone.label}</span>
+            </div>
+            <div className="text-[12.5px] text-muted mt-0.5 truncate">
+              {a.department || "Any role"}{a.locationName ? ` · ${a.locationName}` : ""} · applied {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </div>
           </div>
-          <div className="text-[13px] text-muted mt-0.5">
-            {a.department || "Any role"}{a.locationName ? ` · ${a.locationName}` : ""} · applied {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-          </div>
-        </div>
+        </button>
         <button onClick={remove} disabled={pending} className="text-muted-2 hover:text-danger disabled:opacity-50 shrink-0" title="Remove"><Trash2 size={15} /></button>
       </div>
 
+      {!open ? null : (
+      <div className="px-5 pb-5 -mt-1">
       {(a.email || a.phone) && <div className="text-[13px] text-charcoal-2">{[a.email, a.phone].filter(Boolean).join(" · ")}</div>}
       {a.availability && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Availability:</span> {a.availability}</div>}
       {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {new Date(a.preferredVisitAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
@@ -447,6 +512,8 @@ function ApplicantCard({ a }: { a: Applicant }) {
           </div>
         )}
       </div>
+      </div>
+      )}
     </div>
   );
 }
