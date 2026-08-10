@@ -17,6 +17,12 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Normalize a source tag (from ?src= / ?utm_source= on the apply link) to a short,
+// safe, lowercase key. Empty if nothing usable was passed.
+function normalizeSource(raw: string): string {
+  return raw.trim().toLowerCase().replace(/[^a-z0-9 ._-]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+}
+
 // A public visitor submits an application. Runs on the service-role client
 // (there's no logged-in user), validating the org strictly by its public slug
 // and only writing to that org's rows.
@@ -123,7 +129,9 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
       availability,
       message,
       preferred_visit_at: preferredVisitAt,
-      source: formData.get("embed") === "1" ? "embed" : "link",
+      // A tagged link (?src=craigslist) wins; otherwise fall back to how they
+      // reached the form (embedded on the restaurant's site vs. the direct link).
+      source: normalizeSource(String(formData.get("src") || "")) || (formData.get("embed") === "1" ? "embed" : "link"),
     })
     .select("id")
     .single();

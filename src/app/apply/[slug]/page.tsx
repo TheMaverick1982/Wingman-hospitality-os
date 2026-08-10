@@ -67,11 +67,14 @@ export default async function ApplyPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ embed?: string; role?: string; location?: string; opening?: string }>;
+  searchParams: Promise<{ embed?: string; role?: string; location?: string; opening?: string; src?: string; utm_source?: string }>;
 }) {
   const { slug } = await params;
-  const { embed, role, location, opening } = await searchParams;
+  const { embed, role, location, opening, src, utm_source } = await searchParams;
   const isEmbed = embed === "1";
+  // Where this applicant came from — a tagged link (?src=craigslist) or a UTM
+  // param. Carried through the form so it's stored with the application.
+  const source = (src ?? utm_source ?? "").toString().slice(0, 60);
 
   const admin = createAdminClient();
   const { data: orgRow } = await admin
@@ -157,6 +160,7 @@ export default async function ApplyPage({
       config={formConfig}
       screeningByRole={screeningByRole}
       openingId={openingId}
+      source={source}
     />
   );
 
