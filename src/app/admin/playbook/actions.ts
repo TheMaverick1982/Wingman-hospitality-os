@@ -90,7 +90,7 @@ export async function generateMonthAction(): Promise<{ error: string | null; cre
 export async function scanNewsNowAction(): Promise<{ error: string | null; drafted?: boolean; title?: string; considered?: number }> {
   const me = await admin();
   if (!me) return { error: "Not authorized." };
-  const res = await runDailyNewsjack();
+  const res = await runDailyNewsjack("manual");
   revalidatePath("/admin/playbook");
   if (!res.drafted) {
     return { error: res.considered === 0 ? "No fresh restaurant news found right now — try again later." : "Scanned the news but nothing was a good, safe fit to newsjack today.", drafted: false, considered: res.considered };
