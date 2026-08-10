@@ -169,41 +169,89 @@ function esc(s: string): string {
   return s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
 }
 
+export type NewsjackOutcome = "drafted" | "skipped" | "no_fresh_news" | "error";
+export type NewsjackRun = { ranAt: string; outcome: NewsjackOutcome; detail: string; considered: number; trigger: string };
+
+// Record one scan's outcome so the Admin → Playbook page can show the scanner is
+// alive even on days it drafts nothing. Best-effort — never blocks a run.
+async function recordRun(outcome: NewsjackOutcome, detail: string, considered: number, postId: string | null, trigger: "cron" | "manual"): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    await admin.from("newsjack_runs").insert({ outcome, detail: detail.slice(0, 300), considered, post_id: postId, trigger });
+  } catch {
+    /* best-effort */
+  }
+}
+
+// The most recent scan, for the admin status line. Null if none / unavailable.
+export async function lastNewsjackRun(): Promise<NewsjackRun | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("newsjack_runs")
+      .select("ran_at, outcome, detail, considered, trigger")
+      .order("ran_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return null;
+    const r = data as { ran_at: string; outcome: string; detail: string; considered: number; trigger: string };
+    return { ranAt: r.ran_at, outcome: r.outcome as NewsjackOutcome, detail: r.detail, considered: r.considered, trigger: r.trigger };
+  } catch {
+    return null;
+  }
+}
+
 // The daily loop: scan → dedup → pick + draft → save as a pending draft → email
-// the platform admins. Returns a small summary for the cron response.
-export async function runDailyNewsjack(): Promise<{ drafted: boolean; title?: string; considered: number }> {
-  const feeds = await Promise.all(RSS_FEEDS.map(fetchRss));
-  const all = [...(await fetchNewsData()), ...feeds.flat()];
-  const fresh = await unseen(all);
-  await markSeen(fresh);
-  if (fresh.length === 0) return { drafted: false, considered: 0 };
+// the platform admins. Returns a small summary for the cron response, and logs
+// its outcome to newsjack_runs so a quiet day is still visibly "ran ok".
+export async function runDailyNewsjack(trigger: "cron" | "manual" = "cron"): Promise<{ drafted: boolean; title?: string; considered: number }> {
+  try {
+    const feeds = await Promise.all(RSS_FEEDS.map(fetchRss));
+    const all = [...(await fetchNewsData()), ...feeds.flat()];
+    const fresh = await unseen(all);
+    await markSeen(fresh);
+    if (fresh.length === 0) {
+      await recordRun("no_fresh_news", "No new headlines since the last scan.", 0, null, trigger);
+      return { drafted: false, considered: 0 };
+    }
 
-  const draft = await draftFrom(fresh);
-  if (!draft) return { drafted: false, considered: fresh.length };
+    const draft = await draftFrom(fresh);
+    if (!draft) {
+      await recordRun("skipped", "Nothing timely and safe to newsjack today.", fresh.length, null, trigger);
+      return { drafted: false, considered: fresh.length };
+    }
 
-  const source = fresh.find((c) => c.url === draft.url);
-  const id = await createPost(null, {
-    title: draft.title,
-    excerpt: draft.excerpt,
-    body: draft.body,
-    category: draft.category,
-    keywords: draft.keywords,
-    status: "draft",
-    sourceUrl: draft.url,
-  });
-  if (!id) return { drafted: false, considered: fresh.length };
+    const source = fresh.find((c) => c.url === draft.url);
+    const id = await createPost(null, {
+      title: draft.title,
+      excerpt: draft.excerpt,
+      body: draft.body,
+      category: draft.category,
+      keywords: draft.keywords,
+      status: "draft",
+      sourceUrl: draft.url,
+    });
+    if (!id) {
+      await recordRun("error", "Drafted a post but couldn't save it.", fresh.length, null, trigger);
+      return { drafted: false, considered: fresh.length };
+    }
+    await recordRun("drafted", draft.title, fresh.length, id, trigger);
 
-  const emails = await platformAdminEmails();
-  if (emails.length > 0) {
-    await sendEmail({
-      to: emails,
-      subject: `Newsjack draft ready: ${draft.title}`,
-      html: `<p>A timely Playbook post is drafted and waiting for your review:</p>
+    const emails = await platformAdminEmails();
+    if (emails.length > 0) {
+      await sendEmail({
+        to: emails,
+        subject: `Newsjack draft ready: ${draft.title}`,
+        html: `<p>A timely Playbook post is drafted and waiting for your review:</p>
 <p style="font-size:16px"><strong>${esc(draft.title)}</strong><br/><span style="color:#555">${esc(draft.excerpt)}</span></p>
 <p>Riding this story${source ? ` (${esc(source.source)})` : ""}: <a href="${esc(draft.url)}">${esc(source?.title ?? draft.url)}</a></p>
 <p><a href="${SITE}/admin/playbook">Review, edit, and publish in Admin &rarr; Playbook</a></p>
 <p style="color:#888;font-size:13px">Nothing publishes until you approve it. News moves fast, so try to review it today.</p>`,
-    }).catch(() => undefined);
+      }).catch(() => undefined);
+    }
+    return { drafted: true, title: draft.title, considered: fresh.length };
+  } catch (e) {
+    await recordRun("error", String(e).slice(0, 200), 0, null, trigger);
+    return { drafted: false, considered: 0 };
   }
-  return { drafted: true, title: draft.title, considered: fresh.length };
 }
