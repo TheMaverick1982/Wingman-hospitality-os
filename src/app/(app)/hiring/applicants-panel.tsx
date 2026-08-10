@@ -18,6 +18,7 @@ export type Applicant = {
   availability: string;
   message: string;
   hasResume: boolean;
+  source: string;
   preferredVisitAt: string | null;
   interviewAt: string | null;
   interviewDetails: string;
@@ -83,6 +84,31 @@ function ScreeningGradeBlock({ grade, answers }: { grade: ScreeningGrade; answer
   );
 }
 
+// Friendly labels for known application sources. Anything else (a custom ?src=
+// tag the owner made up) is title-cased from its raw key.
+const SOURCE_LABELS: Record<string, string> = {
+  link: "Direct link",
+  embed: "Their website",
+  craigslist: "Craigslist",
+  facebook: "Facebook",
+  "facebook-ads": "Facebook Ads",
+  instagram: "Instagram",
+  indeed: "Indeed",
+  ziprecruiter: "ZipRecruiter",
+  google: "Google",
+  tiktok: "TikTok",
+  qr: "QR code",
+  flyer: "Flyer",
+  referral: "Referral",
+  linkedin: "LinkedIn",
+};
+function sourceLabel(s: string): string {
+  const key = (s || "link").toLowerCase();
+  return SOURCE_LABELS[key] ?? key.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+// Common presets offered as one-tap "tag this link" buttons for the owner.
+const SOURCE_PRESETS = ["craigslist", "facebook", "instagram", "indeed", "flyer", "qr"];
+
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
   { value: "contacted", label: "Contacted", cls: "bg-[#FDF3E1] text-[#B45309]" },
@@ -121,6 +147,9 @@ function byScoreThenDate(a: Applicant, b: Applicant): number {
 
 export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applySlug: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
   const [filter, setFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [tagDraft, setTagDraft] = useState("");
+  const [taggedCopied, setTaggedCopied] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
@@ -137,6 +166,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const [slugMsg, setSlugMsg] = useState<string | null>(null);
   const [slugPending, startSlug] = useTransition();
   const [showForwarding, setShowForwarding] = useState(false);
+  const [showTags, setShowTags] = useState(false);
   // Which tier groups are collapsed (default: the "Probably pass" pile).
   const [collapsed, setCollapsed] = useState<Set<GroupKey>>(
     () => new Set(GROUP_ORDER.filter((g) => GROUP_META[g].collapsedByDefault)),
@@ -180,7 +210,16 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
     navigator.clipboard.writeText(embedCode).then(() => { setEmbedCopied(true); setTimeout(() => setEmbedCopied(false), 2000); });
   }
   const counts = STATUS.reduce((m, s) => ({ ...m, [s.value]: applicants.filter((a) => a.status === s.value).length }), {} as Record<string, number>);
-  const shown = filter === "all" ? applicants : applicants.filter((a) => a.status === filter);
+  // Applicant counts per source, most-common first — the "where are they coming
+  // from" rollup, doubling as a filter.
+  const sourceCounts = (() => {
+    const m = new Map<string, number>();
+    for (const a of applicants) m.set(a.source, (m.get(a.source) ?? 0) + 1);
+    return [...m.entries()].sort((x, y) => y[1] - x[1]);
+  })();
+  const shown = applicants.filter(
+    (a) => (filter === "all" || a.status === filter) && (sourceFilter === "all" || a.source === sourceFilter),
+  );
   // Only group by tier when at least one applicant has actually been screened;
   // otherwise a single flat (score-then-date) list reads cleaner.
   const anyGraded = applicants.some((a) => a.screeningGrade);
@@ -191,6 +230,19 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  // Turn a source name into a tagged apply link (…/apply/slug?src=craigslist) and
+  // copy it, so applications from that link are attributed to that channel.
+  function taggedUrl(src: string): string {
+    const key = src.trim().toLowerCase().replace(/[^a-z0-9 ._-]/g, "").replace(/\s+/g, "-");
+    return key && liveUrl ? `${liveUrl}?src=${encodeURIComponent(key)}` : "";
+  }
+  function copyTagged(src: string) {
+    const url = taggedUrl(src);
+    if (!url) return;
+    const key = src.trim().toLowerCase().replace(/[^a-z0-9 ._-]/g, "").replace(/\s+/g, "-");
+    navigator.clipboard.writeText(url).then(() => { setTaggedCopied(key); setTimeout(() => setTaggedCopied(null), 2000); });
   }
 
   function saveCc() {
@@ -295,6 +347,37 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
               <p className="mt-1.5 text-muted-2">Prefer the form embedded directly on your own website instead? Use the <strong>Embed</strong> option above.</p>
             </div>
           )}
+
+          <button onClick={() => setShowTags((v) => !v)} className="mt-3 ml-4 text-[12.5px] font-semibold text-charcoal-2 hover:text-brick">
+            {showTags ? "Hide" : "Track where applicants come from (Craigslist, Facebook…) →"}
+          </button>
+          {showTags && (
+            <div className="mt-2 rounded-xl bg-paper border border-line p-3.5">
+              <p className="text-[12.5px] text-muted leading-relaxed mb-2.5">Post a different link on each channel and Wingman tags every application with where it came from. Tap one to copy its link, or make your own tag.</p>
+              <div className="flex flex-wrap gap-1.5 mb-2.5">
+                {SOURCE_PRESETS.map((s) => (
+                  <button key={s} onClick={() => copyTagged(s)} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold border rounded-full px-3 py-1.5 transition-colors border-line text-charcoal-2 hover:border-brick hover:text-brick">
+                    {taggedCopied === s ? <Check size={13} className="text-[#15803d]" /> : <Link2 size={13} />}
+                    {taggedCopied === s ? "Copied" : sourceLabel(s)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  value={tagDraft}
+                  onChange={(e) => setTagDraft(e.target.value)}
+                  placeholder="Your own tag — e.g. door-flyer, radio-ad"
+                  className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none focus:border-brick"
+                />
+                <button onClick={() => { if (tagDraft.trim()) copyTagged(tagDraft); }} disabled={!tagDraft.trim()} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-2 hover:bg-brick-dark disabled:opacity-50 shrink-0">
+                  {taggedCopied && taggedCopied === tagDraft.trim().toLowerCase().replace(/[^a-z0-9 ._-]/g, "").replace(/\s+/g, "-") ? <Check size={13} /> : <Link2 size={13} />} Copy link
+                </button>
+              </div>
+              {tagDraft.trim() && taggedUrl(tagDraft) && (
+                <p className="text-[11.5px] text-muted-2 font-mono mt-1.5 break-all">{taggedUrl(tagDraft).replace(/^https?:\/\//, "")}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -333,7 +416,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         <p className="text-[12px] text-muted-2 mt-1.5">Every new application is emailed to the location&rsquo;s address on file — these addresses always get a copy too. {ccMsg && <span className="text-olive font-semibold">{ccMsg}</span>}</p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {[{ value: "all", label: "All" }, ...STATUS].map((f) => {
           const n = f.value === "all" ? applicants.length : counts[f.value] ?? 0;
           return (
@@ -349,6 +432,33 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
           );
         })}
       </div>
+
+      {/* Where applicants came from — a rollup that doubles as a filter. Only
+          shown once there's more than one source to distinguish. */}
+      {sourceCounts.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+          <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Source</span>
+          <button
+            onClick={() => setSourceFilter("all")}
+            className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+              sourceFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+            }`}
+          >
+            All sources
+          </button>
+          {sourceCounts.map(([src, n]) => (
+            <button
+              key={src}
+              onClick={() => setSourceFilter(src)}
+              className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                sourceFilter === src ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+              }`}
+            >
+              {sourceLabel(src)} <span className="tabular-nums">· {n}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {shown.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
@@ -441,7 +551,7 @@ function ApplicantCard({ a }: { a: Applicant }) {
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${tone.cls}`}>{tone.label}</span>
             </div>
             <div className="text-[12.5px] text-muted mt-0.5 truncate">
-              {a.department || "Any role"}{a.locationName ? ` · ${a.locationName}` : ""} · applied {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              {a.department || "Any role"}{a.locationName ? ` · ${a.locationName}` : ""} · applied {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · via {sourceLabel(a.source)}
             </div>
           </div>
         </button>

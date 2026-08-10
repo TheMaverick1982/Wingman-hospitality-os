@@ -57,6 +57,7 @@ export function ApplyForm({
   config,
   screeningByRole,
   openingId,
+  source,
 }: {
   slug: string;
   orgName: string;
@@ -69,6 +70,7 @@ export function ApplyForm({
   config: ApplicationFormConfig;
   screeningByRole: Record<string, { id: string; prompt: string }[]>;
   openingId?: string | null;
+  source?: string;
 }) {
   const [state, formAction, pending] = useActionState(submitApplication.bind(null, slug), initial);
   // The role drives which screening questions show, so it's controlled.
@@ -112,6 +114,7 @@ export function ApplyForm({
         <HoneypotField />
         {embed && <input type="hidden" name="embed" value="1" />}
         {openingId && <input type="hidden" name="opening" value={openingId} />}
+        {source && <input type="hidden" name="src" value={source} />}
 
         <div>
           <label className={label}>Your name<Req on /></label>

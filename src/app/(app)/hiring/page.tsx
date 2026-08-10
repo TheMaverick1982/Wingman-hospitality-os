@@ -102,7 +102,7 @@ export default async function HiringPage({
   // used for custom_answers / screening / form config throughout this page.
   let applicationsQ = hiringAdmin
     .from("job_applications")
-    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at")
+    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at, source")
     .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
   const spansAllLocations = profile.accessRole === "super_admin" || profile.allLocations;
@@ -194,7 +194,7 @@ export default async function HiringPage({
   const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
     availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
-    status: string; created_at: string;
+    status: string; created_at: string; source: string | null;
   }[]).map((a) => ({
     id: a.id,
     name: a.name,
@@ -206,6 +206,7 @@ export default async function HiringPage({
     availability: a.availability,
     message: a.message,
     hasResume: Boolean(a.resume_path),
+    source: a.source || "link",
     preferredVisitAt: a.preferred_visit_at,
     interviewAt: interviewById.get(a.id)?.at ?? null,
     interviewDetails: interviewById.get(a.id)?.details ?? "",

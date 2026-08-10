@@ -638,6 +638,15 @@ export const ARTICLES: HelpArticle[] = [
         "Anyone who applies lands with the role and location already set, and shows up tagged to that opening. Wingman counts clicks and applications per opening, so you can see which post is actually working (e.g. 120 clicks → 9 applied).",
         "Close an opening when it's filled, reopen or delete it anytime — applicants who already applied are always kept.",
       ] },
+      { kind: "h", text: "See where applicants come from" },
+      { kind: "p", text: "Under Applicants, open \"Track where applicants come from\" to get a tagged version of your link for each channel. Tap Craigslist, Facebook, Instagram, Indeed, or make your own tag (e.g. door-flyer, radio-ad) — it copies a link like /apply/your-slug?src=craigslist. Post a different tagged link on each channel." },
+      { kind: "list", items: [
+        "Every application shows where it came from (\"via Craigslist\") right on its row in the tracker.",
+        "A \"Source\" filter appears above the list once you have more than one source, with a count per channel — so you can see at a glance that, say, Craigslist sent 12 and Facebook sent 8, and click one to see only those applicants.",
+        "Combined with the screening tiers, you can tell not just how many each channel sends, but how good they are — e.g. Facebook sends more, but Craigslist sends more Strong-fit candidates.",
+        "No tag? The application is still logged — as \"Their website\" if it came through your embedded form, or \"Direct link\" otherwise.",
+      ] },
+      { kind: "tip", text: "Job-opening short links (joinwingman.app/j/…) already track clicks and applications per opening. Source tags are for the plain apply link — use them to compare channels for general \"always hiring\" posts." },
       { kind: "h", text: "Add your logo & a catch-all copy" },
       { kind: "list", items: [
         "Upload your logo (under Applicants) to brand the form.",
