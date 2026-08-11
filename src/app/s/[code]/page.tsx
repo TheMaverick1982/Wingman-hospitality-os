@@ -88,11 +88,20 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   const logoUrl = (orgRow as { logo_url?: string | null } | null)?.logo_url ?? null;
   const locationName = (locRow as { name?: string } | null)?.name ?? "";
 
+  // Org switch for the "Who took care of you?" picker. Guarded — the column lands
+  // with migration 0162, so a not-yet-applied migration defaults to on (today's
+  // behavior) and never crashes the public survey.
+  let askServer = true;
+  {
+    const { data, error } = await admin.from("organizations").select("survey_ask_server").eq("id", link.org_id).maybeSingle();
+    if (!error && data) askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
+  }
+
   // Who to offer in "Who took care of you?", preferring the most relevant set
   // but never showing an empty dropdown when staff exist: FOH at this location →
   // FOH org-wide → anyone at this location → anyone active. Hidden staff
   // (marketing, catering, etc.) are dropped up front.
-  const active = staffRows.filter((s) => !s.exclude_from_survey);
+  const active = askServer ? staffRows.filter((s) => !s.exclude_from_survey) : [];
   const isGuestFacing = (d: string) => (GUEST_FACING_DEPARTMENTS as readonly string[]).includes(d);
   const gfAtLoc = active.filter((s) => isGuestFacing(s.department) && s.location_id === link.location_id);
   const gfOrg = active.filter((s) => isGuestFacing(s.department));
