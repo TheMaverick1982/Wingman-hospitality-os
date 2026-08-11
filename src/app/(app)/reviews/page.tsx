@@ -35,6 +35,14 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     getStaffMembers(null),
   ]);
 
+  // The "ask who served them" survey switch. Guarded — the column lands with
+  // migration 0162, so default to on until it's applied.
+  let askServer = true;
+  {
+    const { data, error } = await admin.from("organizations").select("survey_ask_server").eq("id", profile.orgId).maybeSingle();
+    if (!error && data) askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
+  }
+
   const locName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "A location" : "");
   const staffFirstName = (id: string | null) => {
     if (!id) return "";
@@ -83,6 +91,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       links={linkRows}
       responses={responses}
       canManage={canManage}
+      askServer={askServer}
       scopeLocationId={effectiveLocation ?? null}
     />
   );

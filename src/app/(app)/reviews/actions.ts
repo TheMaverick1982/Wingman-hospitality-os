@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSectionAccess } from "@/lib/auth/permissions";
@@ -9,6 +10,21 @@ import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { RATING_LABEL } from "@/lib/guest-survey";
 
 export type ReviewSummaryState = { error: string | null; summary?: string };
+
+// Toggle the guest survey's "Who took care of you?" staff picker for the whole
+// org. Manager-gated (reviews "full" access), same bar as the AI summary.
+export async function setSurveyAskServer(enabled: boolean): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "reviews", profile.permissionOverrides) !== "full") {
+    return { error: "Only managers can change this." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ survey_ask_server: enabled }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that setting. Try again." };
+  revalidatePath("/reviews");
+  return { error: null };
+}
 
 const SYSTEM = `You are an elite restaurant operations advisor. You read raw guest survey feedback for ONE restaurant and write a short, honest readout the operator can act on today.
 

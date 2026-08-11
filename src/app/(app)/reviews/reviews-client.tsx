@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Copy, Check, QrCode, Star, MessageSquare, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary } from "./actions";
+import { generateReviewSummary, setSurveyAskServer } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -44,12 +44,14 @@ export function ReviewsClient({
   links,
   responses,
   canManage,
+  askServer,
   scopeLocationId,
 }: {
   siteUrl: string;
   links: SurveyLinkRow[];
   responses: ReviewRow[];
   canManage: boolean;
+  askServer: boolean;
   scopeLocationId: string | null;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
@@ -57,6 +59,18 @@ export function ReviewsClient({
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summarizing, startSummary] = useTransition();
+  const [ask, setAsk] = useState(askServer);
+  const [askErr, setAskErr] = useState<string | null>(null);
+  const [savingAsk, startAsk] = useTransition();
+
+  function toggleAsk(next: boolean) {
+    setAsk(next);
+    setAskErr(null);
+    startAsk(async () => {
+      const res = await setSurveyAskServer(next);
+      if (res.error) { setAsk(!next); setAskErr(res.error); }
+    });
+  }
 
   function summarize() {
     setSummaryError(null);
@@ -165,6 +179,29 @@ export function ReviewsClient({
           ))}
           {links.length === 0 && <p className="text-sm text-muted py-2">No locations yet.</p>}
         </div>
+
+        {canManage && (
+          <div className="mt-4 pt-4 border-t border-line">
+            <label className="flex items-start justify-between gap-4 cursor-pointer">
+              <div className="min-w-0">
+                <div className="text-[14px] font-semibold text-ink">Ask guests who took care of them</div>
+                <p className="text-[12.5px] text-muted-2 mt-0.5">Shows a &ldquo;Who took care of you?&rdquo; picker on the survey so feedback can be credited to a server. Turn off for counter-service or if you&rsquo;d rather not tie reviews to a person.</p>
+                {askErr && <p className="text-[12px] text-danger mt-1">{askErr}</p>}
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={ask}
+                disabled={savingAsk}
+                onClick={() => toggleAsk(!ask)}
+                className={`relative shrink-0 mt-0.5 h-6 w-11 rounded-full transition-colors disabled:opacity-60 ${ask ? "bg-brick" : "bg-line-strong"}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${ask ? "translate-x-5" : ""}`} />
+              </button>
+            </label>
+            <p className="text-[12px] text-muted-2 mt-2">Want to hide just one person instead? Open their profile in Staff and turn off &ldquo;Show on the guest survey.&rdquo;</p>
+          </div>
+        )}
       </div>
 
       {/* Archive */}
