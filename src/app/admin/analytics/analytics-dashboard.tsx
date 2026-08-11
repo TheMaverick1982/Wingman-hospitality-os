@@ -31,9 +31,15 @@ export function AnalyticsDashboard({ data, rangeLabel }: { data: AnalyticsData; 
         {data.daily.length === 0 ? (
           <p className="text-sm text-muted">No data for this period yet.</p>
         ) : (
-          <div className="flex items-end gap-[3px] h-40">
+          <div className="flex items-end gap-[3px] h-44">
             {data.daily.map((d, i) => (
               <div key={i} className="flex-1 h-full flex flex-col items-center justify-end group" title={`${d.date}: ${d.users}`}>
+                {/* The count above each bar. Hidden past ~5 weeks of bars, where the
+                    columns get too thin for the numbers not to collide (hover still
+                    shows the exact value). */}
+                {data.daily.length <= 35 && (
+                  <span className="text-[10px] font-semibold text-charcoal-2 tabular-nums leading-none mb-1">{d.users}</span>
+                )}
                 <div
                   className="w-full rounded-t bg-brick/80 group-hover:bg-brick transition-colors"
                   style={{ height: `${Math.max(2, (d.users / maxDaily) * 100)}%` }}
