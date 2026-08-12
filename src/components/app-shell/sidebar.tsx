@@ -31,6 +31,7 @@ import {
   MessagesSquare,
   Star,
   Megaphone,
+  Gauge,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
@@ -80,6 +81,7 @@ const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
       { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
       { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
       { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
+      { href: "/hospitality-score", label: "Hospitality Score", icon: Gauge, section: "reporting" },
       { href: "/partners", label: "Partners", icon: Handshake, section: "partners" },
     ],
   },
@@ -109,7 +111,7 @@ const MOBILE_FLOOR_ORDER = [
   // while they're out in the community (manager/owner-only by permission).
   "/partners",
 ];
-const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/reporting"];
+const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/hospitality-score", "/reporting"];
 const ALL_NAV_ITEMS: NavItem[] = [DASHBOARD_ITEM, REPORTING_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
 
 // Items shown for a group in a given variant. On mobile, Guest Bounce Back is
