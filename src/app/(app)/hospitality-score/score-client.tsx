@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Gauge, ArrowRight, Check, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Gauge, ArrowRight, Check, TrendingUp, TrendingDown, Minus, MapPin } from "lucide-react";
 import { SCORE_STATEMENTS, MAX_SCORE, SCORE_COUNT, bandFor, totalScore } from "@/lib/hospitality-score";
 import { submitAssessment } from "./actions";
 
@@ -12,7 +12,15 @@ function when(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function ScoreClient({ canTake, history }: { canTake: boolean; history: AssessmentRow[] }) {
+export function ScoreClient({
+  canTake, history, scopeLocationId, scopeLabel, multiLocation,
+}: {
+  canTake: boolean;
+  history: AssessmentRow[];
+  scopeLocationId: string | null;
+  scopeLabel: string;
+  multiLocation: boolean;
+}) {
   const latest = history[0] ?? null;
   const [taking, setTaking] = useState(false);
   const [scores, setScores] = useState<(number | null)[]>(Array(SCORE_COUNT).fill(null));
@@ -26,7 +34,7 @@ export function ScoreClient({ canTake, history }: { canTake: boolean; history: A
     if (answered < SCORE_COUNT) return;
     setErr(null);
     start(async () => {
-      const res = await submitAssessment(scores as number[]);
+      const res = await submitAssessment(scores as number[], scopeLocationId);
       if (res.error) { setErr(res.error); return; }
       setTaking(false);
       setScores(Array(SCORE_COUNT).fill(null));
@@ -47,6 +55,13 @@ export function ScoreClient({ canTake, history }: { canTake: boolean; history: A
             An honest read on how intentional your hospitality culture is — and exactly where to focus next. Rate ten
             statements, get a score out of {MAX_SCORE}, and retake it each quarter to watch it climb.
           </p>
+          {multiLocation && (
+            <div className="mt-2.5 inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-1.5 text-[12.5px]">
+              <MapPin size={13} className="text-brick" />
+              <span className="font-semibold text-charcoal-2">{scopeLabel}</span>
+              <span className="text-muted-2">· {scopeLocationId === null ? "company-wide score" : "this location's score"} — switch locations up top to change</span>
+            </div>
+          )}
         </div>
         {latest && canTake && !showForm && (
           <button onClick={() => { setScores(Array(SCORE_COUNT).fill(null)); setTaking(true); setErr(null); }} className="shrink-0 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark">
@@ -70,7 +85,9 @@ export function ScoreClient({ canTake, history }: { canTake: boolean; history: A
         <Result latest={latest} history={history} />
       ) : (
         <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
-          <p className="text-[15px] text-muted">No assessment yet. The owner takes the Hospitality Score to set a baseline for the whole team.</p>
+          <p className="text-[15px] text-muted">
+            No assessment yet for {scopeLocationId === null ? "the company-wide score" : scopeLabel}. {canTake ? "Take the Hospitality Score to set a baseline." : "The owner or this location's manager sets the baseline by taking it."}
+          </p>
         </div>
       )}
     </div>
