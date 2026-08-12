@@ -292,6 +292,28 @@ export const ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    slug: "hospitality-score",
+    title: "Hospitality Score — measure your culture, then fix the weak spots",
+    summary: "A 10-question self-assessment that scores how intentional your hospitality culture is (0–100) and points you at the exact tools to improve.",
+    categoryId: "growth",
+    keywords: ["hospitality score", "self assessment", "assessment", "culture", "score", "diagnostic", "10 out of 10", "benchmark", "improve hospitality", "where to start"],
+    body: [
+      { kind: "p", text: "The Hospitality Score is an honest read on how intentional your restaurant's hospitality culture really is. You rate ten statements from 1 to 10, get a score out of 100, and Wingman shows you exactly which tools will move your weakest areas. Retake it each quarter to watch the number climb." },
+      { kind: "h", text: "Taking the assessment" },
+      { kind: "p", text: "Open Hospitality Score (under the Growth group in the sidebar). Only the owner takes it — it's your read on your own culture. Rate each of the ten statements honestly: 1 means you strongly disagree, 10 means you completely agree. There's no right answer, only your honest one, and the more honest you are the more useful your focus areas will be. Tap \"See my score\" when you've answered all ten." },
+      { kind: "list", items: [
+        "The statements cover the things that actually separate a forgettable restaurant from an unforgettable one: whether guests come back for the experience (not just the food), whether your team knows the difference between service and hospitality and WHY it matters, whether you've defined what a 10-out-of-10 looks like, and whether hospitality is unconditional and consistent.",
+        "Your score lands in a band — Foundational, Developing, Strong, or Elite — with a one-line read on what that means and what to do next.",
+      ] },
+      { kind: "h", text: "Your focus areas" },
+      { kind: "p", text: "Wingman surfaces your lowest three statements as \"Focus here first,\" each linked straight to the Wingman tools that raise it — for example, a low \"defined 10/10\" score links you to Guest Journey to map the experience; a low \"team knows why\" score links you to Training & Standards. It turns a vague feeling that hospitality could be better into a specific, ordered to-do list." },
+      { kind: "h", text: "Tracking it over time" },
+      { kind: "p", text: "Every assessment is saved, so once you've taken it more than once you get a trend chart and a \"+N since last time\" on your latest score. Retake it every quarter (or after a big training push) to prove the culture is actually moving, not just that you hoped it would. Managers can view the score and history; only the owner records a new one." },
+      { kind: "tip", text: "Take it once now to set your baseline, act on the top focus area this month, then retake it next quarter. A rising Hospitality Score is the clearest sign your retention work is landing." },
+    ],
+    links: [{ label: "Guest Journey", href: "/help/guest-journey" }, { label: "Training & Standards", href: "/help/training-programs" }],
+  },
+  {
     slug: "guest-reviews",
     title: "Guest Reviews — a survey QR that drives feedback",
     summary: "Collect how guests felt with a per-location QR / short link, and see it all in one archive — separate from Bounce Back.",
