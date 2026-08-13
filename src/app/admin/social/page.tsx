@@ -12,6 +12,13 @@ import { Connections } from "./connections";
 
 export const metadata: Metadata = { title: "Social · Admin" };
 
+// "Generate posts with AI" (a server action on this route) makes an AI call and
+// then renders a branded card image per post — a batch of 15 runs well past the
+// default serverless timeout. Without room to finish, the function is killed
+// mid-render and the browser sees "Failed to fetch" (and nothing is saved, since
+// the drafts are inserted only at the end). Give the route generous time.
+export const maxDuration = 300;
+
 function withUrls(post: SocialPost) {
   return { ...post, imageUrls: post.image_paths.map((path) => ({ path, url: publicImageUrl(path) })) };
 }
