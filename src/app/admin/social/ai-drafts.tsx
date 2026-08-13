@@ -30,9 +30,16 @@ export function AiDrafts({ initialBrief, initialAuto }: { initialBrief: string; 
     setGenErr(null); setGenMsg(null);
     if (selected.length === 0) { setGenErr("Pick at least one channel."); return; }
     startGen(async () => {
-      const res = await generateDraftsAction(count, selected, focus);
-      if (res.error) setGenErr(res.error);
-      else setGenMsg(`Created ${res.created} idea${res.created === 1 ? "" : "s"} as drafts across ${selected.join(", ")}. Review them below, then approve to schedule.`);
+      try {
+        const res = await generateDraftsAction(count, selected, focus);
+        if (res.error) setGenErr(res.error);
+        else setGenMsg(`Created ${res.created} idea${res.created === 1 ? "" : "s"} as drafts across ${selected.join(", ")}. Review them below, then approve to schedule.`);
+      } catch {
+        // A dropped/timed-out request (large batches take longer to draw every
+        // card) throws "Failed to fetch". Show a recoverable message instead of
+        // letting it hit the page-level error boundary.
+        setGenErr(`That batch didn't finish in time. Try generating fewer at once${count > 6 ? " (say 6)" : ""}, then run it again for more.`);
+      }
     });
   }
   function save() {
