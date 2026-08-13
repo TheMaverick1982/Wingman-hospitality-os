@@ -251,6 +251,28 @@ export async function setStatus(formData: FormData): Promise<void> {
   revalidatePath("/admin/social");
 }
 
+// Approve every draft that has a scheduled time — moves them all to "scheduled"
+// in one click (they then auto-publish at their slot if a platform's connected,
+// or wait in the scheduled queue). Drafts with no date are left alone, since a
+// scheduled post with no time has nothing to fire on.
+export async function approveAllDrafts(): Promise<{ scheduled: number; skippedNoDate: number }> {
+  if (!(await guard())) return { scheduled: 0, skippedNoDate: 0 };
+  const admin = createAdminClient();
+  const { data: dated } = await admin
+    .from("social_posts")
+    .update({ status: "scheduled", updated_at: new Date().toISOString() })
+    .eq("status", "draft")
+    .not("scheduled_at", "is", null)
+    .select("id");
+  const { count: dateless } = await admin
+    .from("social_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "draft")
+    .is("scheduled_at", null);
+  revalidatePath("/admin/social");
+  return { scheduled: (dated ?? []).length, skippedNoDate: dateless ?? 0 };
+}
+
 export async function deletePost(formData: FormData): Promise<void> {
   if (!(await guard())) return;
   const id = String(formData.get("id") || "");

@@ -128,6 +128,18 @@ export function PostCard({ post, connected }: { post: CardPost; connected: boole
 
         <div className="flex-1" />
 
+        {post.status === "draft" && (
+          <form action={setStatus} title={post.scheduled_at ? "" : "This draft has no date — it'll wait in Scheduled until you set one."}>
+            <input type="hidden" name="id" value={post.id} />
+            <input type="hidden" name="status" value="scheduled" />
+            <SubmitButton
+              pendingLabel="Approving…"
+              className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors"
+            >
+              ✓ Approve
+            </SubmitButton>
+          </form>
+        )}
         {connected && post.status !== "posted" && !isAssistedOnly(post.format) && (
           <form action={publishNow}>
             <input type="hidden" name="id" value={post.id} />
