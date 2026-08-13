@@ -1,10 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { PostCard } from "./post-card";
+import { approveAllDrafts } from "./actions";
 import { SOCIAL_PLATFORMS, SOCIAL_STATUSES, type SocialPost } from "@/lib/social";
 
 type CardPost = SocialPost & { imageUrls: { path: string; url: string }[] };
+
+// One-click approval of every dated draft (moves them all to Scheduled). Count is
+// DB-wide, matching what the action approves — not the current filter.
+function ApproveAllButton({ count }: { count: number }) {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  if (count === 0) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          setMsg(null);
+          start(async () => {
+            const r = await approveAllDrafts();
+            setMsg(`Scheduled ${r.scheduled}${r.skippedNoDate ? ` · ${r.skippedNoDate} need a date first` : ""}.`);
+          });
+        }}
+        className="text-[13px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors disabled:opacity-60"
+      >
+        {pending ? "Approving…" : `✓ Approve all ${count}`}
+      </button>
+      {msg && <span className="text-[12.5px] text-olive font-semibold">{msg}</span>}
+    </div>
+  );
+}
 
 const STATUS_DOT: Record<string, string> = {
   draft: "bg-[#d7a55a]",
@@ -16,14 +44,17 @@ const PLATFORM_ABBR: Record<string, string> = { facebook: "FB", instagram: "IG",
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-function Section({ title, items, hint, connected }: { title: string; items: CardPost[]; hint?: string; connected: boolean }) {
+function Section({ title, items, hint, connected, action }: { title: string; items: CardPost[]; hint?: string; connected: boolean; action?: React.ReactNode }) {
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
-        <span className="text-[13px] text-muted-2">{items.length}</span>
-        {hint && <span className="text-[13px] text-muted">· {hint}</span>}
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
+          <span className="text-[13px] text-muted-2">{items.length}</span>
+          {hint && <span className="text-[13px] text-muted">· {hint}</span>}
+        </div>
+        {action}
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {items.map((p) => (
@@ -127,7 +158,13 @@ export function SocialBoard({ posts, connected }: { posts: CardPost[]; connected
         <div className="flex flex-col gap-8">
           <Section title="Ready to post now" items={dueNow} hint="scheduled time has arrived" connected={connected} />
           <Section title="Upcoming" items={upcoming} connected={connected} />
-          <Section title="Drafts" items={drafts} hint="no time set yet" connected={connected} />
+          <Section
+            title="Drafts"
+            items={drafts}
+            hint="waiting for your approval"
+            connected={connected}
+            action={<ApproveAllButton count={posts.filter((p) => p.status === "draft" && p.scheduled_at).length} />}
+          />
           <Section title="Posted & skipped" items={done} connected={connected} />
         </div>
       ) : (
