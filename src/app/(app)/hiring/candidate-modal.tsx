@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, MessageSquareText, Check, X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -59,7 +60,23 @@ export function CandidateModalButton({
   const [recommendation, setRecommendation] = useState<(typeof RECOMMENDATION_OPTIONS)[number]>("Unsure");
   const [showGuide, setShowGuide] = useState(true);
   const [state, formAction, pending] = useActionState(addCandidate, initialState);
-  useCloseOnSuccess(pending, state.error, () => setOpen(false));
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Close the modal and strip the score-request params from the URL (keeping any
+  // location filter), so it doesn't reopen on reload and scoring the SAME
+  // interview again re-triggers the remount that opens it.
+  function closeModal() {
+    setOpen(false);
+    const SCORE_KEYS = ["app", "an", "scoreDept", "scoreLoc"];
+    if (SCORE_KEYS.some((k) => searchParams.has(k))) {
+      const next = new URLSearchParams(searchParams.toString());
+      SCORE_KEYS.forEach((k) => next.delete(k));
+      const qs = next.toString();
+      router.replace(qs ? `/hiring?${qs}` : "/hiring", { scroll: false });
+    }
+  }
+  useCloseOnSuccess(pending, state.error, closeModal);
 
   const combinedTraits = [
     ...universalTraits.map((t) => ({ ...t, universal: true })),
@@ -73,7 +90,12 @@ export function CandidateModalButton({
         Score a candidate
       </Btn>
       {open && (
-        <Modal title="Score a candidate" sub="Against your actual values, not a generic rubric." onClose={() => setOpen(false)} wide>
+        <Modal
+          title={applicationId ? "Interview & score" : "Score a candidate"}
+          sub={applicationId ? "The questions to ask are under each trait — run the interview, then score against your actual values." : "Against your actual values, not a generic rubric."}
+          onClose={closeModal}
+          wide
+        >
           <form action={formAction}>
             <input type="hidden" name="recommendation" value={recommendation} />
             {applicationId && <input type="hidden" name="applicationId" value={applicationId} />}
@@ -197,7 +219,7 @@ export function CandidateModalButton({
             </Field>
             {state.error && <p className="text-sm text-brick mb-2">{state.error}</p>}
             <div className="flex justify-end gap-2 mt-2">
-              <Btn type="button" kind="ghost" onClick={() => setOpen(false)}>
+              <Btn type="button" kind="ghost" onClick={closeModal}>
                 Cancel
               </Btn>
               <Btn type="submit" disabled={pending}>

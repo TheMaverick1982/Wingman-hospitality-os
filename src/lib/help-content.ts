@@ -706,7 +706,7 @@ export const ARTICLES: HelpArticle[] = [
         "Each application has a status — New, Contacted, or Not a fit — plus their resume if they attached one. Filter by status to work the pipeline.",
         "When you're ready, click \"Schedule interview\", pick a date/time, add details (who's interviewing, where, what to bring), and Confirm.",
         "Confirming moves them out of Applications and into your candidates area under \"Interviews scheduled.\"",
-        "After the interview, click \"Score after interview\" — it opens a scorecard pre-filled with their name, role, and location, and links back to the application. Score them, and they become a candidate (then Hire from the scorecard as always).",
+        "When it's time, click \"Interview & score\" — it opens a combined card pre-filled with their name, role, and location and linked back to the application. The exact questions to ask sit right under each trait (with green-flag / red-flag cues), so you run the interview from it and then score against your real standards. Save it and they become a candidate (then Hire from the scorecard as always).",
       ] },
       { kind: "note", text: "Every morning, any location with an interview scheduled that day gets a reminder email at the address on file, so a booked interview never slips." },
       { kind: "note", text: "Applicants don't get a login — they're just people who applied. Scheduling and scoring are how they progress." },

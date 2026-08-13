@@ -302,6 +302,11 @@ export default async function HiringPage({
             <Users size={15} /> See candidates{allCandidates.length > 0 ? ` (${allCandidates.length})` : ""}
           </ScrollToButton>
           <CandidateModalButton
+            // Remount on a new score request so the mount-time auto-open fires
+            // even when "Score after interview" navigates within /hiring (a
+            // same-route nav re-renders but doesn't remount, so the open-state
+            // initializer wouldn't re-run otherwise).
+            key={prefillAppId ? `app-${prefillAppId}` : autoOpenDepartment ? `dept-${autoOpenDepartment}` : "new"}
             universalTraits={(coreValues ?? []).map((v) => ({
               title: v.title,
               question: v.hiring_question,
