@@ -62,7 +62,7 @@ function InterviewCard({ a }: { a: Applicant }) {
           href={`/hiring?app=${a.id}&an=${encodeURIComponent(a.name)}${a.department ? `&scoreDept=${encodeURIComponent(a.department)}` : ""}${a.locationId ? `&scoreLoc=${a.locationId}` : ""}`}
           className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark"
         >
-          <UserPlus size={13} /> Score after interview
+          <UserPlus size={13} /> Interview &amp; score
         </Link>
         {a.hasResume && (
           <button onClick={openResume} disabled={pending} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/30 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50">
