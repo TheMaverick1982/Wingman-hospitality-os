@@ -207,6 +207,30 @@ export const ROLE_SEED: Record<Department, RoleSeed> = {
       { title: "Coachability", question: "Tell me about the last time a chef corrected you mid-service.", green_flag: "Took it well, adjusted immediately.", red_flag: "Defensive, argued, or repeated the mistake." },
     ],
   },
+  "Pizza Cook": {
+    trackLabel: "Dough, oven & execution",
+    hasMenu: false,
+    standards: [
+      "Own the oven like your name is on every pie that leaves it",
+      "Treat every pizza as if it's going to your own table",
+      "Own a mistake and re-fire immediately, no excuses",
+      "Communicate 86s and delays to the floor fast",
+      "Keep every pie consistent to the standard — size, bake, and toppings",
+      "Support other stations when you're in the weeds together",
+      "Keep your station and oven area clean as you go, not just at close",
+    ],
+    duties: [
+      "Know dough handling, proofing, and par levels cold",
+      "Know oven temps and bake times for every pie — never guess",
+      "Know every pizza's build, portioning, and topping spec",
+      "Know allergen protocol and cross-contact prevention (gluten especially)",
+      "Know how to stretch, dress, launch, and turn a pie in the oven",
+    ],
+    hiring: [
+      { title: "Consistency under fire", question: "Tell me about a slammed service and how you kept every pie to standard.", green_flag: "Holds the bake and build, stays organized under pressure.", red_flag: "Quality drops, blames the rush." },
+      { title: "Craft & pride", question: "What makes a great pizza to you, and how do you keep it consistent?", green_flag: "Cares about dough, bake, and balance; takes real pride in the craft.", red_flag: "Treats it as just assembly, no attention to detail." },
+    ],
+  },
   Dishwasher: {
     trackLabel: "Sanitation & flow",
     hasMenu: false,

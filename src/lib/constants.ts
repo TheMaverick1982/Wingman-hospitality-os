@@ -9,6 +9,7 @@ export const ALL_DEPARTMENTS = [
   "Chef",
   "Sous Chef",
   "Line Cook",
+  "Pizza Cook",
   "Prep Cook",
   "Dishwasher",
   "Expo",
