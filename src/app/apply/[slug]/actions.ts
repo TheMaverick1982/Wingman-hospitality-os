@@ -108,6 +108,28 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     return { error: `Please attach your ${resumeF.label.toLowerCase()}.` };
   }
 
+  // Pre-interview screening questions for this role. Fetched once, up front, so we
+  // can enforce the required ones BEFORE creating the application (and reuse them
+  // for grading after). All guarded: the screening_questions table and its
+  // `required` column land with migrations, so a missing table/column degrades to
+  // "no screening / nothing required" rather than blocking a real applicant.
+  let screeningQuestions: { id: string; prompt: string; axis: string; required: boolean }[] = [];
+  if (department) {
+    const { data: qRows } = await admin
+      .from("screening_questions")
+      .select("id, prompt, axis, sort_order, required")
+      .eq("org_id", org.id)
+      .eq("department", department)
+      .order("sort_order");
+    screeningQuestions = ((qRows ?? []) as { id: string; prompt: string; axis: string; required?: boolean }[])
+      .map((q) => ({ id: q.id, prompt: q.prompt, axis: q.axis, required: Boolean(q.required) }));
+    for (const q of screeningQuestions) {
+      if (q.required && !String(formData.get(`screen_${q.id}`) || "").trim()) {
+        return { error: "Please answer all required questions before submitting." };
+      }
+    }
+  }
+
   // If the link carried a job-opening id, validate it belongs to THIS org (so a
   // forged id can't attach) before tagging the application to it below.
   let openingId: string | null = null;
@@ -153,21 +175,11 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
   }
 
   // Pre-interview screening: capture the role's screening answers and grade them
-  // so the manager gets a read before deciding on an interview. All of it is
-  // guarded/best-effort — the screening_questions table and the two application
-  // columns land with a migration, and grading is an external AI call, so none of
-  // it can ever block a real applicant's submission.
-  if (department) {
-    let questions: { id: string; prompt: string; axis: string }[] = [];
-    const { data: qRows } = await admin
-      .from("screening_questions")
-      .select("id, prompt, axis, sort_order")
-      .eq("org_id", org.id)
-      .eq("department", department)
-      .order("sort_order");
-    questions = (qRows ?? []) as { id: string; prompt: string; axis: string }[];
-
-    const screeningAnswers: ScreeningAnswer[] = questions
+  // so the manager gets a read before deciding on an interview. Reuses the
+  // questions fetched above; grading is an external AI call, kept best-effort so
+  // it can never block a real applicant's submission.
+  if (department && screeningQuestions.length > 0) {
+    const screeningAnswers: ScreeningAnswer[] = screeningQuestions
       .map((q) => ({
         id: q.id,
         prompt: q.prompt,

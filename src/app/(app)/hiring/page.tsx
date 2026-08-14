@@ -184,7 +184,7 @@ export default async function HiringPage({
   {
     const { data: sqRows } = await supabase
       .from("screening_questions")
-      .select("id, department, prompt, axis, sort_order, source")
+      .select("id, department, prompt, axis, sort_order, source, required")
       .order("sort_order");
     for (const r of (sqRows ?? []) as ScreeningQuestion[]) {
       (screeningQuestionsByDept[r.department] ??= []).push(r);

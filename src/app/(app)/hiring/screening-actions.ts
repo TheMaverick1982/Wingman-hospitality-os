@@ -145,6 +145,7 @@ export async function addScreeningQuestion(_prev: ScreeningQState, formData: For
   const department = String(formData.get("department") || "");
   const promptText = String(formData.get("prompt") || "").trim();
   const axis = isScreeningAxis(formData.get("axis")) ? (formData.get("axis") as ScreeningAxis) : "hospitality";
+  const required = formData.get("required") === "1";
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
   if (!promptText) return { error: "The question is required." };
 
@@ -161,21 +162,34 @@ export async function addScreeningQuestion(_prev: ScreeningQState, formData: For
     .eq("department", department);
   const { error } = await supabase
     .from("screening_questions")
-    .insert({ org_id: org.id, department, prompt: promptText.slice(0, 500), axis, sort_order: count ?? 0, source: "custom" });
+    .insert({ org_id: org.id, department, prompt: promptText.slice(0, 500), axis, sort_order: count ?? 0, source: "custom", required });
   if (error) return { error: error.message };
   revalidatePath("/hiring");
   return { error: null };
 }
 
-export async function updateScreeningQuestion(id: string, patch: { prompt?: string; axis?: ScreeningAxis }) {
+export async function updateScreeningQuestion(id: string, patch: { prompt?: string; axis?: ScreeningAxis; required?: boolean }) {
   const profile = await getCurrentProfile();
   if (!profile || !canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return;
   const safe: Record<string, unknown> = {};
   if (typeof patch.prompt === "string") safe.prompt = patch.prompt.trim().slice(0, 500);
   if (isScreeningAxis(patch.axis)) safe.axis = patch.axis;
+  if (typeof patch.required === "boolean") safe.required = patch.required;
   if (Object.keys(safe).length === 0) return;
   const supabase = await createClient();
   await supabase.from("screening_questions").update(safe).eq("id", id);
+  revalidatePath("/hiring");
+}
+
+// Make every screening question for a role required (or optional) in one toggle.
+export async function setAllScreeningRequired(department: string, required: boolean) {
+  const profile = await getCurrentProfile();
+  if (!profile || !canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return;
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return;
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return;
+  await supabase.from("screening_questions").update({ required }).eq("org_id", org.id).eq("department", department);
   revalidatePath("/hiring");
 }
 

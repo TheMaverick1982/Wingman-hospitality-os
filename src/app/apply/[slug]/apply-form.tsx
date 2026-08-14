@@ -68,7 +68,7 @@ export function ApplyForm({
   preLocation: string;
   embed: boolean;
   config: ApplicationFormConfig;
-  screeningByRole: Record<string, { id: string; prompt: string }[]>;
+  screeningByRole: Record<string, { id: string; prompt: string; required: boolean }[]>;
   openingId?: string | null;
   source?: string;
 }) {
@@ -192,8 +192,8 @@ export function ApplyForm({
             </p>
             {screeningQuestions.map((q, i) => (
               <div key={q.id}>
-                <label className={label}>{i + 1}. {q.prompt}</label>
-                <textarea name={`screen_${q.id}`} rows={3} className={field} />
+                <label className={label}>{i + 1}. {q.prompt}<Req on={q.required} /></label>
+                <textarea name={`screen_${q.id}`} required={q.required} rows={3} className={field} />
               </div>
             ))}
           </div>

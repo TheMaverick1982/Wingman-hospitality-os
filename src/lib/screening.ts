@@ -12,6 +12,7 @@ export type ScreeningQuestion = {
   axis: ScreeningAxis;
   sort_order: number;
   source: "wingman" | "custom";
+  required: boolean;
 };
 
 // A stored answer keeps the prompt at submit time, so the manager's view is
