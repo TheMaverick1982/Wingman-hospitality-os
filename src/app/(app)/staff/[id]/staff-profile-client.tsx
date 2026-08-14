@@ -50,6 +50,7 @@ export function StaffProfileClient({
   staff,
   locationName,
   canEdit,
+  accountEmail,
   hospitalityItems,
   roleItems,
   trackLabel,
@@ -64,6 +65,7 @@ export function StaffProfileClient({
   staff: Staff;
   locationName: string;
   canEdit: boolean;
+  accountEmail?: string | null;
   hospitalityItems: ChecklistItem[];
   roleItems: ChecklistItem[];
   trackLabel: string | null;
@@ -135,7 +137,7 @@ export function StaffProfileClient({
         />
       )}
 
-      {tab === "contact" && <ContactTab staff={staff} locationName={locationName} canEdit={canEdit} />}
+      {tab === "contact" && <ContactTab staff={staff} locationName={locationName} canEdit={canEdit} accountEmail={accountEmail} />}
 
       {tab === "training" && (
         <TrainingTab
@@ -333,7 +335,7 @@ function TestsTab({ tests }: { tests: TestRow[] }) {
   );
 }
 
-function ContactTab({ staff, locationName, canEdit }: { staff: Staff; locationName: string; canEdit: boolean }) {
+function ContactTab({ staff, locationName, canEdit, accountEmail }: { staff: Staff; locationName: string; canEdit: boolean; accountEmail?: string | null }) {
   const [fullName, setFullName] = useState(staff.full_name);
   const [email, setEmail] = useState(staff.email);
   const [phone, setPhone] = useState(staff.phone);
@@ -357,7 +359,7 @@ function ContactTab({ staff, locationName, canEdit }: { staff: Staff; locationNa
           />
         </div>
         <div>
-          <label className="text-[13px] font-semibold mb-1.5 text-ink block">Email</label>
+          <label className="text-[13px] font-semibold mb-1.5 text-ink block">Contact email</label>
           <input
             type="email"
             value={email}
@@ -366,6 +368,15 @@ function ContactTab({ staff, locationName, canEdit }: { staff: Staff; locationNa
             disabled={!canEdit}
             className={inputClass}
           />
+        </div>
+        <div>
+          <label className="text-[13px] font-semibold mb-1.5 text-ink block">Login email</label>
+          <input value={accountEmail ?? ""} placeholder="No login set up yet" disabled className={`${inputClass} opacity-70`} />
+          <p className="text-[12px] text-muted-2 mt-1">
+            {accountEmail
+              ? "The address this person signs in with. It can differ from their contact email and is managed by them in their account."
+              : "This person hasn't been invited to a login yet. Once they are, the email they sign in with shows here."}
+          </p>
         </div>
         <div>
           <label className="text-[13px] font-semibold mb-1.5 text-ink block">Phone</label>

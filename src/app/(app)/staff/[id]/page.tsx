@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { StaffProfileClient } from "./staff-profile-client";
@@ -118,6 +119,19 @@ export default async function StaffProfilePage({
   };
   const checklists = { hasLogin: Boolean(staff.profile_id), preshift: summarize("preshift"), loyalty: summarize("loyalty") };
 
+  // The email their LOGIN account was created under (auth user), which can differ
+  // from the contact email on the roster. profiles.id === the auth user id, so we
+  // read it via the service-role admin API. Guarded — never blocks the page.
+  let accountEmail: string | null = null;
+  if (staff.profile_id) {
+    try {
+      const { data } = await createAdminClient().auth.admin.getUserById(staff.profile_id as string);
+      accountEmail = data?.user?.email ?? null;
+    } catch {
+      accountEmail = null;
+    }
+  }
+
   return (
     <>
     {isSuperAdmin && !staff.profile_id && (
@@ -127,6 +141,7 @@ export default async function StaffProfilePage({
       staff={staff}
       locationName={locations.find((l) => l.id === staff.location_id)?.name ?? ""}
       canEdit={canEdit}
+      accountEmail={accountEmail}
       hospitalityItems={standards ?? []}
       roleItems={trainingItems ?? []}
       trackLabel={meta?.track_label ?? null}
