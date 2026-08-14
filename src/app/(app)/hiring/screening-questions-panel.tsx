@@ -9,10 +9,26 @@ import {
   addScreeningQuestion,
   updateScreeningQuestion,
   deleteScreeningQuestion,
+  setAllScreeningRequired,
   type GeneratedQuestion,
 } from "./screening-actions";
 
 const field = "w-full rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick";
+
+function Switch({ on, disabled, onClick, small }: { on: boolean; disabled?: boolean; onClick: () => void; small?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative shrink-0 rounded-full transition-colors disabled:opacity-60 ${small ? "w-8 h-[18px]" : "w-11 h-6"} ${on ? "bg-brick" : "bg-line-strong"}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 rounded-full bg-white shadow transition-transform ${small ? "h-3.5 w-3.5" : "h-5 w-5"} ${on ? (small ? "translate-x-[14px]" : "translate-x-5") : ""}`} />
+    </button>
+  );
+}
 
 function AxisPill({ axis }: { axis: ScreeningAxis }) {
   const isFollows = axis === "follows_instructions";
@@ -133,9 +149,25 @@ export function ScreeningQuestionsPanel({
               <p className="text-[13px] text-muted mt-1">Generate a set from your hiring criteria, then edit to taste.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2.5 mb-4">
-              {questions.map((q) => <QuestionRow key={q.id} q={q} />)}
-            </div>
+            <>
+              <div className="flex items-center justify-between gap-3 mb-2.5 rounded-xl border border-line bg-paper px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-semibold text-ink">Require an answer to every question</div>
+                  <p className="text-[12px] text-muted-2 mt-0.5">When on, applicants must answer all {role} screening questions to submit. You can still flip individual ones below.</p>
+                </div>
+                <Switch
+                  on={questions.length > 0 && questions.every((q) => q.required)}
+                  disabled={pending}
+                  onClick={() => {
+                    const next = !(questions.length > 0 && questions.every((q) => q.required));
+                    start(async () => { await setAllScreeningRequired(role, next); });
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-2.5 mb-4">
+                {questions.map((q) => <QuestionRow key={q.id} q={q} />)}
+              </div>
+            </>
           )}
 
           {adding ? (
@@ -193,10 +225,17 @@ function QuestionRow({ q }: { q: ScreeningQuestion }) {
   return (
     <div className="bg-panel border border-line rounded-xl p-3 flex items-start gap-3">
       <div className="flex-1 min-w-0">
-        <div className="mb-1"><AxisPill axis={q.axis} /></div>
+        <div className="mb-1 flex items-center gap-1.5">
+          <AxisPill axis={q.axis} />
+          {q.required && <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-[#F1F1F1] text-charcoal-2">Required</span>}
+        </div>
         <p className="text-[13.5px] text-ink">{q.prompt}</p>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-2.5 shrink-0">
+        <label className="flex items-center gap-1.5 text-[11.5px] text-muted-2 select-none cursor-pointer" title="Require an answer to this question">
+          <Switch small on={q.required} disabled={pending} onClick={() => start(async () => { await updateScreeningQuestion(q.id, { required: !q.required }); })} />
+          Required
+        </label>
         <button onClick={() => setEditing(true)} className="text-muted-2 hover:text-ink" title="Edit"><Pencil size={14} /></button>
         <button onClick={() => start(() => deleteScreeningQuestion(q.id))} disabled={pending} className="text-muted-2 hover:text-danger disabled:opacity-50" title="Delete"><Trash2 size={14} /></button>
       </div>
@@ -209,6 +248,7 @@ function AddQuestionForm({ department, onClose }: { department: string; onClose:
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [axis, setAxis] = useState<ScreeningAxis>("hospitality");
+  const [required, setRequired] = useState(false);
 
   function submit() {
     setError(null);
@@ -216,6 +256,7 @@ function AddQuestionForm({ department, onClose }: { department: string; onClose:
     fd.set("department", department);
     fd.set("prompt", prompt);
     fd.set("axis", axis);
+    if (required) fd.set("required", "1");
     start(async () => {
       const res = await addScreeningQuestion({ error: null }, fd);
       if (res.error) setError(res.error);
@@ -233,6 +274,10 @@ function AddQuestionForm({ department, onClose }: { department: string; onClose:
         <button onClick={onClose} className="text-muted-2 hover:text-ink"><X size={15} /></button>
       </div>
       <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} placeholder="Write the screening question…" className={field} />
+      <label className="flex items-center gap-2 mt-2 text-[12.5px] text-charcoal-2 select-none cursor-pointer">
+        <Switch small on={required} onClick={() => setRequired((v) => !v)} />
+        Required — applicants must answer this to submit
+      </label>
       {error && <p className="text-[12.5px] text-danger mt-1.5">{error}</p>}
       <div className="flex justify-end mt-2">
         <button onClick={submit} disabled={pending || !prompt.trim()} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark disabled:opacity-50">

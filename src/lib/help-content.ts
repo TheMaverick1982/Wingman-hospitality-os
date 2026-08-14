@@ -696,6 +696,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "list", items: [
         "Pick a role, tap \"Generate with AI,\" review the draft, and Save. Regenerating only replaces the AI questions — anything you added by hand stays.",
         "Candidates see the questions only once they've selected that role; other roles show their own set (or none, if you haven't set any).",
+        "Make answers required if you want them: flip the \"Require an answer to every question\" switch at the top of the section to require them all at once, or use the small Required toggle on any single question for finer control. Required questions show a * on the form and block submission until they're answered; leave the switch off to keep them optional.",
         "When someone applies, Wingman reads their answers and puts a quick read on their card — a Strong fit / Worth a look / Probably pass tier, plus a 1–5 score for guest-experience instinct and for following instructions, each with a one-line reason. Tap to read their actual answers.",
       ] },
       { kind: "note", text: "The screen is decision support, not a gatekeeper — it never rejects anyone or changes their status. It's there to help you decide who's worth an interview; you always make the call." },

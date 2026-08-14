@@ -103,15 +103,15 @@ export default async function ApplyPage({
   // Per-role screening questions, grouped by department for role-reactive display.
   // Guarded (the table lands with a migration) so the form still works if it
   // hasn't been applied yet — it just shows no screening step.
-  const screeningByRole: Record<string, { id: string; prompt: string }[]> = {};
+  const screeningByRole: Record<string, { id: string; prompt: string; required: boolean }[]> = {};
   {
     const { data: sqRows } = await admin
       .from("screening_questions")
-      .select("id, department, prompt, sort_order")
+      .select("id, department, prompt, sort_order, required")
       .eq("org_id", org.id)
       .order("sort_order");
-    for (const r of (sqRows ?? []) as { id: string; department: string; prompt: string }[]) {
-      (screeningByRole[r.department] ??= []).push({ id: r.id, prompt: r.prompt });
+    for (const r of (sqRows ?? []) as { id: string; department: string; prompt: string; required?: boolean }[]) {
+      (screeningByRole[r.department] ??= []).push({ id: r.id, prompt: r.prompt, required: Boolean(r.required) });
     }
   }
 
