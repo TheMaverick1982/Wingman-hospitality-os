@@ -18,6 +18,7 @@ import {
   type ItemState,
   type BuildState,
 } from "./template-actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const addInitial: ItemState = { error: null };
 const buildInitial: BuildState = { error: null };
@@ -157,7 +158,7 @@ function BuilderItemList({ items, setItems }: { items: string[]; setItems: (v: s
 function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistType | string; label: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"paste" | "upload" | "wizard">("paste");
-  const [state, formAction, pending] = useActionState(generateAccountabilityChecklist, buildInitial);
+  const [state, formAction, pending] = useActionState(networkSafeAction(generateAccountabilityChecklist, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), buildInitial);
 
   // Review state.
   const [items, setItems] = useState<string[]>([]);
@@ -201,9 +202,13 @@ function ChecklistBuilder({ checklistType, label }: { checklistType: ChecklistTy
   function doSave() {
     setSaveError(null);
     startSave(async () => {
-      const res = await saveAccountabilityChecklist(checklistType, items);
-      if (res.error) setSaveError(res.error);
-      else setSaved(res.built ?? items.length);
+      try {
+        const res = await saveAccountabilityChecklist(checklistType, items);
+        if (res.error) setSaveError(res.error);
+        else setSaved(res.built ?? items.length);
+      } catch {
+        setSaveError(NETWORK_ERROR_MESSAGE);
+      }
     });
   }
 

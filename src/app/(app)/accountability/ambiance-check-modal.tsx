@@ -10,6 +10,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { AMBIANCE_DIMENSIONS } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { addAmbianceCheck, type ActionState } from "./actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -26,7 +27,7 @@ export function AmbianceCheckModalButton({
   defaultLocationId: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(addAmbianceCheck, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(addAmbianceCheck, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   return (

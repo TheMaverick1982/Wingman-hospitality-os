@@ -8,6 +8,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import type { Location } from "@/lib/data/locations";
 import { logCoaching, type ActionState } from "./actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: ActionState = { error: null };
 
@@ -43,7 +44,7 @@ export function CoachingModalButton({
   defaultLocationId: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(logCoaching, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(logCoaching, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   return (

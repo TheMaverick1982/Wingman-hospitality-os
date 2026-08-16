@@ -8,6 +8,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import type { Location } from "@/lib/data/locations";
 import { addDailyChecklist, type ActionState } from "./actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -26,7 +27,7 @@ export function DailyCheckModalButton({
   items: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(addDailyChecklist, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(addDailyChecklist, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   return (

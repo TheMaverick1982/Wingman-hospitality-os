@@ -6,6 +6,7 @@ import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { createCustomChecklist, updateCustomChecklist, deleteCustomChecklist, type CustomChecklist } from "./custom-checklist-actions";
+import { NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 import type { TemplateItem } from "./template-actions";
 
 type ChecklistWithItems = CustomChecklist & { items: TemplateItem[] };
@@ -52,12 +53,16 @@ export function CustomChecklistsManager({ checklists, departments }: { checklist
       return;
     }
     start(async () => {
-      const res = await createCustomChecklist(title, depts);
-      if (res.error) setError(res.error);
-      else {
-        setTitle("");
-        setDepts([]);
-        setAdding(false);
+      try {
+        const res = await createCustomChecklist(title, depts);
+        if (res.error) setError(res.error);
+        else {
+          setTitle("");
+          setDepts([]);
+          setAdding(false);
+        }
+      } catch {
+        setError(NETWORK_ERROR_MESSAGE);
       }
     });
   }
@@ -128,15 +133,23 @@ function ChecklistHeader({ checklist, departments }: { checklist: ChecklistWithI
   function save() {
     setError(null);
     start(async () => {
-      const res = await updateCustomChecklist(checklist.id, title, depts);
-      if (res?.error) setError(res.error);
-      else setEditing(false);
+      try {
+        const res = await updateCustomChecklist(checklist.id, title, depts);
+        if (res?.error) setError(res.error);
+        else setEditing(false);
+      } catch {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
     });
   }
   function remove() {
     if (!confirm(`Delete "${checklist.title}"? This removes the checklist and its items.`)) return;
     start(async () => {
-      await deleteCustomChecklist(checklist.id);
+      try {
+        await deleteCustomChecklist(checklist.id);
+      } catch {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
     });
   }
 
