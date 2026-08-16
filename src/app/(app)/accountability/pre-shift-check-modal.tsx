@@ -9,6 +9,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { addPreShiftCheck, type ActionState } from "./actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -27,7 +28,7 @@ export function PreShiftCheckModalButton({
   items: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(addPreShiftCheck, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(addPreShiftCheck, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   return (

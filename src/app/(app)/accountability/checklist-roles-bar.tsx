@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Users } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { setChecklistRoles } from "./custom-checklist-actions";
+import { NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 // Role-assignment control shown above a built-in staff checklist's editor. Empty
 // selection = all staff. Lets the owner control who sees the checklist on login.
@@ -26,9 +27,13 @@ export function ChecklistRolesBar({
   function save() {
     setError(null);
     start(async () => {
-      const res = await setChecklistRoles(checklistType, sel);
-      if (res?.error) setError(res.error);
-      else setEditing(false);
+      try {
+        const res = await setChecklistRoles(checklistType, sel);
+        if (res?.error) setError(res.error);
+        else setEditing(false);
+      } catch {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
     });
   }
 

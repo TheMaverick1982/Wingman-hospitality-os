@@ -5,6 +5,7 @@ import { CheckCircle2, Circle, ChevronDown, ClipboardList } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { t as translate, type Lang } from "@/lib/i18n";
 import { completeMyCustomChecklist, type PreshiftState } from "./shift-checklist-actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: PreshiftState = { error: null };
 
@@ -51,7 +52,7 @@ export function MyChecklistsHub({ checklists, lang = "en" }: { checklists: HubCh
 
 function ChecklistRow({ data, lang, open, onToggle }: { data: HubChecklist; lang: Lang; open: boolean; onToggle: () => void }) {
   const tr = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => translate(lang, key, vars);
-  const [state, formAction, pending] = useActionState(completeMyCustomChecklist, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(completeMyCustomChecklist, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   const done = data.done || Boolean(state.done);
 
   return (

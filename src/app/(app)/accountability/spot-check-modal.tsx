@@ -10,6 +10,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS, SPOT_CHECK_DIMENSIONS } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import { addSpotCheck, type ActionState } from "./actions";
+import { networkSafeAction, NETWORK_ERROR_MESSAGE } from "@/lib/network-safe-action";
 
 const initialState: ActionState = { error: null };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -32,7 +33,7 @@ export function SpotCheckModalButton({
   departmentOptions?: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(addSpotCheck, initialState);
+  const [state, formAction, pending] = useActionState(networkSafeAction(addSpotCheck, (s) => ({ ...s, error: NETWORK_ERROR_MESSAGE })), initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
 
   // Only offer the roles this org actually runs (falls back to all).
