@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Sparkles, Plus, Trash2, Check, X, Loader2, Pencil, ClipboardCheck } from "lucide-react";
+import { Sparkles, Plus, Trash2, Check, X, Loader2, Pencil } from "lucide-react";
 import { AXIS_LABEL, type ScreeningAxis, type ScreeningQuestion } from "@/lib/screening";
 import {
   generateScreeningQuestions,
@@ -76,18 +76,8 @@ export function ScreeningQuestionsPanel({
   if (roles.length === 0) return null;
 
   return (
-    <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-      <div className="flex items-start gap-2 mb-1">
-        <ClipboardCheck size={18} className="text-brick mt-0.5 shrink-0" />
-        <div>
-          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Screening questions</div>
-          <p className="text-[13px] text-muted mt-0.5 max-w-2xl">
-            A few short questions candidates answer on your application form — specific to each role. Wingman drafts them from your hiring criteria and grades the answers, so you get a read before deciding whether to interview. Edit anything before it goes live.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 mt-4 mb-4">
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         {roles.map((d) => (
           <button
             key={d}
