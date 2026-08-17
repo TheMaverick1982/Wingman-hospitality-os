@@ -25,6 +25,21 @@ export async function updateApplicationStatus(id: string, status: string): Promi
   return { error: null };
 }
 
+// Save a rejected applicant's note + "do not hire" flag. (The status is set to
+// 'not_a_fit' separately via updateApplicationStatus.) Columns land with a
+// migration, so this is best-effort until it's applied.
+export async function saveRejectionDetails(id: string, note: string, doNotHire: boolean): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("job_applications")
+    .update({ rejection_note: (note || "").slice(0, 2000), do_not_hire: !!doNotHire, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
 // Confirm an interview: set the date/time + details and move the application
 // into the candidates area (status 'interviewing').
 export async function confirmInterview(id: string, when: string, details: string): Promise<{ error: string | null }> {
