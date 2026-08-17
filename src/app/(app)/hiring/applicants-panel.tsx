@@ -430,7 +430,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
 
       {/* Applications vs. Archive (rejected). Archive stays out of the main flow. */}
       <div className="flex items-center gap-1 mb-3 border-b border-line">
-        {([["active", "Applications", activeApps.length], ["archive", "Archive", archivedApps.length]] as const).map(([key, label, n]) => (
+        {([["active", "Applications", activeApps.length], ["archive", "Rejected (Archived)", archivedApps.length]] as const).map(([key, label, n]) => (
           <button
             key={key}
             onClick={() => { setTab(key); setFilter("all"); setRoleFilter("all"); }}
