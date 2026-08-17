@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
-import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug } from "./applicant-actions";
+import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug, saveRejectionDetails } from "./applicant-actions";
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
@@ -19,6 +19,8 @@ export type Applicant = {
   message: string;
   hasResume: boolean;
   source: string;
+  rejectionNote: string;
+  doNotHire: boolean;
   preferredVisitAt: string | null;
   interviewAt: string | null;
   interviewDetails: string;
@@ -111,10 +113,12 @@ const SOURCE_PRESETS = ["craigslist", "facebook", "instagram", "indeed", "flyer"
 
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
-  { value: "contacted", label: "Contacted", cls: "bg-[#FDF3E1] text-[#B45309]" },
-  { value: "not_a_fit", label: "Not a fit", cls: "bg-[#F1F1F1] text-charcoal-2" },
+  { value: "contacted", label: "Reviewed", cls: "bg-[#FDF3E1] text-[#B45309]" },
+  { value: "not_a_fit", label: "Rejected", cls: "bg-[#F1F1F1] text-charcoal-2" },
 ];
 const toneOf = (s: string) => STATUS.find((x) => x.value === s) ?? STATUS[0];
+// The two "active" statuses (Rejected lives in the Archive tab, out of the way).
+const ACTIVE_STATUS = STATUS.filter((s) => s.value !== "not_a_fit");
 
 // datetime-local wants "YYYY-MM-DDTHH:mm" in local time.
 function toLocalInput(iso: string | null): string {
@@ -146,7 +150,9 @@ function byScoreThenDate(a: Applicant, b: Applicant): number {
 }
 
 export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsCc, logoUrl, formConfig }: { applicants: Applicant[]; applyUrl: string | null; applySlug: string | null; applicationsCc: string; logoUrl: string | null; formConfig: ApplicationFormConfig }) {
+  const [tab, setTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [tagDraft, setTagDraft] = useState("");
   const [taggedCopied, setTaggedCopied] = useState<string | null>(null);
@@ -209,20 +215,34 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   function copyEmbed() {
     navigator.clipboard.writeText(embedCode).then(() => { setEmbedCopied(true); setTimeout(() => setEmbedCopied(false), 2000); });
   }
-  const counts = STATUS.reduce((m, s) => ({ ...m, [s.value]: applicants.filter((a) => a.status === s.value).length }), {} as Record<string, number>);
-  // Applicant counts per source, most-common first — the "where are they coming
-  // from" rollup, doubling as a filter.
+  // Rejected applications live in the Archive tab, out of the main flow; New +
+  // Reviewed are the active pipeline.
+  const activeApps = applicants.filter((a) => a.status !== "not_a_fit");
+  const archivedApps = applicants.filter((a) => a.status === "not_a_fit");
+  const pool = tab === "archive" ? archivedApps : activeApps;
+
+  const counts = ACTIVE_STATUS.reduce((m, s) => ({ ...m, [s.value]: activeApps.filter((a) => a.status === s.value).length }), {} as Record<string, number>);
+  // Distinct roles present in the current pool, for the role filter.
+  const roleCounts = (() => {
+    const m = new Map<string, number>();
+    for (const a of pool) { const d = a.department || "Any role"; m.set(d, (m.get(d) ?? 0) + 1); }
+    return [...m.entries()].sort((x, y) => y[1] - x[1]);
+  })();
+  // Applicant counts per source (across everything), most-common first.
   const sourceCounts = (() => {
     const m = new Map<string, number>();
     for (const a of applicants) m.set(a.source, (m.get(a.source) ?? 0) + 1);
     return [...m.entries()].sort((x, y) => y[1] - x[1]);
   })();
-  const shown = applicants.filter(
-    (a) => (filter === "all" || a.status === filter) && (sourceFilter === "all" || a.source === sourceFilter),
+  const shown = pool.filter(
+    (a) =>
+      (tab === "archive" || filter === "all" || a.status === filter) &&
+      (roleFilter === "all" || (a.department || "Any role") === roleFilter) &&
+      (sourceFilter === "all" || a.source === sourceFilter),
   );
-  // Only group by tier when at least one applicant has actually been screened;
-  // otherwise a single flat (score-then-date) list reads cleaner.
-  const anyGraded = applicants.some((a) => a.screeningGrade);
+  // Only group by tier when at least one shown applicant has actually been
+  // screened; otherwise a single flat (score-then-date) list reads cleaner.
+  const anyGraded = pool.some((a) => a.screeningGrade);
 
   function copyLink() {
     if (!liveUrl) return;
@@ -416,22 +436,66 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         <p className="text-[12px] text-muted-2 mt-1.5">Every new application is emailed to the location&rsquo;s address on file — these addresses always get a copy too. {ccMsg && <span className="text-olive font-semibold">{ccMsg}</span>}</p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {[{ value: "all", label: "All" }, ...STATUS].map((f) => {
-          const n = f.value === "all" ? applicants.length : counts[f.value] ?? 0;
-          return (
+      {/* Applications vs. Archive (rejected). Archive stays out of the main flow. */}
+      <div className="flex items-center gap-1 mb-3 border-b border-line">
+        {([["active", "Applications", activeApps.length], ["archive", "Archive", archivedApps.length]] as const).map(([key, label, n]) => (
+          <button
+            key={key}
+            onClick={() => { setTab(key); setFilter("all"); setRoleFilter("all"); }}
+            className={`text-[13px] font-semibold px-3.5 py-2 -mb-px border-b-2 transition-colors ${
+              tab === key ? "border-brick text-brick-dark" : "border-transparent text-muted hover:text-charcoal-2"
+            }`}
+          >
+            {label} {n > 0 && <span className="tabular-nums text-muted-2">· {n}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Status sub-filter — active tab only (New / Reviewed). */}
+      {tab === "active" && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {[{ value: "all", label: "All" }, ...ACTIVE_STATUS].map((f) => {
+            const n = f.value === "all" ? activeApps.length : counts[f.value] ?? 0;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                  filter === f.value ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+                }`}
+              >
+                {f.label} {n > 0 && <span className="tabular-nums">· {n}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Role filter — only when the current tab spans more than one role. */}
+      {roleCounts.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Role</span>
+          <button
+            onClick={() => setRoleFilter("all")}
+            className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+              roleFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+            }`}
+          >
+            All roles
+          </button>
+          {roleCounts.map(([role, n]) => (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
+              key={role}
+              onClick={() => setRoleFilter(role)}
               className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                filter === f.value ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+                roleFilter === role ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
               }`}
             >
-              {f.label} {n > 0 && <span className="tabular-nums">· {n}</span>}
+              {role} <span className="tabular-nums">· {n}</span>
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Where applicants came from — a rollup that doubles as a filter. Only
           shown once there's more than one source to distinguish. */}
@@ -463,12 +527,14 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
       {shown.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
           <p className="text-sm text-muted">
-            {applicants.length === 0
-              ? "No applications yet. Share your application link (Hiring → get the link) or embed the form on your site."
-              : "Nothing in this status."}
+            {tab === "archive"
+              ? "No rejected applications. Rejected applicants land here, out of your main list."
+              : applicants.length === 0
+                ? "No applications yet. Share your application link (Hiring → get the link) or embed the form on your site."
+                : "Nothing matches these filters."}
           </p>
         </div>
-      ) : anyGraded ? (
+      ) : tab === "active" && anyGraded ? (
         <div className="flex flex-col gap-5">
           {GROUP_ORDER.map((g) => {
             const members = shown.filter((a) => groupOf(a) === g).sort(byScoreThenDate);
@@ -508,6 +574,9 @@ function ApplicantCard({ a }: { a: Applicant }) {
   const [details, setDetails] = useState(a.interviewDetails);
   const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [note, setNote] = useState(a.rejectionNote);
+  const [doNotHire, setDoNotHire] = useState(a.doNotHire);
+  const [rejMsg, setRejMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const tone = toneOf(status);
   const grade = a.screeningGrade;
@@ -516,6 +585,15 @@ function ApplicantCard({ a }: { a: Applicant }) {
   function changeStatus(next: string) {
     setStatus(next);
     start(async () => { await updateApplicationStatus(a.id, next); });
+  }
+  function saveRejection(nextDoNotHire?: boolean) {
+    const dnh = nextDoNotHire ?? doNotHire;
+    setRejMsg(null);
+    start(async () => {
+      const res = await saveRejectionDetails(a.id, note, dnh);
+      setRejMsg(res.error ? res.error : "Saved");
+      setTimeout(() => setRejMsg(null), 2000);
+    });
   }
   function confirm_() {
     start(async () => {
@@ -549,6 +627,7 @@ function ApplicantCard({ a }: { a: Applicant }) {
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tierMeta.bg} ${tierMeta.fg}`}>{grade.overall}/5</span>
               )}
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${tone.cls}`}>{tone.label}</span>
+              {a.doNotHire && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FDECEC] text-danger">Do not hire</span>}
             </div>
             <div className="text-[12.5px] text-muted mt-0.5 truncate">
               {a.department || "Any role"}{a.locationName ? ` · ${a.locationName}` : ""} · applied {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · via {sourceLabel(a.source)}
@@ -618,6 +697,24 @@ function ApplicantCard({ a }: { a: Applicant }) {
               </button>
               <button onClick={() => setScheduling(false)} className="text-[13px] font-semibold text-muted-2 hover:text-ink">Cancel</button>
               {msg && <span className="text-[12.5px] text-danger self-center">{msg}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Rejection details — a note for the record and a hard "do not hire" flag. */}
+        {!scheduling && status === "not_a_fit" && (
+          <div className="mt-3 rounded-xl bg-paper border border-line p-3">
+            <label className="text-[12px] font-semibold text-charcoal-2 block mb-1">Why rejected <span className="font-normal text-muted-2">(optional, for your records)</span></label>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="A quick note on why…" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none focus:border-brick" />
+            <div className="flex items-center justify-between gap-3 mt-2 flex-wrap">
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-charcoal-2 cursor-pointer select-none">
+                <input type="checkbox" checked={doNotHire} onChange={(e) => { setDoNotHire(e.target.checked); saveRejection(e.target.checked); }} className="accent-danger" />
+                Do not hire — never reconsider
+              </label>
+              <div className="flex items-center gap-2">
+                {rejMsg && <span className="text-[12px] text-olive font-semibold">{rejMsg}</span>}
+                <button onClick={() => saveRejection()} disabled={pending} className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark disabled:opacity-50">Save note</button>
+              </div>
             </div>
           </div>
         )}

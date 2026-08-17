@@ -7,7 +7,7 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
-import type { ScreeningGrade, ScreeningAnswer, ScreeningQuestion } from "@/lib/screening";
+import { TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningQuestion } from "@/lib/screening";
 import { ScreeningQuestionsPanel } from "./screening-questions-panel";
 import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
@@ -157,6 +157,17 @@ export default async function HiringPage({
     }
   }
 
+  // Rejection note + do-not-hire flag land with migration 0167. Read them in an
+  // isolated guarded query so a not-yet-applied migration degrades to "no
+  // rejection details" instead of breaking the whole applications list.
+  const rejectionById = new Map<string, { note: string; doNotHire: boolean }>();
+  {
+    const { data: rjRows } = await hiringAdmin.from("job_applications").select("id, rejection_note, do_not_hire").eq("org_id", profile.orgId);
+    for (const r of (rjRows ?? []) as { id: string; rejection_note: string | null; do_not_hire: boolean | null }[]) {
+      rejectionById.set(r.id, { note: r.rejection_note ?? "", doNotHire: Boolean(r.do_not_hire) });
+    }
+  }
+
   // Interview scheduling columns land with migration 0087. Read them in isolation
   // so a not-yet-applied migration degrades to "no interview scheduled" instead of
   // erroring the applications query and blanking the whole list.
@@ -208,6 +219,8 @@ export default async function HiringPage({
     message: a.message,
     hasResume: Boolean(a.resume_path),
     source: a.source || "link",
+    rejectionNote: rejectionById.get(a.id)?.note ?? "",
+    doNotHire: rejectionById.get(a.id)?.doNotHire ?? false,
     preferredVisitAt: a.preferred_visit_at,
     interviewAt: interviewById.get(a.id)?.at ?? null,
     interviewDetails: interviewById.get(a.id)?.details ?? "",
@@ -221,6 +234,16 @@ export default async function HiringPage({
   // the person into the candidates area until they're scored.
   const applicants = allApplications.filter((a) => a.status !== "interviewing" && a.status !== "hired");
   const interviews = allApplications.filter((a) => a.status === "interviewing");
+
+  // Inbound applications by AI screening fit — the top-of-page read on lead
+  // quality, pulled from the applications' own screening tiers.
+  const activeApplicants = applicants.filter((a) => a.status !== "not_a_fit");
+  const fitTiles = [
+    { key: "strong", label: TIER_META.strong.label, fg: TIER_META.strong.fg, bg: TIER_META.strong.bg, n: activeApplicants.filter((a) => a.screeningGrade?.tier === "strong").length },
+    { key: "worth_a_look", label: TIER_META.worth_a_look.label, fg: TIER_META.worth_a_look.fg, bg: TIER_META.worth_a_look.bg, n: activeApplicants.filter((a) => a.screeningGrade?.tier === "worth_a_look").length },
+    { key: "pass", label: TIER_META.pass.label, fg: TIER_META.pass.fg, bg: TIER_META.pass.bg, n: activeApplicants.filter((a) => a.screeningGrade?.tier === "pass").length },
+    { key: "unscored", label: "Not yet screened", fg: "text-charcoal-2", bg: "bg-[#F1F1F1]", n: activeApplicants.filter((a) => !a.screeningGrade).length },
+  ];
 
   const { data: hiredStaff } = await hiringAdmin.from("staff_members").select("candidate_id").eq("org_id", profile.orgId).not("candidate_id", "is", null);
   const hiredCandidateIds = new Set((hiredStaff ?? []).map((s) => s.candidate_id));
@@ -333,6 +356,21 @@ export default async function HiringPage({
           />
         </div>
       </div>
+
+      {canEdit && applicants.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Applications by fit</div>
+          <p className="text-[13px] text-muted mb-4">How your inbound applications screened, before you spend an interview. Dig into them in Applications below.</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {fitTiles.map((t) => (
+              <div key={t.key} className="bg-[#FAFAFA] rounded-[14px] p-4 flex items-center justify-between gap-2">
+                <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full ${t.bg} ${t.fg}`}>{t.label}</span>
+                <span className="text-[22px] font-bold text-ink tabular-nums">{t.n}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
         <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Pipeline by recommendation</div>
