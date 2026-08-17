@@ -153,7 +153,6 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const [tab, setTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [tagDraft, setTagDraft] = useState("");
   const [taggedCopied, setTaggedCopied] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -228,17 +227,10 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
     for (const a of pool) { const d = a.department || "Any role"; m.set(d, (m.get(d) ?? 0) + 1); }
     return [...m.entries()].sort((x, y) => y[1] - x[1]);
   })();
-  // Applicant counts per source (across everything), most-common first.
-  const sourceCounts = (() => {
-    const m = new Map<string, number>();
-    for (const a of applicants) m.set(a.source, (m.get(a.source) ?? 0) + 1);
-    return [...m.entries()].sort((x, y) => y[1] - x[1]);
-  })();
   const shown = pool.filter(
     (a) =>
       (tab === "archive" || filter === "all" || a.status === filter) &&
-      (roleFilter === "all" || (a.department || "Any role") === roleFilter) &&
-      (sourceFilter === "all" || a.source === sourceFilter),
+      (roleFilter === "all" || (a.department || "Any role") === roleFilter),
   );
   // Only group by tier when at least one shown applicant has actually been
   // screened; otherwise a single flat (score-then-date) list reads cleaner.
@@ -492,33 +484,6 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
               }`}
             >
               {role} <span className="tabular-nums">· {n}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Where applicants came from — a rollup that doubles as a filter. Only
-          shown once there's more than one source to distinguish. */}
-      {sourceCounts.length > 1 && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-4">
-          <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Source</span>
-          <button
-            onClick={() => setSourceFilter("all")}
-            className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-              sourceFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
-            }`}
-          >
-            All sources
-          </button>
-          {sourceCounts.map(([src, n]) => (
-            <button
-              key={src}
-              onClick={() => setSourceFilter(src)}
-              className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                sourceFilter === src ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
-              }`}
-            >
-              {sourceLabel(src)} <span className="tabular-nums">· {n}</span>
             </button>
           ))}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Plus, Copy, Check, X, Megaphone, Pencil, Trash2, QrCode } from "lucide-react";
+import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
@@ -66,15 +66,9 @@ export function OpeningsPanel({
   const closed = openings.filter((o) => o.status !== "open");
 
   return (
-    <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Megaphone size={18} className="text-brick" />
-          <div>
-            <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">Job openings</div>
-            <p className="text-[13px] text-muted">Post a role for a location, get an AI-written ad + a link to share on Indeed, Craigslist, or social. Counts below are applicants who came through each posting; your full applicant list (including direct applications) is further down.</p>
-          </div>
-        </div>
+    <div>
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <p className="text-[13px] text-muted">Counts below are applicants who came through each posting; your full applicant list (including direct applications) is further down.</p>
         {canEdit && (
           <Btn small icon={Plus} onClick={() => setEditing("new")}>
             Create opening
