@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
@@ -132,13 +133,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           permissionOverrides={profile.permissionOverrides}
           showStartHere={!!launch && !launch.allDone}
         />
-        <Topbar
-          locations={switchableLocations}
-          canSwitch={canSpanLocations}
-          orgIsMultiLocation={locations.length > 1}
-          userLocationName={profile.locationName}
-          language={profile.language}
-        />
+        {/* Topbar reads useSearchParams() (the location switcher). Without a
+            Suspense boundary, a param-changing soft navigation opts the whole
+            layout subtree into a CSR bailout and the switcher vanishes until a
+            full reload. The boundary keeps it stable across in-app navigation. */}
+        <Suspense fallback={<div className="sticky top-0 z-20 min-h-16 lg:h-16 bg-white/80 border-b border-line" />}>
+          <Topbar
+            locations={switchableLocations}
+            canSwitch={canSpanLocations}
+            orgIsMultiLocation={locations.length > 1}
+            userLocationName={profile.locationName}
+            language={profile.language}
+          />
+        </Suspense>
         <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
           <ScrollReset targetId="app-scroll" />
           <div className="max-w-[1400px] mx-auto flex flex-col gap-6 min-w-0">{children}</div>
