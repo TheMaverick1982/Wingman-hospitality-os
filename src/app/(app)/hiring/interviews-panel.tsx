@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CalendarCheck, Paperclip, Undo2, UserPlus } from "lucide-react";
 import type { Applicant } from "./applicants-panel";
 import { unconfirmInterview, getResumeUrl } from "./applicant-actions";
@@ -26,6 +27,9 @@ export function InterviewsPanel({ interviews }: { interviews: Applicant[] }) {
 function InterviewCard({ a }: { a: Applicant }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Carry the currently-selected location through so scoring an interview
+  // doesn't snap the page (and the top switcher) back to "All locations".
+  const currentLocation = useSearchParams().get("location");
 
   const when = a.interviewAt
     ? new Date(a.interviewAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
@@ -59,7 +63,7 @@ function InterviewCard({ a }: { a: Applicant }) {
 
       <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-line">
         <Link
-          href={`/hiring?app=${a.id}&an=${encodeURIComponent(a.name)}${a.department ? `&scoreDept=${encodeURIComponent(a.department)}` : ""}${a.locationId ? `&scoreLoc=${a.locationId}` : ""}`}
+          href={`/hiring?app=${a.id}&an=${encodeURIComponent(a.name)}${a.department ? `&scoreDept=${encodeURIComponent(a.department)}` : ""}${a.locationId ? `&scoreLoc=${a.locationId}` : ""}${currentLocation ? `&location=${encodeURIComponent(currentLocation)}` : ""}`}
           className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark"
         >
           <UserPlus size={13} /> Interview &amp; score
