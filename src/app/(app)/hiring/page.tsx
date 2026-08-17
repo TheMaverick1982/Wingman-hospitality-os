@@ -18,6 +18,7 @@ import { OpeningsPanel, type OpeningRow } from "./openings-panel";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
   "Strong fit": { fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
@@ -378,9 +379,21 @@ export default async function HiringPage({
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
-      <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
+      <CollapsibleSection
+        title="Interview criteria & questions"
+        subtitle="The traits and interview questions you screen every candidate against, per role. Set once, then open to refine."
+      >
+        <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
+      </CollapsibleSection>
 
-      {canEdit && <ScreeningQuestionsPanel departments={activeDepts} questionsByDept={screeningQuestionsByDept} />}
+      {canEdit && activeDepts.length > 0 && (
+        <CollapsibleSection
+          title="Screening questions"
+          subtitle="Short questions candidates answer on your application form, per role — Wingman drafts and grades them. Build once, open to tweak."
+        >
+          <ScreeningQuestionsPanel departments={activeDepts} questionsByDept={screeningQuestionsByDept} />
+        </CollapsibleSection>
+      )}
 
       {canEdit && (
         <OpeningsPanel
