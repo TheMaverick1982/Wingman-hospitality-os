@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 import { TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningQuestion } from "@/lib/screening";
 import { ScreeningQuestionsPanel } from "./screening-questions-panel";
@@ -19,33 +19,6 @@ import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
-
-const RECOMMENDATION_TONE: Record<(typeof RECOMMENDATION_OPTIONS)[number], { fg: string; bg: string }> = {
-  "Strong fit": { fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
-  Fit: { fg: "text-brick-dark", bg: "bg-brick-tint" },
-  Unsure: { fg: "text-[#B45309]", bg: "bg-[#FDF3E1]" },
-  "Not a fit": { fg: "text-danger", bg: "bg-danger-tint" },
-};
-
-const AVATAR_TONES = [
-  { bg: "bg-brick-tint", fg: "text-brick-dark" },
-  { bg: "bg-[#E7F6EC]", fg: "text-[#15803D]" },
-  { bg: "bg-[#FDF3E1]", fg: "text-[#B45309]" },
-  { bg: "bg-[#F1F1F1]", fg: "text-charcoal-2" },
-];
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
-function toneFor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
-}
 
 // AI generation/refinement server actions run from this route; give them room
 // to finish instead of hitting the platform's short default function timeout.
@@ -372,49 +345,6 @@ export default async function HiringPage({
         </div>
       )}
 
-      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Pipeline by recommendation</div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-          {RECOMMENDATION_OPTIONS.map((rec) => {
-            const cands = allCandidates.filter((c) => c.recommendation === rec);
-            return (
-              <div key={rec} className="bg-[#FAFAFA] rounded-[14px] p-4">
-                <div className="flex items-center justify-between mb-3.5">
-                  <span className="text-[13px] font-semibold text-charcoal-2">{rec}</span>
-                  <span className="text-xs font-bold text-muted bg-white px-2.5 py-0.5 rounded-full">{cands.length}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {cands.slice(0, 3).map((c) => {
-                    const avg = c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length;
-                    const tone = toneFor(c.name);
-                    return (
-                      <div key={c.id} className="bg-white border border-line rounded-[11px] p-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold ${tone.bg} ${tone.fg}`}>
-                            {initialsOf(c.name)}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-semibold text-ink truncate">{c.name}</div>
-                            <div className="text-[11.5px] text-muted-2">{c.department}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-2.5">
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${RECOMMENDATION_TONE[c.recommendation as keyof typeof RECOMMENDATION_TONE]?.bg} ${RECOMMENDATION_TONE[c.recommendation as keyof typeof RECOMMENDATION_TONE]?.fg}`}>
-                            {avg.toFixed(1)}/5
-                          </span>
-                          <span className="text-[11.5px] text-muted-2">avg score</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {cands.length === 0 && <p className="text-xs text-muted-2">None yet.</p>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
 
       <CollapsibleSection
@@ -434,15 +364,20 @@ export default async function HiringPage({
       )}
 
       {canEdit && (
-        <OpeningsPanel
-          openings={openings}
-          counts={openingCounts}
-          locations={openingLocations}
-          departments={activeDepts}
-          applyUrl={applyUrl}
-          siteUrl={SITE}
-          canEdit={canEdit}
-        />
+        <CollapsibleSection
+          title="Job openings"
+          subtitle="Post a role for a location, get an AI-written ad + a branded link to share on Indeed, Craigslist, or social. Set up once, open to post more."
+        >
+          <OpeningsPanel
+            openings={openings}
+            counts={openingCounts}
+            locations={openingLocations}
+            departments={activeDepts}
+            applyUrl={applyUrl}
+            siteUrl={SITE}
+            canEdit={canEdit}
+          />
+        </CollapsibleSection>
       )}
 
       <div className="lg:max-w-md">
