@@ -22,6 +22,7 @@ export default async function PathsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
+      <Link href="/training" className="text-brick font-semibold text-sm">← Training &amp; standards</Link>
       <div className="flex items-start gap-3">
         <div className="w-11 h-11 rounded-xl bg-ink text-white flex items-center justify-center shrink-0 mt-0.5"><Route size={20} /></div>
         <div>
