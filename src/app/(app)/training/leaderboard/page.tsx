@@ -27,6 +27,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
+      <Link href="/training" className="text-brick font-semibold text-sm">← Training &amp; standards</Link>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-xl bg-ink text-white flex items-center justify-center shrink-0 mt-0.5"><Trophy size={20} /></div>
