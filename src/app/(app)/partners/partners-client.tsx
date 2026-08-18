@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -62,6 +63,7 @@ export function PartnersClient({
   scopedLocationName,
   showLocationBadges,
   goalTargets,
+  isOwner,
 }: {
   contacts: PartnerContact[];
   activities: FeedActivity[];
@@ -73,6 +75,9 @@ export function PartnersClient({
   scopedLocationName: string | null;
   showLocationBadges: boolean;
   goalTargets: { goal_new_contacts: number; goal_events: number; goal_fundraisers: number; goal_active_connections: number };
+  // Owners set the quarterly partner goals (per store) in Settings; a banner
+  // points them there so it's discoverable from where the goals are tracked.
+  isOwner?: boolean;
 }) {
   const [tab, setTab] = useState<"contacts" | "activity">("contacts");
   const [search, setSearch] = useState("");
@@ -340,6 +345,19 @@ export function PartnersClient({
           </div>
         )}
       </div>
+
+      {isOwner && (
+        <Link
+          href="/settings?tab=partners"
+          className="flex items-center gap-2.5 bg-brick-tint/50 border border-brick/20 rounded-xl px-4 py-2.5 text-[13px] text-charcoal-2 hover:bg-brick-tint transition-colors"
+        >
+          <Target size={15} className="text-brick shrink-0" />
+          <span>
+            Set your quarterly goals — new contacts, events, fundraisers, and connections kept warm — per location in{" "}
+            <span className="font-semibold text-brick">Settings → Partners →</span>
+          </span>
+        </Link>
+      )}
 
       {/* Metrics — desktop: above the tabs. (Mobile renders them below the list.) */}
       <div className="hidden lg:flex lg:flex-col gap-5">{metricCards}</div>

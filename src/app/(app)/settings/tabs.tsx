@@ -4,8 +4,12 @@ import { useState } from "react";
 
 type TabDef = { key: string; label: string; content: React.ReactNode };
 
-export function SettingsTabs({ tabs }: { tabs: TabDef[] }) {
-  const [tab, setTab] = useState<string>(tabs[0]?.key ?? "");
+export function SettingsTabs({ tabs, initialKey }: { tabs: TabDef[]; initialKey?: string }) {
+  // Deep-link support: open on `initialKey` when it names a real tab (e.g.
+  // /settings?tab=partners from the Partners page), otherwise the first tab.
+  const [tab, setTab] = useState<string>(
+    () => (initialKey && tabs.some((t) => t.key === initialKey) ? initialKey : tabs[0]?.key) ?? ""
+  );
   const active = tabs.find((t) => t.key === tab) ?? tabs[0];
 
   return (
