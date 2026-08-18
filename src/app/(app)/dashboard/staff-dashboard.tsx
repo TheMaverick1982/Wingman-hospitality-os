@@ -12,6 +12,7 @@ import { getRecentWins } from "@/lib/wins-data";
 import { StaffTests } from "@/components/dashboard/staff-tests";
 import { getStaffTests, isTestToDo } from "@/lib/data/staff-tests";
 import { resolveMyStaff } from "@/lib/data/my-staff";
+import { effectiveRoles } from "@/lib/constants";
 import type { CurrentProfile } from "@/lib/auth/profile";
 
 // Personal dashboard for the staff role — their own tests to take, training,
@@ -37,12 +38,13 @@ export async function StaffDashboard({ profile }: { profile: CurrentProfile }) {
     );
   }
   const staffId = myStaff.id;
-  const department = myStaff.department;
+  // A staff member can hold multiple roles; their training % spans all of them.
+  const roles = effectiveRoles(myStaff.department, myStaff.additional_departments);
 
   const [{ data: org }, { data: standards }, { data: trainingItems }, { data: progress }, tests] = await Promise.all([
     supabase.from("organizations").select("weekly_focus, weekly_experiment").single(),
-    supabase.from("department_standards").select("id").eq("department", department),
-    supabase.from("department_training_items").select("id").eq("department", department),
+    supabase.from("department_standards").select("id").in("department", roles),
+    supabase.from("department_training_items").select("id").in("department", roles),
     admin.from("staff_training_progress").select("item_type, item_id, checked").eq("staff_id", staffId),
     getStaffTests(staffId),
   ]);

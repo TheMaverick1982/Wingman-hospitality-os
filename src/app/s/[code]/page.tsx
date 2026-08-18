@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { GUEST_FACING_DEPARTMENTS } from "@/lib/constants";
+import { GUEST_FACING_DEPARTMENTS, effectiveRoles } from "@/lib/constants";
 import { SurveyForm } from "./survey-form";
 
 // Public guest survey (no login), reached via the per-location QR / short link
@@ -64,12 +64,12 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   // dropdown isn't empty just because a location has no FOH role assigned.
   // Guarded: exclude_from_survey lands with migration 0153, so fall back to the
   // base columns if it isn't there yet (the public survey must never crash).
-  type StaffRow = { id: string; full_name: string; department: string; location_id: string | null; exclude_from_survey?: boolean };
+  type StaffRow = { id: string; full_name: string; department: string; additional_departments?: string[]; location_id: string | null; exclude_from_survey?: boolean };
   let staffRows: StaffRow[] = [];
   {
     const withCol = await admin
       .from("staff_members")
-      .select("id, full_name, department, location_id, exclude_from_survey")
+      .select("id, full_name, department, additional_departments, location_id, exclude_from_survey")
       .eq("org_id", link.org_id)
       .eq("status", "active");
     if (withCol.error) {
@@ -102,9 +102,11 @@ export default async function SurveyPage({ params }: { params: Promise<{ code: s
   // FOH org-wide → anyone at this location → anyone active. Hidden staff
   // (marketing, catering, etc.) are dropped up front.
   const active = askServer ? staffRows.filter((s) => !s.exclude_from_survey) : [];
-  const isGuestFacing = (d: string) => (GUEST_FACING_DEPARTMENTS as readonly string[]).includes(d);
-  const gfAtLoc = active.filter((s) => isGuestFacing(s.department) && s.location_id === link.location_id);
-  const gfOrg = active.filter((s) => isGuestFacing(s.department));
+  // A person is guest-facing if ANY of their roles is (they may hold several).
+  const isGuestFacing = (s: StaffRow) =>
+    effectiveRoles(s.department, s.additional_departments).some((d) => (GUEST_FACING_DEPARTMENTS as readonly string[]).includes(d));
+  const gfAtLoc = active.filter((s) => isGuestFacing(s) && s.location_id === link.location_id);
+  const gfOrg = active.filter((s) => isGuestFacing(s));
   const atLoc = active.filter((s) => s.location_id === link.location_id);
   const chosen = gfAtLoc.length ? gfAtLoc : gfOrg.length ? gfOrg : atLoc.length ? atLoc : active;
 

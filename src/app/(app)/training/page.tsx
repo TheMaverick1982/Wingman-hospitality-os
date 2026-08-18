@@ -5,12 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLeaderboard } from "@/lib/leaderboard";
 import { canEditSection } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, effectiveRoles, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { MenuTrainingSection } from "./menu-training-section";
 import { SignoffLog } from "./signoff-log";
@@ -58,7 +59,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const isStaff = profile.accessRole === "staff";
   const myStaff = await resolveMyStaff(profile);
   const myStaffId = isStaff ? (myStaff?.id ?? null) : null;
-  const myDept = isStaff ? (myStaff?.department ?? null) : null;
+  // A staff member can hold more than one role (primary + additional). Their
+  // Training view spans ALL of them, not just the primary.
+  const myRoles = isStaff ? effectiveRoles(myStaff?.department, myStaff?.additional_departments) : [];
   const myTests = myStaff ? await getStaffTests(myStaff.id) : [];
 
   const supabase = await createClient();
@@ -127,12 +130,13 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
   const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
   const baseRenderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
-  // Staff: restrict to their own department so they never see other roles' training.
-  const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
+  // Staff: restrict to their own role(s) so they never see other roles' training.
+  const renderDepts = isStaff && myRoles.length ? baseRenderDepts.filter((d) => myRoles.includes(d)) : baseRenderDepts;
 
   // Who can open a dish's recipe: managers/owners (who also edit) and the roles
   // that MAKE the item — the kitchen (Chef) for food, the Bartender for drinks.
-  const canViewRecipes = canEdit || (isStaff && !!myDept && RECIPE_MAKER_ROLES.includes(myDept as Department));
+  // A multi-role staffer qualifies if ANY of their roles is a maker role.
+  const canViewRecipes = canEdit || (isStaff && myRoles.some((d) => RECIPE_MAKER_ROLES.includes(d)));
 
   // LTO flag lives behind a migration (0144) that only lands on the prod branch,
   // so read it in its own guarded query — naming is_lto in the main menu select
@@ -198,8 +202,8 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           .map((p) => `${p.item_type}:${p.item_id}`)
       );
       const keys = [
-        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => s.department === myDept).map((s) => `standard:${s.id}`),
-        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => t.department === myDept).map((t) => `training:${t.id}`),
+        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => myRoles.includes(s.department as Department)).map((s) => `standard:${s.id}`),
+        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => myRoles.includes(t.department as Department)).map((t) => `training:${t.id}`),
       ];
       trainingPct = keys.length ? Math.round((keys.filter((k) => checkedKeys.has(k)).length / keys.length) * 100) : 0;
     }
@@ -230,30 +234,61 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </>
         )}
 
-        {myDept && (data[myDept as Department]?.hasMenu ?? false) && (
-          <>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">
-              {canViewRecipes ? "Your menu — tap any item for how to make it" : "Your menu"}
-            </div>
-            {canViewRecipes && (
-              <p className="text-[13px] text-muted -mt-2">
-                Every item, grouped by section. Tap a dish or drink to open its step-by-step recipe with photos.
-              </p>
-            )}
-            <MenuTrainingSection
-              department={myDept}
-              items={data[myDept as Department].menuItems}
-              canEdit={false}
-              canViewRecipes={canViewRecipes}
-            />
-          </>
-        )}
+        {(() => {
+          // A staff member can hold roles across both menu groups (e.g. Server +
+          // Bartender → food AND bar). Show one menu per distinct group they
+          // touch, deduped so two food roles don't render the food menu twice.
+          const seenGroups = new Set<string>();
+          const menuDepts = myRoles.filter((d) => {
+            if (!(data[d]?.hasMenu ?? false)) return false;
+            const g = menuGroup(d);
+            if (seenGroups.has(g)) return false;
+            seenGroups.add(g);
+            return true;
+          });
+          if (menuDepts.length === 0) return null;
+          return (
+            <>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">
+                {canViewRecipes ? "Your menu — tap any item for how to make it" : "Your menu"}
+              </div>
+              {canViewRecipes && (
+                <p className="text-[13px] text-muted -mt-2">
+                  Every item, grouped by section. Tap a dish or drink to open its step-by-step recipe with photos.
+                </p>
+              )}
+              {menuDepts.map((d) => (
+                <MenuTrainingSection
+                  key={d}
+                  department={d}
+                  menuLabel={menuDepts.length > 1 ? menuGroup(d) : undefined}
+                  items={data[d].menuItems}
+                  canEdit={false}
+                  canViewRecipes={canViewRecipes}
+                />
+              ))}
+            </>
+          );
+        })()}
 
         <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
         <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hideMenu />
       </>
     );
   }
+
+  // Central Menu section: one shared upload/manage area instead of it being
+  // buried under each role tab. The FOOD menu is shared across food-group roles
+  // (Chef, Server, …) and the BAR menu across bar-group roles (Bartender,
+  // Barista), so pick one representative active department for each group that
+  // has a menu — items are grouped by menuGroup, so the choice is just the
+  // storage key.
+  const foodMenuDept = renderDepts.find((d) => menuGroup(d) === "food" && (data[d]?.hasMenu ?? false)) ?? null;
+  const barMenuDept = renderDepts.find((d) => menuGroup(d) === "bar" && (data[d]?.hasMenu ?? false)) ?? null;
+  const hasBothMenus = Boolean(foodMenuDept) && Boolean(barMenuDept);
+  const menuItemCount =
+    (foodMenuDept ? data[foodMenuDept].menuItems.filter((m) => !m.archived_at).length : 0) +
+    (barMenuDept ? data[barMenuDept].menuItems.filter((m) => !m.archived_at).length : 0);
 
   return (
     <>
@@ -377,7 +412,40 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
 
       {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
 
-      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} />
+      {!isStaff && (foodMenuDept || barMenuDept) && (
+        <div id="menu" className="scroll-mt-24">
+          <CollapsibleSection
+            title="Menu"
+            subtitle="One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs below automatically."
+            count={menuItemCount}
+          >
+            <div className="flex flex-col gap-6 pt-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
+                <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
+                <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
+              </div>
+              {foodMenuDept && (
+                <div>
+                  {hasBothMenus && (
+                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
+                  )}
+                  <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                </div>
+              )}
+              {barMenuDept && (
+                <div>
+                  {hasBothMenus && (
+                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
+                  )}
+                  <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
+
+      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hasCentralMenu={Boolean(foodMenuDept || barMenuDept)} />
 
       {!isStaff && <SignoffLog signoffs={allSignoffs} />}
     </>

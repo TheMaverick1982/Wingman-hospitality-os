@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { getActiveDepartments } from "@/lib/roles";
+import { effectiveRoles, type Department } from "@/lib/constants";
 import { Pill } from "@/components/ui/pill";
 import { ArrowRight } from "lucide-react";
 import { AddStaffButton } from "./add-staff-form";
@@ -33,25 +34,37 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   });
 
   const supabase = await createClient();
-  let staffQ = supabase
-    .from("staff_members")
-    .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on")
-    .order("full_name");
-  if (effectiveLocation) staffQ = staffQ.eq("location_id", effectiveLocation);
+  // additional_departments (multi-role) lands in migration 0168 — select it
+  // defensively so a not-yet-migrated database still renders the roster.
+  const STAFF_LIST_COLS = "id, full_name, department, email, phone, status, location_id, candidate_id, hired_on";
+  const staffSelect = (cols: string) => {
+    let q = supabase.from("staff_members").select(cols).order("full_name");
+    if (effectiveLocation) q = q.eq("location_id", effectiveLocation);
+    return q;
+  };
 
-  const [{ data: staff }, locations, { data: signoffs }, activeDepts] = await Promise.all([
-    staffQ,
+  const [staffRes, locations, { data: signoffs }, activeDepts] = await Promise.all([
+    staffSelect(`${STAFF_LIST_COLS}, additional_departments`),
     getOrgLocations(),
     supabase.from("training_signoffs").select("staff_id, completion_pct, occurred_on").order("occurred_on", { ascending: false }),
     getActiveDepartments(),
   ]);
+  let staff = staffRes.data as Record<string, unknown>[] | null;
+  if (staffRes.error) ({ data: staff } = (await staffSelect(STAFF_LIST_COLS)) as { data: Record<string, unknown>[] | null });
 
-  const allStaff = staff ?? [];
+  type StaffListRow = {
+    id: string; full_name: string; department: string; additional_departments?: Department[];
+    email: string; phone: string; status: string; location_id: string; candidate_id: string | null; hired_on: string | null;
+  };
+  const allStaff = ((staff ?? []) as unknown as StaffListRow[]).map((s) => ({ ...s, additional_departments: s.additional_departments ?? [] }));
   // Show a count card for each role the restaurant runs (the ones set up in
   // Hiring/Training), plus any role a current staff member is still assigned to
   // so nobody silently disappears from the breakdown.
   const activeSet = new Set<string>(activeDepts);
-  const staffOnlyDepts = Array.from(new Set(allStaff.map((s) => s.department as string))).filter((d) => !activeSet.has(d));
+  // Count a person under every role they hold, and surface any of those roles in
+  // the breakdown even if it isn't in the org's active set.
+  const rolesOf = (s: { department: string; additional_departments?: Department[] }) => effectiveRoles(s.department, s.additional_departments);
+  const staffOnlyDepts = Array.from(new Set(allStaff.flatMap((s) => rolesOf(s) as string[]))).filter((d) => !activeSet.has(d));
   const gridDepts: string[] = [...activeDepts, ...staffOnlyDepts];
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
 
@@ -82,7 +95,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {gridDepts.map((d) => {
-          const count = allStaff.filter((s) => s.department === d).length;
+          const count = allStaff.filter((s) => rolesOf(s).includes(d as Department)).length;
           return (
             <div key={d} className="bg-white border border-line rounded-2xl p-5 shadow-sm">
               <div className="text-sm font-semibold text-ink mb-1">{d}</div>
@@ -121,7 +134,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                       {s.candidate_id && <Pill tone="olive">Hired</Pill>}
                     </Link>
                   </td>
-                  <td className="px-6 py-3.5 text-muted border-b border-[#F5F5F5]">{s.department}</td>
+                  <td className="px-6 py-3.5 text-muted border-b border-[#F5F5F5]">{[s.department, ...(s.additional_departments ?? [])].join(", ")}</td>
                   <td className="px-6 py-3.5 text-muted border-b border-[#F5F5F5]">{locationName(s.location_id)}</td>
                   <td className="px-6 py-3.5 text-muted border-b border-[#F5F5F5] text-xs">
                     {s.email || s.phone ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UtensilsCrossed } from "lucide-react";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import type { StaffMember } from "@/lib/data/staff";
@@ -34,6 +35,7 @@ export function TrainingClient({
   roleTestDepts,
   canViewRecipes,
   hideMenu,
+  hasCentralMenu,
 }: {
   data: Record<Department, DeptData>;
   summaries: Record<Department, RoleSummary>;
@@ -46,6 +48,10 @@ export function TrainingClient({
   // The staff view renders its own dedicated Menu section above, so it suppresses
   // the inline one here to avoid showing the menu twice.
   hideMenu?: boolean;
+  // When the manager Training page shows the shared central "Menu" section, the
+  // inline per-role menu points up to it so editors know both places manage the
+  // same menu.
+  hasCentralMenu?: boolean;
 }) {
   const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [activeRole, setActiveRole] = useState<Department>(roles[0]);
@@ -86,7 +92,21 @@ export function TrainingClient({
       </div>
 
       {dept.hasMenu && !hideMenu && (
-        <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} canViewRecipes={canViewRecipes} />
+        <>
+          {hasCentralMenu && (
+            <a
+              href="#menu"
+              className="flex items-center gap-2 text-[12.5px] text-charcoal-2 bg-gold-tint/50 border border-gold/30 rounded-xl px-4 py-2.5 mb-3 hover:bg-gold-tint transition-colors"
+            >
+              <UtensilsCrossed size={14} className="text-[#b45309] shrink-0" />
+              <span>
+                This is the same menu you can manage in the central{" "}
+                <span className="font-semibold text-[#b45309]">Menu</span> section at the top of the page — upload or edit it in either place.
+              </span>
+            </a>
+          )}
+          <MenuTrainingSection department={activeRole} items={dept.menuItems} canEdit={isGm} canViewRecipes={canViewRecipes} />
+        </>
       )}
 
       <RoleChecklist

@@ -17,12 +17,26 @@ function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email);
 }
 
+// Parse an "additional roles" JSON payload from a form: keep only known roles,
+// drop the primary (it's already the department), and dedupe. Never throws.
+function parseDepartmentList(raw: FormDataEntryValue | null, exclude: string): string[] {
+  let list: unknown = [];
+  try {
+    list = JSON.parse(String(raw ?? "[]"));
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((d): d is string => typeof d === "string" && ALL_DEPARTMENTS.includes(d as Department) && d !== exclude))];
+}
+
 export async function addStaffMember(_prev: StaffFormState, formData: FormData): Promise<StaffFormState> {
   const fullName = String(formData.get("fullName") || "").trim();
   const department = String(formData.get("department") || "");
   const locationId = String(formData.get("locationId") || "");
   const email = String(formData.get("email") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
+  const additionalDepartments = parseDepartmentList(formData.get("additionalDepartments"), department);
 
   if (!fullName) return { error: "Name is required." };
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Choose a role." };
@@ -55,6 +69,7 @@ export async function addStaffMember(_prev: StaffFormState, formData: FormData):
       location_id: locationId,
       full_name: fullName,
       department,
+      additional_departments: additionalDepartments,
       email,
       phone,
     })
@@ -145,6 +160,31 @@ export async function updateStaffContact(
   await supabase.from("staff_members").update(safe).eq("id", id);
   revalidatePath("/staff");
   revalidatePath(`/staff/${id}`);
+}
+
+// Update a staff member's role set: their PRIMARY role plus any additional roles
+// (for people whose work overlaps, e.g. Host + Server). Both are validated
+// against the known roles; the primary is filtered out of the extras and the
+// extras are deduped. RLS gates who may write the row.
+export async function updateStaffRoles(
+  id: string,
+  primary: string,
+  additional: string[]
+): Promise<{ error: string | null }> {
+  if (!ALL_DEPARTMENTS.includes(primary as Department)) return { error: "Choose a primary role." };
+  const extras = [...new Set((additional ?? []).filter((d) => ALL_DEPARTMENTS.includes(d as Department) && d !== primary))];
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("staff_members")
+    .update({ department: primary, additional_departments: extras })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/staff");
+  revalidatePath(`/staff/${id}`);
+  revalidatePath("/training");
+  return { error: null };
 }
 
 // Toggle whether a staff member appears in the guest survey's "who served you"

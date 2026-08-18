@@ -14,7 +14,7 @@ import { SpotCheckModalButton } from "./spot-check-modal";
 import { PreShiftCheckModalButton } from "./pre-shift-check-modal";
 import { AmbianceCheckModalButton } from "./ambiance-check-modal";
 import { CoachingModalButton } from "./coaching-modal";
-import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { SPOT_CHECK_DIMENSIONS, FOH_DEPARTMENTS, ALL_DEPARTMENTS, effectiveRoles } from "@/lib/constants";
 import { ChecklistTemplateEditor } from "./checklist-template-editor";
 import { ChecklistRolesBar } from "./checklist-roles-bar";
 import { CustomChecklistsManager } from "./custom-checklists-manager";
@@ -193,9 +193,24 @@ export default async function AccountabilityPage({
   // A manager/owner without a staff record still runs their own checklists — treat
   // them as the "Manager" role so pre-shift and any Manager-assigned checklist
   // reaches them, just like servers/hosts/kitchen get theirs.
-  const { data: myStaffRow } = await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle();
+  // additional_departments (multi-role) lands in migration 0168 — select it
+  // defensively. A multi-role viewer runs the checklists for ANY role they hold.
+  type MyStaffRow = { department?: string; additional_departments?: string[] };
+  let myStaffRow: MyStaffRow | null;
+  {
+    const r = await supabase.from("staff_members").select("department, additional_departments").eq("profile_id", profile.userId).maybeSingle();
+    myStaffRow = r.error
+      ? ((await supabase.from("staff_members").select("department").eq("profile_id", profile.userId).maybeSingle()).data as MyStaffRow | null)
+      : (r.data as MyStaffRow | null);
+  }
   const isManagement = profile.accessRole === "manager" || profile.accessRole === "shift_lead" || profile.accessRole === "super_admin";
-  const myDepartment = (myStaffRow as { department?: string } | null)?.department ?? (isManagement ? "Manager" : null);
+  // The viewer's role set. A manager/owner without a staff record runs the
+  // "Manager" role so pre-shift and any Manager-assigned checklist reaches them.
+  const myRoles = myStaffRow?.department
+    ? effectiveRoles(myStaffRow.department, myStaffRow.additional_departments)
+    : isManagement
+      ? ["Manager"]
+      : [];
 
   let preShiftItemTexts = preShiftTemplateItems.map((i) => i.item);
   let loyaltyItemTexts = loyaltyTemplateItems.map((i) => i.item);
@@ -217,11 +232,14 @@ export default async function AccountabilityPage({
   }
   // Cards the viewer personally runs: all-staff checklists (no roles) + ones that
   // include their role.
-  const myCustomLists = customLists.filter((c) => c.departments.length === 0 || (myDepartment != null && c.departments.includes(myDepartment)));
+  const myCustomLists = customLists.filter((c) => c.departments.length === 0 || c.departments.some((d) => myRoles.includes(d)));
 
   // Staff departments — used to decide which role a person is in (for checklist
   // visibility) and to roster the completion reports.
-  const { data: staffDeptRows } = await supabase.from("staff_members").select("profile_id, department").not("profile_id", "is", null);
+  const staffDeptRes = await supabase.from("staff_members").select("profile_id, department, additional_departments").not("profile_id", "is", null);
+  const staffDeptRows = (staffDeptRes.error
+    ? (await supabase.from("staff_members").select("profile_id, department").not("profile_id", "is", null)).data
+    : staffDeptRes.data) as { profile_id: string | null; department: string; additional_departments?: string[] }[] | null;
   // Full roster (name + department) for the spot-check staff picker.
   const { data: staffRosterRows } = await supabase.from("staff_members").select("full_name, department").order("full_name");
   const spotCheckStaff = ((staffRosterRows ?? []) as { full_name: string; department: string }[]).filter((s) => s.full_name);
@@ -260,7 +278,7 @@ export default async function AccountabilityPage({
   };
   const seesChecklist = (type: "preshift" | "server" | "loyalty"): boolean => {
     const roles = effRoles(type);
-    return roles.length === 0 || (myDepartment != null && roles.includes(myDepartment));
+    return roles.length === 0 || roles.some((r) => myRoles.includes(r));
   };
 
   const canSeeReport = profile.accessRole !== "staff";
@@ -339,12 +357,14 @@ export default async function AccountabilityPage({
       .filter((p) => p.access_role !== "super_admin")
       .filter((p) => !effectiveLocation || p.location_id === effectiveLocation);
     // Each checklist's roster is exactly the roles it's assigned to (empty = all).
-    const deptByProfile = new Map<string, string>();
-    for (const s of (staffDeptRows ?? []) as { profile_id: string | null; department: string }[]) {
-      if (s.profile_id) deptByProfile.set(s.profile_id, s.department);
+    // A person can hold multiple roles, so map each profile to its full role set
+    // and roster them under any checklist that targets one of those roles.
+    const rolesByProfile = new Map<string, string[]>();
+    for (const s of staffDeptRows ?? []) {
+      if (s.profile_id) rolesByProfile.set(s.profile_id, effectiveRoles(s.department, s.additional_departments));
     }
     const rosterForRoles = (roles: string[]) =>
-      roles.length === 0 ? baseRoster : baseRoster.filter((p) => roles.includes(deptByProfile.get(p.id) ?? ""));
+      roles.length === 0 ? baseRoster : baseRoster.filter((p) => (rolesByProfile.get(p.id) ?? []).some((d) => roles.includes(d)));
 
     ({ today: todayCompletions, roster } = buildChecklistReport(preComps, todayStr, nameById, rosterForRoles(effRoles("preshift"))));
     ({ today: loyaltyToday, roster: loyaltyRoster } = buildChecklistReport(loyComps, todayStr, nameById, rosterForRoles(effRoles("loyalty"))));

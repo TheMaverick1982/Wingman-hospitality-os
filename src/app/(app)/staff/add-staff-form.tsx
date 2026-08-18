@@ -16,6 +16,7 @@ export function AddStaffButton({ locations, departments }: { locations: Location
   const roles = departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const [department, setDepartment] = useState<Department>(roles[0]);
+  const [additional, setAdditional] = useState<string[]>([]);
   const [state, formAction, pending] = useActionState(addStaffMember, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
   const multiLocation = locations.length > 1;
@@ -36,7 +37,11 @@ export function AddStaffButton({ locations, departments }: { locations: Location
               <select
                 name="department"
                 value={department}
-                onChange={(e) => setDepartment(e.target.value as Department)}
+                onChange={(e) => {
+                  const next = e.target.value as Department;
+                  setDepartment(next);
+                  setAdditional((prev) => prev.filter((d) => d !== next));
+                }}
                 className={inputClass}
               >
                 {roles.map((d) => (
@@ -44,6 +49,27 @@ export function AddStaffButton({ locations, departments }: { locations: Location
                 ))}
               </select>
             </Field>
+            <input type="hidden" name="additionalDepartments" value={JSON.stringify(additional)} />
+            <div className="mb-3 -mt-1">
+              <div className="text-[12px] font-semibold text-muted-2 mb-1.5">Additional roles (optional)</div>
+              <div className="flex flex-wrap gap-1.5">
+                {roles.filter((d) => d !== department).map((d) => {
+                  const on = additional.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setAdditional((prev) => (on ? prev.filter((x) => x !== d) : [...prev, d]))}
+                      className={`text-[12.5px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                        on ? "bg-brick text-white border-brick" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {multiLocation && (
               <Field label="Location">
                 <select name="locationId" required defaultValue="" className={inputClass}>

@@ -6,7 +6,7 @@ import { GraduationCap, UserPlus, Users } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, effectiveRoles, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
 import type { StaffMember } from "@/lib/data/staff";
 import { addStaffMember } from "@/app/(app)/staff/actions";
@@ -27,7 +27,7 @@ export function StartTrainingButton({
   const roles = departments && departments.length ? departments : ALL_DEPARTMENTS;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
-  const filtered = department ? staff.filter((s) => s.department === department) : staff;
+  const filtered = department ? staff.filter((s) => effectiveRoles(s.department, s.additional_departments).includes(department)) : staff;
   const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? "");
   const [newName, setNewName] = useState("");
   const [newDept, setNewDept] = useState<Department>(department ?? roles[0]);

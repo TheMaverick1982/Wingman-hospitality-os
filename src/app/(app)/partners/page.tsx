@@ -111,6 +111,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       scopedLocationName={scopedLocationName}
       showLocationBadges={!effectiveLocation}
       goalTargets={goalTargets}
+      isOwner={profile.accessRole === "super_admin"}
     />
   );
 }

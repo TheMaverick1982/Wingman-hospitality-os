@@ -38,7 +38,8 @@ import { listActivity } from "@/lib/activity-log";
 import { isNativeIOS } from "@/lib/native/platform";
 import type { ApiKeyRow } from "./api-actions";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab: initialTab } = await searchParams;
   const profile = await getCurrentProfile();
   if (!profile) return null;
   // Owners get the full Settings surface; managers (and shift leads) get in for
@@ -617,6 +618,7 @@ export default async function SettingsPage() {
           { key: "activity", label: "Activity", content: <StaffActivityPanel rows={activity} staff={activityStaff} initialHasMore={activityHasMore} /> },
           { key: "trash", label: "Trash", content: trashContent },
         ]}
+        initialKey={initialTab}
       />
     </>
   );
