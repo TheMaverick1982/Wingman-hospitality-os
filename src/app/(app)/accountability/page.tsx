@@ -379,6 +379,14 @@ export default async function AccountabilityPage({
     );
   }
 
+  // Active roles not covered by any checklist yet — a role is covered if it's in
+  // a checklist's assigned roles, or a checklist applies to everyone (empty set).
+  const checklistRoleSets = [effRoles("preshift"), effRoles("server"), effRoles("loyalty"), ...customLists.map((c) => c.departments)];
+  const anyUniversalChecklist = checklistRoleSets.some((s) => s.length === 0);
+  const coveredRoles = new Set<string>();
+  if (!anyUniversalChecklist) for (const s of checklistRoleSets) for (const r of s) coveredRoles.add(r);
+  const uncoveredRoles = anyUniversalChecklist ? [] : rolesInUse.filter((r) => !coveredRoles.has(r));
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -614,6 +622,20 @@ export default async function AccountabilityPage({
         </Card>
       </div>
 
+      {isSuperAdmin && uncoveredRoles.length > 0 && (
+        <div className="border border-brick/30 bg-brick-tint/25 rounded-2xl p-5">
+          <div className="text-[15px] font-semibold text-ink mb-1">
+            {uncoveredRoles.length === 1 ? "A role has no checklist yet" : "Some roles have no checklist yet"}
+          </div>
+          <p className="text-[13.5px] text-charcoal-2 mb-3">
+            <span className="font-semibold text-ink">{uncoveredRoles.join(", ")}</span> {uncoveredRoles.length === 1 ? "isn't" : "aren't"} covered by any checklist. Create one so every shift runs to a standard — build it with AI in seconds, or upload a checklist you already use and Wingman will sharpen it.
+          </p>
+          <a href="#role-checklists" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark transition-colors">
+            Create a role checklist
+          </a>
+        </div>
+      )}
+
       {isSuperAdmin && (
         <div>
           <h3 className="font-display text-lg font-semibold mb-1 text-ink">Checklist templates</h3>
@@ -636,7 +658,7 @@ export default async function AccountabilityPage({
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 scroll-mt-24" id="role-checklists">
             <CustomChecklistsManager
               departments={rolesInUse}
               checklists={customChecklists.map((c, i) => ({ id: c.id, title: c.title, departments: c.departments ?? [], sort_order: c.sort_order, items: customItemsRaw[i] }))}
