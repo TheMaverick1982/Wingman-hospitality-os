@@ -11,6 +11,7 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { MenuTrainingSection } from "./menu-training-section";
 import { SignoffLog } from "./signoff-log";
@@ -255,6 +256,19 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     );
   }
 
+  // Central Menu section: one shared upload/manage area instead of it being
+  // buried under each role tab. The FOOD menu is shared across food-group roles
+  // (Chef, Server, …) and the BAR menu across bar-group roles (Bartender,
+  // Barista), so pick one representative active department for each group that
+  // has a menu — items are grouped by menuGroup, so the choice is just the
+  // storage key.
+  const foodMenuDept = renderDepts.find((d) => menuGroup(d) === "food" && (data[d]?.hasMenu ?? false)) ?? null;
+  const barMenuDept = renderDepts.find((d) => menuGroup(d) === "bar" && (data[d]?.hasMenu ?? false)) ?? null;
+  const hasBothMenus = Boolean(foodMenuDept) && Boolean(barMenuDept);
+  const menuItemCount =
+    (foodMenuDept ? data[foodMenuDept].menuItems.filter((m) => !m.archived_at).length : 0) +
+    (barMenuDept ? data[barMenuDept].menuItems.filter((m) => !m.archived_at).length : 0);
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -377,7 +391,40 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
 
       {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
 
-      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} />
+      {!isStaff && (foodMenuDept || barMenuDept) && (
+        <div id="menu" className="scroll-mt-24">
+          <CollapsibleSection
+            title="Menu"
+            subtitle="One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs below automatically."
+            count={menuItemCount}
+          >
+            <div className="flex flex-col gap-6 pt-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
+                <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
+                <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
+              </div>
+              {foodMenuDept && (
+                <div>
+                  {hasBothMenus && (
+                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
+                  )}
+                  <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                </div>
+              )}
+              {barMenuDept && (
+                <div>
+                  {hasBothMenus && (
+                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
+                  )}
+                  <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
+
+      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hasCentralMenu={Boolean(foodMenuDept || barMenuDept)} />
 
       {!isStaff && <SignoffLog signoffs={allSignoffs} />}
     </>

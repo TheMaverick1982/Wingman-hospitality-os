@@ -51,15 +51,21 @@ export function MenuTrainingSection({
   items,
   canEdit,
   canViewRecipes,
+  menuLabel,
 }: {
   department: string;
   items: MenuItem[];
   canEdit: boolean;
   canViewRecipes?: boolean;
+  // Wording for the upload copy — e.g. "food" / "bar" when this section is the
+  // shared central Menu area, instead of a single role name. Storage still keys
+  // off `department`.
+  menuLabel?: string;
 }) {
   // Show the per-dish "Recipe" link to editors (managers/owners) and to the
   // roles allowed to view recipes (Chef).
   const showRecipe = canEdit || !!canViewRecipes;
+  const label = menuLabel ?? department.toLowerCase();
   const [uploadState, uploadAction, uploadPending] = useActionState(uploadAndParseMenu, uploadInitial);
   const [showAdd, setShowAdd] = useState(false);
   const [addState, addAction, addPending] = useActionState(addCustomMenuItem, addInitial);
@@ -130,7 +136,7 @@ export function MenuTrainingSection({
             <h3 className="font-display text-lg font-semibold text-[#b45309]">Menu upload</h3>
           </div>
           <p className="text-xs mb-3 text-[#b45309]">
-            Upload a photo or PDF of the {department.toLowerCase()} menu. Wingman reads it and builds
+            Upload a photo or PDF of the {label} menu. Wingman reads it and builds
             category, pairing, allergen, and upsell training automatically. Re-uploading updates items
             that already exist (matched by name) instead of duplicating them, and keeps your
             popularity/profit numbers.

@@ -294,6 +294,10 @@ export function MenuClient({ items, canEdit }: { items: MenuItemRow[]; canEdit: 
             Your menu is your most-used sales tool. Add your key movers with their price, food cost, and how well they
             sell — we&apos;ll sort them into what to <span className="font-semibold text-ink">feature, fix, or cut</span>.
           </p>
+          <p className="text-[12.5px] text-muted mt-2">
+            Training your team on the menu — recipes, allergens, pairings, upsells? That lives in the{" "}
+            <a href="/training#menu" className="font-semibold text-brick hover:text-brick-dark">Menu section under Training &amp; Standards →</a>
+          </p>
         </div>
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
