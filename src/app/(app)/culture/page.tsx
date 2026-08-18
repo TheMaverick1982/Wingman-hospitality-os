@@ -191,9 +191,13 @@ export default async function CulturePage() {
         <summary className="flex items-center justify-between gap-3 p-6 cursor-pointer list-none">
           <div>
             <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Weekly manager huddle</div>
-            <div className="text-[13px] text-muted mt-0.5">A 45-minute agenda that ends in action, not venting. Tap to open.</div>
+            <div className="text-[13px] text-muted mt-0.5">A 45-minute agenda that ends in action, not venting.</div>
           </div>
-          <span className="text-muted-2 text-sm group-open:rotate-180 transition-transform">⌄</span>
+          <span className="shrink-0 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 group-hover:bg-brick-dark transition-colors">
+            <span className="group-open:hidden">Show agenda</span>
+            <span className="hidden group-open:inline">Hide</span>
+            <span className="text-[15px] leading-none group-open:rotate-180 transition-transform">⌄</span>
+          </span>
         </summary>
         <div className="px-6 pb-6 -mt-1">
           <ol className="flex flex-col gap-3">
