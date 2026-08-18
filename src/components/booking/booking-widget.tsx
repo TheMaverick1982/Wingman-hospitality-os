@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calendar, Check, ChevronLeft, ChevronRight, Clock, Globe, Loader2, Video } from "lucide-react";
 import { BOOKING_TIMEZONES } from "@/lib/calendar/timezones";
+import { fbTrack } from "@/lib/fbq";
 
 type SlotDTO = { start: number; end: number; day: string; date: string; time: string };
 
@@ -149,6 +150,8 @@ export function BookingWidget({
         return;
       }
       setDone({ meetLink: data.meetLink ?? "" });
+      // Meta Pixel: a demo booking is the highest-value conversion on the site.
+      fbTrack("Schedule");
     } catch {
       setError("Network error — please try again.");
     } finally {

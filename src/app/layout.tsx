@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { getGaMeasurementId } from "@/lib/data/platform-settings";
+import { FacebookPixel } from "@/components/analytics/facebook-pixel";
 import { getPlatformPricing } from "@/lib/pricing";
 import { DelayedThirdParties } from "@/components/analytics/delayed-third-parties";
 import { VisitorTracker } from "@/components/analytics/visitor-tracker";
@@ -127,6 +129,9 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         <main className="flex-1 flex flex-col min-h-0">{children}</main>
+        <Suspense fallback={null}>
+          <FacebookPixel />
+        </Suspense>
         <VisitorTracker />
         <ServiceWorkerRegistrar />
         <InstallPrompt />

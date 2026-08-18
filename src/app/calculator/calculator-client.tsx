@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { HoneypotField } from "@/components/honeypot-field";
 import { HONEYPOT_FIELD } from "@/lib/honeypot";
+import { fbTrack, fbTrackCustom } from "@/lib/fbq";
 import { captureLead } from "../lead-actions";
 
 const field =
@@ -29,6 +30,39 @@ export function CalculatorClient() {
     const perYear = extraRegularsYear * Math.max(0, visits - 1) * check;
     return { extraRegularsYear, perYear, perMonth: perYear / 12 };
   }, [guests, check, current, target, visits]);
+
+  // Fire the Meta CalcResult event once the visitor has actually engaged with the
+  // calculator — NOT on page load (the result renders with defaults immediately),
+  // and NOT on every keystroke. Skip the initial mount, then fire once, 1.2s after
+  // the last input change, and at most once per browser session.
+  const calcFired = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    if (calcFired.current) return;
+    try {
+      if (window.sessionStorage?.getItem("wm_fb_calcresult")) {
+        calcFired.current = true;
+        return;
+      }
+    } catch {
+      // sessionStorage unavailable (private mode) — fall through and still fire once per mount.
+    }
+    const t = window.setTimeout(() => {
+      if (calcFired.current) return;
+      calcFired.current = true;
+      try {
+        window.sessionStorage?.setItem("wm_fb_calcresult", "1");
+      } catch {
+        // ignore
+      }
+      fbTrackCustom("CalcResult", { value: Math.round(result.perYear), currency: "USD" });
+    }, 1200);
+    return () => window.clearTimeout(t);
+  }, [guests, check, current, target, visits, result.perYear]);
 
   async function emailMe(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,7 +94,10 @@ export function CalculatorClient() {
     });
     setBusy(false);
     if (res.error) setError(res.error);
-    else setSent(true);
+    else {
+      setSent(true);
+      fbTrack("Lead", { value: Math.round(result.perYear), currency: "USD" });
+    }
   }
 
   return (
