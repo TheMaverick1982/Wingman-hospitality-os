@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLeaderboard } from "@/lib/leaderboard";
 import { canEditSection } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, effectiveRoles, type Department } from "@/lib/constants";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
@@ -59,7 +59,9 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const isStaff = profile.accessRole === "staff";
   const myStaff = await resolveMyStaff(profile);
   const myStaffId = isStaff ? (myStaff?.id ?? null) : null;
-  const myDept = isStaff ? (myStaff?.department ?? null) : null;
+  // A staff member can hold more than one role (primary + additional). Their
+  // Training view spans ALL of them, not just the primary.
+  const myRoles = isStaff ? effectiveRoles(myStaff?.department, myStaff?.additional_departments) : [];
   const myTests = myStaff ? await getStaffTests(myStaff.id) : [];
 
   const supabase = await createClient();
@@ -128,12 +130,13 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
   const inactiveDepts = ALL_DEPARTMENTS.filter((d) => !activeDepts.includes(d));
   const baseRenderDepts = activeDepts.length ? activeDepts : [...ALL_DEPARTMENTS];
-  // Staff: restrict to their own department so they never see other roles' training.
-  const renderDepts = isStaff && myDept ? baseRenderDepts.filter((d) => d === myDept) : baseRenderDepts;
+  // Staff: restrict to their own role(s) so they never see other roles' training.
+  const renderDepts = isStaff && myRoles.length ? baseRenderDepts.filter((d) => myRoles.includes(d)) : baseRenderDepts;
 
   // Who can open a dish's recipe: managers/owners (who also edit) and the roles
   // that MAKE the item — the kitchen (Chef) for food, the Bartender for drinks.
-  const canViewRecipes = canEdit || (isStaff && !!myDept && RECIPE_MAKER_ROLES.includes(myDept as Department));
+  // A multi-role staffer qualifies if ANY of their roles is a maker role.
+  const canViewRecipes = canEdit || (isStaff && myRoles.some((d) => RECIPE_MAKER_ROLES.includes(d)));
 
   // LTO flag lives behind a migration (0144) that only lands on the prod branch,
   // so read it in its own guarded query — naming is_lto in the main menu select
@@ -199,8 +202,8 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           .map((p) => `${p.item_type}:${p.item_id}`)
       );
       const keys = [
-        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => s.department === myDept).map((s) => `standard:${s.id}`),
-        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => t.department === myDept).map((t) => `training:${t.id}`),
+        ...((standards ?? []) as { id: string; department: string }[]).filter((s) => myRoles.includes(s.department as Department)).map((s) => `standard:${s.id}`),
+        ...((trainingItems ?? []) as { id: string; department: string }[]).filter((t) => myRoles.includes(t.department as Department)).map((t) => `training:${t.id}`),
       ];
       trainingPct = keys.length ? Math.round((keys.filter((k) => checkedKeys.has(k)).length / keys.length) * 100) : 0;
     }
@@ -231,24 +234,42 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           </>
         )}
 
-        {myDept && (data[myDept as Department]?.hasMenu ?? false) && (
-          <>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">
-              {canViewRecipes ? "Your menu — tap any item for how to make it" : "Your menu"}
-            </div>
-            {canViewRecipes && (
-              <p className="text-[13px] text-muted -mt-2">
-                Every item, grouped by section. Tap a dish or drink to open its step-by-step recipe with photos.
-              </p>
-            )}
-            <MenuTrainingSection
-              department={myDept}
-              items={data[myDept as Department].menuItems}
-              canEdit={false}
-              canViewRecipes={canViewRecipes}
-            />
-          </>
-        )}
+        {(() => {
+          // A staff member can hold roles across both menu groups (e.g. Server +
+          // Bartender → food AND bar). Show one menu per distinct group they
+          // touch, deduped so two food roles don't render the food menu twice.
+          const seenGroups = new Set<string>();
+          const menuDepts = myRoles.filter((d) => {
+            if (!(data[d]?.hasMenu ?? false)) return false;
+            const g = menuGroup(d);
+            if (seenGroups.has(g)) return false;
+            seenGroups.add(g);
+            return true;
+          });
+          if (menuDepts.length === 0) return null;
+          return (
+            <>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">
+                {canViewRecipes ? "Your menu — tap any item for how to make it" : "Your menu"}
+              </div>
+              {canViewRecipes && (
+                <p className="text-[13px] text-muted -mt-2">
+                  Every item, grouped by section. Tap a dish or drink to open its step-by-step recipe with photos.
+                </p>
+              )}
+              {menuDepts.map((d) => (
+                <MenuTrainingSection
+                  key={d}
+                  department={d}
+                  menuLabel={menuDepts.length > 1 ? menuGroup(d) : undefined}
+                  items={data[d].menuItems}
+                  canEdit={false}
+                  canViewRecipes={canViewRecipes}
+                />
+              ))}
+            </>
+          );
+        })()}
 
         <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Your standards</div>
         <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={false} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hideMenu />

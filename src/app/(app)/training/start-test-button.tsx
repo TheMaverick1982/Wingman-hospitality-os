@@ -7,7 +7,7 @@ import { ClipboardCheck, User, Users, UsersRound, Check, ArrowRight, Plus } from
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
-import type { Department } from "@/lib/constants";
+import { effectiveRoles, type Department } from "@/lib/constants";
 import { startTests, type StartTarget } from "./tests/run-actions";
 
 export type TestOption = {
@@ -28,7 +28,7 @@ export function StartTestButton({
   small,
 }: {
   tests: TestOption[];
-  staff: { id: string; full_name: string; department: string }[];
+  staff: { id: string; full_name: string; department: string; additional_departments?: string[] }[];
   departments: Department[];
   effectiveLocationId?: string | null;
   small?: boolean;
@@ -48,7 +48,7 @@ export function StartTestButton({
   // targeting for "all", so this is a friendly upper bound, not a promise).
   const reach = useMemo(() => {
     if (who === "person") return personId ? 1 : 0;
-    if (who === "role") return staff.filter((s) => s.department === role).length;
+    if (who === "role") return staff.filter((s) => effectiveRoles(s.department, s.additional_departments).some((d) => d === role)).length;
     return staff.length;
   }, [who, personId, role, staff]);
 

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
+import { effectiveRoles } from "@/lib/constants";
 
 // Continuing Education: on the 1st of each month, re-assign every active
 // "rotates monthly" study-quiz test to staff as a FRESH attempt, so ongoing
@@ -64,13 +65,16 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    // Active staff for this org.
-    const { data: staffRows } = await admin
-      .from("staff_members")
-      .select("id, full_name, email, department, location_id")
-      .eq("org_id", orgId)
-      .eq("status", "active");
-    const staff = (staffRows ?? []) as { id: string; full_name: string; email: string; department: string; location_id: string | null }[];
+    // Active staff for this org, with their full role set (additional_departments
+    // lands in migration 0168 — selected defensively).
+    const staffSel = (cols: string) =>
+      admin.from("staff_members").select(cols).eq("org_id", orgId).eq("status", "active");
+    const staffFirst = await staffSel("id, full_name, email, department, additional_departments, location_id");
+    let staffRows = staffFirst.data;
+    if (staffFirst.error) ({ data: staffRows } = await staffSel("id, full_name, email, department, location_id"));
+    const staff = ((staffRows ?? []) as unknown as { id: string; full_name: string; email: string; department: string; additional_departments?: string[]; location_id: string | null }[]).map(
+      (s) => ({ ...s, additional_departments: s.additional_departments ?? [] })
+    );
 
     // Build fresh assignments: each test to staff whose role it targets (or all
     // if it targets none). A fresh attempt = progress columns reset.
@@ -78,7 +82,9 @@ export async function GET(request: NextRequest) {
     const perPerson = new Map<string, { name: string; email: string; titles: string[] }>();
     for (const t of orgTests) {
       const targets = (t.target_departments ?? []).filter(Boolean);
-      const eligible = targets.length > 0 ? staff.filter((s) => targets.includes(s.department)) : staff;
+      const eligible = targets.length > 0
+        ? staff.filter((s) => effectiveRoles(s.department, s.additional_departments).some((r) => targets.includes(r)))
+        : staff;
       const due = dueFrom(t.complete_within_amount, t.complete_within_unit, now);
       for (const s of eligible) {
         rows.push({

@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { sendEmail } from "@/lib/email";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, effectiveRoles, type Department } from "@/lib/constants";
 import { scoreTest, resolveAttempt } from "@/lib/tests";
 import { isNotificationEnabled } from "@/lib/notifications";
 
@@ -19,6 +19,30 @@ async function manager() {
 }
 
 type StaffLite = { id: string; full_name: string; email: string; location_id: string };
+type StaffWithRoles = StaffLite & { department: string; additional_departments: string[] };
+
+// Active staff with their full role set. additional_departments lands in
+// migration 0168 — selected defensively so a not-yet-migrated database degrades
+// to single-role. Role matching is done in JS (via effectiveRoles) so a
+// multi-role person matches on ANY role they hold, not just their primary.
+async function activeStaffWithRoles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  opts?: { locationId?: string | null; staffId?: string }
+): Promise<StaffWithRoles[]> {
+  const base = (cols: string) => {
+    let q = supabase.from("staff_members").select(cols).eq("status", "active");
+    if (opts?.staffId) q = q.eq("id", opts.staffId);
+    if (opts?.locationId) q = q.eq("location_id", opts.locationId);
+    return q;
+  };
+  const first = await base("id, full_name, email, location_id, department, additional_departments");
+  let data = first.data;
+  if (first.error) ({ data } = await base("id, full_name, email, location_id, department"));
+  return ((data ?? []) as unknown as (StaffWithRoles & { additional_departments?: string[] })[]).map((s) => ({
+    ...s,
+    additional_departments: s.additional_departments ?? [],
+  }));
+}
 
 function dueFrom(amount: number | null, unit: string): string | null {
   if (!amount) return null;
@@ -107,13 +131,16 @@ export async function startTests(
   }[];
   if (tests.length === 0) return { error: "No tests found.", assigned: 0, tests: 0 };
 
-  // Resolve the base pool of people from the target.
-  let q = supabase.from("staff_members").select("id, full_name, email, department, location_id").eq("status", "active");
-  if (target.kind === "person") q = q.eq("id", target.staffId);
-  else if (target.kind === "role") q = q.eq("department", target.department);
-  if (opts?.locationId) q = q.eq("location_id", opts.locationId);
-  const { data: staffRows } = await q;
-  const pool = (staffRows ?? []) as (StaffLite & { department: string })[];
+  // Resolve the base pool of people from the target. A "role" target matches a
+  // person if that role is in their full role set (primary or additional).
+  const basePool = await activeStaffWithRoles(supabase, {
+    locationId: opts?.locationId,
+    staffId: target.kind === "person" ? target.staffId : undefined,
+  });
+  const pool =
+    target.kind === "role"
+      ? basePool.filter((s) => effectiveRoles(s.department, s.additional_departments).includes(target.department as Department))
+      : basePool;
   if (pool.length === 0) return { error: "No active staff matched.", assigned: 0, tests: 0 };
 
   // Build every (person × test) assignment. For "all staff", honor each test's
@@ -124,7 +151,10 @@ export async function startTests(
   const perPerson = new Map<string, { name: string; email: string; titles: string[] }>();
   for (const t of tests) {
     const targets = (t.target_departments ?? []).filter(Boolean);
-    const eligible = target.kind === "all" && targets.length > 0 ? pool.filter((s) => targets.includes(s.department)) : pool;
+    const eligible =
+      target.kind === "all" && targets.length > 0
+        ? pool.filter((s) => effectiveRoles(s.department, s.additional_departments).some((r) => targets.includes(r)))
+        : pool;
     const dueAt = opts?.dueAt ?? dueFrom(t.complete_within_amount, t.complete_within_unit);
     for (const s of eligible) {
       rows.push({ org_id: org.id, test_id: t.id, staff_id: s.id, location_id: s.location_id, assigned_by: profile.userId, due_at: dueAt, updated_at: now });
@@ -168,8 +198,9 @@ export async function assignTestToRole(testId: string, department: string): Prom
   if (!(await manager())) return { error: "Not authorized.", assigned: 0 };
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role.", assigned: 0 };
   const supabase = await createClient();
-  const { data: staff } = await supabase.from("staff_members").select("id").eq("department", department).eq("status", "active");
-  return assignTest(testId, (staff ?? []).map((s) => (s as { id: string }).id));
+  const staff = await activeStaffWithRoles(supabase);
+  const matched = staff.filter((s) => effectiveRoles(s.department, s.additional_departments).includes(department as Department));
+  return assignTest(testId, matched.map((s) => s.id));
 }
 
 // Send to all active staff (respecting the test's role targeting if it has any).
@@ -177,11 +208,12 @@ export async function assignTestToAll(testId: string): Promise<{ error: string |
   if (!(await manager())) return { error: "Not authorized.", assigned: 0 };
   const supabase = await createClient();
   const { data: test } = await supabase.from("tests").select("target_departments").eq("id", testId).maybeSingle();
-  let q = supabase.from("staff_members").select("id, department").eq("status", "active");
   const targets = ((test?.target_departments ?? []) as string[]).filter(Boolean);
-  if (targets.length > 0) q = q.in("department", targets);
-  const { data: staff } = await q;
-  return assignTest(testId, (staff ?? []).map((s) => (s as { id: string }).id));
+  const staff = await activeStaffWithRoles(supabase);
+  const matched = targets.length > 0
+    ? staff.filter((s) => effectiveRoles(s.department, s.additional_departments).some((r) => targets.includes(r)))
+    : staff;
+  return assignTest(testId, matched.map((s) => s.id));
 }
 
 // Manager clears a lock and grants one more attempt (after coaching).

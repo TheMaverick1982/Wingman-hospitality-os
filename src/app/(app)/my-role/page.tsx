@@ -6,7 +6,7 @@ import { resolveMyStaff } from "@/lib/data/my-staff";
 import { getActiveDepartments } from "@/lib/roles";
 import { canEditSection } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, effectiveRoles, type Department } from "@/lib/constants";
 import { RoleOverviewEditor } from "./role-overview-editor";
 
 export const metadata: Metadata = { title: "Your role" };
@@ -30,13 +30,17 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
 
   let department: string | null = null;
   let previewMode = false;
+  // A staff member can hold more than one role; they can flip between their own
+  // role guides with ?department= (validated to a role they actually hold).
+  let myRoles: string[] = [];
   if (canPreview && validParam) {
     department = deptParam!;
     previewMode = true;
   } else {
     const myStaff = await resolveMyStaff(profile);
     if (myStaff) {
-      department = myStaff.department;
+      myRoles = effectiveRoles(myStaff.department, myStaff.additional_departments);
+      department = deptParam && myRoles.includes(deptParam) ? deptParam : (myRoles[0] ?? myStaff.department);
     } else if (canPreview && activeDepts.length > 0) {
       // A manager without a staff record lands in preview mode on the first role.
       department = activeDepts[0];
@@ -107,6 +111,25 @@ export default async function MyRolePage({ searchParams }: { searchParams: Promi
           </div>
           <div className="flex flex-wrap gap-1.5">
             {activeDepts.map((d) => (
+              <Link
+                key={d}
+                href={`/my-role?department=${encodeURIComponent(d)}`}
+                className={`text-[12.5px] font-semibold rounded-full px-3 py-1 border transition-colors ${
+                  d === department ? "border-brick text-white bg-brick" : "border-line text-charcoal-2 bg-white hover:border-brick"
+                }`}
+              >
+                {d}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!previewMode && myRoles.length > 1 && (
+        <div className="mb-4">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-1.5">You work more than one role — pick one</div>
+          <div className="flex flex-wrap gap-1.5">
+            {myRoles.map((d) => (
               <Link
                 key={d}
                 href={`/my-role?department=${encodeURIComponent(d)}`}

@@ -3,6 +3,8 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
+import { getActiveDepartments } from "@/lib/roles";
+import { effectiveRoles } from "@/lib/constants";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { StaffProfileClient } from "./staff-profile-client";
 import { InviteLoginBanner } from "./invite-login-banner";
@@ -27,15 +29,26 @@ export default async function StaffProfilePage({
   const canEdit = access === "full";
 
   const supabase = await createClient();
-  const [{ data: staff }, locations] = await Promise.all([
-    supabase
-      .from("staff_members")
-      .select("id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at, profile_id, exclude_from_survey")
-      .eq("id", id)
-      .maybeSingle(),
+  // additional_departments (multi-role) lands in migration 0168 — select it
+  // defensively so a not-yet-migrated database still loads the profile.
+  const baseCols = "id, full_name, department, email, phone, status, location_id, candidate_id, hired_on, created_at, profile_id, exclude_from_survey";
+  const [staffRes, locations, activeDepts] = await Promise.all([
+    supabase.from("staff_members").select(`${baseCols}, additional_departments`).eq("id", id).maybeSingle(),
     getOrgLocations(),
+    getActiveDepartments(),
   ]);
+  type StaffRow = {
+    id: string; full_name: string; department: string; email: string; phone: string;
+    status: "active" | "inactive"; location_id: string; candidate_id: string | null;
+    hired_on: string | null; created_at: string; profile_id: string | null;
+    exclude_from_survey?: boolean; additional_departments?: string[];
+  };
+  let staff = staffRes.data as StaffRow | null;
+  if (staffRes.error) {
+    ({ data: staff } = (await supabase.from("staff_members").select(baseCols).eq("id", id).maybeSingle()) as { data: StaffRow | null });
+  }
   if (!staff) return notFound();
+  const staffRoles = effectiveRoles(staff.department, staff.additional_departments);
   const isSuperAdmin = profile.accessRole === "super_admin";
 
   const [
@@ -49,14 +62,14 @@ export default async function StaffProfilePage({
     supabase
       .from("department_standards")
       .select("id, item, sort_order")
-      .eq("department", staff.department)
+      .in("department", staffRoles)
       .order("sort_order"),
     supabase
       .from("department_training_items")
       .select("id, item, sort_order")
-      .eq("department", staff.department)
+      .in("department", staffRoles)
       .order("sort_order"),
-    supabase.from("department_meta").select("track_label").eq("department", staff.department).maybeSingle(),
+    supabase.from("department_meta").select("department, track_label").in("department", staffRoles),
     supabase
       .from("staff_training_progress")
       .select("item_type, item_id, checked, rating, note")
@@ -138,13 +151,18 @@ export default async function StaffProfilePage({
       <InviteLoginBanner staffId={staff.id} name={staff.full_name} email={staff.email} />
     )}
     <StaffProfileClient
-      staff={staff}
+      staff={{ ...staff, additional_departments: staffRoles.slice(1) }}
+      departments={activeDepts}
       locationName={locations.find((l) => l.id === staff.location_id)?.name ?? ""}
       canEdit={canEdit}
       accountEmail={accountEmail}
       hospitalityItems={standards ?? []}
       roleItems={trainingItems ?? []}
-      trackLabel={meta?.track_label ?? null}
+      trackLabel={
+        staffRoles.length > 1
+          ? "Role-specific"
+          : ((meta ?? []) as { track_label: string | null }[])[0]?.track_label ?? null
+      }
       progress={progress ?? []}
       signoffs={signoffs ?? []}
       candidate={candidateResult?.data ?? null}

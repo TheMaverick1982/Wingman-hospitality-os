@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Heart, GraduationCap, ThumbsUp, MessageCircleWar
 import { Pill } from "@/components/ui/pill";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
-import { updateStaffContact, updateTrainingProgress, signOffStaffTraining, setStaffSurveyExcluded } from "../actions";
+import { updateStaffContact, updateTrainingProgress, signOffStaffTraining, setStaffSurveyExcluded, updateStaffRoles } from "../actions";
 
 type ChecklistItem = { id: string; item: string };
 type ProgressRow = { item_type: "standard" | "training"; item_id: string; checked: boolean; rating: "" | "strong" | "coaching"; note: string };
@@ -14,6 +14,7 @@ type Staff = {
   id: string;
   full_name: string;
   department: string;
+  additional_departments?: string[];
   email: string;
   phone: string;
   status: "active" | "inactive";
@@ -48,6 +49,7 @@ function initialsOf(name: string): string {
 
 export function StaffProfileClient({
   staff,
+  departments,
   locationName,
   canEdit,
   accountEmail,
@@ -63,6 +65,7 @@ export function StaffProfileClient({
   initialTab,
 }: {
   staff: Staff;
+  departments: string[];
   locationName: string;
   canEdit: boolean;
   accountEmail?: string | null;
@@ -105,7 +108,7 @@ export function StaffProfileClient({
             </Pill>
           </div>
           <p className="text-sm text-muted mt-0.5">
-            {staff.department} · {locationName}
+            {[staff.department, ...(staff.additional_departments ?? [])].join(" · ")} · {locationName}
             {staff.candidate_id && " · Hired through Wingman"}
           </p>
         </div>
@@ -137,7 +140,7 @@ export function StaffProfileClient({
         />
       )}
 
-      {tab === "contact" && <ContactTab staff={staff} locationName={locationName} canEdit={canEdit} accountEmail={accountEmail} />}
+      {tab === "contact" && <ContactTab staff={staff} departments={departments} locationName={locationName} canEdit={canEdit} accountEmail={accountEmail} />}
 
       {tab === "training" && (
         <TrainingTab
@@ -335,7 +338,81 @@ function TestsTab({ tests }: { tests: TestRow[] }) {
   );
 }
 
-function ContactTab({ staff, locationName, canEdit, accountEmail }: { staff: Staff; locationName: string; canEdit: boolean; accountEmail?: string | null }) {
+// Edit a staff member's role(s): one primary role plus any additional roles for
+// people whose work overlaps (e.g. Host + Server). They see the training, menu,
+// tests, and checklists for every role they hold.
+function RoleEditor({
+  staff,
+  departments,
+  canEdit,
+  onSave,
+}: {
+  staff: Staff;
+  departments: string[];
+  canEdit: boolean;
+  onSave: (primary: string, additional: string[]) => void;
+}) {
+  const [primary, setPrimary] = useState(staff.department);
+  const [additional, setAdditional] = useState<string[]>(staff.additional_departments ?? []);
+
+  // Offer every role the restaurant runs, plus any the person already holds (so
+  // a staff-only role isn't dropped from the list).
+  const options = Array.from(new Set([...departments, staff.department, ...(staff.additional_departments ?? [])]));
+
+  function changePrimary(next: string) {
+    const nextAdditional = additional.filter((d) => d !== next);
+    setPrimary(next);
+    setAdditional(nextAdditional);
+    onSave(next, nextAdditional);
+  }
+
+  function toggleAdditional(dept: string) {
+    const next = additional.includes(dept) ? additional.filter((d) => d !== dept) : [...additional, dept];
+    setAdditional(next);
+    onSave(primary, next);
+  }
+
+  if (!canEdit) {
+    return (
+      <div>
+        <label className="text-[13px] font-semibold mb-1.5 text-ink block">Role{(staff.additional_departments?.length ?? 0) > 0 ? "s" : ""}</label>
+        <input value={[staff.department, ...(staff.additional_departments ?? [])].join(", ")} disabled className={inputClass} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="text-[13px] font-semibold mb-1.5 text-ink block">Primary role</label>
+      <select value={primary} onChange={(e) => changePrimary(e.target.value)} className={inputClass}>
+        {options.map((d) => (
+          <option key={d} value={d}>{d}</option>
+        ))}
+      </select>
+      <div className="text-[13px] font-semibold mt-4 mb-1.5 text-ink">Additional roles</div>
+      <p className="text-[12px] text-muted-2 mb-2">For people who work more than one role — they&rsquo;ll get the training, menu, tests, and checklists for each.</p>
+      <div className="flex flex-wrap gap-2">
+        {options.filter((d) => d !== primary).map((d) => {
+          const on = additional.includes(d);
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => toggleAdditional(d)}
+              className={`text-[13px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                on ? "bg-brick text-white border-brick" : "bg-white text-charcoal-2 border-line hover:border-brick"
+              }`}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ContactTab({ staff, departments, locationName, canEdit, accountEmail }: { staff: Staff; departments: string[]; locationName: string; canEdit: boolean; accountEmail?: string | null }) {
   const [fullName, setFullName] = useState(staff.full_name);
   const [email, setEmail] = useState(staff.email);
   const [phone, setPhone] = useState(staff.phone);
@@ -388,10 +465,7 @@ function ContactTab({ staff, locationName, canEdit, accountEmail }: { staff: Sta
             className={inputClass}
           />
         </div>
-        <div>
-          <label className="text-[13px] font-semibold mb-1.5 text-ink block">Role</label>
-          <input value={staff.department} disabled className={inputClass} />
-        </div>
+        <RoleEditor staff={staff} departments={departments} canEdit={canEdit} onSave={(primary, additional) => startTransition(() => { void updateStaffRoles(staff.id, primary, additional); })} />
         <div>
           <label className="text-[13px] font-semibold mb-1.5 text-ink block">Location</label>
           <input value={locationName} disabled className={inputClass} />

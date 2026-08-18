@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { UserPlus, Users } from "lucide-react";
 import { inputClass } from "@/components/ui/field";
+import { effectiveRoles } from "@/lib/constants";
 
-export type StaffOption = { id: string; full_name: string; department: string };
+export type StaffOption = { id: string; full_name: string; department: string; additional_departments?: string[] };
 
 /**
  * A form-field replacement: pick an existing person from the Staff roster
@@ -29,7 +30,7 @@ export function StaffPicker({
   // Prefill a brand-new name (e.g. starting a scorecard from an application).
   defaultNewName?: string;
 }) {
-  const filtered = department ? staff.filter((s) => s.department === department) : staff;
+  const filtered = department ? staff.filter((s) => effectiveRoles(s.department, s.additional_departments).some((d) => d === department)) : staff;
   const [mode, setMode] = useState<"existing" | "new">(defaultNewName ? "new" : filtered.length > 0 ? "existing" : "new");
   const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? "");
   const [newName, setNewName] = useState(defaultNewName ?? "");

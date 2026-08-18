@@ -20,6 +20,23 @@ export const ALL_DEPARTMENTS = [
 ] as const;
 export type Department = (typeof ALL_DEPARTMENTS)[number];
 
+// A staff member's effective role set: their primary `department` first, then
+// any `additional_departments` (deduped, invalid/blank values dropped). Use this
+// everywhere a staff user's training, menu, tests, or checklists should span all
+// the roles they hold — not just their primary one. Kept pure so it's usable on
+// both server and client.
+export function effectiveRoles(primary: string | null | undefined, additional?: readonly string[] | null): Department[] {
+  const seen = new Set<string>();
+  const out: Department[] = [];
+  for (const d of [primary, ...(additional ?? [])]) {
+    if (d && !seen.has(d) && (ALL_DEPARTMENTS as readonly string[]).includes(d)) {
+      seen.add(d);
+      out.push(d as Department);
+    }
+  }
+  return out;
+}
+
 // The roles the Setup Wizard pre-selects (kept to the common core so the single
 // AI generation stays focused). Owners check any extra roles they actually have.
 export const WIZARD_DEFAULT_DEPARTMENTS: Department[] = ["Host", "Server", "Bartender", "Chef", "Manager"];
