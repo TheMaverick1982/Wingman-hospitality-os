@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { CalendarCheck, Paperclip, Undo2, UserPlus } from "lucide-react";
 import type { Applicant } from "./applicants-panel";
 import { unconfirmInterview, getResumeUrl } from "./applicant-actions";
 import { formatInZone } from "@/lib/timezone";
+import { useLocationParam } from "@/components/app-shell/use-location-param";
 
 // Confirmed interviews — applicants who've moved into the candidates area with a
 // scheduled interview, waiting to be scored.
@@ -29,8 +29,10 @@ function InterviewCard({ a }: { a: Applicant }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   // Carry the currently-selected location through so scoring an interview
-  // doesn't snap the page (and the top switcher) back to "All locations".
-  const currentLocation = useSearchParams().get("location");
+  // doesn't snap the page (and the top switcher) back to "All locations". Reads
+  // without useSearchParams so this component can't suspend the Hiring page.
+  const loc = useLocationParam();
+  const currentLocation = loc && loc !== "all" ? loc : null;
 
   const when = formatInZone(a.interviewAt, a.locationTimezone, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
@@ -145,7 +146,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
         <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
           <ScrollReset targetId="app-scroll" />
-          <div className="max-w-[1400px] mx-auto flex flex-col gap-6 min-w-0">{children}</div>
+          {/* Contain the PAGE here: if any page component uses useSearchParams()
+              (which opts into a Suspense/CSR bailout on a param navigation), the
+              suspension is caught by THIS boundary — in the content area only —
+              and can never bubble up to blank the sticky top bar or sidebar,
+              which live outside it. Structural guarantee against the recurring
+              "location switcher vanishes" bug, whatever page triggers it. */}
+          <div className="max-w-[1400px] mx-auto flex flex-col gap-6 min-w-0">
+            <Suspense fallback={null}>{children}</Suspense>
+          </div>
         </div>
       </div>
       <AssistantWidget />
