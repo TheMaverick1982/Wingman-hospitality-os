@@ -6,6 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { normalizeFormConfig } from "@/lib/application-form";
+import { wallClockToUtc } from "@/lib/timezone";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { CurrentProfile } from "@/lib/auth/profile";
 
 const STATUSES = ["new", "contacted", "not_a_fit", "hired"] as const;
 export type ApplicationStatus = (typeof STATUSES)[number];
@@ -13,6 +16,22 @@ export type ApplicationStatus = (typeof STATUSES)[number];
 async function gate() {
   const p = await getCurrentProfile();
   return p && canEditSection(p.accessRole, "hiring", p.permissionOverrides) ? p : null;
+}
+
+// The IANA zone an interview/visit time should be read in: the application's
+// location, falling back to the manager's home location. A <input
+// type="datetime-local"> gives a naive wall-clock string, so we must anchor it to
+// THIS zone (the store's), not the UTC server, or the saved instant is off by the
+// server's offset.
+async function applicationTimezone(supabase: SupabaseClient, id: string, profile: CurrentProfile): Promise<string | null> {
+  const { data } = await supabase.from("job_applications").select("location_id").eq("id", id).maybeSingle();
+  const locId = (data as { location_id: string | null } | null)?.location_id ?? null;
+  if (locId) {
+    const { data: loc } = await supabase.from("locations").select("timezone").eq("id", locId).maybeSingle();
+    const tz = (loc as { timezone: string | null } | null)?.timezone;
+    if (tz) return tz;
+  }
+  return profile.locationTimezone ?? null;
 }
 
 export async function updateApplicationStatus(id: string, status: string): Promise<{ error: string | null }> {
@@ -43,10 +62,12 @@ export async function saveRejectionDetails(id: string, note: string, doNotHire: 
 // Confirm an interview: set the date/time + details and move the application
 // into the candidates area (status 'interviewing').
 export async function confirmInterview(id: string, when: string, details: string): Promise<{ error: string | null }> {
-  if (!(await gate())) return { error: "Not authorized." };
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
   if (!when) return { error: "Pick an interview date and time." };
-  const iso = new Date(when).toISOString();
   const supabase = await createClient();
+  const tz = await applicationTimezone(supabase, id, profile);
+  const iso = (wallClockToUtc(when, tz) ?? new Date(when)).toISOString();
   const { error } = await supabase
     .from("job_applications")
     .update({ interview_at: iso, interview_details: (details || "").slice(0, 2000), status: "interviewing", updated_at: new Date().toISOString() })
@@ -70,9 +91,11 @@ export async function unconfirmInterview(id: string): Promise<{ error: string | 
 }
 
 export async function scheduleApplicationVisit(id: string, when: string): Promise<{ error: string | null }> {
-  if (!(await gate())) return { error: "Not authorized." };
-  const iso = when ? new Date(when).toISOString() : null;
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
   const supabase = await createClient();
+  const tz = when ? await applicationTimezone(supabase, id, profile) : null;
+  const iso = when ? (wallClockToUtc(when, tz) ?? new Date(when)).toISOString() : null;
   const { error } = await supabase
     .from("job_applications")
     .update({ preferred_visit_at: iso, visit_confirmed: Boolean(iso), updated_at: new Date().toISOString() })

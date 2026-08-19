@@ -69,6 +69,11 @@ export type ActivityListRow = {
   action: string;
   label: string;
   createdAt: string;
+  // The IANA time zone to show this event's time in — the acting user's home
+  // location's zone, so a multi-location owner reads each entry in the store's
+  // local time. Falls back to the viewer's zone when the actor has no single
+  // location (system rows, all-locations owners).
+  timezone: string | null;
 };
 
 // The activity trail grows without bound per org, so it's read a page at a time
@@ -77,7 +82,12 @@ export type ActivityListRow = {
 // showing). Names are resolved against the current team roster in one lookup.
 export const ACTIVITY_PAGE_SIZE = 100;
 
-export async function listActivity(orgId: string, offset = 0, limit = ACTIVITY_PAGE_SIZE): Promise<{ rows: ActivityListRow[]; hasMore: boolean }> {
+export async function listActivity(
+  orgId: string,
+  offset = 0,
+  limit = ACTIVITY_PAGE_SIZE,
+  fallbackTz: string | null = null
+): Promise<{ rows: ActivityListRow[]; hasMore: boolean }> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("activity_events")
@@ -87,12 +97,29 @@ export async function listActivity(orgId: string, offset = 0, limit = ACTIVITY_P
     .range(offset, offset + limit - 1);
   const raw = (data ?? []) as { id: string; actor_id: string | null; actor_name: string; area: string; action: string; label: string; created_at: string }[];
 
-  // Resolve current names for the actors on this page (falls back to stored name).
+  // Resolve current names for the actors on this page (falls back to stored
+  // name), and each actor's home-location time zone in the same pass, so every
+  // entry shows in the store's local time rather than the viewer's browser.
   const ids = [...new Set(raw.map((r) => r.actor_id).filter((v): v is string => Boolean(v)))];
   const nameById = new Map<string, string>();
+  const locByActor = new Map<string, string | null>();
   if (ids.length) {
-    const { data: people } = await admin.from("profiles").select("id, full_name").in("id", ids);
-    for (const p of (people ?? []) as { id: string; full_name: string }[]) nameById.set(p.id, p.full_name);
+    const { data: people } = await admin.from("profiles").select("id, full_name, location_id").in("id", ids);
+    const locIds = new Set<string>();
+    for (const p of (people ?? []) as { id: string; full_name: string; location_id: string | null }[]) {
+      nameById.set(p.id, p.full_name);
+      locByActor.set(p.id, p.location_id);
+      if (p.location_id) locIds.add(p.location_id);
+    }
+    const tzByLoc = new Map<string, string | null>();
+    if (locIds.size) {
+      const { data: locs } = await admin.from("locations").select("id, timezone").in("id", [...locIds]);
+      for (const l of (locs ?? []) as { id: string; timezone: string | null }[]) tzByLoc.set(l.id, l.timezone);
+    }
+    // Re-key the actor→location map to actor→timezone for the row builder.
+    for (const [actorId, locId] of locByActor) {
+      locByActor.set(actorId, locId ? tzByLoc.get(locId) ?? null : null);
+    }
   }
 
   const rows: ActivityListRow[] = raw.map((r) => ({
@@ -103,6 +130,7 @@ export async function listActivity(orgId: string, offset = 0, limit = ACTIVITY_P
     action: r.action,
     label: r.label,
     createdAt: r.created_at,
+    timezone: (r.actor_id ? locByActor.get(r.actor_id) : null) || fallbackTz,
   }));
   return { rows, hasMore: raw.length === limit };
 }

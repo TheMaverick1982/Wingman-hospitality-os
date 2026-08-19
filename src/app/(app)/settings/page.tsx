@@ -575,7 +575,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   // Staff activity trail (owner-only). Paginated — the first page loads here, and
   // "Load more" in the panel pulls older pages via loadMoreActivityAction.
-  const { rows: activity, hasMore: activityHasMore } = await listActivity(profile.orgId, 0);
+  const { rows: activity, hasMore: activityHasMore } = await listActivity(profile.orgId, 0, undefined, profile.locationTimezone);
   const activityStaff = allMembers.map((m) => ({ id: m.id, name: m.full_name }));
 
   // App Review compliance (guideline 3.1.1): hide the Billing tab (plan pricing,

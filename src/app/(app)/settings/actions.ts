@@ -543,6 +543,6 @@ export async function loadMoreActivityAction(offset: number): Promise<{ rows: Ac
   const profile = await getCurrentProfile();
   if (!profile || profile.accessRole !== "super_admin") return { rows: [], hasMore: false, error: "Only a Super Admin can view activity." };
   const safeOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
-  const { rows, hasMore } = await listActivity(profile.orgId, safeOffset, ACTIVITY_PAGE_SIZE);
+  const { rows, hasMore } = await listActivity(profile.orgId, safeOffset, ACTIVITY_PAGE_SIZE, profile.locationTimezone);
   return { rows, hasMore, error: null };
 }

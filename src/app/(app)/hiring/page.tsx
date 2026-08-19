@@ -117,6 +117,10 @@ export default async function HiringPage({
   }
 
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? id;
+  // The zone to read a location's interview/visit times in. Falls back to the
+  // viewer's home-location zone for unassigned (no-location) applications.
+  const locationTz = (id: string | null) =>
+    (id ? locations.find((l) => l.id === id)?.timezone : null) ?? profile.locationTimezone ?? null;
   const allCandidates = candidates ?? [];
 
   // Custom answers live in a column added by a later migration. Read them in an
@@ -186,6 +190,7 @@ export default async function HiringPage({
     department: a.department,
     locationId: a.location_id,
     locationName: a.location_id ? locationName(a.location_id) : "",
+    locationTimezone: locationTz(a.location_id),
     email: a.email,
     phone: a.phone,
     availability: a.availability,

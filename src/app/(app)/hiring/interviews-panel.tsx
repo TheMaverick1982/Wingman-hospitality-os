@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { CalendarCheck, Paperclip, Undo2, UserPlus } from "lucide-react";
 import type { Applicant } from "./applicants-panel";
 import { unconfirmInterview, getResumeUrl } from "./applicant-actions";
+import { formatInZone } from "@/lib/timezone";
 
 // Confirmed interviews — applicants who've moved into the candidates area with a
 // scheduled interview, waiting to be scored.
@@ -31,9 +32,7 @@ function InterviewCard({ a }: { a: Applicant }) {
   // doesn't snap the page (and the top switcher) back to "All locations".
   const currentLocation = useSearchParams().get("location");
 
-  const when = a.interviewAt
-    ? new Date(a.interviewAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-    : "";
+  const when = formatInZone(a.interviewAt, a.locationTimezone, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   function openResume() {
     start(async () => {

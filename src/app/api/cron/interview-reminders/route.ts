@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
+import { formatInZone } from "@/lib/timezone";
 
 // Daily reminder to managers about interviews happening today. For each location
 // with a confirmed interview today, email the location's address on file a short
@@ -62,16 +63,20 @@ export async function GET(request: NextRequest) {
     if (!(await remindersOn(list[0].org_id))) continue;
     let to = "";
     let locName = "";
+    let locTz: string | null = null;
     if (locationId) {
-      const { data: loc } = await admin.from("locations").select("email, name").eq("id", locationId).maybeSingle();
+      const { data: loc } = await admin.from("locations").select("email, name, timezone").eq("id", locationId).maybeSingle();
       to = ((loc as { email?: string } | null)?.email || "").trim();
       locName = (loc as { name?: string } | null)?.name || "";
+      locTz = (loc as { timezone?: string | null } | null)?.timezone ?? null;
     }
     if (!to) to = FALLBACK_ALERT;
 
     const items = list
       .map((r) => {
-        const t = new Date(r.interview_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        // Show each interview time in its store's local zone (with the zone
+        // label), not the UTC cron server's.
+        const t = formatInZone(r.interview_at, locTz, { hour: "numeric", minute: "2-digit" });
         return `<tr>
           <td style="padding:6px 0;font-size:14px;color:#1a1a1a;"><strong>${t}</strong> · ${esc(r.name)}<span style="color:#888;">${r.department ? ` · ${esc(r.department)}` : ""}</span>${r.interview_details ? `<div style="color:#888;font-size:12.5px;">${esc(r.interview_details)}</div>` : ""}</td>
         </tr>`;
