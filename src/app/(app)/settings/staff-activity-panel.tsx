@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { LogIn, UserPlus, UserMinus, Pencil, Trash2, Plus, Users, Activity, Loader2 } from "lucide-react";
+import { formatInZone } from "@/lib/timezone";
 import { loadMoreActivityAction } from "./actions";
 
 export type ActivityRow = {
@@ -12,6 +13,8 @@ export type ActivityRow = {
   action: string;
   label: string;
   createdAt: string;
+  // The zone to show this entry's time in (the actor's location) — see listActivity.
+  timezone: string | null;
 };
 
 const AREA_LABEL: Record<string, string> = {
@@ -46,8 +49,10 @@ function phrase(r: ActivityRow): string {
   return `${verb} ${noun}${r.label ? ` “${r.label}”` : ""}`;
 }
 
-function dayKey(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+function dayKey(iso: string, tz: string | null): string {
+  // Group by the calendar day in the entry's own zone, so a late-evening action
+  // doesn't jump to "tomorrow" just because it's past midnight UTC.
+  return formatInZone(iso, tz, { weekday: "short", month: "short", day: "numeric" }, false);
 }
 
 export function StaffActivityPanel({ rows: initialRows, staff, initialHasMore = false }: { rows: ActivityRow[]; staff: { id: string; name: string }[]; initialHasMore?: boolean }) {
@@ -78,7 +83,7 @@ export function StaffActivityPanel({ rows: initialRows, staff, initialHasMore = 
   const groups = useMemo(() => {
     const m = new Map<string, ActivityRow[]>();
     for (const r of filtered) {
-      const k = dayKey(r.createdAt);
+      const k = dayKey(r.createdAt, r.timezone);
       const arr = m.get(k) ?? [];
       arr.push(r);
       m.set(k, arr);
@@ -127,7 +132,7 @@ export function StaffActivityPanel({ rows: initialRows, staff, initialHasMore = 
                         <span className="font-semibold text-ink">{r.actorName || "Someone"}</span>{" "}
                         <span className="text-charcoal-2">{phrase(r)}</span>
                       </div>
-                      <span className="text-[12px] text-muted-2 shrink-0 tabular-nums">{new Date(r.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+                      <span className="text-[12px] text-muted-2 shrink-0 tabular-nums">{formatInZone(r.createdAt, r.timezone, { hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                   );
                 })}

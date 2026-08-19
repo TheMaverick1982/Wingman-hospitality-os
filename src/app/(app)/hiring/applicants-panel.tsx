@@ -6,6 +6,7 @@ import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplicat
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
+import { utcToWallClockInput, formatInZone, zoneAbbrev } from "@/lib/timezone";
 
 export type Applicant = {
   id: string;
@@ -13,6 +14,7 @@ export type Applicant = {
   department: string;
   locationId: string | null;
   locationName: string;
+  locationTimezone: string | null;
   email: string;
   phone: string;
   availability: string;
@@ -120,13 +122,6 @@ const toneOf = (s: string) => STATUS.find((x) => x.value === s) ?? STATUS[0];
 // The two "active" statuses (Rejected lives in the Archive tab, out of the way).
 const ACTIVE_STATUS = STATUS.filter((s) => s.value !== "not_a_fit");
 
-// datetime-local wants "YYYY-MM-DDTHH:mm" in local time.
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 // Applicants are grouped best→worst by their AI screening tier so the strong
 // ones surface at the top and the weak pile can be folded away. Ungraded
@@ -535,7 +530,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
 function ApplicantCard({ a }: { a: Applicant }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(a.status);
-  const [when, setWhen] = useState(toLocalInput(a.interviewAt));
+  const [when, setWhen] = useState(utcToWallClockInput(a.interviewAt, a.locationTimezone));
   const [details, setDetails] = useState(a.interviewDetails);
   const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -606,7 +601,7 @@ function ApplicantCard({ a }: { a: Applicant }) {
       <div className="px-5 pb-5 -mt-1">
       {(a.email || a.phone) && <div className="text-[13px] text-charcoal-2">{[a.email, a.phone].filter(Boolean).join(" · ")}</div>}
       {a.availability && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Availability:</span> {a.availability}</div>}
-      {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {new Date(a.preferredVisitAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
+      {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {formatInZone(a.preferredVisitAt, a.locationTimezone, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
       {a.message && <p className="text-[13px] text-muted mt-1 whitespace-pre-wrap">{a.message}</p>}
       {a.customAnswers.length > 0 && (
         <div className="mt-2 flex flex-col gap-1">
@@ -651,7 +646,12 @@ function ApplicantCard({ a }: { a: Applicant }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
-            <div className="text-[12.5px] font-semibold text-ink">Schedule the interview — this moves them into your candidates.</div>
+            <div className="text-[12.5px] font-semibold text-ink">
+              Schedule the interview — this moves them into your candidates.
+              {a.locationTimezone && (
+                <span className="font-normal text-muted-2"> Times are in {a.locationName || "this location"}&rsquo;s time zone{when ? ` (${zoneAbbrev(new Date(), a.locationTimezone)})` : ""}.</span>
+              )}
+            </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
               <input value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Details — who's interviewing, where, what to bring…" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
