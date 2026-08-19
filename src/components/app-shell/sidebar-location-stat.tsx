@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useLocationParam } from "./use-location-param";
 
 export type LocationStat = { id: string; name: string; repeatRate: number };
 
@@ -18,8 +18,7 @@ export function SidebarLocationStat({
   fallbackName: string;
   fallbackRate: number;
 }) {
-  const searchParams = useSearchParams();
-  const param = searchParams.get("location");
+  const param = useLocationParam();
   const match = param && param !== "all" ? stats.find((s) => s.id === param) : null;
   const name = match ? match.name : fallbackName;
   const rate = match ? match.repeatRate : fallbackRate;
