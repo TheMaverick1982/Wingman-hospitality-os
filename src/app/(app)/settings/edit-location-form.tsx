@@ -5,20 +5,10 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { US_TIMEZONES } from "@/lib/us-timezones";
 import { updateLocation, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
-
-// Common US timezones (plus a couple of others) for the store's report time.
-const TIMEZONES = [
-  ["America/New_York", "Eastern (New York)"],
-  ["America/Chicago", "Central (Chicago)"],
-  ["America/Denver", "Mountain (Denver)"],
-  ["America/Phoenix", "Mountain – no DST (Phoenix)"],
-  ["America/Los_Angeles", "Pacific (Los Angeles)"],
-  ["America/Anchorage", "Alaska (Anchorage)"],
-  ["Pacific/Honolulu", "Hawaii (Honolulu)"],
-] as const;
 
 type LocationDetails = { id: string; name: string; address: string; phone: string; email: string; timezone: string };
 
@@ -55,7 +45,7 @@ export function EditLocationForm({ location }: { location: LocationDetails }) {
               </Field>
               <Field label="Timezone (for reports)">
                 <select name="timezone" defaultValue={location.timezone || "America/New_York"} className={inputClass}>
-                  {TIMEZONES.map(([v, label]) => (
+                  {US_TIMEZONES.map(([v, label]) => (
                     <option key={v} value={v}>
                       {label}
                     </option>

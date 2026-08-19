@@ -6,14 +6,17 @@ import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import { US_TIMEZONES, guessTimezoneFromAddress, browserTimezoneOrDefault } from "@/lib/us-timezones";
 import { bulkAddLocations, type BatchState } from "./actions";
 
 const initialState: BatchState = { error: null, successCount: 0, failures: [] };
 
-type Row = { name: string; address: string; phone: string; email: string };
+// tzTouched: once the operator picks a zone by hand we stop auto-overwriting it
+// from the address, so their choice sticks.
+type Row = { name: string; address: string; phone: string; email: string; timezone: string; tzTouched: boolean };
 
 function emptyRow(): Row {
-  return { name: "", address: "", phone: "", email: "" };
+  return { name: "", address: "", phone: "", email: "", timezone: browserTimezoneOrDefault(), tzTouched: false };
 }
 
 export function AddLocationForm({
@@ -35,11 +38,28 @@ export function AddLocationForm({
     setRows([emptyRow()]);
   });
 
-  function updateRow(i: number, field: keyof Row, value: string) {
-    setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [field]: value } : row)));
+  function updateRow(i: number, field: "name" | "address" | "phone" | "email", value: string) {
+    setRows((r) =>
+      r.map((row, idx) => {
+        if (idx !== i) return row;
+        const next = { ...row, [field]: value };
+        // Auto-detect the store's time zone from the address as they type — until
+        // they pick one by hand (tzTouched), then their choice wins.
+        if (field === "address" && !row.tzTouched) {
+          const guess = guessTimezoneFromAddress(value);
+          if (guess) next.timezone = guess;
+        }
+        return next;
+      }),
+    );
+  }
+
+  function setRowTimezone(i: number, value: string) {
+    setRows((r) => r.map((row, idx) => (idx === i ? { ...row, timezone: value, tzTouched: true } : row)));
   }
 
   const validRows = rows.filter((r) => r.name.trim());
+  const payload = validRows.map((r) => ({ name: r.name, address: r.address, phone: r.phone, email: r.email, timezone: r.timezone }));
   const newTotal = currentLocationCount + validRows.length;
   const currentMonthly = currentLocationCount > 0 ? firstDollars + (currentLocationCount - 1) * addlDollars : 0;
   const nextMonthly = newTotal > 0 ? firstDollars + (newTotal - 1) * addlDollars : 0;
@@ -52,7 +72,7 @@ export function AddLocationForm({
       {open && (
         <Modal title="Add locations" sub="Add one location or several at once." onClose={() => setOpen(false)} wide>
           <form action={formAction}>
-            <input type="hidden" name="locationsJson" value={JSON.stringify(validRows)} />
+            <input type="hidden" name="locationsJson" value={JSON.stringify(payload)} />
 
             <div className="flex flex-col gap-4 max-h-[380px] overflow-y-auto pr-1 mb-1">
               {rows.map((row, i) => (
@@ -80,6 +100,22 @@ export function AddLocationForm({
                     <Field label="Phone">
                       <input type="tel" value={row.phone} onChange={(e) => updateRow(i, "phone", e.target.value)} className={inputClass} />
                     </Field>
+                    <div className="col-span-2">
+                      <Field label="Time zone (for reports, activity & interview times)">
+                        <select value={row.timezone} onChange={(e) => setRowTimezone(i, e.target.value)} className={inputClass}>
+                          {US_TIMEZONES.map(([v, label]) => (
+                            <option key={v} value={v}>{label}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <p className="text-[12px] text-muted-2 mt-1">
+                        {row.tzTouched
+                          ? "Set manually."
+                          : row.address && guessTimezoneFromAddress(row.address)
+                            ? "Auto-detected from the address — change it if it's off."
+                            : "Add the address (with state) and we'll set this for you, or pick it here."}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
