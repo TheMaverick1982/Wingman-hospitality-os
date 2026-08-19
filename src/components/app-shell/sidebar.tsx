@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -430,9 +430,7 @@ export function Sidebar({
             Platform admin
           </Link>
         )}
-        <Suspense fallback={null}>
-          <SidebarLocationStat stats={locationStats} fallbackName={fallbackLocationName} fallbackRate={fallbackRepeatRate} />
-        </Suspense>
+        <SidebarLocationStat stats={locationStats} fallbackName={fallbackLocationName} fallbackRate={fallbackRepeatRate} />
         <div className="flex items-center gap-2.5 px-2.5 py-2 border-t border-line">
           <div className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center shrink-0 text-[13px] font-semibold">
             {initialsOf(fullName)}

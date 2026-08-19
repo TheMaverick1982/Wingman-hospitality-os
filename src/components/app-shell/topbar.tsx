@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { MapPin } from "lucide-react";
 import type { Location } from "@/lib/data/locations";
 import type { Lang } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
+import { useLocationParam, useSetLocationParam } from "./use-location-param";
 import { logout } from "@/app/login/actions";
 
 const TITLES: Record<string, string> = {
@@ -34,22 +35,13 @@ export function Topbar({
   userLocationName: string | null;
   language: Lang;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentLocation = searchParams.get("location") ?? "all";
+  const currentLocation = useLocationParam();
+  const setLocation = useSetLocationParam();
   // Show a real switcher only when the member can span >1 location; otherwise,
   // in a multi-location org, just label their home location.
   const showSwitcher = canSwitch && locations.length > 1;
   const title = TITLES[pathname] ?? "Wingman";
-
-  function onLocationChange(value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value === "all") params.delete("location");
-    else params.set("location", value);
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  }
 
   return (
     <div className="sticky top-0 z-20 min-h-16 py-2 lg:h-16 lg:py-0 bg-white/80 backdrop-blur-xl backdrop-saturate-[1.8] border-b border-line flex flex-wrap lg:flex-nowrap items-center justify-between px-5 lg:px-8 gap-x-2 gap-y-1">
@@ -61,7 +53,7 @@ export function Topbar({
             {showSwitcher ? (
               <select
                 value={currentLocation}
-                onChange={(e) => onLocationChange(e.target.value)}
+                onChange={(e) => setLocation(e.target.value)}
                 className="text-[13px] font-semibold bg-transparent outline-none pr-1 text-charcoal-2"
               >
                 <option value="all">All locations</option>
