@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Plus, MessageSquareText, Check, X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
@@ -61,16 +61,17 @@ export function CandidateModalButton({
   const [showGuide, setShowGuide] = useState(true);
   const [state, formAction, pending] = useActionState(addCandidate, initialState);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   // Close the modal and strip the score-request params from the URL (keeping any
   // location filter), so it doesn't reopen on reload and scoring the SAME
-  // interview again re-triggers the remount that opens it.
+  // interview again re-triggers the remount that opens it. Reads the live URL
+  // (not useSearchParams) so this component never opts the Hiring page into a
+  // Suspense/CSR bailout — which used to blank the whole top bar on a param nav.
   function closeModal() {
     setOpen(false);
     const SCORE_KEYS = ["app", "an", "scoreDept", "scoreLoc"];
-    if (SCORE_KEYS.some((k) => searchParams.has(k))) {
-      const next = new URLSearchParams(searchParams.toString());
+    const next = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+    if (SCORE_KEYS.some((k) => next.has(k))) {
       SCORE_KEYS.forEach((k) => next.delete(k));
       const qs = next.toString();
       router.replace(qs ? `/hiring?${qs}` : "/hiring", { scroll: false });
