@@ -1036,9 +1036,10 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "Owners manage locations under Settings → Locations." },
       { kind: "list", items: [
         "Add one or several locations at once.",
-        "Edit a location's name, address, phone, or email.",
+        "Edit a location's name, address, phone, email, or time zone.",
         "Remove a location (you'll be asked to reassign anyone based there first).",
       ] },
+      { kind: "note", text: "Each location has a time zone, and it matters: it's what activity times, interview scheduling, and the daily interview reminder are shown and calculated in — so a chain that spans the country reads correctly at every store. When you add a location, Wingman auto-detects the zone from the address (include the state) and pre-fills it; adjust it right there if an edge city is off, or change it anytime from Edit. New locations default to Eastern until set." },
       { kind: "note", text: "Billing is per-location: adding or removing a location updates your monthly total automatically once billing is connected." },
     ],
     links: [{ label: "Billing", href: "/help/billing" }],

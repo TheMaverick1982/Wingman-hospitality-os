@@ -424,7 +424,7 @@ export async function bulkAddLocations(_prev: BatchState, formData: FormData): P
     return { error: "Only the account owner can add locations.", successCount: 0, failures: [] };
   }
 
-  let rows: { name: string; address: string; phone: string; email: string }[];
+  let rows: { name: string; address: string; phone: string; email: string; timezone?: string }[];
   try {
     rows = JSON.parse(String(formData.get("locationsJson") || "[]"));
   } catch {
@@ -447,12 +447,25 @@ export async function bulkAddLocations(_prev: BatchState, formData: FormData): P
       failures.push({ index: i, message: "Location name is required." });
       continue;
     }
+    // Validate the tz against the runtime's tz database; a bad/absent value just
+    // falls back to the column default rather than blocking the add.
+    let timezone: string | null = null;
+    const tzRaw = (row.timezone || "").trim();
+    if (tzRaw) {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: tzRaw });
+        timezone = tzRaw;
+      } catch {
+        timezone = null;
+      }
+    }
     const { error } = await supabase.from("locations").insert({
       org_id: org.id,
       name,
       address: (row.address || "").trim(),
       phone: (row.phone || "").trim(),
       email: (row.email || "").trim(),
+      ...(timezone ? { timezone } : {}),
     });
     if (error) failures.push({ index: i, message: error.message });
     else successCount++;
