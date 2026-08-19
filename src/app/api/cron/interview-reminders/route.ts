@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
 import { formatInZone } from "@/lib/timezone";
+import { localDate } from "@/lib/local-date";
 
 // Daily reminder to managers about interviews happening today. For each location
 // with a confirmed interview today, email the location's address on file a short
@@ -26,8 +27,13 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient();
   const now = new Date();
-  const start = new Date(now); start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
+  // Scan a WIDE ±1-day UTC window so no location's *local* "today" is clipped by
+  // the UTC day boundary (a late-evening interview on the west coast is already
+  // "tomorrow" in UTC). We then filter each location's rows down to its own local
+  // today below. The cron runs at 12:00 UTC — early morning across US zones — so
+  // each location's local "today" relative to now is the day we want to remind on.
+  const start = new Date(now); start.setUTCHours(0, 0, 0, 0); start.setUTCDate(start.getUTCDate() - 1);
+  const end = new Date(now); end.setUTCHours(0, 0, 0, 0); end.setUTCDate(end.getUTCDate() + 2);
 
   const { data } = await admin
     .from("job_applications")
@@ -72,7 +78,14 @@ export async function GET(request: NextRequest) {
     }
     if (!to) to = FALLBACK_ALERT;
 
-    const items = list
+    // Only this location's interviews happening on ITS local calendar day (the
+    // wide scan above may include yesterday/tomorrow rows for other zones). For a
+    // no-location group, localDate falls back to the UTC day.
+    const localToday = localDate(locTz, now);
+    const todays = list.filter((r) => localDate(locTz, new Date(r.interview_at)) === localToday);
+    if (todays.length === 0) continue;
+
+    const items = todays
       .map((r) => {
         // Show each interview time in its store's local zone (with the zone
         // label), not the UTC cron server's.
@@ -85,13 +98,13 @@ export async function GET(request: NextRequest) {
 
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:560px;">
       <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 6px;">Interviews today${locName ? ` · ${esc(locName)}` : ""}</p>
-      <p style="font-size:15px;color:#1a1a1a;margin:0 0 12px;">You have ${list.length} interview${list.length === 1 ? "" : "s"} scheduled today.</p>
+      <p style="font-size:15px;color:#1a1a1a;margin:0 0 12px;">You have ${todays.length} interview${todays.length === 1 ? "" : "s"} scheduled today.</p>
       <table style="width:100%;border-collapse:collapse;border-top:1px solid #eee;border-bottom:1px solid #eee;margin:0 0 14px;">${items}</table>
       <p style="font-size:14px;"><a href="${SITE}/hiring" style="color:#0a6cff;font-weight:600;">Open Hiring</a> to see details and score them after.</p>
     </div>`;
 
     try {
-      await sendEmail({ to: [to], subject: `${list.length} interview${list.length === 1 ? "" : "s"} today${locName ? ` — ${locName}` : ""}`, html });
+      await sendEmail({ to: [to], subject: `${todays.length} interview${todays.length === 1 ? "" : "s"} today${locName ? ` — ${locName}` : ""}`, html });
       sent++;
     } catch (e) {
       console.error("[interview-reminders] send failed", e);
