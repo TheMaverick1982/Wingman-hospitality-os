@@ -7,7 +7,13 @@ import { getAffiliateSettings, REF_COOKIE } from "@/lib/affiliate";
 // to the homepage. Unknown/inactive codes just redirect silently.
 export async function GET(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const res = NextResponse.redirect(new URL("/", request.nextUrl.origin));
+  // Optional post-attribution destination (e.g. an embed's "Get Started" → set
+  // the cookie, then land on /signup). Only same-origin absolute paths are
+  // allowed — never "//host" or an external URL — so this can't be an open
+  // redirect.
+  const toRaw = request.nextUrl.searchParams.get("to") || "/";
+  const to = toRaw.startsWith("/") && !toRaw.startsWith("//") ? toRaw : "/";
+  const res = NextResponse.redirect(new URL(to, request.nextUrl.origin));
 
   const admin = createAdminClient();
   const { data: aff } = await admin
