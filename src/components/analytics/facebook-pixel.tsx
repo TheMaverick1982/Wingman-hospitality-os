@@ -18,6 +18,7 @@ const PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1867814633743997";
 
 const PUBLIC_PREFIXES = [
   "/calculator",
+  "/scorecard",
   "/pricing",
   "/book-a-demo",
   "/book",
