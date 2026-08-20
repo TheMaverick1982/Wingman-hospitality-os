@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { HoneypotField } from "@/components/honeypot-field";
 import { HONEYPOT_FIELD } from "@/lib/honeypot";
 import { captureLead } from "../lead-actions";
@@ -35,7 +34,11 @@ function gradeFor(pct: number): { grade: string; blurb: string } {
   return { grade: "F", blurb: "Big opportunity — most of your retention is being left to chance." };
 }
 
-export function ScorecardClient() {
+// refCode/embed: when embedded on a partner's site, credit signups to their
+// referral code and open CTAs out of the iframe. See the calculator embed.
+export function ScorecardClient({ refCode = null, embed = false }: { refCode?: string | null; embed?: boolean } = {}) {
+  const cta = (dest: string) => (refCode ? `/r/${encodeURIComponent(refCode)}?to=${encodeURIComponent(dest)}` : dest);
+  const ctaTarget = embed ? { target: "_blank" as const, rel: "noopener" } : {};
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [scored, setScored] = useState(false);
   const [name, setName] = useState("");
@@ -68,6 +71,7 @@ export function ScorecardClient() {
         gap_1: weakest[0]?.pillar,
         gap_2: weakest[1]?.pillar,
         gap_3: weakest[2]?.pillar,
+        ...(refCode ? { ref: refCode, embed: true } : {}),
       },
       summary: `Scored ${pct}% (${grade}). Weakest: ${weakest.map((w) => w.pillar).join(", ")}`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
@@ -151,7 +155,7 @@ export function ScorecardClient() {
         {revealed ? (
           <div>
             <p className="text-[15px] text-olive font-semibold mb-4">Full scorecard sent to your inbox.</p>
-            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</Link>
+            <a href={cta("/signup")} {...ctaTarget} className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</a>
           </div>
         ) : (
           <form onSubmit={getReport} className="flex flex-col gap-2.5">

@@ -3,23 +3,35 @@
 import { useState } from "react";
 import { Code2, Check, Copy } from "lucide-react";
 
-// Lets a consultant / partner / affiliate grab a copy-paste snippet to embed the
-// calculator on their own site — every embed is a backlink to Wingman. An
+// Lets a consultant / partner / affiliate grab a copy-paste snippet to embed one
+// of Wingman's free tools on their own site — every embed is a backlink. An
 // optional referral code routes signups from that embed back to them (the
 // incentive to place it). The snippet is a plain iframe + a tiny listener that
-// resizes it to fit (the embedded page posts its height up — see
-// CalcEmbedResizer), so there's no inner scrollbar and no dependency to install.
+// resizes it to fit (the embedded page posts its height up — see EmbedResizer),
+// so there's no inner scrollbar and no dependency to install.
 const SITE = "https://www.joinwingman.app";
 
-export function EmbedSnippet() {
+export function EmbedSnippet({
+  toolName,
+  embedPath,
+  iframeTitle,
+  messageKey,
+  heightDefault = 1000,
+}: {
+  toolName: string; // e.g. "calculator", "scorecard"
+  embedPath: string; // e.g. "/calculator/embed"
+  iframeTitle: string; // the <iframe title="...">
+  messageKey: string; // the postMessage key the EmbedResizer posts
+  heightDefault?: number;
+}) {
   const [ref, setRef] = useState("");
   const [copied, setCopied] = useState(false);
 
   const clean = ref.trim().replace(/[^a-zA-Z0-9_-]/g, "");
-  const src = `${SITE}/calculator/embed${clean ? `?ref=${clean}` : ""}`;
-  const snippet = `<iframe src="${src}" title="Restaurant Retention Revenue Calculator" loading="lazy" style="width:100%;max-width:1080px;border:0;overflow:hidden" height="1000"></iframe>
+  const src = `${SITE}${embedPath}${clean ? `?ref=${clean}` : ""}`;
+  const snippet = `<iframe src="${src}" title="${iframeTitle}" loading="lazy" style="width:100%;max-width:1080px;border:0;overflow:hidden" height="${heightDefault}"></iframe>
 <script>
-window.addEventListener("message",function(e){if(e&&e.data&&typeof e.data.wingmanCalcHeight==="number"){var f=document.querySelector('iframe[src*="joinwingman.app/calculator/embed"]');if(f){f.style.height=e.data.wingmanCalcHeight+"px";}}});
+window.addEventListener("message",function(e){if(e&&e.data&&typeof e.data.${messageKey}==="number"){var f=document.querySelector('iframe[src*="joinwingman.app${embedPath}"]');if(f){f.style.height=e.data.${messageKey}+"px";}}});
 </script>`;
 
   async function copy() {
@@ -39,7 +51,7 @@ window.addEventListener("message",function(e){if(e&&e.data&&typeof e.data.wingma
         <h3 className="font-display text-xl font-semibold text-ink">Add this free tool to your site</h3>
       </div>
       <p className="text-[15px] text-muted leading-relaxed mb-5 max-w-[640px]">
-        Run a restaurant blog, consultancy, or resource page? Drop this calculator in with one snippet — it resizes to
+        Run a restaurant blog, consultancy, or resource page? Drop this {toolName} in with one snippet — it resizes to
         fit and gives your audience a genuinely useful tool. If you&rsquo;re a{" "}
         <a href="/affiliates" className="font-semibold text-brick hover:text-brick-dark">Wingman affiliate</a>, add your
         code and any signups it drives are credited to you.

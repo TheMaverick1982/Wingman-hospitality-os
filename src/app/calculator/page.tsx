@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { CalculatorClient } from "./calculator-client";
-import { EmbedSnippet } from "./embed-snippet";
+import { EmbedSnippet } from "@/components/marketing/embed-snippet";
 
 export const metadata: Metadata = {
   title: "Retention Revenue Calculator",
@@ -63,7 +63,7 @@ export default function CalculatorPage() {
 
       <div className="bg-paper border-t border-line">
         <div className="max-w-[1080px] mx-auto px-6 sm:px-10 py-16 sm:py-20">
-          <EmbedSnippet />
+          <EmbedSnippet toolName="calculator" embedPath="/calculator/embed" iframeTitle="Restaurant Retention Revenue Calculator" messageKey="wingmanCalcHeight" heightDefault={1000} />
         </div>
       </div>
 

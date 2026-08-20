@@ -2,19 +2,20 @@
 
 import { useEffect } from "react";
 
-// When the calculator is embedded (?embed=1) on a third-party page, the parent
-// <iframe> can't measure our height across origins. Post it up so the embed
-// snippet can size the frame to fit — no inner scrollbar. The calculator's
-// height changes as the result/lead form updates, so re-measure aggressively but
-// only post on an actual change. Rendered only in embed mode.
-export function CalcEmbedResizer() {
+// Posts this document's height up to the parent window so an embedding <iframe>
+// can size itself to fit (no inner scrollbar) — the parent can't measure a
+// cross-origin frame. Each embeddable tool passes a DISTINCT messageKey so a
+// host page embedding two Wingman tools resizes each to its own height. Content
+// height changes as results/forms update, so re-measure aggressively but only
+// post on an actual change. Rendered only in embed mode.
+export function EmbedResizer({ messageKey }: { messageKey: string }) {
   useEffect(() => {
     let last = 0;
     const post = () => {
       const h = Math.ceil(document.documentElement.scrollHeight);
       if (h > 0 && h !== last) {
         last = h;
-        window.parent?.postMessage({ wingmanCalcHeight: h }, "*");
+        window.parent?.postMessage({ [messageKey]: h }, "*");
       }
     };
     post();
@@ -32,6 +33,6 @@ export function CalcEmbedResizer() {
       window.removeEventListener("load", post);
       window.removeEventListener("resize", post);
     };
-  }, []);
+  }, [messageKey]);
   return null;
 }

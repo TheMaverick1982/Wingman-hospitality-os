@@ -52,13 +52,13 @@ const applyEmbedHeaders = [
   { key: "X-Robots-Tag", value: "noindex, nofollow" },
 ];
 
-// The free calculator's embed route (/calculator/embed): framable on any origin
-// so consultants, affiliates, and partners can embed it on their own sites —
-// every embed is a backlink. Framable CSP, no X-Frame-Options. The route sets
-// its own noindex in metadata (it's a bare copy of the canonical /calculator),
-// so no X-Robots-Tag here. The main /calculator page stays frame-locked +
-// indexed like everything else.
-const calcEmbedHeaders = [
+// The free-tool embed routes (/calculator/embed, /scorecard/embed): framable on
+// any origin so consultants, affiliates, and partners can embed them on their
+// own sites — every embed is a backlink. Framable CSP, no X-Frame-Options. Each
+// route sets its own noindex in metadata (it's a bare copy of the canonical
+// page), so no X-Robots-Tag here. The full /calculator and /scorecard pages stay
+// frame-locked + indexed like everything else.
+const embedToolHeaders = [
   ...commonSecurityHeaders,
   { key: "Content-Security-Policy", value: cspEmbeddable },
 ];
@@ -89,12 +89,13 @@ const nextConfig: NextConfig = {
       // top of the page's noindex <meta>). We do NOT robots.txt-disallow /apply —
       // that would stop Google from reading the noindex, which is counterproductive.
       { source: "/apply/:path*", headers: applyEmbedHeaders },
-      // The embeddable calculator route (see calcEmbedHeaders).
-      { source: "/calculator/embed", headers: calcEmbedHeaders },
+      // The embeddable free-tool routes (see embedToolHeaders).
+      { source: "/calculator/embed", headers: embedToolHeaders },
+      { source: "/scorecard/embed", headers: embedToolHeaders },
       // Everything else is frame-locked. The negative lookahead excludes /apply
-      // and /calculator/embed so the rules never apply conflicting frame headers
+      // and the embed routes so the rules never apply conflicting frame headers
       // to the same request.
-      { source: "/((?!apply/|calculator/embed).*)", headers: lockedSecurityHeaders },
+      { source: "/((?!apply/|calculator/embed|scorecard/embed).*)", headers: lockedSecurityHeaders },
       // The service worker must never be cached by the browser/CDN, so a new
       // deploy's sw.js is fetched immediately and the update flow can run.
       {
