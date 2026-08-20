@@ -14,7 +14,18 @@ export function ScrollToButton({
   children: React.ReactNode;
 }) {
   function go() {
-    document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = document.getElementById(targetId);
+    const scroller = document.getElementById("app-scroll");
+    // Scroll ONLY the app's scroll container, computed from the target's offset
+    // within it. scrollIntoView() walks up EVERY scrollable ancestor, which could
+    // scroll the layout column/window and shove the sticky top bar out of view —
+    // this can't. Falls back to scrollIntoView if the container isn't found.
+    if (target && scroller) {
+      const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    } else {
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
   return (
     <button type="button" onClick={go} className={className}>

@@ -110,7 +110,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         showStartHere={!!launch && !launch.allDone}
         questionsBadge={openQuestions}
       />
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-x-hidden safe-inset-x safe-inset-b">
+      {/* overflow-hidden (BOTH axes), not overflow-x-hidden: when only one axis is
+          hidden, CSS computes the other to `auto`, which silently made this column
+          a second vertical scroll container. scrollIntoView() (e.g. the hiring
+          "See applications" button) then scrolled THIS column too, pushing the
+          sticky top bar up out of the clipped area — and it stayed gone until a
+          refresh. The inner #app-scroll is the only thing that should scroll. */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden safe-inset-x safe-inset-b">
         {isImpersonating && <ImpersonationBanner viewingName={profile.fullName || profile.orgName} />}
         {profile.isDemoSandbox && <DemoBanner email={profile.demoLeadEmail} />}
         {profile.isDemo && (
