@@ -45,6 +45,10 @@ export default function CalculatorPage() {
             Estimates use your own numbers — the added revenue is the value of the extra visits from first-timers you
             convert into regulars. Actual results depend on your execution; Wingman gives your team the system to get there.
           </p>
+          <p className="text-center text-[14px] text-muted mt-4">
+            Want the why behind the math? Read{" "}
+            <a href="/state-of-restaurant-retention" className="font-semibold text-brick hover:text-brick-dark">The State of Restaurant Guest Retention →</a>
+          </p>
         </div>
       </div>
 

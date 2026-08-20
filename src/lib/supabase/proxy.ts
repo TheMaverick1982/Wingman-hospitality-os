@@ -68,6 +68,7 @@ const PUBLIC_PREFIXES = [
   // Public lead-magnet tools.
   "/calculator",
   "/scorecard",
+  "/state-of-restaurant-retention",
   // Link-in-bio page for social profiles.
   "/links",
   // Launch-special funnel (unlinked landing page).
@@ -117,6 +118,7 @@ const IOS_BLOCKED_PREFIXES = [
   "/r",
   "/calculator",
   "/scorecard",
+  "/state-of-restaurant-retention",
   "/links",
   "/launch",
   "/founders",
