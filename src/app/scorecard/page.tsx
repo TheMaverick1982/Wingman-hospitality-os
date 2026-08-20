@@ -54,6 +54,10 @@ export default function ScorecardPage() {
           <a href="/signup" className="text-[17px] font-semibold text-white bg-brick rounded-full px-8 py-[15px] hover:bg-brick-dark transition-colors">Get Started</a>
           <a href="/calculator" className="text-[17px] font-semibold text-ink bg-white border border-line-strong rounded-full px-[30px] py-3.5 hover:bg-[#efefef] transition-colors">Try the revenue calculator</a>
         </div>
+        <p className="text-[14px] text-muted mt-6">
+          The economics behind the score:{" "}
+          <a href="/state-of-restaurant-retention" className="font-semibold text-brick hover:text-brick-dark">The State of Restaurant Guest Retention →</a>
+        </p>
       </div>
 
       <div className="bg-paper border-t border-line">

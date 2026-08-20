@@ -14,6 +14,7 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   // Top-of-funnel lead-gen pages — the ones people search for and convert on.
   { path: "/calculator", priority: 0.8, changeFrequency: "monthly" },
   { path: "/scorecard", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/state-of-restaurant-retention", priority: 0.8, changeFrequency: "monthly" },
   { path: "/guest-journey", priority: 0.8, changeFrequency: "monthly" },
   { path: "/book-a-demo", priority: 0.8, changeFrequency: "monthly" },
   { path: "/playbook", priority: 0.8, changeFrequency: "weekly" },
