@@ -8,6 +8,7 @@ import { VisitorTracker } from "@/components/analytics/visitor-tracker";
 import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SalesChat } from "@/components/marketing/sales-chat";
+import { HideWhenFramed } from "@/components/app-shell/hide-when-framed";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app";
@@ -135,7 +136,12 @@ export default async function RootLayout({
         <VisitorTracker />
         <ServiceWorkerRegistrar />
         <InstallPrompt />
-        <SalesChat />
+        {/* Never surface the sales-chat bubble inside an iframe — the embeddable
+            calculator (and the /apply form) are framed on third-party sites, and
+            a chat widget popping up inside someone else's page is wrong. */}
+        <HideWhenFramed>
+          <SalesChat />
+        </HideWhenFramed>
       </body>
       <DelayedThirdParties gtmId="GTM-P7CJ3J7G" gaId={gaMeasurementId} />
     </html>

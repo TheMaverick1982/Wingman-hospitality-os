@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { HoneypotField } from "@/components/honeypot-field";
 import { HONEYPOT_FIELD } from "@/lib/honeypot";
 import { fbTrack, fbTrackCustom } from "@/lib/fbq";
@@ -11,7 +10,15 @@ const field =
   "w-full rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink placeholder:text-muted-2 outline-none focus:border-brick transition-colors";
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
-export function CalculatorClient() {
+// refCode: an affiliate referral code carried by an embed, so signups from a
+// partner's embedded copy credit them (the incentive to place the widget).
+// embed: bare mode — CTAs open Wingman in a new tab out of the iframe.
+export function CalculatorClient({ refCode = null, embed = false }: { refCode?: string | null; embed?: boolean } = {}) {
+  // Route a CTA through the referral entry point (which sets the attribution
+  // cookie, then forwards to `to`) when an embed carries a code; otherwise link
+  // straight to the destination.
+  const cta = (dest: string) => (refCode ? `/r/${encodeURIComponent(refCode)}?to=${encodeURIComponent(dest)}` : dest);
+  const ctaTarget = embed ? { target: "_blank" as const, rel: "noopener" } : {};
   const [guests, setGuests] = useState(400); // new guests / month
   const [check, setCheck] = useState(35); // average check $
   const [current, setCurrent] = useState(25); // current repeat rate %
@@ -83,6 +90,7 @@ export function CalculatorClient() {
         perYear: Math.round(result.perYear),
         annual_upside: Math.round(result.perYear),
         monthly_upside: Math.round(result.perMonth),
+        ...(refCode ? { ref: refCode, embed: true } : {}),
       },
       summary: `${guests} new guests/mo · $${check} check · ${current}%→${target}% repeat · est. +${money(result.perYear)}/yr`,
       resultHtml: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;max-width:520px;">
@@ -166,8 +174,8 @@ export function CalculatorClient() {
             </form>
           )}
           <div className="flex items-center gap-3 mt-5">
-            <Link href="/signup" className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</Link>
-            <Link href="/book-a-demo" className="text-[15px] font-semibold text-white/90 hover:text-white">Book a demo →</Link>
+            <a href={cta("/signup")} {...ctaTarget} className="text-[15px] font-semibold text-white bg-brick rounded-full px-6 py-3 hover:bg-brick-dark transition-colors">Get Started</a>
+            <a href={cta("/book-a-demo")} {...ctaTarget} className="text-[15px] font-semibold text-white/90 hover:text-white">Book a demo →</a>
           </div>
         </div>
       </div>
