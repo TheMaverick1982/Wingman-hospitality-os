@@ -666,6 +666,9 @@ export const ARTICLES: HelpArticle[] = [
         "Anyone who applies lands with the role and location already set, and shows up tagged to that opening. Wingman counts clicks and applications per opening, so you can see which post is actually working (e.g. 120 clicks → 9 applied).",
         "Close an opening when it's filled, reopen or delete it anytime — applicants who already applied are always kept.",
       ] },
+      { kind: "h", text: "Your public careers page" },
+      { kind: "p", text: "Every open opening also appears automatically on one public careers page — a single link (joinwingman.app/careers/your-slug) that lists everything you're hiring for, grouped by location, each with an \"Apply\" button that drops the applicant into your form pre-set to that role. It's the \"here's everything we're hiring for\" front door, versus the per-opening /j/ links you use to track a specific channel like Indeed. Grab it from the \"Your public careers page\" bar at the top of Job openings and put it on your website, Google Business Profile, and social." },
+      { kind: "note", text: "Because each role carries proper job-posting details, the careers page is marked up for Google Jobs — so your open roles can show up in Google's jobs search results, free applicant traffic most small restaurants never tap. Close an opening and it drops off the page (and out of Google) automatically." },
       { kind: "h", text: "See where applicants come from" },
       { kind: "p", text: "Under Applicants, open \"Track where applicants come from\" to get a tagged version of your link for each channel. Tap Craigslist, Facebook, Instagram, Indeed, or make your own tag (e.g. door-flyer, radio-ad) — it copies a link like /apply/your-slug?src=craigslist. Post a different tagged link on each channel." },
       { kind: "list", items: [

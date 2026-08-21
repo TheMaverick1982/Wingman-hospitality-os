@@ -232,6 +232,7 @@ export default async function HiringPage({
   const orgApplyRow = orgApply as { public_slug: string | null; applications_cc: string | null; logo_url: string | null } | null;
   const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
   const applyUrl = orgApplyRow?.public_slug ? `${SITE}/apply/${orgApplyRow.public_slug}` : null;
+  const careersUrl = orgApplyRow?.public_slug ? `${SITE}/careers/${orgApplyRow.public_slug}` : null;
   const applicationsCc = orgApplyRow?.applications_cc ?? "";
   const orgLogoUrl = orgApplyRow?.logo_url ?? null;
   // application_form_config is added by a later migration — read it in isolation so
@@ -379,6 +380,7 @@ export default async function HiringPage({
             locations={openingLocations}
             departments={activeDepts}
             applyUrl={applyUrl}
+            careersUrl={careersUrl}
             siteUrl={SITE}
             canEdit={canEdit}
           />

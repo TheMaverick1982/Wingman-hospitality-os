@@ -31,6 +31,7 @@ export function OpeningsPanel({
   locations,
   departments,
   applyUrl,
+  careersUrl,
   siteUrl,
   canEdit,
 }: {
@@ -39,6 +40,7 @@ export function OpeningsPanel({
   locations: LocOpt[];
   departments: string[];
   applyUrl: string | null;
+  careersUrl: string | null;
   siteUrl: string;
   canEdit: boolean;
 }) {
@@ -75,6 +77,25 @@ export function OpeningsPanel({
           </Btn>
         )}
       </div>
+
+      {careersUrl && open.length > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-brick-tint/40 border border-brick/20 rounded-xl px-4 py-3 mb-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-[13px] font-semibold text-ink">Your public careers page</div>
+            <div className="text-[12.5px] text-muted-2 font-mono truncate">{careersUrl.replace(/^https?:\/\//, "")}</div>
+            <div className="text-[12px] text-muted mt-0.5">One link with every open role, by location — put it on your website, Google profile, and social.</div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href={careersUrl} target="_blank" rel="noopener" className="text-[12.5px] font-semibold text-brick hover:text-brick-dark">Open</a>
+            <button
+              onClick={() => copy(careersUrl, "careers")}
+              className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors"
+            >
+              {copiedId === "careers" ? "Copied" : "Copy link"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {openings.length === 0 ? (
         <p className="text-sm text-muted py-2">No openings yet. Create one to get a ready-to-post ad and an apply link that comes straight to this role.</p>
