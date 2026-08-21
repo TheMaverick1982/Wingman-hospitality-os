@@ -129,8 +129,10 @@ export default async function CareersPage({ params }: { params: Promise<{ slug: 
         {/* Branded header */}
         <div className="flex items-center gap-3 mb-8">
           {org.logo_url ? (
+            // Fixed height, auto width, object-contain — show the whole logo
+            // (wordmarks included) without cropping it into a square.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={org.logo_url} alt={org.name} className="h-11 w-11 rounded-xl object-cover border border-line" />
+            <img src={org.logo_url} alt={org.name} className="h-12 w-auto max-w-[220px] object-contain" />
           ) : (
             <div className="h-11 w-11 rounded-xl bg-ink text-white flex items-center justify-center text-lg font-bold">{org.name.charAt(0)}</div>
           )}
