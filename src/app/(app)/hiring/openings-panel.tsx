@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode } from "lucide-react";
+import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode, Code2 } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
@@ -59,6 +59,17 @@ export function OpeningsPanel({
   const [busyId, startBusy] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [showCareersEmbed, setShowCareersEmbed] = useState(false);
+  const [showCareersQr, setShowCareersQr] = useState(false);
+
+  // Copy-paste iframe for the careers page — customers embed the whole "now
+  // hiring, by location" page on their own site. The tiny listener resizes the
+  // frame to fit (the page posts its height up via EmbedResizer), so no inner
+  // scrollbar and nothing to install.
+  const careersEmbedCode = careersUrl
+    ? `<iframe id="wingman-careers" src="${careersUrl}?embed=1" title="Careers — we're hiring" style="width:100%;border:0;display:block;min-height:640px"></iframe>
+<script>window.addEventListener("message",function(e){var h=e&&e.data&&e.data.wingmanCareersHeight;if(typeof h==="number"&&h>0&&h<20000){var f=document.getElementById("wingman-careers");if(f){f.style.minHeight="0";f.style.height=h+"px";}}});</script>`
+    : "";
 
   const locName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "A location" : "All locations");
   // Prefer the short branded link (/j/<code>); fall back to the full apply URL for
@@ -90,21 +101,60 @@ export function OpeningsPanel({
       </div>
 
       {careersUrl && open.length > 0 && (
-        <div className="flex items-center justify-between gap-3 bg-brick-tint/40 border border-brick/20 rounded-xl px-4 py-3 mb-4 flex-wrap">
-          <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-ink">Your public careers page</div>
-            <div className="text-[12.5px] text-muted-2 font-mono truncate">{careersUrl.replace(/^https?:\/\//, "")}</div>
-            <div className="text-[12px] text-muted mt-0.5">One link with every open role, by location — put it on your website, Google profile, and social.</div>
+        <div className="bg-brick-tint/40 border border-brick/20 rounded-xl px-4 py-3 mb-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="text-[13px] font-semibold text-ink">Your public careers page</div>
+              <div className="text-[12.5px] text-muted-2 font-mono truncate">{careersUrl.replace(/^https?:\/\//, "")}</div>
+              <div className="text-[12px] text-muted mt-0.5">One link with every open role, by location — put it on your website, Google profile, and social.</div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <a href={careersUrl} target="_blank" rel="noopener" className="text-[12.5px] font-semibold text-brick hover:text-brick-dark">Open</a>
+              <button
+                type="button"
+                onClick={() => setShowCareersQr(true)}
+                className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 border border-line bg-white rounded-full px-3 py-1.5 hover:border-brick hover:text-brick transition-colors"
+              >
+                <QrCode size={13} /> QR
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCareersEmbed((v) => !v)}
+                className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 border border-line bg-white rounded-full px-3 py-1.5 hover:border-brick hover:text-brick transition-colors"
+              >
+                <Code2 size={13} /> Embed
+              </button>
+              <button
+                onClick={() => copy(careersUrl, "careers")}
+                className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors"
+              >
+                {copiedId === "careers" ? "Copied" : "Copy link"}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <a href={careersUrl} target="_blank" rel="noopener" className="text-[12.5px] font-semibold text-brick hover:text-brick-dark">Open</a>
-            <button
-              onClick={() => copy(careersUrl, "careers")}
-              className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors"
-            >
-              {copiedId === "careers" ? "Copied" : "Copy link"}
-            </button>
-          </div>
+
+          {showCareersEmbed && careersEmbedCode && (
+            <div className="mt-3 pt-3 border-t border-brick/15">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-[12.5px] font-semibold text-ink">Embed the careers page on your website</label>
+                <button
+                  type="button"
+                  onClick={() => copy(careersEmbedCode, "careers-embed")}
+                  className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brick hover:text-brick-dark"
+                >
+                  {copiedId === "careers-embed" ? <Check size={13} /> : <Code2 size={13} />} {copiedId === "careers-embed" ? "Copied" : "Copy code"}
+                </button>
+              </div>
+              <textarea
+                readOnly
+                value={careersEmbedCode}
+                onFocus={(e) => e.currentTarget.select()}
+                rows={4}
+                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[12px] font-mono text-charcoal-2 outline-none resize-none"
+              />
+              <p className="text-[11.5px] text-muted-2 mt-1.5">Paste into any page or website builder that allows an HTML/embed block. It resizes to fit and always shows your current open roles — close a role and it drops off automatically.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -206,6 +256,19 @@ export function OpeningsPanel({
             <img src={`/j/${qrCode}/qr`} alt="Opening QR code" width={240} height={240} className="rounded-xl border border-line" />
             <div className="text-[12px] text-muted-2 font-mono break-all text-center">{siteUrl}/j/{qrCode}</div>
             <a href={`/j/${qrCode}/qr`} download={`opening-${qrCode}.svg`} className="text-[13px] font-semibold text-brick hover:opacity-70">
+              Download QR (SVG)
+            </a>
+          </div>
+        </Modal>
+      )}
+
+      {showCareersQr && careersUrl && (
+        <Modal title="Careers page QR code" sub="Scan to open your careers page with every open role by location — great for a window decal, flyer, or the back of a receipt." onClose={() => setShowCareersQr(false)}>
+          <div className="flex flex-col items-center gap-3 py-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${careersUrl}/qr`} alt="Careers page QR code" width={240} height={240} className="rounded-xl border border-line" />
+            <div className="text-[12px] text-muted-2 font-mono break-all text-center">{careersUrl.replace(/^https?:\/\//, "")}</div>
+            <a href={`${careersUrl}/qr`} download="careers-qr.svg" className="text-[13px] font-semibold text-brick hover:opacity-70">
               Download QR (SVG)
             </a>
           </div>
