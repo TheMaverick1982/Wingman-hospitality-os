@@ -661,6 +661,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "p", text: "On the Hiring page, \"Job openings\" lets you post for a specific role at a specific location (or all locations). Tap \"Create opening,\" pick the role and location, add pay/type and anything to highlight, then \"Generate ad with AI\" writes a full job ad grounded in that role's standards, duties, and hiring criteria — or paste your existing ad and it sharpens it. Edit it, save, and you get copy-ready ad text plus a unique apply link." },
       { kind: "list", items: [
         "Hiring the same role at several stores? When you create the opening, tap more than one location — Wingman makes one opening per location, sharing the same ad, each with its own apply link so you can still track them separately.",
+        "Already posted a role at one store and want it at more? Edit that posting and use \"Also post to more locations\" — the original stays as is, and each store you add gets its own new posting and apply link with the same ad.",
         "For the type, pick Full-time, Part-time, and/or Seasonal — you can choose more than one when a role is open to both.",
       ] },
       { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },

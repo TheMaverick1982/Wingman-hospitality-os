@@ -248,6 +248,11 @@ function OpeningEditor({
       const withoutAll = prev.filter((x) => x !== ALL_LOCATIONS);
       return withoutAll.includes(id) ? withoutAll.filter((x) => x !== id) : [...withoutAll, id];
     });
+  // Edit mode: fan an existing posting out to more stores — the edited posting
+  // stays as is, and each of these creates a NEW posting (same ad, its own link).
+  const [alsoLocationIds, setAlsoLocationIds] = useState<string[]>([]);
+  const toggleAlso = (id: string) =>
+    setAlsoLocationIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [mustHaves, setMustHaves] = useState("");
   const [existing, setExisting] = useState("");
   const [adCopy, setAdCopy] = useState(opening?.ad_copy ?? "");
@@ -286,10 +291,19 @@ function OpeningEditor({
   function save() {
     setError(null);
     startSave(async () => {
-      // Editing: update the one opening.
+      // Editing: update the one opening in place.
       if (isEdit) {
-        const res = await saveOpening({ id: opening!.id, department, locationId: locationId === ALL_LOCATIONS ? null : locationId, payNote, employmentType, adCopy });
+        const ownLoc = locationId === ALL_LOCATIONS ? null : locationId;
+        const res = await saveOpening({ id: opening!.id, department, locationId: ownLoc, payNote, employmentType, adCopy });
         if (res.error) { setError(res.error); return; }
+        // Fan out to any additional locations: one NEW posting each (same ad, its
+        // own link). Guard against re-posting to this posting's own location.
+        const extra = alsoLocationIds.filter((id) => id !== ownLoc);
+        for (const loc of extra) {
+          const r = await saveOpening({ id: null, department, locationId: loc, payNote, employmentType, adCopy });
+          if (r.error) { setError(r.error); return; }
+        }
+        if (extra.length > 0) { onClose(); return; }
         setSavedId(res.id ?? opening!.id);
         if (res.code) setSavedCode(res.code);
         return;
@@ -375,6 +389,37 @@ function OpeningEditor({
             </>
           )}
         </div>
+
+        {/* Edit mode: expand an existing posting to more stores. Only offered for a
+            specific-location posting (an "all locations" one already covers everyone),
+            and only when there are other locations to add. */}
+        {isEdit && locationId !== ALL_LOCATIONS && locations.filter((l) => l.id !== locationId).length > 0 && (
+          <div>
+            <label className="text-[13px] font-semibold text-ink mb-1 block">Also post to more locations <span className="font-normal text-muted-2">(optional)</span></label>
+            <div className="flex flex-wrap gap-2">
+              {locations.filter((l) => l.id !== locationId).map((l) => {
+                const on = alsoLocationIds.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => toggleAlso(l.id)}
+                    className={`inline-flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-3.5 py-1.5 border transition-colors ${
+                      on ? "bg-brick text-white border-brick" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                    }`}
+                  >
+                    {on && <Check size={13} />} {l.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11.5px] text-muted-2 mt-1.5">
+              {alsoLocationIds.filter((id) => id !== locationId).length > 0
+                ? `This posting stays as is; creates ${alsoLocationIds.filter((id) => id !== locationId).length} more — one per location, same ad, each with its own apply link.`
+                : "Add the same role at other stores — each gets its own posting and apply link. This posting is unchanged."}
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="text-[13px] font-semibold text-ink mb-1 block">Type <span className="font-normal text-muted-2">(optional)</span></label>
