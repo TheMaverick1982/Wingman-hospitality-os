@@ -25,6 +25,17 @@ type LocOpt = { id: string; name: string };
 
 const ALL_LOCATIONS = "__all__";
 
+const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Seasonal"] as const;
+// Parse a stored employment_type string back into the checkbox set.
+function parseEmploymentTypes(s: string | null | undefined): string[] {
+  const low = (s || "").toLowerCase();
+  const out: string[] = [];
+  if (low.includes("full")) out.push("Full-time");
+  if (low.includes("part")) out.push("Part-time");
+  if (low.includes("season") || low.includes("temp")) out.push("Seasonal");
+  return out;
+}
+
 export function OpeningsPanel({
   openings,
   counts,
@@ -219,10 +230,24 @@ function OpeningEditor({
   siteUrl: string;
   onClose: () => void;
 }) {
+  const isEdit = Boolean(opening);
   const [department, setDepartment] = useState(opening?.department ?? departments[0] ?? "");
+  // Edit mode edits one opening's single location; create mode can target several
+  // locations at once (one opening is created per location, sharing the ad).
   const [locationId, setLocationId] = useState<string>(opening?.location_id ?? ALL_LOCATIONS);
+  const [locationIds, setLocationIds] = useState<string[]>(opening?.location_id ? [opening.location_id] : [ALL_LOCATIONS]);
   const [payNote, setPayNote] = useState(opening?.pay_note ?? "");
-  const [employmentType, setEmploymentType] = useState(opening?.employment_type ?? "");
+  // Employment type is one or more of these (a role can be BOTH full- and
+  // part-time), stored as a comma-joined string.
+  const [types, setTypes] = useState<string[]>(parseEmploymentTypes(opening?.employment_type));
+  const employmentType = types.join(", ");
+  const toggleType = (t: string) => setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  const toggleLoc = (id: string) =>
+    setLocationIds((prev) => {
+      if (id === ALL_LOCATIONS) return [ALL_LOCATIONS];
+      const withoutAll = prev.filter((x) => x !== ALL_LOCATIONS);
+      return withoutAll.includes(id) ? withoutAll.filter((x) => x !== id) : [...withoutAll, id];
+    });
   const [mustHaves, setMustHaves] = useState("");
   const [existing, setExisting] = useState("");
   const [adCopy, setAdCopy] = useState(opening?.ad_copy ?? "");
@@ -236,12 +261,18 @@ function OpeningEditor({
   // Prefer the short branded link; fall back to the full apply URL until a code exists.
   const link = savedCode ? `${siteUrl}/j/${savedCode}` : savedId && applyUrl ? `${applyUrl}?opening=${savedId}` : "";
 
+  // The single location to give the AI for ad context: the edited opening's
+  // location, or (on create) the one selected location — otherwise none.
+  const genLocation = isEdit
+    ? locationId === ALL_LOCATIONS ? null : locationId
+    : locationIds.length === 1 && locationIds[0] !== ALL_LOCATIONS ? locationIds[0] : null;
+
   function generate() {
     setError(null);
     startGen(async () => {
       const res = await generateOpeningAd({
         department,
-        locationId: locationId === ALL_LOCATIONS ? null : locationId,
+        locationId: genLocation,
         payNote: payNote || undefined,
         employmentType: employmentType || undefined,
         mustHaves: mustHaves || undefined,
@@ -255,19 +286,30 @@ function OpeningEditor({
   function save() {
     setError(null);
     startSave(async () => {
-      const res = await saveOpening({
-        id: opening?.id ?? null,
-        department,
-        locationId: locationId === ALL_LOCATIONS ? null : locationId,
-        payNote,
-        employmentType,
-        adCopy,
-      });
-      if (res.error) setError(res.error);
-      else {
-        setSavedId(res.id ?? opening?.id ?? null);
+      // Editing: update the one opening.
+      if (isEdit) {
+        const res = await saveOpening({ id: opening!.id, department, locationId: locationId === ALL_LOCATIONS ? null : locationId, payNote, employmentType, adCopy });
+        if (res.error) { setError(res.error); return; }
+        setSavedId(res.id ?? opening!.id);
         if (res.code) setSavedCode(res.code);
+        return;
       }
+      // Creating: one opening per selected location (null = all locations). Share
+      // the same ad/pay/type across them.
+      const targets: (string | null)[] = locationIds.includes(ALL_LOCATIONS) ? [null] : locationIds;
+      if (targets.length === 0) { setError("Pick at least one location."); return; }
+      let lastId: string | null = null;
+      let lastCode: string | null = null;
+      for (const loc of targets) {
+        const res = await saveOpening({ id: null, department, locationId: loc, payNote, employmentType, adCopy });
+        if (res.error) { setError(res.error); return; }
+        lastId = res.id ?? lastId;
+        lastCode = res.code ?? lastCode;
+      }
+      // One opening → keep the in-modal link/QR flow; several → close, they show
+      // in the list with their own links.
+      if (targets.length === 1) { setSavedId(lastId); setSavedCode(lastCode); }
+      else onClose();
     });
   }
 
@@ -292,20 +334,68 @@ function OpeningEditor({
             </select>
           </div>
           <div>
-            <label className="text-[13px] font-semibold text-ink mb-1 block">Location</label>
+            <label className="text-[13px] font-semibold text-ink mb-1 block">Pay <span className="font-normal text-muted-2">(optional)</span></label>
+            <input value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="e.g. $18–22/hr + tips" className={inputClass} />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[13px] font-semibold text-ink mb-1 block">Location</label>
+          {isEdit ? (
+            // Editing one opening — a single location (or all).
             <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputClass}>
               <option value={ALL_LOCATIONS}>All locations</option>
               {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
+          ) : (
+            // Creating — pick one or more. "All locations" is exclusive (a single
+            // posting that applies everywhere); otherwise one opening is created
+            // per selected location, sharing this same ad.
+            <>
+              <div className="flex flex-wrap gap-2">
+                {[{ id: ALL_LOCATIONS, name: "All locations" }, ...locations].map((l) => {
+                  const on = locationIds.includes(l.id);
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => toggleLoc(l.id)}
+                      className={`inline-flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-3.5 py-1.5 border transition-colors ${
+                        on ? "bg-brick text-white border-brick" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                      }`}
+                    >
+                      {on && <Check size={13} />} {l.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {locations.length > 0 && !locationIds.includes(ALL_LOCATIONS) && locationIds.length > 1 && (
+                <p className="text-[11.5px] text-muted-2 mt-1.5">Creates {locationIds.length} openings — one per location — with this same ad and its own apply link.</p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div>
+          <label className="text-[13px] font-semibold text-ink mb-1 block">Type <span className="font-normal text-muted-2">(optional)</span></label>
+          <div className="flex flex-wrap gap-2">
+            {EMPLOYMENT_TYPES.map((t) => {
+              const on = types.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleType(t)}
+                  className={`inline-flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-3.5 py-1.5 border transition-colors ${
+                    on ? "bg-brick text-white border-brick" : "bg-white text-charcoal-2 border-line hover:border-brick"
+                  }`}
+                >
+                  {on && <Check size={13} />} {t}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label className="text-[13px] font-semibold text-ink mb-1 block">Pay <span className="font-normal text-muted-2">(optional)</span></label>
-            <input value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="e.g. $18–22/hr + tips" className={inputClass} />
-          </div>
-          <div>
-            <label className="text-[13px] font-semibold text-ink mb-1 block">Type <span className="font-normal text-muted-2">(optional)</span></label>
-            <input value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} placeholder="e.g. Full-time, Part-time" className={inputClass} />
-          </div>
+          <p className="text-[11.5px] text-muted-2 mt-1.5">Pick one or more — a role can be open to both full- and part-time.</p>
         </div>
 
         <div>

@@ -659,6 +659,10 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Post specific openings (by role & location)" },
       { kind: "p", text: "On the Hiring page, \"Job openings\" lets you post for a specific role at a specific location (or all locations). Tap \"Create opening,\" pick the role and location, add pay/type and anything to highlight, then \"Generate ad with AI\" writes a full job ad grounded in that role's standards, duties, and hiring criteria — or paste your existing ad and it sharpens it. Edit it, save, and you get copy-ready ad text plus a unique apply link." },
+      { kind: "list", items: [
+        "Hiring the same role at several stores? When you create the opening, tap more than one location — Wingman makes one opening per location, sharing the same ad, each with its own apply link so you can still track them separately.",
+        "For the type, pick Full-time, Part-time, and/or Seasonal — you can choose more than one when a role is open to both.",
+      ] },
       { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },
       { kind: "list", items: [
         "Each opening gets a short, branded link (joinwingman.app/j/…) and a QR code — post the ad anywhere you hire (Indeed, Craigslist, Facebook) and use the short link as the \"apply\" URL, or print the QR on a window sign or table tent.",
@@ -668,6 +672,10 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Your public careers page" },
       { kind: "p", text: "Every open opening also appears automatically on one public careers page — a single link (joinwingman.app/careers/your-slug) that lists everything you're hiring for, grouped by location, each with an \"Apply\" button that drops the applicant into your form pre-set to that role. It's the \"here's everything we're hiring for\" front door, versus the per-opening /j/ links you use to track a specific channel like Indeed. Grab it from the \"Your public careers page\" bar at the top of Job openings and put it on your website, Google Business Profile, and social." },
+      { kind: "list", items: [
+        "If you run several locations, visitors get a location picker at the top of the page so they can jump straight to the roles at the store nearest them (roles you post to \"all locations\" always show).",
+        "Each ad is trimmed to a few lines with a \"Show more\" toggle, so a long post doesn't bury the roles beneath it — and share the careers link anywhere and the preview shows your logo and \"Now hiring at [your restaurant],\" not a generic card.",
+      ] },
       { kind: "note", text: "Because each role carries proper job-posting details, the careers page is marked up for Google Jobs — so your open roles can show up in Google's jobs search results, free applicant traffic most small restaurants never tap. Close an opening and it drops off the page (and out of Google) automatically." },
       { kind: "h", text: "See where applicants come from" },
       { kind: "p", text: "Under Applicants, open \"Track where applicants come from\" to get a tagged version of your link for each channel. Tap Craigslist, Facebook, Instagram, Indeed, or make your own tag (e.g. door-flyer, radio-ad) — it copies a link like /apply/your-slug?src=craigslist. Post a different tagged link on each channel." },
