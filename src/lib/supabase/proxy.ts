@@ -62,6 +62,9 @@ const PUBLIC_PREFIXES = [
   // Job-opening short links (/j/<code> and /j/<code>/qr) — a public apply link
   // and its QR image; the visitor is a job applicant, not logged in.
   "/j",
+  // Public careers page (/careers/<org-slug>) — lists open roles by location for
+  // job seekers; not logged in.
+  "/careers",
   // Guest survey short links (/s/<code> and /s/<code>/qr) — a public feedback
   // form and its QR image; the visitor is a guest, not logged in.
   "/s",
