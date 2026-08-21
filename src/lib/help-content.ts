@@ -676,6 +676,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "list", items: [
         "If you run several locations, visitors get a location picker at the top of the page so they can jump straight to the roles at the store nearest them (roles you post to \"all locations\" always show).",
         "Each ad is trimmed to a few lines with a \"Show more\" toggle, so a long post doesn't bury the roles beneath it — and share the careers link anywhere and the preview shows your logo and \"Now hiring at [your restaurant],\" not a generic card.",
+        "From the \"Your public careers page\" bar you can also grab a QR code (print it on a window decal, flyer, or receipt) and an Embed code — paste one snippet to drop the whole careers page onto your own website. The embed resizes to fit and always shows your current open roles, so closing a filled role removes it everywhere automatically.",
       ] },
       { kind: "note", text: "Because each role carries proper job-posting details, the careers page is marked up for Google Jobs — so your open roles can show up in Google's jobs search results, free applicant traffic most small restaurants never tap. Close an opening and it drops off the page (and out of Google) automatically." },
       { kind: "h", text: "See where applicants come from" },

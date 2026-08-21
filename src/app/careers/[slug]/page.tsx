@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
 import { CareersOpenings } from "./careers-openings";
+import { EmbedResizer } from "@/components/marketing/embed-resizer";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 
@@ -29,8 +30,15 @@ async function loadOrg(slug: string): Promise<Org | null> {
   return (data as Org | null) ?? null;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ embed?: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
+  const embed = (await searchParams)?.embed === "1";
   const org = await loadOrg(slug);
   if (!org) return { title: "Careers", robots: { index: false, follow: false } };
   const title = `Careers at ${org.name} — Now Hiring`;
@@ -38,6 +46,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
+    // The ?embed=1 copy lives inside a customer's iframe — keep it out of the
+    // index so it isn't ranked as a duplicate; the canonical careers page is what
+    // Google should surface (and carries the JobPosting markup).
+    ...(embed ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical: `/careers/${slug}` },
     openGraph: { title, description, url: `/careers/${slug}`, type: "website" },
   };
@@ -55,8 +67,15 @@ function employmentEnum(t: string | null): string | null {
   return null;
 }
 
-export default async function CareersPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CareersPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ embed?: string }>;
+}) {
   const { slug } = await params;
+  const embed = (await searchParams)?.embed === "1";
   const org = await loadOrg(slug);
   if (!org) return notFound();
 
@@ -118,11 +137,13 @@ export default async function CareersPage({ params }: { params: Promise<{ slug: 
   };
 
   return (
-    <div className="min-h-full bg-paper force-light">
+    <div className={`bg-paper force-light ${embed ? "" : "min-h-full"}`}>
+      {/* Embedded on a customer's own site — post height up so their iframe sizes to fit. */}
+      {embed && <EmbedResizer messageKey="wingmanCareersHeight" />}
       {openings.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
-      <div className="max-w-[820px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
+      <div className={`max-w-[820px] mx-auto px-5 sm:px-8 ${embed ? "py-6 sm:py-8" : "py-12 sm:py-16"}`}>
         {/* Branded header */}
         <div className="flex items-center gap-3 mb-8">
           {org.logo_url ? (

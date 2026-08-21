@@ -63,6 +63,17 @@ const embedToolHeaders = [
   { key: "Content-Security-Policy", value: cspEmbeddable },
 ];
 
+// The public careers page (/careers/<slug>): restaurants can embed it on their
+// own site (Hiring → careers "Embed" builds an <iframe src=".../careers/<slug>?embed=1">),
+// so it must be framable on any origin. Unlike /apply it stays INDEXED — the
+// canonical careers page carries JobPosting markup for Google Jobs — so there is
+// deliberately no noindex header here; the ?embed=1 variant sets its own noindex
+// in metadata so the embed copy isn't indexed as a duplicate.
+const careersEmbedHeaders = [
+  ...commonSecurityHeaders,
+  { key: "Content-Security-Policy", value: cspEmbeddable },
+];
+
 const nextConfig: NextConfig = {
   // Don't advertise the framework in a response header (reduces fingerprinting).
   poweredByHeader: false,
@@ -92,10 +103,13 @@ const nextConfig: NextConfig = {
       // The embeddable free-tool routes (see embedToolHeaders).
       { source: "/calculator/embed", headers: embedToolHeaders },
       { source: "/scorecard/embed", headers: embedToolHeaders },
-      // Everything else is frame-locked. The negative lookahead excludes /apply
-      // and the embed routes so the rules never apply conflicting frame headers
-      // to the same request.
-      { source: "/((?!apply/|calculator/embed|scorecard/embed).*)", headers: lockedSecurityHeaders },
+      // The public careers page is embeddable on customers' own sites (see
+      // careersEmbedHeaders) while staying indexable for Google Jobs.
+      { source: "/careers/:path*", headers: careersEmbedHeaders },
+      // Everything else is frame-locked. The negative lookahead excludes /apply,
+      // /careers, and the embed routes so the rules never apply conflicting frame
+      // headers to the same request.
+      { source: "/((?!apply/|careers/|calculator/embed|scorecard/embed).*)", headers: lockedSecurityHeaders },
       // The service worker must never be cached by the browser/CDN, so a new
       // deploy's sw.js is fetched immediately and the update flow can run.
       {
