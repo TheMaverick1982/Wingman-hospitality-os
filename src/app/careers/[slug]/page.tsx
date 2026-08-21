@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { ShowMoreText } from "./show-more-text";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 
@@ -169,9 +170,7 @@ export default async function CareersPage({ params }: { params: Promise<{ slug: 
                           {o.employment_type && usds(o.pay_note) && <span>·</span>}
                           {usds(o.pay_note) && <span className="font-medium text-charcoal-2">{usds(o.pay_note)}</span>}
                         </div>
-                        {o.ad_copy?.trim() && (
-                          <p className="text-[14px] text-muted leading-relaxed mt-2.5 line-clamp-3">{o.ad_copy.trim()}</p>
-                        )}
+                        {o.ad_copy?.trim() && <ShowMoreText text={o.ad_copy.trim()} />}
                       </div>
                       <a
                         href={applyHref(o)}

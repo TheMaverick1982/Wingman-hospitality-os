@@ -146,7 +146,17 @@ export function OpeningsPanel({
                         </button>
                       )}
                       <button type="button" aria-label="Edit" onClick={() => setEditing(o)} className="text-muted-2 hover:text-ink p-1"><Pencil size={14} /></button>
-                      <button type="button" onClick={() => startBusy(async () => { await setOpeningStatus(o.id, isClosed ? "open" : "closed"); })} disabled={busyId} className="text-[12px] font-semibold text-muted-2 hover:text-ink px-1">
+                      <button
+                        type="button"
+                        onClick={() => startBusy(async () => { await setOpeningStatus(o.id, isClosed ? "open" : "closed"); })}
+                        disabled={busyId}
+                        title={isClosed ? "Reopen — show this role on your careers page again" : "Close — hide this role from your careers page (applicants are kept)"}
+                        className={`inline-flex items-center gap-1 text-[12px] font-semibold rounded-full px-2.5 py-1 transition-colors disabled:opacity-50 ${
+                          isClosed
+                            ? "text-white bg-olive hover:opacity-90"
+                            : "text-charcoal-2 border border-line hover:border-brick hover:text-brick"
+                        }`}
+                      >
                         {isClosed ? "Reopen" : "Close"}
                       </button>
                       <button
