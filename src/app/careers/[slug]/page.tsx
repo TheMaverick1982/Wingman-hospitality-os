@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_DEPARTMENTS } from "@/lib/constants";
-import { ShowMoreText } from "./show-more-text";
+import { CareersOpenings } from "./careers-openings";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 
@@ -43,7 +43,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-const usds = (s: string | null) => (s ? s.trim() : "");
 const roleLabel = (o: Opening) => (o.title?.trim() || o.department);
 // Map a free-text employment type to schema.org's enum, best-effort.
 function employmentEnum(t: string | null): string | null {
@@ -89,8 +88,6 @@ export default async function CareersPage({ params }: { params: Promise<{ slug: 
   }
   // Specific locations first (alphabetical), "All locations" last.
   groups.sort((a, b) => (a.key === "all" ? 1 : b.key === "all" ? -1 : a.name.localeCompare(b.name)));
-
-  const applyHref = (o: Opening) => `/apply/${slug}?opening=${o.id}&src=careers`;
 
   // JobPosting structured data → eligibility for the Google Jobs listing.
   const jsonLd = {
@@ -153,39 +150,7 @@ export default async function CareersPage({ params }: { params: Promise<{ slug: 
             <p className="text-sm text-muted">Check back soon — new roles are posted here as they open.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-9">
-            <p className="text-[16px] text-muted leading-relaxed -mt-2">
-              Here&rsquo;s everything we&rsquo;re hiring for right now{isMulti ? ", by location" : ""}. Tap a role to apply — it takes a couple of minutes.
-            </p>
-            {groups.map((g) => (
-              <section key={g.key}>
-                {g.name && (
-                  <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-2 mb-3">{g.name}</h2>
-                )}
-                <div className="flex flex-col gap-3">
-                  {g.items.map((o) => (
-                    <div key={o.id} className="bg-white border border-line rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="text-[17px] font-semibold text-ink">{roleLabel(o)}</div>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[13px] text-muted-2">
-                          {o.employment_type && <span className="font-medium">{o.employment_type}</span>}
-                          {o.employment_type && usds(o.pay_note) && <span>·</span>}
-                          {usds(o.pay_note) && <span className="font-medium text-charcoal-2">{usds(o.pay_note)}</span>}
-                        </div>
-                        {o.ad_copy?.trim() && <ShowMoreText text={o.ad_copy.trim()} />}
-                      </div>
-                      <a
-                        href={applyHref(o)}
-                        className="shrink-0 self-start inline-flex items-center justify-center text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors"
-                      >
-                        Apply
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <CareersOpenings slug={slug} groups={groups} isMulti={isMulti} />
         )}
 
         <div className="text-center mt-12 text-[12.5px] text-muted-2">
