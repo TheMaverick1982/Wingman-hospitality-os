@@ -100,18 +100,21 @@ export default async function ApplyPage({
   const departments = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => (m as { department: string }).department === d));
   const roleOptions = departments.length ? departments : [...ALL_DEPARTMENTS];
 
-  // Per-role screening questions, grouped by department for role-reactive display.
-  // Guarded (the table lands with a migration) so the form still works if it
-  // hasn't been applied yet — it just shows no screening step.
+  // Per-role screening questions, grouped by role for role-reactive display. A
+  // custom role's questions are keyed by the custom role NAME (not the "Other"
+  // bucket) so they match the role the applicant actually picks. Guarded (the
+  // table + custom_role column land with migrations) so the form still works if
+  // they haven't applied yet — it just shows no screening step.
   const screeningByRole: Record<string, { id: string; prompt: string; required: boolean }[]> = {};
   {
     const { data: sqRows } = await admin
       .from("screening_questions")
-      .select("id, department, prompt, sort_order, required")
+      .select("id, department, custom_role, prompt, sort_order, required")
       .eq("org_id", org.id)
       .order("sort_order");
-    for (const r of (sqRows ?? []) as { id: string; department: string; prompt: string; required?: boolean }[]) {
-      (screeningByRole[r.department] ??= []).push({ id: r.id, prompt: r.prompt, required: Boolean(r.required) });
+    for (const r of (sqRows ?? []) as { id: string; department: string; custom_role: string | null; prompt: string; required?: boolean }[]) {
+      const key = r.custom_role?.trim() || r.department;
+      (screeningByRole[key] ??= []).push({ id: r.id, prompt: r.prompt, required: Boolean(r.required) });
     }
   }
 

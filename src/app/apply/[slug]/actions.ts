@@ -7,6 +7,7 @@ import { builtinSetting, normalizeFormConfig, type CustomAnswer } from "@/lib/ap
 import { gradeScreeningAnswers } from "@/lib/hiring/screening-grader";
 import { isScreeningAxis, type ScreeningAnswer } from "@/lib/screening";
 import { guardPublicForm } from "@/lib/public-form-guard";
+import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, type Department } from "@/lib/constants";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 const FALLBACK_ALERT = process.env.MONITOR_ALERT_EMAIL ?? "brian@brianhardy.com";
@@ -115,12 +116,15 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
   // "no screening / nothing required" rather than blocking a real applicant.
   let screeningQuestions: { id: string; prompt: string; axis: string; required: boolean }[] = [];
   if (department) {
-    const { data: qRows } = await admin
+    // A custom role's questions live under the "Other" bucket keyed by the role
+    // name; a standard role's are keyed by department with no custom_role.
+    const isKnownDept = ALL_DEPARTMENTS.includes(department as Department);
+    let qb = admin
       .from("screening_questions")
       .select("id, prompt, axis, sort_order, required")
-      .eq("org_id", org.id)
-      .eq("department", department)
-      .order("sort_order");
+      .eq("org_id", org.id);
+    qb = isKnownDept ? qb.eq("department", department).is("custom_role", null) : qb.eq("department", OPENING_OTHER_ROLE).eq("custom_role", department);
+    const { data: qRows } = await qb.order("sort_order");
     screeningQuestions = ((qRows ?? []) as { id: string; prompt: string; axis: string; required?: boolean }[])
       .map((q) => ({ id: q.id, prompt: q.prompt, axis: q.axis, required: Boolean(q.required) }));
     for (const q of screeningQuestions) {

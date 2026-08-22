@@ -5,10 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, type Department } from "@/lib/constants";
 import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 import { TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningQuestion } from "@/lib/screening";
-import { ScreeningQuestionsPanel } from "./screening-questions-panel";
+import { ScreeningQuestionsPanel, type ScreeningRole } from "./screening-questions-panel";
 import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
@@ -167,18 +167,47 @@ export default async function HiringPage({
     }
   }
 
+  // Custom job roles this org has posted (openings under the "Other" bucket carry
+  // the role name in their title). These get their own screening tabs alongside
+  // the standard roles. Unfiltered by location — screening is org-wide.
+  const customRoleNames: string[] = [];
+  {
+    const { data: crRows } = await supabase
+      .from("job_openings")
+      .select("title")
+      .eq("org_id", profile.orgId)
+      .eq("department", OPENING_OTHER_ROLE);
+    const seen = new Set<string>();
+    for (const r of (crRows ?? []) as { title: string | null }[]) {
+      const name = r.title?.trim();
+      if (name && !seen.has(name.toLowerCase())) { seen.add(name.toLowerCase()); customRoleNames.push(name); }
+    }
+    customRoleNames.sort((a, b) => a.localeCompare(b));
+  }
+
+  // The key a screening row belongs to: standard role → department; custom role →
+  // "other:<name>". Must match the keys built for the panel's `roles` below.
+  const screeningRoleKey = (department: string, customRole: string | null) =>
+    customRole?.trim() ? `other:${customRole.trim().toLowerCase()}` : department;
+
   // Per-role screening questions for the authoring panel (guarded — the table
   // lands with a migration, so this degrades to "none" until then).
-  const screeningQuestionsByDept: Record<string, ScreeningQuestion[]> = {};
+  const screeningQuestionsByRole: Record<string, ScreeningQuestion[]> = {};
   {
     const { data: sqRows } = await supabase
       .from("screening_questions")
-      .select("id, department, prompt, axis, sort_order, source, required")
+      .select("id, department, custom_role, prompt, axis, sort_order, source, required")
       .order("sort_order");
-    for (const r of (sqRows ?? []) as ScreeningQuestion[]) {
-      (screeningQuestionsByDept[r.department] ??= []).push(r);
+    for (const r of (sqRows ?? []) as (ScreeningQuestion & { custom_role: string | null })[]) {
+      (screeningQuestionsByRole[screeningRoleKey(r.department, r.custom_role)] ??= []).push(r);
     }
   }
+
+  // Standard roles first, then custom roles as their own tabs.
+  const screeningRoles: ScreeningRole[] = [
+    ...activeDepts.map((d) => ({ key: d, label: d, department: d, customRole: null as string | null })),
+    ...customRoleNames.map((name) => ({ key: `other:${name.toLowerCase()}`, label: name, department: OPENING_OTHER_ROLE, customRole: name })),
+  ];
 
   const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
@@ -360,12 +389,12 @@ export default async function HiringPage({
         <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
       </CollapsibleSection>
 
-      {canEdit && activeDepts.length > 0 && (
+      {canEdit && screeningRoles.length > 0 && (
         <CollapsibleSection
           title="Screening questions"
           subtitle="Short questions candidates answer on your application form, per role — Wingman drafts and grades them. Build once, open to tweak."
         >
-          <ScreeningQuestionsPanel departments={activeDepts} questionsByDept={screeningQuestionsByDept} />
+          <ScreeningQuestionsPanel roles={screeningRoles} questionsByRole={screeningQuestionsByRole} />
         </CollapsibleSection>
       )}
 
