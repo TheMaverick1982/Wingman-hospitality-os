@@ -39,16 +39,21 @@ function AxisPill({ axis }: { axis: ScreeningAxis }) {
   );
 }
 
+// A role in the screening panel: a standard department (customRole null) or a
+// custom job role (department "Other" + a name). `key` identifies it in state and
+// in the questions map.
+export type ScreeningRole = { key: string; label: string; department: string; customRole: string | null };
+
 export function ScreeningQuestionsPanel({
-  departments,
-  questionsByDept,
+  roles,
+  questionsByRole,
 }: {
-  departments: string[];
-  questionsByDept: Record<string, ScreeningQuestion[]>;
+  roles: ScreeningRole[];
+  questionsByRole: Record<string, ScreeningQuestion[]>;
 }) {
-  const roles = departments.length ? departments : [];
-  const [role, setRole] = useState(roles[0] ?? "");
-  const questions = useMemo(() => questionsByDept[role] ?? [], [questionsByDept, role]);
+  const [roleKey, setRoleKey] = useState(roles[0]?.key ?? "");
+  const current = useMemo(() => roles.find((r) => r.key === roleKey) ?? roles[0], [roles, roleKey]);
+  const questions = useMemo(() => questionsByRole[roleKey] ?? [], [questionsByRole, roleKey]);
 
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -56,38 +61,41 @@ export function ScreeningQuestionsPanel({
   const [adding, setAdding] = useState(false);
 
   function generate() {
+    if (!current) return;
     setError(null);
     setPreview(null);
     start(async () => {
-      const res = await generateScreeningQuestions(role);
+      const res = await generateScreeningQuestions(current.department, current.customRole ?? undefined);
       if (res.error) setError(res.error);
       else setPreview(res.questions ?? []);
     });
   }
   function savePreview() {
-    if (!preview) return;
+    if (!preview || !current) return;
     start(async () => {
-      const res = await saveScreeningQuestions(role, preview);
+      const res = await saveScreeningQuestions(current.department, preview, current.customRole ?? undefined);
       if (res.error) setError(res.error);
       else setPreview(null);
     });
   }
 
-  if (roles.length === 0) return null;
+  if (roles.length === 0 || !current) return null;
+  const role = current.label;
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {roles.map((d) => (
+        {roles.map((r) => (
           <button
-            key={d}
-            onClick={() => { setRole(d); setPreview(null); setError(null); setAdding(false); }}
+            key={r.key}
+            onClick={() => { setRoleKey(r.key); setPreview(null); setError(null); setAdding(false); }}
             className={`text-[13px] font-semibold px-3.5 py-1.5 rounded-full border transition-colors ${
-              role === d ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+              roleKey === r.key ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
             }`}
           >
-            {d}
-            {(questionsByDept[d]?.length ?? 0) > 0 && <span className="ml-1.5 tabular-nums text-muted-2">{questionsByDept[d].length}</span>}
+            {r.label}
+            {r.customRole && <span className="ml-1.5 text-[10.5px] font-semibold text-muted-2 bg-paper border border-line rounded-full px-1.5 py-0.5">Custom</span>}
+            {(questionsByRole[r.key]?.length ?? 0) > 0 && <span className="ml-1.5 tabular-nums text-muted-2">{questionsByRole[r.key].length}</span>}
           </button>
         ))}
       </div>
@@ -150,7 +158,7 @@ export function ScreeningQuestionsPanel({
                   disabled={pending}
                   onClick={() => {
                     const next = !(questions.length > 0 && questions.every((q) => q.required));
-                    start(async () => { await setAllScreeningRequired(role, next); });
+                    start(async () => { await setAllScreeningRequired(current.department, next, current.customRole ?? undefined); });
                   }}
                 />
               </div>
@@ -161,7 +169,7 @@ export function ScreeningQuestionsPanel({
           )}
 
           {adding ? (
-            <AddQuestionForm department={role} onClose={() => setAdding(false)} />
+            <AddQuestionForm department={current.department} customRole={current.customRole} onClose={() => setAdding(false)} />
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={generate} disabled={pending} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark disabled:opacity-50">
@@ -233,7 +241,7 @@ function QuestionRow({ q }: { q: ScreeningQuestion }) {
   );
 }
 
-function AddQuestionForm({ department, onClose }: { department: string; onClose: () => void }) {
+function AddQuestionForm({ department, customRole, onClose }: { department: string; customRole: string | null; onClose: () => void }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -244,6 +252,7 @@ function AddQuestionForm({ department, onClose }: { department: string; onClose:
     setError(null);
     const fd = new FormData();
     fd.set("department", department);
+    if (customRole) fd.set("customRole", customRole);
     fd.set("prompt", prompt);
     fd.set("axis", axis);
     if (required) fd.set("required", "1");

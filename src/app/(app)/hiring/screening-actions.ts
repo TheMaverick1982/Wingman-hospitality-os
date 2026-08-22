@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
@@ -13,6 +13,13 @@ import { isScreeningAxis, type ScreeningAxis } from "@/lib/screening";
 export type GeneratedQuestion = { prompt: string; axis: ScreeningAxis };
 export type ScreeningBuildState = { error: string | null; questions?: GeneratedQuestion[]; built?: number };
 export type ScreeningQState = { error: string | null };
+
+// A screening role is either a standard department (customRole null) or a custom
+// job role, which lives under the "Other" bucket and is identified by its name.
+function validScreeningRole(department: string, customRole?: string | null): boolean {
+  if (ALL_DEPARTMENTS.includes(department as Department)) return true;
+  return department === OPENING_OTHER_ROLE && Boolean(customRole?.trim());
+}
 
 function callAnthropic(apiKey: string, body: Record<string, unknown>) {
   return fetch("https://api.anthropic.com/v1/messages", {
@@ -49,13 +56,13 @@ function cleanQuestions(raw: unknown[]): GeneratedQuestion[] {
 
 // Generate role-specific screening questions grounded in the restaurant's own
 // hiring criteria for that role. Returns a preview — nothing saved until save*().
-export async function generateScreeningQuestions(department: string): Promise<ScreeningBuildState> {
+export async function generateScreeningQuestions(department: string, customRole?: string): Promise<ScreeningBuildState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
     return { error: "You don't have access to generate screening questions." };
   }
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
+  if (!validScreeningRole(department, customRole)) return { error: "Pick a role." };
   if (!(await consumeAiLimit(profile))) {
     return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
   }
@@ -63,12 +70,19 @@ export async function generateScreeningQuestions(department: string): Promise<Sc
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
+  // A custom role has no hiring_traits to ground on; the questions are inferred
+  // from the role name instead. Standard roles pull their own criteria.
+  const isKnownRole = ALL_DEPARTMENTS.includes(department as Department);
+  const roleName = (isKnownRole ? department : customRole?.trim()) || department;
+
   const supabase = await createClient();
-  const { data: traits } = await supabase
-    .from("hiring_traits")
-    .select("title, question, green_flag, red_flag")
-    .eq("department", department)
-    .order("sort_order");
+  const { data: traits } = isKnownRole
+    ? await supabase
+        .from("hiring_traits")
+        .select("title, question, green_flag, red_flag")
+        .eq("department", department)
+        .order("sort_order")
+    : { data: [] as { title: string; question: string; green_flag: string; red_flag: string }[] };
   const criteria = (traits ?? [])
     .map((t) => {
       const r = t as { title: string; question: string; green_flag: string; red_flag: string };
@@ -76,9 +90,9 @@ export async function generateScreeningQuestions(department: string): Promise<Sc
     })
     .join("\n");
 
-  const prompt = `Design 4 short pre-interview screening questions for a restaurant's ${department} candidate to answer IN WRITING on the application form. They must be answerable in a few sentences.
+  const prompt = `Design 4 short pre-interview screening questions for a restaurant's ${roleName} candidate to answer IN WRITING on the application form. They must be answerable in a few sentences.
 
-${criteria ? `Ground them in this restaurant's own ${department} hiring criteria:\n${criteria}\n` : `Infer what genuinely predicts success for a ${department} in a hospitality-first restaurant.\n`}
+${criteria ? `Ground them in this restaurant's own ${roleName} hiring criteria:\n${criteria}\n` : `Infer what genuinely predicts success for a ${roleName} in a hospitality-first restaurant.\n`}
 Rules:
 - Exactly 3 questions with axis "hospitality": real, specific guest-experience scenarios for THIS role that reveal warmth, ownership, reading the guest, and a guest-first instinct (not trivia, not yes/no).
 - Exactly 1 question with axis "follows_instructions": a normal question that EMBEDS an explicit, checkable instruction inside it — for example a length limit, or "begin your answer with the word 'Absolutely'", or "answer in exactly two sentences". The point is that whether they follow the instruction is itself the signal, so the instruction must be unmistakable in the wording.
@@ -113,11 +127,11 @@ ${SHAPE}`;
 
 // Persist reviewed questions, replacing this role's previous AI output (keeps any
 // the owner added by hand, which are source='custom').
-export async function saveScreeningQuestions(department: string, questions: GeneratedQuestion[]): Promise<ScreeningBuildState> {
+export async function saveScreeningQuestions(department: string, questions: GeneratedQuestion[], customRole?: string): Promise<ScreeningBuildState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return { error: "Not authorized." };
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
+  if (!validScreeningRole(department, customRole)) return { error: "Pick a role." };
 
   const clean = cleanQuestions(questions ?? []);
   if (clean.length === 0) return { error: "Nothing to save — keep at least one question." };
@@ -126,14 +140,16 @@ export async function saveScreeningQuestions(department: string, questions: Gene
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  await supabase.from("screening_questions").delete().eq("org_id", org.id).eq("department", department).eq("source", "wingman");
-  const { count: base } = await supabase
-    .from("screening_questions")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", org.id)
-    .eq("department", department);
+  const role = customRole?.trim() || null;
+
+  const del = supabase.from("screening_questions").delete().eq("org_id", org.id).eq("department", department).eq("source", "wingman");
+  await (role ? del.eq("custom_role", role) : del.is("custom_role", null));
+
+  const countQ = supabase.from("screening_questions").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("department", department);
+  const { count: base } = await (role ? countQ.eq("custom_role", role) : countQ.is("custom_role", null));
+
   const { error } = await supabase.from("screening_questions").insert(
-    clean.map((q, i) => ({ org_id: org.id, department, prompt: q.prompt, axis: q.axis, sort_order: (base ?? 0) + i, source: "wingman" }))
+    clean.map((q, i) => ({ org_id: org.id, department, custom_role: role, prompt: q.prompt, axis: q.axis, sort_order: (base ?? 0) + i, source: "wingman" }))
   );
   if (error) return { error: error.message };
 
@@ -143,10 +159,11 @@ export async function saveScreeningQuestions(department: string, questions: Gene
 
 export async function addScreeningQuestion(_prev: ScreeningQState, formData: FormData): Promise<ScreeningQState> {
   const department = String(formData.get("department") || "");
+  const customRole = String(formData.get("customRole") || "").trim();
   const promptText = String(formData.get("prompt") || "").trim();
   const axis = isScreeningAxis(formData.get("axis")) ? (formData.get("axis") as ScreeningAxis) : "hospitality";
   const required = formData.get("required") === "1";
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
+  if (!validScreeningRole(department, customRole)) return { error: "Pick a role." };
   if (!promptText) return { error: "The question is required." };
 
   const profile = await getCurrentProfile();
@@ -155,14 +172,12 @@ export async function addScreeningQuestion(_prev: ScreeningQState, formData: For
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
-  const { count } = await supabase
-    .from("screening_questions")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", org.id)
-    .eq("department", department);
+  const role = customRole || null;
+  const countQ = supabase.from("screening_questions").select("id", { count: "exact", head: true }).eq("org_id", org.id).eq("department", department);
+  const { count } = await (role ? countQ.eq("custom_role", role) : countQ.is("custom_role", null));
   const { error } = await supabase
     .from("screening_questions")
-    .insert({ org_id: org.id, department, prompt: promptText.slice(0, 500), axis, sort_order: count ?? 0, source: "custom", required });
+    .insert({ org_id: org.id, department, custom_role: role, prompt: promptText.slice(0, 500), axis, sort_order: count ?? 0, source: "custom", required });
   if (error) return { error: error.message };
   revalidatePath("/hiring");
   return { error: null };
@@ -182,14 +197,16 @@ export async function updateScreeningQuestion(id: string, patch: { prompt?: stri
 }
 
 // Make every screening question for a role required (or optional) in one toggle.
-export async function setAllScreeningRequired(department: string, required: boolean) {
+export async function setAllScreeningRequired(department: string, required: boolean, customRole?: string) {
   const profile = await getCurrentProfile();
   if (!profile || !canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return;
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return;
+  if (!validScreeningRole(department, customRole)) return;
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return;
-  await supabase.from("screening_questions").update({ required }).eq("org_id", org.id).eq("department", department);
+  const role = customRole?.trim() || null;
+  const upd = supabase.from("screening_questions").update({ required }).eq("org_id", org.id).eq("department", department);
+  await (role ? upd.eq("custom_role", role) : upd.is("custom_role", null));
   revalidatePath("/hiring");
 }
 
