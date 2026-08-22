@@ -20,6 +20,19 @@ export const ALL_DEPARTMENTS = [
 ] as const;
 export type Department = (typeof ALL_DEPARTMENTS)[number];
 
+// A job opening (and only a job opening) can use this bucket for a custom role
+// that isn't one of the standard departments above — e.g. "Baker", "Valet",
+// "Event Lead". The real, human-readable role name lives in the opening's `title`
+// and is what shows everywhere. This is intentionally NOT in ALL_DEPARTMENTS, so
+// it never appears in staff roles, training, or standards; it only gives an
+// opening (and any candidate scored from it) a valid enum value to fall back to.
+export const OPENING_OTHER_ROLE = "Other";
+// A role string is valid for an opening if it's a standard department or the
+// custom "Other" bucket.
+export function isOpeningRole(d: string): boolean {
+  return (ALL_DEPARTMENTS as readonly string[]).includes(d) || d === OPENING_OTHER_ROLE;
+}
+
 // A staff member's effective role set: their primary `department` first, then
 // any `additional_departments` (deduped, invalid/blank values dropped). Use this
 // everywhere a staff user's training, menu, tests, or checklists should span all

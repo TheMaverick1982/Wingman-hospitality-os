@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_DEPARTMENTS } from "@/lib/constants";
+import { isOpeningRole } from "@/lib/constants";
 import { CareersOpenings } from "./careers-openings";
 import { EmbedResizer } from "@/components/marketing/embed-resizer";
 
@@ -89,7 +89,7 @@ export default async function CareersPage({
       .order("created_at", { ascending: false }),
     admin.from("locations").select("id, name, address").eq("org_id", org.id).order("name"),
   ]);
-  const openings = ((opRows ?? []) as Opening[]).filter((o) => ALL_DEPARTMENTS.includes(o.department as (typeof ALL_DEPARTMENTS)[number]));
+  const openings = ((opRows ?? []) as Opening[]).filter((o) => isOpeningRole(o.department));
   const locations = (locRows ?? []) as Loc[];
   const locById = new Map(locations.map((l) => [l.id, l]));
   const isMulti = locations.length > 1;
