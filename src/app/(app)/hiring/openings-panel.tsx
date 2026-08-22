@@ -5,6 +5,7 @@ import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode, Code2 } from "l
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
+import { OPENING_OTHER_ROLE } from "@/lib/constants";
 import { generateOpeningAd, saveOpening, setOpeningStatus, deleteOpening } from "./openings-actions";
 
 export type OpeningRow = {
@@ -24,6 +25,8 @@ export type OpeningRow = {
 type LocOpt = { id: string; name: string };
 
 const ALL_LOCATIONS = "__all__";
+// Sentinel for the role <select> meaning "a custom role I'll type in".
+const CUSTOM_ROLE = "__custom__";
 
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Seasonal"] as const;
 // Parse a stored employment_type string back into the checkbox set.
@@ -177,7 +180,7 @@ export function OpeningsPanel({
                       {!isClosed && <span className="text-[11px] font-semibold text-olive bg-olive-tint rounded-full px-2 py-0.5">Open</span>}
                     </div>
                     <div className="text-[12px] text-muted-2 mt-0.5">
-                      {o.department}
+                      {o.department === OPENING_OTHER_ROLE ? "Custom role" : o.department}
                       {o.pay_note ? ` · ${o.pay_note}` : ""}
                       {o.employment_type ? ` · ${o.employment_type}` : ""}
                     </div>
@@ -294,7 +297,15 @@ function OpeningEditor({
   onClose: () => void;
 }) {
   const isEdit = Boolean(opening);
-  const [department, setDepartment] = useState(opening?.department ?? departments[0] ?? "");
+  // Role can be a standard department or a custom one. The <select> holds either a
+  // department name or the CUSTOM sentinel; when custom, the typed name lives in
+  // `customRole` and the opening is stored under the "Other" bucket with the name
+  // in its title (which is what shows everywhere the posting appears).
+  const startedCustom = opening?.department === OPENING_OTHER_ROLE;
+  const [roleChoice, setRoleChoice] = useState<string>(startedCustom ? CUSTOM_ROLE : opening?.department ?? departments[0] ?? "");
+  const [customRole, setCustomRole] = useState(startedCustom ? opening?.title ?? "" : "");
+  const isCustomRole = roleChoice === CUSTOM_ROLE;
+  const department = isCustomRole ? OPENING_OTHER_ROLE : roleChoice;
   // Edit mode edits one opening's single location; create mode can target several
   // locations at once (one opening is created per location, sharing the ad).
   const [locationId, setLocationId] = useState<string>(opening?.location_id ?? ALL_LOCATIONS);
@@ -340,6 +351,7 @@ function OpeningEditor({
     startGen(async () => {
       const res = await generateOpeningAd({
         department,
+        roleLabel: isCustomRole ? customRole.trim() : undefined,
         locationId: genLocation,
         payNote: payNote || undefined,
         employmentType: employmentType || undefined,
@@ -353,17 +365,21 @@ function OpeningEditor({
 
   function save() {
     setError(null);
+    if (isCustomRole && !customRole.trim()) { setError("Name the custom role."); return; }
+    // Custom role → store its name as the title (shown everywhere); a standard role
+    // carries no title (undefined clears it on save).
+    const title = isCustomRole ? customRole.trim() : undefined;
     startSave(async () => {
       // Editing: update the one opening in place.
       if (isEdit) {
         const ownLoc = locationId === ALL_LOCATIONS ? null : locationId;
-        const res = await saveOpening({ id: opening!.id, department, locationId: ownLoc, payNote, employmentType, adCopy });
+        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy });
         if (res.error) { setError(res.error); return; }
         // Fan out to any additional locations: one NEW posting each (same ad, its
         // own link). Guard against re-posting to this posting's own location.
         const extra = alsoLocationIds.filter((id) => id !== ownLoc);
         for (const loc of extra) {
-          const r = await saveOpening({ id: null, department, locationId: loc, payNote, employmentType, adCopy });
+          const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy });
           if (r.error) { setError(r.error); return; }
         }
         if (extra.length > 0) { onClose(); return; }
@@ -378,7 +394,7 @@ function OpeningEditor({
       let lastId: string | null = null;
       let lastCode: string | null = null;
       for (const loc of targets) {
-        const res = await saveOpening({ id: null, department, locationId: loc, payNote, employmentType, adCopy });
+        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy });
         if (res.error) { setError(res.error); return; }
         lastId = res.id ?? lastId;
         lastCode = res.code ?? lastCode;
@@ -406,9 +422,19 @@ function OpeningEditor({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-[13px] font-semibold text-ink mb-1 block">Role</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputClass}>
+            <select value={roleChoice} onChange={(e) => setRoleChoice(e.target.value)} className={inputClass}>
               {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+              <option value={CUSTOM_ROLE}>+ Custom role…</option>
             </select>
+            {isCustomRole && (
+              <input
+                value={customRole}
+                onChange={(e) => setCustomRole(e.target.value)}
+                placeholder="Name the role — e.g. Baker, Valet, Event Lead"
+                className={`${inputClass} mt-2`}
+                autoFocus
+              />
+            )}
           </div>
           <div>
             <label className="text-[13px] font-semibold text-ink mb-1 block">Pay <span className="font-normal text-muted-2">(optional)</span></label>
@@ -548,7 +574,7 @@ function OpeningEditor({
 
       <div className="flex justify-between items-center gap-2 mt-4">
         <Btn type="button" kind="ghost" icon={X} onClick={onClose}>Close</Btn>
-        <Btn type="button" onClick={save} loading={savePending} disabled={!department}>
+        <Btn type="button" onClick={save} loading={savePending} disabled={!department || (isCustomRole && !customRole.trim())}>
           {savePending ? "Saving…" : savedId ? "Save changes" : "Save opening"}
         </Btn>
       </div>

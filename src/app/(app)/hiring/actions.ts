@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { ALL_DEPARTMENTS, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, RECOMMENDATION_OPTIONS, type Department } from "@/lib/constants";
 import { linkOrCreateStaff } from "@/lib/staff-link";
 import { sendLoginInvite, type LoginAccessRole } from "@/lib/invite";
 
@@ -21,7 +21,11 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
   if (!name || !locationId || !occurredOn) {
     return { error: "Candidate name, location, and date are required." };
   }
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Invalid department." };
+  // A candidate scored from a custom-role application (a role not in the standard
+  // list) is stored under the "Other" bucket — candidates.department is a fixed
+  // enum, and the custom role name lived on the opening, not the candidate.
+  if (!department) return { error: "Invalid department." };
+  const safeDepartment = ALL_DEPARTMENTS.includes(department as Department) ? department : OPENING_OTHER_ROLE;
   if (!RECOMMENDATION_OPTIONS.includes(recommendation as (typeof RECOMMENDATION_OPTIONS)[number])) {
     return { error: "Invalid recommendation." };
   }
@@ -47,7 +51,7 @@ export async function addCandidate(_prev: ActionState, formData: FormData): Prom
       org_id: org.id,
       location_id: locationId,
       name,
-      department,
+      department: safeDepartment,
       occurred_on: occurredOn,
       scores,
       recommendation,

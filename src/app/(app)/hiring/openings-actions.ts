@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
+import { ALL_DEPARTMENTS, isOpeningRole, OPENING_OTHER_ROLE, type Department } from "@/lib/constants";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
@@ -41,6 +41,7 @@ Output ONLY the ad copy as plain text (short paragraphs and simple bullet lines 
 // standards, duties, hiring criteria, and philosophy. Returns a preview only.
 export async function generateOpeningAd(input: {
   department: string;
+  roleLabel?: string; // the custom role name when department is the "Other" bucket
   locationId: string | null;
   payNote?: string;
   employmentType?: string;
@@ -50,18 +51,24 @@ export async function generateOpeningAd(input: {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return { error: "You don't have access to hiring." };
-  if (!ALL_DEPARTMENTS.includes(input.department as Department)) return { error: "Pick a role." };
+  if (!isOpeningRole(input.department)) return { error: "Pick a role." };
+  // A custom ("Other") role has no standards/duties/traits to ground on — the ad
+  // is built from the role name + the restaurant's philosophy instead.
+  const isKnownRole = ALL_DEPARTMENTS.includes(input.department as Department);
+  const roleName = (isKnownRole ? input.department : input.roleLabel?.trim()) || input.department;
+  if (!roleName.trim() || (!isKnownRole && !input.roleLabel?.trim())) return { error: "Name the custom role." };
   if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
   const supabase = await createClient();
+  const empty = Promise.resolve({ data: [] as { item: string }[] });
   const [{ data: org }, { data: standards }, { data: duties }, { data: traits }, locRow] = await Promise.all([
     supabase.from("organizations").select("name, philosophy").single(),
-    supabase.from("department_standards").select("item").eq("department", input.department).order("sort_order"),
-    supabase.from("department_training_items").select("item").eq("department", input.department).order("sort_order"),
-    supabase.from("hiring_traits").select("title, green_flag, red_flag").eq("department", input.department).order("sort_order"),
+    isKnownRole ? supabase.from("department_standards").select("item").eq("department", input.department).order("sort_order") : empty,
+    isKnownRole ? supabase.from("department_training_items").select("item").eq("department", input.department).order("sort_order") : empty,
+    isKnownRole ? supabase.from("hiring_traits").select("title, green_flag, red_flag").eq("department", input.department).order("sort_order") : Promise.resolve({ data: [] as { title: string; green_flag: string; red_flag: string }[] }),
     input.locationId ? supabase.from("locations").select("name").eq("id", input.locationId).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const orgName = (org as { name?: string } | null)?.name ?? "our restaurant";
@@ -73,11 +80,11 @@ export async function generateOpeningAd(input: {
     .map((t) => `- ${t.title}: we look for ${t.green_flag}; we avoid ${t.red_flag}`)
     .join("\n");
 
-  const prompt = `Write a job ad to hire a ${input.department} at ${orgName}${locName ? ` (${locName} location)` : ""}. It will be posted on Indeed / Craigslist / social.
+  const prompt = `Write a job ad to hire a ${roleName} at ${orgName}${locName ? ` (${locName} location)` : ""}. It will be posted on Indeed / Craigslist / social.
 
 Cover, in the restaurant's own warm voice:
 1. A short, inviting opener about the restaurant and why this role matters to the guest experience.
-2. What the ${input.department} actually does day to day (the responsibilities).
+2. What the ${roleName} actually does day to day (the responsibilities).
 3. The KIND of person who thrives here — the traits and mindset (not just experience).
 4. ${input.payNote ? `Pay: ${input.payNote}. ` : ""}${input.employmentType ? `Type: ${input.employmentType}. ` : ""}A clear, friendly call to apply.
 
@@ -116,7 +123,9 @@ export async function saveOpening(input: OpeningInput): Promise<OpeningResult> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
   if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return { error: "Not authorized." };
-  if (!ALL_DEPARTMENTS.includes(input.department as Department)) return { error: "Pick a role." };
+  if (!isOpeningRole(input.department)) return { error: "Pick a role." };
+  // A custom ("Other") role must carry its name in the title.
+  if (input.department === OPENING_OTHER_ROLE && !input.title?.trim()) return { error: "Name the custom role." };
 
   const admin = createAdminClient();
   const row = {

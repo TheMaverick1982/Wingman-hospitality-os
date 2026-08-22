@@ -125,20 +125,30 @@ export default async function ApplyPage({
   if (opening) {
     const { data: op } = await admin
       .from("job_openings")
-      .select("id, department, location_id, status")
+      .select("id, department, title, location_id, status")
       .eq("id", opening)
       .eq("org_id", org.id)
       .maybeSingle();
-    const o = op as { id: string; department: string; location_id: string | null; status: string } | null;
+    const o = op as { id: string; department: string; title: string | null; location_id: string | null; status: string } | null;
     if (o && o.status === "open") {
       openingId = o.id;
-      openingRole = o.department;
+      // Custom-role openings store their real role name in the title; a standard
+      // role is the department. Either way this is the role the applicant is
+      // applying for.
+      openingRole = o.title?.trim() || o.department;
       openingLocation = o.location_id;
     }
   }
 
+  // If this opening is for a custom role that isn't in the standard list, make it
+  // selectable (and preselected) so the applicant can apply for exactly that role.
+  const roleList: string[] =
+    openingRole && !roleOptions.includes(openingRole as (typeof roleOptions)[number])
+      ? [openingRole, ...roleOptions]
+      : (roleOptions as string[]);
+
   const rolePick = openingRole ?? role;
-  const preRole = rolePick && roleOptions.includes(rolePick as (typeof roleOptions)[number]) ? rolePick : "";
+  const preRole = rolePick && roleList.includes(rolePick) ? rolePick : "";
   const locPick = openingLocation ?? location;
   const preLocation = locPick && locations.some((l) => l.id === locPick) ? locPick : "";
 
@@ -153,7 +163,7 @@ export default async function ApplyPage({
       orgName={org.name}
       logoUrl={org.logo_url}
       locations={locations}
-      roles={roleOptions as string[]}
+      roles={roleList}
       preRole={preRole}
       preLocation={preLocation}
       embed={isEmbed}
