@@ -23,6 +23,7 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/guest-retention-software", priority: 0.9, changeFrequency: "monthly" },
   { path: "/restaurant-training-software", priority: 0.9, changeFrequency: "monthly" },
   { path: "/restaurant-review-management", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/restaurant-revenue-growth", priority: 0.9, changeFrequency: "monthly" },
   { path: "/affiliates", priority: 0.6, changeFrequency: "monthly" },
   { path: "/api-guide", priority: 0.5, changeFrequency: "monthly" },
   { path: "/playbook", priority: 0.8, changeFrequency: "weekly" },
