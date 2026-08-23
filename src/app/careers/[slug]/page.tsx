@@ -18,7 +18,7 @@ type Opening = {
   employment_type: string | null;
   created_at: string;
 };
-type Loc = { id: string; name: string; address: string | null };
+type Loc = { id: string; name: string };
 
 async function loadOrg(slug: string): Promise<Org | null> {
   const admin = createAdminClient();
@@ -55,18 +55,6 @@ export async function generateMetadata({
   };
 }
 
-const roleLabel = (o: Opening) => (o.title?.trim() || o.department);
-// Map a free-text employment type to schema.org's enum, best-effort.
-function employmentEnum(t: string | null): string | null {
-  const s = (t || "").toLowerCase();
-  if (s.includes("full")) return "FULL_TIME";
-  if (s.includes("part")) return "PART_TIME";
-  if (s.includes("contract")) return "CONTRACTOR";
-  if (s.includes("season") || s.includes("temp")) return "TEMPORARY";
-  if (s.includes("intern")) return "INTERN";
-  return null;
-}
-
 export default async function CareersPage({
   params,
   searchParams,
@@ -87,7 +75,7 @@ export default async function CareersPage({
       .eq("org_id", org.id)
       .eq("status", "open")
       .order("created_at", { ascending: false }),
-    admin.from("locations").select("id, name, address").eq("org_id", org.id).order("name"),
+    admin.from("locations").select("id, name").eq("org_id", org.id).order("name"),
   ]);
   const openings = ((opRows ?? []) as Opening[]).filter((o) => isOpeningRole(o.department));
   const locations = (locRows ?? []) as Loc[];
@@ -108,41 +96,14 @@ export default async function CareersPage({
   // Specific locations first (alphabetical), "All locations" last.
   groups.sort((a, b) => (a.key === "all" ? 1 : b.key === "all" ? -1 : a.name.localeCompare(b.name)));
 
-  // JobPosting structured data → eligibility for the Google Jobs listing.
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": openings.map((o) => {
-      const loc = o.location_id ? locById.get(o.location_id) : null;
-      const place = (l: Loc) => ({
-        "@type": "Place",
-        address: { "@type": "PostalAddress", ...(l.address ? { streetAddress: l.address } : {}), addressCountry: "US" },
-      });
-      const empt = employmentEnum(o.employment_type);
-      return {
-        "@type": "JobPosting",
-        title: roleLabel(o),
-        description: o.ad_copy || `${roleLabel(o)} position at ${org.name}.`,
-        datePosted: o.created_at,
-        directApply: true,
-        hiringOrganization: {
-          "@type": "Organization",
-          name: org.name,
-          sameAs: SITE,
-          ...(org.logo_url ? { logo: org.logo_url } : {}),
-        },
-        ...(empt ? { employmentType: empt } : {}),
-        jobLocation: loc ? place(loc) : locations.length ? locations.map(place) : undefined,
-      };
-    }),
-  };
+  // Per Google's Job Posting guidelines, the JobPosting structured data lives on
+  // each role's own detail page (/careers/<slug>/<opening>) — the "leaf" page —
+  // not on this list/hub page. This page just links to them.
 
   return (
     <div className={`bg-paper force-light ${embed ? "" : "min-h-full"}`}>
       {/* Embedded on a customer's own site — post height up so their iframe sizes to fit. */}
       {embed && <EmbedResizer messageKey="wingmanCareersHeight" />}
-      {openings.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      )}
       <div className={`max-w-[820px] mx-auto px-5 sm:px-8 ${embed ? "py-6 sm:py-8" : "py-12 sm:py-16"}`}>
         {/* Branded header */}
         <div className="flex items-center gap-3 mb-8">

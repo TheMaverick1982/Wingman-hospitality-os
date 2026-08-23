@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { listPublished } from "@/lib/playbook";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app";
 
@@ -42,5 +43,50 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {
     /* sitemap should still render without posts */
   }
-  return [...base, ...posts];
+
+  // Public hiring pages for orgs that are actively hiring: a public slug, an
+  // enabled application form, and at least one OPEN opening. We list both the
+  // careers hub (/careers/<slug>) and each open role's own detail page
+  // (/careers/<slug>/<opening>) — the leaf pages carry the JobPosting markup, so
+  // listing them is what actually feeds the Google Jobs results box. Guarded so a
+  // DB hiccup never breaks the whole sitemap.
+  let careers: MetadataRoute.Sitemap = [];
+  try {
+    const admin = createAdminClient();
+    const [{ data: orgRows }, { data: openRows }] = await Promise.all([
+      admin.from("organizations").select("id, public_slug").not("public_slug", "is", null).eq("apply_enabled", true),
+      admin.from("job_openings").select("id, org_id, created_at").eq("status", "open"),
+    ]);
+    // Slug per eligible org.
+    const slugByOrg = new Map<string, string>();
+    for (const o of (orgRows ?? []) as { id: string; public_slug: string | null }[]) {
+      if (o.public_slug) slugByOrg.set(o.id, o.public_slug);
+    }
+    const opens = ((openRows ?? []) as { id: string; org_id: string; created_at: string }[]).filter((o) => slugByOrg.has(o.org_id));
+
+    // Careers hub per org, dated to its most recent open role.
+    const lastOpenByOrg = new Map<string, number>();
+    for (const o of opens) {
+      const t = new Date(o.created_at).getTime();
+      if (!lastOpenByOrg.has(o.org_id) || t > (lastOpenByOrg.get(o.org_id) as number)) lastOpenByOrg.set(o.org_id, t);
+    }
+    const hubs: MetadataRoute.Sitemap = [...lastOpenByOrg].map(([orgId, t]) => ({
+      url: `${siteUrl}/careers/${slugByOrg.get(orgId)}`,
+      lastModified: new Date(t),
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    }));
+    // One entry per open role — the indexable JobPosting detail pages.
+    const roles: MetadataRoute.Sitemap = opens.map((o) => ({
+      url: `${siteUrl}/careers/${slugByOrg.get(o.org_id)}/${o.id}`,
+      lastModified: new Date(o.created_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }));
+    careers = [...hubs, ...roles];
+  } catch {
+    /* sitemap should still render without careers pages */
+  }
+
+  return [...base, ...posts, ...careers];
 }
