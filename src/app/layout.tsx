@@ -82,7 +82,10 @@ function buildStructuredData(firstLocationPrice: string) {
         name: "Wingman",
         legalName: "Wingman by The Maverick Agency",
         url: siteUrl,
-        logo: `${siteUrl}/og-image.png`,
+        // Google's Organization.logo wants a square raster mark, not the 1200x630
+        // OG banner; use the 512px app icon. Keep the banner as the general image.
+        logo: `${siteUrl}/icons/icon-512.png`,
+        image: `${siteUrl}/og-image.png`,
         description:
           "Wingman is the retention layer for hospitality — the culture, training, and accountability system that turns first-time restaurant guests into regulars.",
         sameAs: ["https://www.instagram.com/joinwingmanapp/", "https://www.facebook.com/joinwingmanapp"],
