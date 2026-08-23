@@ -88,12 +88,23 @@ function buildStructuredData(firstLocationPrice: string) {
         sameAs: ["https://www.instagram.com/joinwingmanapp/", "https://www.facebook.com/joinwingmanapp"],
       },
       {
+        // The site entity — gives Google a single canonical WebSite to attach the
+        // brand SERP to. (No SearchAction: there's no public site-search endpoint.)
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        name: "Wingman",
+        url: siteUrl,
+        inLanguage: "en-US",
+        publisher: { "@id": `${siteUrl}/#organization` },
+      },
+      {
         "@type": "SoftwareApplication",
         "@id": `${siteUrl}/#software`,
         name: "Wingman",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         url: siteUrl,
+        isPartOf: { "@id": `${siteUrl}/#website` },
         publisher: { "@id": `${siteUrl}/#organization` },
         description:
           "Wingman turns every first-time restaurant guest into a second, third, and tenth visit with the culture, training, and accountability system hospitality teams actually use, every shift.",

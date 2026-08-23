@@ -65,8 +65,22 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
   const role = jobRoleLabel(op);
   const applyHref = `/apply/${slug}?opening=${op.id}&src=careers`;
-  // The canonical JobPosting for Google Jobs lives here, on the leaf page.
-  const jsonLd = buildJobPosting(op, org, location ? [location] : [], SITE);
+  // The canonical JobPosting for Google Jobs lives here, on the leaf page, plus a
+  // breadcrumb trail (Home → Careers at <org> → <role>).
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      buildJobPosting(op, org, location ? [location] : [], SITE),
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: `Careers at ${org.name}`, item: `${SITE}/careers/${slug}` },
+          { "@type": "ListItem", position: 3, name: role, item: `${SITE}/careers/${slug}/${op.id}` },
+        ],
+      },
+    ],
+  };
 
   return (
     <div className="min-h-full bg-paper force-light">

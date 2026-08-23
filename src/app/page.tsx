@@ -17,6 +17,7 @@ import { MarketingFooter } from "@/components/marketing/footer";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
+  openGraph: { url: "/" },
 };
 
 export default async function Home() {

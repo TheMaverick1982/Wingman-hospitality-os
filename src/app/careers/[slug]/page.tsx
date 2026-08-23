@@ -100,10 +100,21 @@ export default async function CareersPage({
   // each role's own detail page (/careers/<slug>/<opening>) — the "leaf" page —
   // not on this list/hub page. This page just links to them.
 
+  // Breadcrumb rich result: Home → Careers at <org>. Skipped in embed mode.
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+      { "@type": "ListItem", position: 2, name: `Careers at ${org.name}`, item: `${SITE}/careers/${slug}` },
+    ],
+  };
+
   return (
     <div className={`bg-paper force-light ${embed ? "" : "min-h-full"}`}>
       {/* Embedded on a customer's own site — post height up so their iframe sizes to fit. */}
       {embed && <EmbedResizer messageKey="wingmanCareersHeight" />}
+      {!embed && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />}
       <div className={`max-w-[820px] mx-auto px-5 sm:px-8 ${embed ? "py-6 sm:py-8" : "py-12 sm:py-16"}`}>
         {/* Branded header */}
         <div className="flex items-center gap-3 mb-8">
