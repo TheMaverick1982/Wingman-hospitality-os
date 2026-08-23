@@ -4,6 +4,7 @@ import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAffiliateSettings } from "@/lib/affiliate";
+import { EmbedSnippet } from "@/components/marketing/embed-snippet";
 import { AffiliateApplyForm } from "./apply-form";
 
 // Reads live program settings per request (via the service-role client), so it
@@ -116,6 +117,21 @@ export default async function AffiliatesPage() {
             <h2 className="text-2xl font-bold text-ink mb-4">Apply to become an affiliate</h2>
             <AffiliateApplyForm />
           </div>
+        </div>
+      </div>
+
+      {/* Embeddable free tools — put them on your site with your referral code so
+          every signup they drive is credited to you. */}
+      <div className="max-w-[1080px] mx-auto px-6 sm:px-10 py-16 sm:py-24 w-full">
+        <div className="max-w-[720px] mb-10">
+          <h2 className="text-3xl sm:text-4xl leading-[1.1] tracking-[-0.02em] font-bold text-ink mb-4">Put our free tools on your site</h2>
+          <p className="text-lg text-muted leading-[1.5]">
+            Run a restaurant blog, consultancy, or resource page? Embed one of Wingman&rsquo;s free tools with your referral code — it&rsquo;s genuinely useful for your audience, and any signups it drives are credited to you.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <EmbedSnippet toolName="calculator" embedPath="/calculator/embed" iframeTitle="Restaurant Retention Revenue Calculator" messageKey="wingmanCalcHeight" heightDefault={1000} />
+          <EmbedSnippet toolName="scorecard" embedPath="/scorecard/embed" iframeTitle="Free Restaurant Hospitality Scorecard" messageKey="wingmanScorecardHeight" heightDefault={900} />
         </div>
       </div>
 

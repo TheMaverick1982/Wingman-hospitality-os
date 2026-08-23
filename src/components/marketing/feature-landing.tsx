@@ -109,7 +109,7 @@ export function FeatureLandingPage({ config }: { config: FeatureLandingConfig })
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-5">
               {config.stats.map((st) => (
                 <div key={st.label} className="text-center sm:text-left">
-                  <div className="font-display text-4xl sm:text-5xl font-bold tracking-[-0.02em] text-[#E06A3B] mb-2">{st.value}</div>
+                  <div className="font-display text-4xl sm:text-5xl font-bold tracking-[-0.02em] text-[#4D97FF] mb-2">{st.value}</div>
                   <div className="text-[15px] text-[#A1A1A1] leading-[1.5]">{st.label}</div>
                 </div>
               ))}

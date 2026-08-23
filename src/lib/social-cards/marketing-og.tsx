@@ -8,8 +8,11 @@ import { planeDataUri } from "@/lib/social-cards/plane";
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
-const BRICK = "#B4491F";
-const BRICK_SOFT = "#E06A3B";
+// Dark share cards use the brand's blue accent (matching the /guarantee card and
+// the dark sections of the marketing site), not brick — brick is the light-mode
+// accent.
+const ACCENT = "#0a6cff";
+const ACCENT_SOFT = "#4D97FF";
 
 function b64(s: string): ArrayBuffer {
   const buf = Buffer.from(s, "base64");
@@ -27,18 +30,18 @@ export function marketingOg({ eyebrow, title, subtitle, footer }: { eyebrow: str
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#0A0A0A", padding: 76, position: "relative" }}>
-        <div style={{ position: "absolute", top: -170, right: -130, width: 470, height: 470, borderRadius: 470, background: BRICK, opacity: 0.2, filter: "blur(50px)", display: "flex" }} />
+        <div style={{ position: "absolute", top: -170, right: -130, width: 470, height: 470, borderRadius: 470, background: ACCENT, opacity: 0.2, filter: "blur(50px)", display: "flex" }} />
 
         {/* wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- next/og renders to PNG, not a DOM <img> */}
-          <img width={52} height={52} src={planeDataUri(BRICK_SOFT)} alt="" />
+          <img width={52} height={52} src={planeDataUri(ACCENT_SOFT)} alt="" />
           <div style={{ display: "flex", fontSize: 32, fontWeight: 700, color: "#ffffff" }}>Wingman</div>
         </div>
 
         <div style={{ display: "flex", flexGrow: 1 }} />
 
-        <div style={{ display: "flex", fontSize: 24, fontWeight: 700, color: BRICK_SOFT, letterSpacing: 2, textTransform: "uppercase", marginBottom: 22 }}>{eyebrow}</div>
+        <div style={{ display: "flex", fontSize: 24, fontWeight: 700, color: ACCENT_SOFT, letterSpacing: 2, textTransform: "uppercase", marginBottom: 22 }}>{eyebrow}</div>
         <div style={{ display: "flex", fontSize: titleSize(title.length), fontWeight: 900, color: "#ffffff", lineHeight: 1.05, letterSpacing: -1.6, maxWidth: 1010 }}>{title}</div>
         {subtitle && <div style={{ display: "flex", fontSize: 32, fontWeight: 500, color: "#b8b8b8", marginTop: 22, maxWidth: 980, lineHeight: 1.3 }}>{subtitle}</div>}
 
