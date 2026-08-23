@@ -5,7 +5,9 @@ import { getSectionAccess } from "@/lib/auth/permissions";
 import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { ensureSurveyLinks } from "@/lib/guest-survey-links";
+import { gbpConfigured } from "@/lib/google-business";
 import { ReviewsClient, type ReviewRow, type SurveyLinkRow } from "./reviews-client";
+import { GoogleReviewsPanel, type GoogleLocationRow, type GoogleReviewLite, type ReviewInsightLite } from "./google-reviews-panel";
 
 export const metadata = { title: "Guest Reviews · Wingman" };
 
@@ -85,6 +87,61 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
 
   const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.joinwingman.app").replace(/\/$/, "");
 
+  // Google Business Profile reviews: connection state, per-location mapping +
+  // cached rating / AI insight, and a few recent reviews. All via the admin
+  // client (tokens live in a deny-all table; only non-secret fields are read).
+  const gConfigured = gbpConfigured();
+  const { data: acctRow } = await admin.from("google_business_accounts").select("email").eq("org_id", profile.orgId).limit(1).maybeSingle();
+  const googleAccountEmail = (acctRow as { email: string } | null)?.email ?? null;
+
+  const { data: gMapRows } = await admin
+    .from("google_review_locations")
+    .select("location_id, location_title, average_rating, review_count, last_synced_at, last_sync_status, insight, insight_generated_at")
+    .eq("org_id", profile.orgId);
+  const gMapByLoc = new Map(
+    ((gMapRows ?? []) as {
+      location_id: string; location_title: string | null; average_rating: number | null; review_count: number;
+      last_synced_at: string | null; last_sync_status: string | null; insight: ReviewInsightLite | null; insight_generated_at: string | null;
+    }[]).map((m) => [m.location_id, m]),
+  );
+
+  const reviewsByLocation: Record<string, GoogleReviewLite[]> = {};
+  if (gMapByLoc.size > 0) {
+    let grq = admin
+      .from("google_reviews")
+      .select("id, location_id, reviewer_name, star_rating, comment, reply_comment, review_created_at")
+      .eq("org_id", profile.orgId)
+      .order("review_created_at", { ascending: false })
+      .limit(effectiveLocation ? 25 : 80);
+    if (effectiveLocation) grq = grq.eq("location_id", effectiveLocation);
+    const { data: grRows } = await grq;
+    for (const r of (grRows ?? []) as { id: string; location_id: string; reviewer_name: string; star_rating: number; comment: string; reply_comment: string | null; review_created_at: string | null }[]) {
+      const list = (reviewsByLocation[r.location_id] ??= []);
+      if (list.length < 8) list.push({ id: r.id, reviewerName: r.reviewer_name, stars: r.star_rating, comment: r.comment, reply: r.reply_comment, createdAt: r.review_created_at });
+    }
+  }
+
+  // One row per Wingman location (respecting the location scope), connected or not.
+  const googleRows: GoogleLocationRow[] = locations
+    .filter((l) => !effectiveLocation || l.id === effectiveLocation)
+    .map((l) => {
+      const m = gMapByLoc.get(l.id);
+      return {
+        locationId: l.id,
+        locationName: l.name,
+        connected: Boolean(m),
+        title: m?.location_title ?? null,
+        averageRating: m?.average_rating ?? null,
+        reviewCount: m?.review_count ?? 0,
+        lastSyncedAt: m?.last_synced_at ?? null,
+        lastSyncStatus: m?.last_sync_status ?? null,
+        insight: m?.insight ?? null,
+        insightGeneratedAt: m?.insight_generated_at ?? null,
+      };
+    });
+
+  const showGoogle = canManage || Boolean(googleAccountEmail);
+
   return (
     <ReviewsClient
       siteUrl={SITE}
@@ -93,6 +150,17 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       canManage={canManage}
       askServer={askServer}
       scopeLocationId={effectiveLocation ?? null}
+      googleSlot={
+        showGoogle ? (
+          <GoogleReviewsPanel
+            configured={gConfigured}
+            accountEmail={googleAccountEmail}
+            rows={googleRows}
+            reviewsByLocation={reviewsByLocation}
+            canManage={canManage}
+          />
+        ) : null
+      }
     />
   );
 }

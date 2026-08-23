@@ -320,7 +320,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Guest Reviews — a survey QR that drives feedback",
     summary: "Collect how guests felt with a per-location QR / short link, and see it all in one archive — separate from Bounce Back.",
     categoryId: "operations",
-    keywords: ["guest reviews", "survey", "feedback", "qr code", "ratings", "guest survey", "how guests feel"],
+    keywords: ["guest reviews", "survey", "feedback", "qr code", "ratings", "guest survey", "how guests feel", "google reviews", "google business profile", "connect google", "online reviews", "review analysis", "star rating"],
     body: [
       { kind: "p", text: "Guest Reviews collects how guests felt about their visit through a short survey. Each location gets its own QR code and short link (joinwingman.app/s/…) to put on a table tent, receipt, or window — or to text/email. It's separate from Guest Bounce Back on purpose: a survey response never adds a guest or counts as a visit, so your repeat-rate numbers stay clean." },
       { kind: "image", src: "/help/guest-reviews.png", alt: "The Guest Reviews archive", caption: "Guest Reviews — response count, average rating, and every response, per location." },
@@ -338,6 +338,14 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "The AI readout" },
       { kind: "p", text: "On the Guest Reviews page, tap \"Summarize with AI\" and Wingman reads your recent feedback and hands back three things: what guests love, where to improve, and the single highest-leverage fix to make this week — grounded in your Owner's Mindset. It respects the location filter, so you can read one store or all of them." },
       { kind: "tip", text: "Put the QR where a happy guest is already looking — the check presenter or the receipt. That's where you capture the most, and the best, feedback." },
+      { kind: "h", text: "Connect your Google reviews" },
+      { kind: "p", text: "In the Google reviews section on this page, connect your Google Business Profile and Wingman pulls each location's Google reviews and reads them for you — overall rating and trend, what guests consistently love, where you're slipping (the recurring complaints), the themes, and a few concrete actions to raise your rating. It refreshes automatically every week, and you can hit Refresh anytime." },
+      { kind: "list", items: [
+        "An owner taps \"Connect Google\" and signs in with the Google account that manages your listings (this uses Google's official Business Profile access — read-only; Wingman never posts anything).",
+        "Then link each Wingman location to its matching Google location — so multi-location groups get a separate read per store, respecting the location filter at the top of the page.",
+        "Each location shows its live star rating, review count, an AI \"Wingman's read\" (strengths, where to improve, themes, do-this-next), and you can expand the recent reviews. Disconnect a location anytime; cached reviews are removed.",
+      ] },
+      { kind: "note", text: "Connecting requires the one-time Google Business Profile API approval on your Google account (Google grants it on request, usually within about a week). Once approved, connecting takes a minute." },
     ],
   },
   {
