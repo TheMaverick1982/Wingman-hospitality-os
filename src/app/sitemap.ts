@@ -18,6 +18,11 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/state-of-restaurant-retention", priority: 0.8, changeFrequency: "monthly" },
   { path: "/guest-journey", priority: 0.8, changeFrequency: "monthly" },
   { path: "/book-a-demo", priority: 0.8, changeFrequency: "monthly" },
+  // Use-case / "system" landing pages — one per keyword cluster.
+  { path: "/restaurant-hiring-software", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/guest-retention-software", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/restaurant-training-software", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/restaurant-review-management", priority: 0.9, changeFrequency: "monthly" },
   { path: "/affiliates", priority: 0.6, changeFrequency: "monthly" },
   { path: "/api-guide", priority: 0.5, changeFrequency: "monthly" },
   { path: "/playbook", priority: 0.8, changeFrequency: "weekly" },
