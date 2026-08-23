@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 
-const SITE = "https://www.joinwingman.app";
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").replace(/\/$/, "");
 const UPDATED = "August 2026";
 
 export const metadata: Metadata = {

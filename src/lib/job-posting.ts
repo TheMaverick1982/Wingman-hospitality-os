@@ -44,8 +44,9 @@ export function buildJobPosting(o: JobOpeningLd, org: JobOrgLd, locations: JobLo
   const loc = o.location_id ? locations.find((l) => l.id === o.location_id) ?? null : null;
   const empt = employmentEnums(o.employment_type);
   const jobLocation = loc ? place(loc) : locations.length ? locations.map(place) : undefined;
+  // No "@context" here — the caller nests this inside a page-level @graph that
+  // carries the context.
   return {
-    "@context": "https://schema.org",
     "@type": "JobPosting",
     title: jobRoleLabel(o),
     description: o.ad_copy || `${jobRoleLabel(o)} position at ${org.name}.`,

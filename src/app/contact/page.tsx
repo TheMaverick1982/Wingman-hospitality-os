@@ -5,9 +5,9 @@ import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Get in touch with the Wingman team.",
+  description: "Talk to the Wingman team about guest retention, staff training, and hiring for your restaurant — book a demo, ask a question, or get help getting set up.",
   alternates: { canonical: "/contact" },
-  openGraph: { title: "Contact | Wingman", description: "Get in touch with the Wingman team.", url: "/contact" },
+  openGraph: { title: "Contact | Wingman", description: "Talk to the Wingman team about guest retention, staff training, and hiring for your restaurant.", url: "/contact" },
 };
 
 export default function ContactPage() {

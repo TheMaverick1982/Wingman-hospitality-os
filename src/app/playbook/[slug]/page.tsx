@@ -8,6 +8,8 @@ import { isBotRequest } from "@/lib/is-bot";
 
 export const dynamic = "force-dynamic";
 
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").replace(/\/$/, "");
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPublishedBySlug(slug);
@@ -46,15 +48,33 @@ export default async function PlaybookArticle({ params }: { params: Promise<{ sl
 
   const more = (await listPublished()).filter((p) => p.slug !== post.slug).slice(0, 3);
 
+  const url = `${SITE}/playbook/${post.slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.excerpt,
-    datePublished: post.publishedAt,
-    articleSection: post.category,
-    keywords: post.keywords.join(", "),
-    publisher: { "@type": "Organization", name: "Wingman" },
+    "@graph": [
+      {
+        "@type": "Article",
+        headline: post.title,
+        description: post.excerpt,
+        datePublished: post.publishedAt,
+        dateModified: post.publishedAt,
+        articleSection: post.category,
+        keywords: post.keywords.join(", "),
+        image: `${url}/opengraph-image`,
+        url,
+        mainEntityOfPage: { "@type": "WebPage", "@id": url },
+        author: { "@type": "Organization", name: "Wingman", url: SITE },
+        publisher: { "@type": "Organization", name: "Wingman", logo: { "@type": "ImageObject", url: `${SITE}/og-image.png` } },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: "The Playbook", item: `${SITE}/playbook` },
+          { "@type": "ListItem", position: 3, name: post.title, item: url },
+        ],
+      },
+    ],
   };
 
   return (
