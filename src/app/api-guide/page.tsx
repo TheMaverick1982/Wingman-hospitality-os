@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/api-guide" },
 };
 
-const BASE_URL = "https://www.joinwingman.app";
+const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").replace(/\/$/, "");
 
 function Logo() {
   return (
