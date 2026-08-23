@@ -46,6 +46,7 @@ export function ReviewsClient({
   canManage,
   askServer,
   scopeLocationId,
+  googleSlot,
 }: {
   siteUrl: string;
   links: SurveyLinkRow[];
@@ -53,6 +54,7 @@ export function ReviewsClient({
   canManage: boolean;
   askServer: boolean;
   scopeLocationId: string | null;
+  googleSlot?: React.ReactNode;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
@@ -105,6 +107,8 @@ export function ReviewsClient({
           never adds a guest or counts as a visit.
         </p>
       </div>
+
+      {googleSlot}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
