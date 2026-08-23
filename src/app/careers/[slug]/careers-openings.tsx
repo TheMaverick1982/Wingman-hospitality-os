@@ -64,6 +64,7 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
   const setAll = (open: boolean) => setOpenKeys(open ? new Set(visible.map((g) => g.key)) : new Set());
 
   const applyHref = (o: OpeningLite) => `/apply/${slug}?opening=${o.id}&src=careers`;
+  const detailHref = (o: OpeningLite) => `/careers/${slug}/${o.id}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -145,7 +146,7 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
                 {g.items.map((o) => (
                   <div key={o.id} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 py-4 border-t border-line first:border-t-0">
                     <div className="min-w-0">
-                      <div className="text-[16px] font-semibold text-ink">{roleLabel(o)}</div>
+                      <a href={detailHref(o)} className="text-[16px] font-semibold text-ink hover:text-brick transition-colors">{roleLabel(o)}</a>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5 text-[13px] text-muted-2">
                         {o.employment_type && <span className="font-medium">{o.employment_type}</span>}
                         {o.employment_type && o.pay_note?.trim() && <span>·</span>}
