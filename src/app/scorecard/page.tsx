@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { ScorecardClient } from "./scorecard-client";
-import { EmbedSnippet } from "@/components/marketing/embed-snippet";
 
 export const metadata: Metadata = {
   title: "Free Hospitality Scorecard",
@@ -58,12 +57,6 @@ export default function ScorecardPage() {
           The economics behind the score:{" "}
           <a href="/state-of-restaurant-retention" className="font-semibold text-brick hover:text-brick-dark">The State of Restaurant Guest Retention →</a>
         </p>
-      </div>
-
-      <div className="bg-paper border-t border-line">
-        <div className="max-w-[1080px] mx-auto px-6 sm:px-10 py-16 sm:py-20">
-          <EmbedSnippet toolName="scorecard" embedPath="/scorecard/embed" iframeTitle="Free Restaurant Hospitality Scorecard" messageKey="wingmanScorecardHeight" heightDefault={900} />
-        </div>
       </div>
 
       <MarketingFooter />
