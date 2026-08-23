@@ -9,7 +9,7 @@ import { Code2, Check, Copy } from "lucide-react";
 // incentive to place it). The snippet is a plain iframe + a tiny listener that
 // resizes it to fit (the embedded page posts its height up — see EmbedResizer),
 // so there's no inner scrollbar and no dependency to install.
-const SITE = "https://www.joinwingman.app";
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://joinwingman.app").replace(/\/$/, "");
 
 export function EmbedSnippet({
   toolName,
