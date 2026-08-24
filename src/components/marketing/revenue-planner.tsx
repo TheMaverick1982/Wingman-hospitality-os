@@ -35,14 +35,11 @@ export function RevenuePlanner() {
 
   const { base, projected, delta, pct } = useMemo(() => {
     const base = annualRevenue(guests, check, BASE_REPEAT_RATE, BASE_RETURN_VISITS);
-    const projected = annualRevenue(
-      guests * (1 + lift.traffic / 100),
-      check * (1 + lift.check / 100),
-      BASE_REPEAT_RATE * (1 + lift.repeat / 100),
-      BASE_RETURN_VISITS,
-    );
-    const delta = projected - base;
-    return { base, projected, delta, pct: base > 0 ? (delta / base) * 100 : 0 };
+    // Each channel is a % lift on revenue, and they COMPOUND — the factors
+    // multiply, not add. So +10% on all three = 1.1 × 1.1 × 1.1 = +33.1%.
+    const factor = (1 + lift.repeat / 100) * (1 + lift.check / 100) * (1 + lift.traffic / 100);
+    const projected = base * factor;
+    return { base, projected, delta: projected - base, pct: (factor - 1) * 100 };
   }, [guests, check, lift]);
 
   const barPct = projected > 0 ? Math.round((base / projected) * 100) : 100;
