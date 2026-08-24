@@ -16,7 +16,7 @@ type Lever = { key: string; label: string; sub: string };
 const LEVERS: Lever[] = [
   { key: "repeat", label: "Returning guests", sub: "More first-timers come back, and more often — guest retention" },
   { key: "check", label: "Average check", sub: "Better recommendations & upsells — staff training" },
-  { key: "traffic", label: "New guests", sub: "A stronger rating pulls more people in — reviews" },
+  { key: "traffic", label: "New guests", sub: "Reviews & inbound marketing bring people in — Wingman makes those efforts count by turning them into regulars" },
 ];
 
 function annualRevenue(guests: number, check: number, repeatPct: number, returnVisits: number): number {
@@ -109,7 +109,7 @@ export function RevenuePlanner() {
       </div>
 
       <p className="text-[12px] text-muted-2 mt-6 leading-[1.5]">
-        Illustrative model — the three channels feed one revenue projection, so their gains <span className="font-semibold text-ink">compound</span> instead of just adding up. That&rsquo;s why a few points each turns into a number this big.
+        Illustrative model — the three channels feed one revenue projection, so their gains <span className="font-semibold text-ink">compound</span>{" "}instead of just adding up. That&rsquo;s why a few points each turns into a number this big.
       </p>
     </div>
   );
