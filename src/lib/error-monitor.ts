@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { isTransientClientError } from "@/lib/transient-errors";
 
 // The built-in error monitor. reportError() records a runtime error, grouped by
 // a stable fingerprint (so the same bug is one row with a count), and emails an
@@ -44,6 +45,10 @@ export async function reportError(input: {
     const stack = err instanceof Error && err.stack ? err.stack.slice(0, 4000) : undefined;
     const route = input.route ? String(input.route).slice(0, 300) : undefined;
     if (isControlFlow(message, stack)) return;
+    // A dropped connection / failed RSC navigation / chunk 404 in the browser is a
+    // transient network blip, not a code bug — the error boundary already recovers
+    // with "Try again". Don't record these as bugs or alert on them.
+    if (input.source === "client" && isTransientClientError(message)) return;
 
     const fingerprint = fingerprintOf(message, stack, route);
     const admin = createAdminClient();
