@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-// A live "aggregation of marginal gains" planner: nudge four channels a few
+// A live "aggregation of marginal gains" planner: nudge three channels a few
 // percent each and watch how they compound into a big annual-revenue lift. The
-// math is real — the four levers feed one revenue model, so their gains multiply
+// math is real — the levers feed one revenue model, so their gains multiply
 // rather than just add. Every channel maps to a Wingman system.
 const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
@@ -14,9 +14,8 @@ const BASE_RETURN_VISITS = 5; // extra visits/yr per repeat guest
 
 type Lever = { key: string; label: string; sub: string };
 const LEVERS: Lever[] = [
-  { key: "repeat", label: "Repeat rate", sub: "More first-timers become regulars — guest retention tracking" },
+  { key: "repeat", label: "Returning guests", sub: "More first-timers come back, and more often — guest retention" },
   { key: "check", label: "Average check", sub: "Better recommendations & upsells — staff training" },
-  { key: "frequency", label: "Visit frequency", sub: "Regulars come back more often — bounce-back" },
   { key: "traffic", label: "New guests", sub: "A stronger rating pulls more people in — reviews" },
 ];
 
@@ -30,7 +29,7 @@ function annualRevenue(guests: number, check: number, repeatPct: number, returnV
 export function RevenuePlanner() {
   const [guests, setGuests] = useState(800); // new guests / month
   const [check, setCheck] = useState(32); // average check $
-  const [lift, setLift] = useState<Record<string, number>>({ repeat: 5, check: 5, frequency: 5, traffic: 5 });
+  const [lift, setLift] = useState<Record<string, number>>({ repeat: 5, check: 5, traffic: 5 });
 
   const set = (k: string, v: number) => setLift((p) => ({ ...p, [k]: v }));
 
@@ -40,7 +39,7 @@ export function RevenuePlanner() {
       guests * (1 + lift.traffic / 100),
       check * (1 + lift.check / 100),
       BASE_REPEAT_RATE * (1 + lift.repeat / 100),
-      BASE_RETURN_VISITS * (1 + lift.frequency / 100),
+      BASE_RETURN_VISITS,
     );
     const delta = projected - base;
     return { base, projected, delta, pct: base > 0 ? (delta / base) * 100 : 0 };
@@ -110,7 +109,7 @@ export function RevenuePlanner() {
       </div>
 
       <p className="text-[12px] text-muted-2 mt-6 leading-[1.5]">
-        Illustrative model — the four channels feed one revenue projection, so their gains <span className="font-semibold text-ink">compound</span> instead of just adding up. That&rsquo;s why a few points each turns into a number this big.
+        Illustrative model — the three channels feed one revenue projection, so their gains <span className="font-semibold text-ink">compound</span> instead of just adding up. That&rsquo;s why a few points each turns into a number this big.
       </p>
     </div>
   );
