@@ -366,17 +366,16 @@ export function Sidebar({
           Help
         </Link>
 
-        <Link
+        {/* Opens in a new tab so it never pulls someone off their dashboard. */}
+        <a
           href="/download"
-          className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
-            pathname.startsWith("/download")
-              ? "bg-brick text-white font-semibold"
-              : "text-charcoal-2 font-medium hover:bg-paper"
-          }`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm text-charcoal-2 font-medium hover:bg-paper transition-colors"
         >
-          <Smartphone size={19} strokeWidth={2} className={pathname.startsWith("/download") ? "text-white/90" : "text-muted-2"} />
+          <Smartphone size={19} strokeWidth={2} className="text-muted-2" />
           Get the app
-        </Link>
+        </a>
 
         {accessRole !== "staff" && !isDeveloperRole && (
           <Link
