@@ -24,6 +24,7 @@ import {
   Building2,
   Rocket,
   HelpCircle,
+  Smartphone,
   Lightbulb,
   PlugZap,
   ChevronDown,
@@ -363,6 +364,18 @@ export function Sidebar({
         >
           <HelpCircle size={19} strokeWidth={2} className={pathname.startsWith("/help") ? "text-white/90" : "text-muted-2"} />
           Help
+        </Link>
+
+        <Link
+          href="/download"
+          className={`flex items-center gap-3 px-3 py-[10px] rounded-[10px] text-sm transition-colors ${
+            pathname.startsWith("/download")
+              ? "bg-brick text-white font-semibold"
+              : "text-charcoal-2 font-medium hover:bg-paper"
+          }`}
+        >
+          <Smartphone size={19} strokeWidth={2} className={pathname.startsWith("/download") ? "text-white/90" : "text-muted-2"} />
+          Get the app
         </Link>
 
         {accessRole !== "staff" && !isDeveloperRole && (
