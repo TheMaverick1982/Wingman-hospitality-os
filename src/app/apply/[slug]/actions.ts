@@ -109,28 +109,42 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     return { error: `Please attach your ${resumeF.label.toLowerCase()}.` };
   }
 
-  // Pre-interview screening questions for this role. Fetched once, up front, so we
-  // can enforce the required ones BEFORE creating the application (and reuse them
-  // for grading after). All guarded: the screening_questions table and its
-  // `required` column land with migrations, so a missing table/column degrades to
-  // "no screening / nothing required" rather than blocking a real applicant.
-  let screeningQuestions: { id: string; prompt: string; axis: string; required: boolean }[] = [];
-  if (department) {
-    // A custom role's questions live under the "Other" bucket keyed by the role
-    // name; a standard role's are keyed by department with no custom_role.
-    const isKnownDept = ALL_DEPARTMENTS.includes(department as Department);
-    let qb = admin
+  // Pre-interview screening questions. Fetch this org's whole set once (all roles),
+  // then resolve the ones for THIS applicant's role in code — the same keying the
+  // form uses (a custom role lives under the "Other" bucket keyed by its name; a
+  // standard role is keyed by department with no custom_role). Guarded: a missing
+  // table/column degrades to "no screening" rather than blocking a real applicant.
+  type ScreenRow = { id: string; department: string; custom_role: string | null; prompt: string; axis: string; required: boolean };
+  let allScreening: ScreenRow[] = [];
+  {
+    const { data } = await admin
       .from("screening_questions")
-      .select("id, prompt, axis, sort_order, required")
-      .eq("org_id", org.id);
-    qb = isKnownDept ? qb.eq("department", department).is("custom_role", null) : qb.eq("department", OPENING_OTHER_ROLE).eq("custom_role", department);
-    const { data: qRows } = await qb.order("sort_order");
-    screeningQuestions = ((qRows ?? []) as { id: string; prompt: string; axis: string; required?: boolean }[])
-      .map((q) => ({ id: q.id, prompt: q.prompt, axis: q.axis, required: Boolean(q.required) }));
-    for (const q of screeningQuestions) {
-      if (q.required && !String(formData.get(`screen_${q.id}`) || "").trim()) {
-        return { error: "Please answer all required questions before submitting." };
-      }
+      .select("id, department, custom_role, prompt, axis, sort_order, required")
+      .eq("org_id", org.id)
+      .order("sort_order");
+    allScreening = ((data ?? []) as (ScreenRow & { sort_order?: number })[]).map((q) => ({
+      id: q.id, department: q.department, custom_role: q.custom_role ?? null, prompt: q.prompt, axis: q.axis, required: Boolean(q.required),
+    }));
+  }
+  const orgScreensByRole = allScreening.length > 0;
+
+  const isKnownDept = ALL_DEPARTMENTS.includes(department as Department);
+  const screeningQuestions: { id: string; prompt: string; axis: string; required: boolean }[] = department
+    ? allScreening
+        .filter((q) => (isKnownDept ? q.department === department && !q.custom_role : q.department === OPENING_OTHER_ROLE && q.custom_role === department))
+        .map((q) => ({ id: q.id, prompt: q.prompt, axis: q.axis, required: q.required }))
+    : [];
+
+  // If this org screens applicants by role and the role field is shown, an
+  // applicant must pick a role — otherwise leaving it blank would skip screening
+  // entirely (no questions shown, none enforced, no grade).
+  if (deptF.enabled && orgScreensByRole && !department) {
+    return { error: "Please choose a role so we can ask you a couple of quick questions." };
+  }
+  // Enforce the selected role's required questions before creating the application.
+  for (const q of screeningQuestions) {
+    if (q.required && !String(formData.get(`screen_${q.id}`) || "").trim()) {
+      return { error: "Please answer all required questions before submitting." };
     }
   }
 
