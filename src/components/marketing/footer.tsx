@@ -60,6 +60,9 @@ export function MarketingFooter() {
           <Link href="/contact" className="text-[#525252]">
             Contact
           </Link>
+          <Link href="/download" className="text-[#525252]">
+            Get the app
+          </Link>
           <Link href="/login" className="text-[#525252]">
             Log in
           </Link>
