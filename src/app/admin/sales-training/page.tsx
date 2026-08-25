@@ -332,7 +332,7 @@ export default async function SalesTrainingPage() {
         <SectionHeading eyebrow="Selling the franchise plan" title="Franchise: functions & options" sub="The full picture for demoing the tier to a franchisor or multi-unit brand — how it's set up, what they see, how content and billing work, and the talk track." />
         <div className="bg-white border border-line rounded-2xl p-6">
           <p className="text-[14px] text-charcoal-2 leading-[1.55]">{FRANCHISE_PLAYBOOK.summary}</p>
-          <p className="text-[13px] text-muted mt-2"><span className="font-semibold text-brick">Who it's for: </span>{FRANCHISE_PLAYBOOK.whoFor}</p>
+          <p className="text-[13px] text-muted mt-2"><span className="font-semibold text-brick">Who it&rsquo;s for: </span>{FRANCHISE_PLAYBOOK.whoFor}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
             {FRANCHISE_PLAYBOOK.topics.map((t) => (
