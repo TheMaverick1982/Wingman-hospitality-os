@@ -2,17 +2,57 @@
 
 > Wingman is the retention layer for hospitality: a culture, training, and accountability system that turns first-time restaurant guests into repeat regulars, run shift after shift by the team on the floor.
 
-Wingman gives restaurants and multi-location hospitality groups one system to define a culture statement and core values, run role-based training with a real sign-off log (Host, Server, Bartender, Chef, Manager), run daily checklists and pre-shift rituals, track every guest's visit history to spot who came back and who didn't, log service recovery and discounts with reasons attached, and coach staff before small problems become patterns. Super Admins see every location side by side; Managers see their own floor.
+Wingman gives restaurants and multi-location hospitality groups one system to define a culture statement and core values, run role-based training with a real sign-off log (Host, Server, Bartender, Chef, Manager), run daily checklists and pre-shift rituals, track every guest's visit history to spot who came back and who didn't, log service recovery and discounts with reasons attached, hire faster with public careers pages and AI-screened applications, connect Google reviews for AI analysis, and coach staff before small problems become patterns. Super Admins see every location side by side; Managers see their own floor.
+
+## What Wingman is
+Wingman is web-based hospitality retention software for independent restaurants, bars, cafes, and multi-location restaurant groups. It is used by owners, operators, general managers, and floor managers. It runs in any browser and ships as an iOS/Android app (a native shell around the same live app). One subscription covers unlimited staff at a location.
+
+## Who it's for
+- Independent restaurant and bar owners who want repeat guests, not just new ones.
+- Multi-location hospitality groups that need every location run to the same standard.
+- General managers and floor managers who run training, checklists, and pre-shift rituals.
+- Operators who are tired of stitching together a hiring tool, a training binder, a reviews inbox, and a spreadsheet of regulars.
+
+## What makes it different
+- Retention-first, not reservations or POS. Wingman is the layer on top of whatever POS or booking system a restaurant already uses; it does not replace them.
+- Built to be run by the floor team shift after shift, not a back-office analytics dashboard nobody opens.
+- One connected system: culture → training → daily accountability → guest retention → hiring → reviews, instead of separate point tools.
+- Role-based training with a real sign-off log, so "they were trained" is a record, not a claim.
+- Flat, simple pricing with no per-seat fees.
+
+## Systems (what you can do with Wingman)
+- Hiring — public careers pages, per-role job posts that are indexable for Google Jobs, AI-screened applications, and multi-location openings. See https://joinwingman.app/restaurant-hiring-software
+- Guest retention — track every guest's visit history, spot who came back and who didn't, and log service recovery. See https://joinwingman.app/guest-retention-software
+- Training — role-based training paths with a sign-off log for Host, Server, Bartender, Chef, and Manager. See https://joinwingman.app/restaurant-training-software
+- Review management — connect Google Business Profile so the AI analyzes reviews per location and shows where a restaurant is winning or slipping. See https://joinwingman.app/restaurant-review-management
+- Revenue growth — a live planner showing how small, compounding gains in returning guests, average check, and new guests multiply annual revenue. See https://joinwingman.app/restaurant-revenue-growth
 
 ## Pricing
 - Single location: $199/month, everything included.
 - Each additional location: +$100/month.
 - Example: 3 locations = $399/month ($199 + 2 × $100). 5 locations = $599/month ($199 + 4 × $100).
-- Billed monthly, no long-term commitment required.
+- Billed monthly, no long-term commitment required. No per-seat or per-staff fees.
+
+## FAQ
+- What is Wingman? Web-based hospitality retention software that helps restaurants turn first-time guests into repeat regulars through culture, role-based training, daily accountability, guest tracking, hiring, and AI review analysis.
+- Who is Wingman for? Independent restaurants, bars, and cafes, and multi-location hospitality groups — used by owners, operators, and floor managers.
+- How much does Wingman cost? $199/month for a single location and +$100/month per additional location. Billed monthly, no long-term contract, no per-seat fees.
+- Does Wingman replace my POS or reservation system? No. Wingman is the retention layer on top of the tools a restaurant already uses.
+- Does Wingman help with hiring? Yes — public careers pages, per-role job posts that can appear in Google Jobs, AI-screened applications, and multi-location openings.
+- Can Wingman analyze my Google reviews? Yes — connect a Google Business Profile per location and Wingman's AI summarizes what guests praise and what to fix.
+- Is there a mobile app? Yes — Wingman ships on iOS and Android, wrapping the same live web app.
+- How is Wingman different from a POS or a scheduling app? Those run transactions and shifts; Wingman runs culture, training, guest retention, and accountability — the things that make guests come back.
 
 ## Pages
 - [Homepage](https://joinwingman.app/): product overview, guest retention thesis.
 - [How It Works](https://joinwingman.app/how-it-works): the culture → training → accountability → retention loop, step by step.
 - [Pricing](https://joinwingman.app/pricing): plans, worked pricing examples, and FAQ.
+- [Restaurant hiring software](https://joinwingman.app/restaurant-hiring-software): careers pages, AI-screened applications, Google Jobs.
+- [Guest retention software](https://joinwingman.app/guest-retention-software): visit history, service recovery, spotting regulars.
+- [Restaurant training software](https://joinwingman.app/restaurant-training-software): role-based training with a sign-off log.
+- [Review management](https://joinwingman.app/restaurant-review-management): connect Google reviews for per-location AI analysis.
+- [Revenue growth planner](https://joinwingman.app/restaurant-revenue-growth): a live tool showing how compounding gains multiply revenue.
+- [Retention calculator](https://joinwingman.app/calculator): estimate the revenue at stake in your repeat-guest rate.
+- [State of Restaurant Retention](https://joinwingman.app/state-of-restaurant-retention): data and benchmarks on guest retention.
 - [Book a Demo](https://joinwingman.app/book-a-demo): schedule a walkthrough.
 - [Sign up](https://joinwingman.app/signup): start a free account.
