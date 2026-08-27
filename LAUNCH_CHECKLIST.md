@@ -34,5 +34,11 @@ Run through this before shipping anything to production. The guiding rule:
       Production, and **redeployed** (env changes need a new deployment).
 - [ ] Sandbox validated before flipping an integration to production.
 
+## Mobile app (only when building an Android/iOS release)
+- [ ] Android release build has **R8 on** (`minifyEnabled`/`shrinkResources` +
+      the Capacitor keep rules) — see `docs/mobile-app.md`. Google Play's
+      "code optimization" quality check reads this from the bundle. Test the
+      release `.aab` once (login/splash) before uploading.
+
 When any item is uncertain or a change is irreversible, **stop and confirm with
 the owner** before proceeding.

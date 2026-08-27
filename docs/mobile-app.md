@@ -100,3 +100,71 @@ The app should launch, briefly show the blue Wingman loading screen
   native camera for menu photo uploads.
 - **Store submission** — icons (done), screenshots, privacy policy, listing copy,
   then submit through Xcode/App Store Connect and Google Play Console.
+
+---
+
+## Google Play "app quality" requirements (do before the first Android release)
+
+Google Play is rolling out quality thresholds (memory, bitmaps, code
+optimization, unexpected terminations) plus a device-migration standard. **Most
+are measured from real-world usage**, so with no users there's nothing to fix yet
+— you can't fail a usage-based threshold with no traffic. Revisit **Play Console →
+Quality → Android vitals** once you have real users (targets: user-perceived
+crash rate < 1.09%, ANR rate < 0.47%).
+
+The **only** thing Google can assess pre-launch — from the app bundle itself, not
+usage — is **code optimization (R8)**. Capacitor ships with it **off**, so turn it
+on for the release build. Do this once, after `npx cap add android` generates the
+`android/` project.
+
+### 1. Enable R8 code shrinking — `android/app/build.gradle`
+
+In the `android { buildTypes { ... } }` block, set the **release** type to:
+
+```gradle
+buildTypes {
+    release {
+        minifyEnabled true
+        shrinkResources true
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+}
+```
+
+### 2. Keep rules — `android/app/proguard-rules.pro`
+
+Capacitor loads plugins by name via reflection and bridges JS through
+`@JavascriptInterface`, so R8 will break the app without these keeps. Append:
+
+```proguard
+# --- Capacitor / Cordova (required so R8 doesn't strip the plugin bridge) ---
+-keep public class * extends com.getcapacitor.Plugin
+-keep @com.getcapacitor.annotation.CapacitorPlugin public class *
+-keepclassmembers class * {
+    @com.getcapacitor.PluginMethod public <methods>;
+}
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class com.getcapacitor.** { *; }
+-keep class org.apache.cordova.** { *; }
+# Our installed plugins (App, SplashScreen, StatusBar) live under these:
+-keep class com.capacitorjs.plugins.** { *; }
+-dontwarn com.getcapacitor.**
+```
+
+**Then build a release `.aab` and actually run it once** — a mis-shrunk plugin
+only shows at runtime, so verify login, splash, and status bar work before
+uploading. (Debug builds don't shrink, so this must be tested on a release build.)
+
+### 3. Device migration (trivial for a login app)
+
+Google's "seamless device migration" standard is about not breaking when a user
+restores your app on a new phone. Wingman is login-based and server-backed, so
+there's no local data to migrate — the user just logs back in. Just confirm a
+**fresh install → login** works and doesn't crash, and leave Android's default
+`android:allowBackup` behavior in `AndroidManifest.xml` as generated (fine for a
+no-local-state app).
+
+Bottom line: enable R8 (steps 1–2) before the first Android upload; everything
+else waits for real users.
