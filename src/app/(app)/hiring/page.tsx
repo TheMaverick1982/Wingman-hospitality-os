@@ -281,14 +281,25 @@ export default async function HiringPage({
   if (canEdit) {
     // Scope openings to the selected location, same as the rest of the page. An
     // opening posted for "All locations" (location_id null) is recruiting at every
-    // store, so it stays visible in a single-location view too. "All locations"
-    // (no effectiveLocation) shows every opening.
+    // store, so it stays visible in a single-location view too.
+    //
+    // Critically, job_openings RLS is only org-scoped (no per-location gate), so
+    // this app-level filter is the ONLY thing keeping a location-limited manager
+    // from seeing every store's openings. It must mirror the applications query
+    // above exactly: when a non-spanning member is on the "All locations" view
+    // (effectiveLocation null — which a specific-locations manager lands on by
+    // default), fall back to just their reachable locations + unassigned, never
+    // the whole org. Only a super admin / all-locations member sees everything.
     let openingsQ = supabase
       .from("job_openings")
       .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count")
       .order("created_at", { ascending: false });
     if (effectiveLocation) {
       openingsQ = openingsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
+    } else if (!spansAllLocations) {
+      const reachable = [profile.locationId, ...profile.accessibleLocationIds].filter(Boolean) as string[];
+      const clauses = [...reachable.map((id) => `location_id.eq.${id}`), "location_id.is.null"];
+      openingsQ = openingsQ.or(clauses.join(","));
     }
     const { data: opRows } = await openingsQ;
     if (opRows) {
@@ -298,8 +309,14 @@ export default async function HiringPage({
         if (r.opening_id) openingCounts[r.opening_id] = (openingCounts[r.opening_id] ?? 0) + 1;
       }
     }
+    // The "post an opening" location picker. A location-limited manager should
+    // only be able to post to the stores they manage, so narrow the picker to
+    // their reachable locations (a super admin / all-locations member gets all).
     const { data: locRows } = await supabase.from("locations").select("id, name").order("name");
-    openingLocations = (locRows ?? []) as { id: string; name: string }[];
+    const allOpeningLocs = (locRows ?? []) as { id: string; name: string }[];
+    openingLocations = spansAllLocations
+      ? allOpeningLocs
+      : allOpeningLocs.filter((l) => l.id === profile.locationId || profile.accessibleLocationIds.includes(l.id));
   }
 
   const latestCandidate = allCandidates[0];
