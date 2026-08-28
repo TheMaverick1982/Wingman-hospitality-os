@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLeaderboard } from "@/lib/leaderboard";
 import { canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, RECIPE_MAKER_ROLES, menuGroup, effectiveRoles, type Department } from "@/lib/constants";
-import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation, spansAllLocations, reachableLocationIds } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
@@ -50,7 +50,20 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const leaderAdmin = createAdminClient();
   const { data: lbOrg } = await leaderAdmin.from("organizations").select("leaderboard_enabled").eq("id", profile.orgId).maybeSingle();
   const leaderboardEnabled = (lbOrg as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
-  const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, profile.allLocations ? null : effectiveLocation)).slice(0, 3) : [];
+  // Scope the leaderboard the same way as everything else: a spanning member sees
+  // the whole org (or the one store they've selected); a location-limited manager
+  // sees only their reachable stores — never every store, which `effectiveLocation
+  // === null` would otherwise blend in for them.
+  const locScope = {
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  };
+  const leaderScope = spansAllLocations(locScope)
+    ? effectiveLocation
+    : effectiveLocation ?? reachableLocationIds(locScope);
+  const leaderTop = leaderboardEnabled ? (await computeLeaderboard(profile.orgId, leaderScope)).slice(0, 3) : [];
 
   // Staff see only their own department's training. Resolve "my staff record"
   // (demo-aware: a demo Server/Chef view resolves to that role, not the single

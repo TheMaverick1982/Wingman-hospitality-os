@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation, locationScopeOr, spansAllLocations, reachableLocationIds } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
 import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, type Department } from "@/lib/constants";
@@ -56,8 +56,22 @@ export default async function HiringPage({
   // beyond profile.orgId.
   const hiringAdmin = createAdminClient();
 
+  // Candidates + applications + openings are read with the admin client (or, for
+  // openings, a table whose RLS doesn't gate on location), so this app-level
+  // location filter is the SOLE per-location guard. locationScopeOr centralizes
+  // the rule — including the trap where a specific-locations manager's default
+  // view has a null effectiveLocation that must collapse to their reachable
+  // stores, not the whole org. null return = no filter (a spanning member).
+  const locScope = {
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  };
+  const scopeOr = locationScopeOr(locScope, effectiveLocation);
+
   let candidatesQ = hiringAdmin.from("candidates").select("*").eq("org_id", profile.orgId).order("occurred_on", { ascending: false });
-  if (effectiveLocation) candidatesQ = candidatesQ.eq("location_id", effectiveLocation);
+  if (scopeOr) candidatesQ = candidatesQ.or(scopeOr);
 
   // Applications follow the same location logic as everything else on the page:
   // the top-bar location selector scopes the intake. Pick a location and you see
@@ -79,16 +93,7 @@ export default async function HiringPage({
     .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at, source")
     .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
-  const spansAllLocations = profile.accessRole === "super_admin" || profile.allLocations;
-  if (effectiveLocation) {
-    applicationsQ = spansAllLocations
-      ? applicationsQ.eq("location_id", effectiveLocation)
-      : applicationsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
-  } else if (!spansAllLocations) {
-    const reachable = [profile.locationId, ...profile.accessibleLocationIds].filter(Boolean) as string[];
-    const clauses = [...reachable.map((id) => `location_id.eq.${id}`), "location_id.is.null"];
-    applicationsQ = applicationsQ.or(clauses.join(","));
-  }
+  if (scopeOr) applicationsQ = applicationsQ.or(scopeOr);
 
   const [{ data: coreValues }, { data: hiringTraits }, { data: meta }, { data: candidates }, { data: applications }, locations, staff] = await Promise.all([
     supabase
@@ -279,17 +284,15 @@ export default async function HiringPage({
   const openingCounts: Record<string, number> = {};
   let openingLocations: { id: string; name: string }[] = [];
   if (canEdit) {
-    // Scope openings to the selected location, same as the rest of the page. An
-    // opening posted for "All locations" (location_id null) is recruiting at every
-    // store, so it stays visible in a single-location view too. "All locations"
-    // (no effectiveLocation) shows every opening.
+    // job_openings RLS is org-only (no per-location gate), so scopeOr is the sole
+    // guard keeping a location-limited manager off every store's openings. An
+    // opening for "All locations" (location_id null) recruits everywhere, so it
+    // stays visible in a single-store view too (scopeOr always allows null).
     let openingsQ = supabase
       .from("job_openings")
       .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count")
       .order("created_at", { ascending: false });
-    if (effectiveLocation) {
-      openingsQ = openingsQ.or(`location_id.eq.${effectiveLocation},location_id.is.null`);
-    }
+    if (scopeOr) openingsQ = openingsQ.or(scopeOr);
     const { data: opRows } = await openingsQ;
     if (opRows) {
       openings.push(...(opRows as OpeningRow[]));
@@ -298,8 +301,14 @@ export default async function HiringPage({
         if (r.opening_id) openingCounts[r.opening_id] = (openingCounts[r.opening_id] ?? 0) + 1;
       }
     }
+    // The "post an opening" location picker. A location-limited manager should
+    // only be able to post to the stores they manage, so narrow the picker to
+    // their reachable locations (a super admin / all-locations member gets all).
     const { data: locRows } = await supabase.from("locations").select("id, name").order("name");
-    openingLocations = (locRows ?? []) as { id: string; name: string }[];
+    const allOpeningLocs = (locRows ?? []) as { id: string; name: string }[];
+    openingLocations = spansAllLocations(locScope)
+      ? allOpeningLocs
+      : allOpeningLocs.filter((l) => reachableLocationIds(locScope).includes(l.id));
   }
 
   const latestCandidate = allCandidates[0];

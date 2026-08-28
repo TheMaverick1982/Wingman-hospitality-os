@@ -21,9 +21,13 @@ export default async function LeaderboardPage() {
   const { data: org } = await admin.from("organizations").select("leaderboard_enabled").eq("id", profile.orgId).maybeSingle();
   const enabled = (org as { leaderboard_enabled?: boolean } | null)?.leaderboard_enabled ?? true;
 
-  // Owners / all-location managers see the whole org; everyone else their location.
-  const locationId = canSpan ? null : profile.locationId ?? null;
-  const rows = enabled || isOwner ? await computeLeaderboard(profile.orgId, locationId) : [];
+  // Owners / all-location managers see the whole org; a location-limited member
+  // sees only their reachable stores (home + any explicit extras), never every
+  // store.
+  const locationScope = canSpan
+    ? null
+    : ([profile.locationId, ...profile.accessibleLocationIds].filter(Boolean) as string[]);
+  const rows = enabled || isOwner ? await computeLeaderboard(profile.orgId, locationScope) : [];
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { logLoginOncePerWindow } from "@/lib/activity-log";
-import { getOrgLocations } from "@/lib/data/locations";
+import { getOrgLocationsById } from "@/lib/data/locations";
 import { createClient } from "@/lib/supabase/server";
 import { computeRepeatRate, type GuestWithVisits } from "@/lib/hospitality";
 import { getLaunchPlan } from "@/lib/launch-plan";
@@ -34,7 +34,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   await logLoginOncePerWindow(profile.orgId, profile.userId, profile.fullName);
 
   const isSuperAdmin = profile.accessRole === "super_admin";
-  const locations = await getOrgLocations();
+  // Read the shell's location list by the profile's validated org id with the
+  // service-role client — never the RLS client — so a transient chunked-cookie
+  // auth blackout can't return zero rows and make the location switcher vanish.
+  const locations = await getOrgLocationsById(profile.orgId);
   // Keep "Start here" in the sidebar through the whole 14-day launch — including
   // the usage milestones — not just until setup is done.
   const launch = isSuperAdmin ? await getLaunchPlan() : null;
