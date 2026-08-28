@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSectionAccess } from "@/lib/auth/permissions";
-import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations";
+import { getOrgLocations, resolveEffectiveLocation, locationScopeOr, canSeeLocation } from "@/lib/data/locations";
 import { getStaffMembers } from "@/lib/data/staff";
 import { ensureSurveyLinks } from "@/lib/guest-survey-links";
 import { gbpConfigured } from "@/lib/google-business";
@@ -30,6 +30,18 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     accessibleLocationIds: profile.accessibleLocationIds,
   });
 
+  // Reviews are read with the admin client (guest surveys + Google reviews live
+  // beside deny-all token columns), so RLS never runs — this app-level scope is
+  // the only per-location guard. locationScopeOr collapses a specific-locations
+  // manager's default (null) view to their reachable stores, never the whole org.
+  const locScope = {
+    accessRole: profile.accessRole,
+    userLocationId: profile.locationId,
+    allLocations: profile.allLocations,
+    accessibleLocationIds: profile.accessibleLocationIds,
+  };
+  const scopeOr = locationScopeOr(locScope, effectiveLocation);
+
   const admin = createAdminClient();
   const [links, locations, staff] = await Promise.all([
     ensureSurveyLinks(admin, profile.orgId),
@@ -52,9 +64,10 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     return full.trim().split(/\s+/)[0] || full;
   };
 
-  // Share links, scoped to the selected location (or all).
+  // Share links, scoped to what this member may see (a specific-locations manager
+  // gets only their stores, not every store's link).
   const linkRows: SurveyLinkRow[] = Array.from(links.values())
-    .filter((l) => !effectiveLocation || l.location_id === effectiveLocation)
+    .filter((l) => canSeeLocation(locScope, effectiveLocation, l.location_id))
     .map((l) => ({ locationId: l.location_id, locationName: locName(l.location_id), code: l.code, scanCount: l.scan_count }))
     .sort((a, b) => a.locationName.localeCompare(b.locationName));
 
@@ -66,7 +79,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(200);
-  if (effectiveLocation) q = q.eq("location_id", effectiveLocation);
+  if (scopeOr) q = q.or(scopeOr);
   const { data: respRows } = await q;
 
   const responses: ReviewRow[] = ((respRows ?? []) as {
@@ -113,7 +126,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       .eq("org_id", profile.orgId)
       .order("review_created_at", { ascending: false })
       .limit(effectiveLocation ? 25 : 80);
-    if (effectiveLocation) grq = grq.eq("location_id", effectiveLocation);
+    if (scopeOr) grq = grq.or(scopeOr);
     const { data: grRows } = await grq;
     for (const r of (grRows ?? []) as { id: string; location_id: string; reviewer_name: string; star_rating: number; comment: string; reply_comment: string | null; review_created_at: string | null }[]) {
       const list = (reviewsByLocation[r.location_id] ??= []);
@@ -121,9 +134,9 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     }
   }
 
-  // One row per Wingman location (respecting the location scope), connected or not.
+  // One row per Wingman location this member may see, connected or not.
   const googleRows: GoogleLocationRow[] = locations
-    .filter((l) => !effectiveLocation || l.id === effectiveLocation)
+    .filter((l) => canSeeLocation(locScope, effectiveLocation, l.id))
     .map((l) => {
       const m = gMapByLoc.get(l.id);
       return {

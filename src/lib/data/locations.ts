@@ -37,6 +37,59 @@ export async function getOrgLocationsById(orgId: string): Promise<Location[]> {
   return data ?? [];
 }
 
+export type LocationScopeInput = {
+  accessRole: AccessRole;
+  userLocationId: string | null;
+  allLocations?: boolean;
+  accessibleLocationIds?: string[];
+};
+
+/** A member who can see EVERY location in the org (owner or all-locations grant). */
+export function spansAllLocations(i: LocationScopeInput): boolean {
+  return i.accessRole === "super_admin" || Boolean(i.allLocations);
+}
+
+/** The concrete location ids a member may reach: their home + any explicit extras. */
+export function reachableLocationIds(i: LocationScopeInput): string[] {
+  return [i.userLocationId, ...(i.accessibleLocationIds ?? [])].filter(Boolean) as string[];
+}
+
+/**
+ * The PostgREST `.or()` filter that scopes a per-location table to exactly what
+ * a member may see for the current request — or `null` meaning "apply no filter"
+ * (a member who spans all locations and hasn't narrowed to one store).
+ *
+ * This is the single source of truth for a bug this codebase kept re-introducing.
+ * Reads done with the service-role (admin) client bypass RLS, and a few tables
+ * (e.g. job_openings) don't gate on location in RLS at all — so this app-level
+ * filter is the ONLY thing standing between a location-limited manager and every
+ * other store's data. The trap: `resolveEffectiveLocation` returns `null` for a
+ * specific-locations member on their default view (it means "all the stores I can
+ * reach", not "every store"), so a query that filters ONLY when a location is
+ * explicitly selected silently leaks the whole org to that manager. Here `null`
+ * for a non-spanning member correctly collapses to their reachable set (plus
+ * unassigned/no-location rows, so an applicant who didn't pick a store is kept).
+ *
+ * Apply as: `const or = locationScopeOr(i, eff); if (or) q = q.or(or);`
+ */
+export function locationScopeOr(i: LocationScopeInput, effectiveLocation: string | null): string | null {
+  if (spansAllLocations(i)) return effectiveLocation ? `location_id.eq.${effectiveLocation}` : null;
+  if (effectiveLocation) return `location_id.eq.${effectiveLocation},location_id.is.null`;
+  return [...reachableLocationIds(i).map((id) => `location_id.eq.${id}`), "location_id.is.null"].join(",");
+}
+
+/**
+ * Predicate form of {@link locationScopeOr} for filtering already-fetched rows in
+ * JS (e.g. per-location cards). Unassigned (null) rows are always allowed for a
+ * location-limited member — the same safety net as the query filter.
+ */
+export function canSeeLocation(i: LocationScopeInput, effectiveLocation: string | null, rowLocationId: string | null): boolean {
+  if (spansAllLocations(i)) return !effectiveLocation || rowLocationId === effectiveLocation;
+  if (rowLocationId === null) return true;
+  if (effectiveLocation) return rowLocationId === effectiveLocation;
+  return reachableLocationIds(i).includes(rowLocationId);
+}
+
 /**
  * Resolves the "effective location" for the current request.
  *   - A Super Admin, or a member with all-locations access, can pick any

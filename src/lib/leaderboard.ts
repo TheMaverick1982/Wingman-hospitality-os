@@ -21,11 +21,16 @@ export type LeaderRow = {
 
 const DAY = 86400000;
 
-export async function computeLeaderboard(orgId: string, locationId: string | null): Promise<LeaderRow[]> {
+// `location` scopes the ranked staff: a single id, a set of ids (a
+// specific-locations manager's reachable stores), or null for the whole org.
+// An empty array is treated as "no accessible location" → no one, never the
+// whole org, so a mis-scoped caller can't accidentally leak every store.
+export async function computeLeaderboard(orgId: string, location: string | string[] | null): Promise<LeaderRow[]> {
   const admin = createAdminClient();
 
   let staffQ = admin.from("staff_members").select("id, full_name, department, location_id, status").eq("org_id", orgId).eq("status", "active");
-  if (locationId) staffQ = staffQ.eq("location_id", locationId);
+  if (Array.isArray(location)) staffQ = staffQ.in("location_id", location.length ? location : ["00000000-0000-0000-0000-000000000000"]);
+  else if (location) staffQ = staffQ.eq("location_id", location);
   const [{ data: staff }, { data: attempts }, { data: signoffs }] = await Promise.all([
     staffQ,
     admin.from("test_assignments").select("staff_id, best_score, passed_at, status").eq("org_id", orgId),
