@@ -38,11 +38,21 @@ jobs:
       - name: Install pg_dump 17, gpg, and rclone
         run: |
           set -euo pipefail
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17 gnupg
-          curl -fsSL https://rclone.org/install.sh | sudo bash
+          # Small retry wrapper so a single transient network blip (e.g. a DNS or
+          # TLS timeout fetching a key/script) doesn't skip a nightly backup.
+          retry() { for i in 1 2 3 4 5; do "$@" && return 0; echo "attempt $i failed; retrying in $((i*5))s"; sleep $((i*5)); done; return 1; }
+          retry sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          retry bash -c 'curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg'
+          retry sudo apt-get update
+          retry sudo apt-get install -y postgresql-client-17 gnupg
+          # rclone from the distro repo is reliable (same apt mirror) and new
+          # enough for an S3/B2 upload; only fall back to the install script (with
+          # retries) if the package isn't available. Previously this was a bare
+          # `curl https://rclone.org/install.sh | bash`, whose single connection
+          # timeout to rclone.org failed the whole backup.
+          retry sudo apt-get install -y rclone \
+            || retry bash -c 'curl -fsSL https://rclone.org/install.sh | sudo bash'
+          rclone version
           # The runner ships an older pg_dump (v16) that wins in PATH; put the
           # freshly installed v17 client ahead of it so pg_dump matches the
           # Postgres 17 server (pg_dump refuses to dump a newer server).
