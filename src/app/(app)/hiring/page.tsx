@@ -15,6 +15,8 @@ import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { CandidatesPanel } from "./candidate-scorecards";
 import { ApplicantsPanel, type Applicant } from "./applicants-panel";
 import { OpeningsPanel, type OpeningRow } from "./openings-panel";
+import { ReplyTemplatesPanel } from "./reply-templates-panel";
+import { normalizeReplyTemplates } from "@/lib/applicant-reply";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
@@ -291,6 +293,15 @@ export default async function HiringPage({
     if (cfgRow) formConfig = normalizeFormConfig((cfgRow as { application_form_config: unknown }).application_form_config);
   }
 
+  // The org's editable applicant-reply email copy (falls back to defaults).
+  // Column lands with migration 0173 — read in isolation so a not-yet-applied
+  // migration degrades to the built-in defaults instead of breaking the page.
+  let replyTemplates = normalizeReplyTemplates(null);
+  {
+    const { data: rtRow } = await supabase.from("organizations").select("application_reply_templates").single();
+    if (rtRow) replyTemplates = normalizeReplyTemplates((rtRow as { application_reply_templates: unknown }).application_reply_templates);
+  }
+
   // Job openings (the job_openings table + job_applications.opening_id land with
   // migration 0147 — every read here is guarded so a not-yet-applied migration can
   // never take down the hiring page).
@@ -436,6 +447,15 @@ export default async function HiringPage({
             siteUrl={SITE}
             canEdit={canEdit}
           />
+        </CollapsibleSection>
+      )}
+
+      {canEdit && (
+        <CollapsibleSection
+          title="Applicant reply emails"
+          subtitle="The one-click “we’re interested” and “not a good fit” notes you send applicants from their card. Edit the wording to sound like you, or leave the defaults."
+        >
+          <ReplyTemplatesPanel templates={replyTemplates} />
         </CollapsibleSection>
       )}
 
