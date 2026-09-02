@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { normalizeFormConfig } from "@/lib/application-form";
 import { sendEmail } from "@/lib/email";
+import { REPLY_KINDS, type ReplyKind, normalizeReplyTemplates, renderReplyTemplate } from "@/lib/applicant-reply";
 import { wallClockToUtc } from "@/lib/timezone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentProfile } from "@/lib/auth/profile";
@@ -60,54 +61,27 @@ export async function saveRejectionDetails(id: string, note: string, doNotHire: 
   return { error: null };
 }
 
-// Canned applicant replies so people who apply actually hear back: a warm
-// "we're interested, we'll reach out" and a gracious "not a good fit at the
-// moment." Sent from the restaurant's name; replies go to the location's own
-// inbox (see below), never to Wingman.
-const REPLY_KINDS = ["not_a_fit", "interested"] as const;
-export type ReplyKind = (typeof REPLY_KINDS)[number];
-
-function escEmail(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+// Save the org's editable copy for the two applicant replies. Blank fields fall
+// back to the built-in defaults (normalizeReplyTemplates), so a customer can't
+// save an empty email.
+export async function updateReplyTemplates(input: unknown): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  const templates = normalizeReplyTemplates(input);
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const { error } = await supabase.from("organizations").update({ application_reply_templates: templates }).eq("id", (org as { id: string }).id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
 }
 
-// The email copy per reply kind. Personalized with the applicant's first name,
-// the restaurant's name, and the role they applied for.
-function buildReply(kind: ReplyKind, o: { firstName: string; orgName: string; role: string | null }): { subject: string; paras: string[] } {
-  const org = escEmail(o.orgName);
-  const roleClause = o.role ? ` for the ${escEmail(o.role)} role` : "";
-  const hi = o.firstName ? `Hi ${escEmail(o.firstName)},` : "Hi there,";
-  if (kind === "not_a_fit") {
-    return {
-      subject: `Update on your application to ${o.orgName}`,
-      paras: [
-        hi,
-        `Thank you so much for applying to ${org}${roleClause} and for taking the time to tell us about yourself.`,
-        `After careful consideration, we&rsquo;ve decided not to move forward at this time. It wasn&rsquo;t an easy call — we genuinely appreciate your interest, and we&rsquo;d welcome you to apply again down the road.`,
-        `Wishing you all the best,<br/>The ${org} team`,
-      ],
-    };
-  }
-  return {
-    subject: `Thanks for applying to ${o.orgName}`,
-    paras: [
-      hi,
-      `Thank you for applying to ${org}${roleClause} — we&rsquo;re glad you did, and we&rsquo;re interested in learning more about you.`,
-      `Someone from our team will be reaching out soon about next steps. In the meantime, feel free to reply to this email with any questions.`,
-      `Talk soon,<br/>The ${org} team`,
-    ],
-  };
-}
-
-function replyHtml(paras: string[]): string {
-  const body = paras.map((p) => `<p style="margin:0 0 14px;">${p}</p>`).join("");
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.6;max-width:560px;">${body}</div>`;
-}
-
-// Email an applicant a canned reply, and record that it went out. Reply-to is set
-// to the application's LOCATION email (falling back to the org's copy list), so
-// when the applicant replies it reaches the store — never Wingman. Also nudges
-// the status: 'not_a_fit' archives them, 'interested' marks them Reviewed.
+// Email an applicant a canned reply, and record that it went out. The copy is the
+// org's editable template (or the built-in default), addressed to the applicant
+// by their first name — run through the name-safety filter so a junk/offensive
+// name is never echoed back. Reply-to is the application's LOCATION email
+// (falling back to the org's copy list), so a reply reaches the store, never
+// Wingman. Also nudges status: 'not_a_fit' archives, 'interested' marks Reviewed.
 export async function sendApplicantReply(id: string, kind: string): Promise<{ error: string | null }> {
   if (!(await gate())) return { error: "Not authorized." };
   if (!REPLY_KINDS.includes(kind as ReplyKind)) return { error: "Invalid reply type." };
@@ -123,9 +97,18 @@ export async function sendApplicantReply(id: string, kind: string): Promise<{ er
   const to = (app.email || "").trim();
   if (!to.includes("@")) return { error: "This applicant didn't leave an email address, so there's no one to reply to." };
 
+  // Org name + the (optionally customized) reply templates. Templates land with
+  // migration 0173 — read in isolation so a not-yet-applied migration falls back
+  // to the built-in defaults instead of erroring the send.
   const { data: orgRow } = await supabase.from("organizations").select("name, applications_cc").eq("id", app.org_id).maybeSingle();
   const org = orgRow as { name: string; applications_cc: string | null } | null;
   const orgName = (org?.name || "the team").trim();
+  let storedTemplates: unknown = null;
+  {
+    const { data: tRow } = await supabase.from("organizations").select("application_reply_templates").eq("id", app.org_id).maybeSingle();
+    storedTemplates = (tRow as { application_reply_templates?: unknown } | null)?.application_reply_templates ?? null;
+  }
+  const templates = normalizeReplyTemplates(storedTemplates);
 
   // Reply-to = the location's email so replies land in that store's inbox; fall
   // back to the first configured copy address if the location has none set.
@@ -138,9 +121,11 @@ export async function sendApplicantReply(id: string, kind: string): Promise<{ er
     replyTo = (org?.applications_cc || "").split(/[,\n;]+/).map((s) => s.trim()).find((s) => s.includes("@")) || "";
   }
 
-  const firstName = (app.name || "").trim().split(/\s+/)[0] || "";
-  const role = app.department?.trim() || null;
-  const { subject, paras } = buildReply(kind as ReplyKind, { firstName, orgName, role });
+  const { subject, html } = renderReplyTemplate(templates[kind as ReplyKind], {
+    name: app.name || null,
+    restaurant: orgName,
+    role: app.department?.trim() || null,
+  });
   // The From display name is the restaurant (the verified sending domain stays
   // updates.joinwingman.app); strip header-breaking characters.
   const fromName = orgName.replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Hiring";
@@ -149,7 +134,7 @@ export async function sendApplicantReply(id: string, kind: string): Promise<{ er
     await sendEmail({
       to: [to],
       subject,
-      html: replyHtml(paras),
+      html,
       from: `${fromName} <reports@updates.joinwingman.app>`,
       ...(replyTo ? { replyTo } : {}),
     });
