@@ -172,6 +172,18 @@ export default async function HiringPage({
     }
   }
 
+  // Which canned reply (if any) was already emailed to each applicant, so the
+  // panel can show "✓ Sent" and avoid accidental double-sends. Columns land with
+  // migration 0172 — read in isolation so a not-yet-applied migration degrades to
+  // "no reply sent" instead of breaking the applicants list.
+  const replyById = new Map<string, { kind: string | null; at: string | null }>();
+  {
+    const { data: rpRows } = await hiringAdmin.from("job_applications").select("id, reply_sent_kind, reply_sent_at").eq("org_id", profile.orgId);
+    for (const r of (rpRows ?? []) as { id: string; reply_sent_kind: string | null; reply_sent_at: string | null }[]) {
+      replyById.set(r.id, { kind: r.reply_sent_kind ?? null, at: r.reply_sent_at ?? null });
+    }
+  }
+
   // Custom job roles this org has posted (openings under the "Other" bucket carry
   // the role name in their title). These get their own screening tabs alongside
   // the standard roles. Unfiltered by location — screening is org-wide.
@@ -241,6 +253,8 @@ export default async function HiringPage({
     customAnswers: customAnswersById.get(a.id) ?? [],
     screeningGrade: screeningById.get(a.id)?.grade ?? null,
     screeningAnswers: screeningById.get(a.id)?.answers ?? [],
+    replySentKind: replyById.get(a.id)?.kind ?? null,
+    replySentAt: replyById.get(a.id)?.at ?? null,
   }));
   // Unconfirmed applications stay in "Applications"; a confirmed interview moves
   // the person into the candidates area until they're scored.

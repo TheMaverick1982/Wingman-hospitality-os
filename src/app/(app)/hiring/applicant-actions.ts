@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { normalizeFormConfig } from "@/lib/application-form";
+import { sendEmail } from "@/lib/email";
 import { wallClockToUtc } from "@/lib/timezone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentProfile } from "@/lib/auth/profile";
@@ -55,6 +56,112 @@ export async function saveRejectionDetails(id: string, note: string, doNotHire: 
     .update({ rejection_note: (note || "").slice(0, 2000), do_not_hire: !!doNotHire, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Canned applicant replies so people who apply actually hear back: a warm
+// "we're interested, we'll reach out" and a gracious "not a good fit at the
+// moment." Sent from the restaurant's name; replies go to the location's own
+// inbox (see below), never to Wingman.
+const REPLY_KINDS = ["not_a_fit", "interested"] as const;
+export type ReplyKind = (typeof REPLY_KINDS)[number];
+
+function escEmail(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+}
+
+// The email copy per reply kind. Personalized with the applicant's first name,
+// the restaurant's name, and the role they applied for.
+function buildReply(kind: ReplyKind, o: { firstName: string; orgName: string; role: string | null }): { subject: string; paras: string[] } {
+  const org = escEmail(o.orgName);
+  const roleClause = o.role ? ` for the ${escEmail(o.role)} role` : "";
+  const hi = o.firstName ? `Hi ${escEmail(o.firstName)},` : "Hi there,";
+  if (kind === "not_a_fit") {
+    return {
+      subject: `Update on your application to ${o.orgName}`,
+      paras: [
+        hi,
+        `Thank you so much for applying to ${org}${roleClause} and for taking the time to tell us about yourself.`,
+        `After careful consideration, we&rsquo;ve decided not to move forward at this time. It wasn&rsquo;t an easy call — we genuinely appreciate your interest, and we&rsquo;d welcome you to apply again down the road.`,
+        `Wishing you all the best,<br/>The ${org} team`,
+      ],
+    };
+  }
+  return {
+    subject: `Thanks for applying to ${o.orgName}`,
+    paras: [
+      hi,
+      `Thank you for applying to ${org}${roleClause} — we&rsquo;re glad you did, and we&rsquo;re interested in learning more about you.`,
+      `Someone from our team will be reaching out soon about next steps. In the meantime, feel free to reply to this email with any questions.`,
+      `Talk soon,<br/>The ${org} team`,
+    ],
+  };
+}
+
+function replyHtml(paras: string[]): string {
+  const body = paras.map((p) => `<p style="margin:0 0 14px;">${p}</p>`).join("");
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.6;max-width:560px;">${body}</div>`;
+}
+
+// Email an applicant a canned reply, and record that it went out. Reply-to is set
+// to the application's LOCATION email (falling back to the org's copy list), so
+// when the applicant replies it reaches the store — never Wingman. Also nudges
+// the status: 'not_a_fit' archives them, 'interested' marks them Reviewed.
+export async function sendApplicantReply(id: string, kind: string): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  if (!REPLY_KINDS.includes(kind as ReplyKind)) return { error: "Invalid reply type." };
+  const supabase = await createClient();
+
+  const { data: appRow } = await supabase
+    .from("job_applications")
+    .select("id, name, email, department, location_id, org_id")
+    .eq("id", id)
+    .maybeSingle();
+  const app = appRow as { id: string; name: string; email: string | null; department: string | null; location_id: string | null; org_id: string } | null;
+  if (!app) return { error: "Application not found." };
+  const to = (app.email || "").trim();
+  if (!to.includes("@")) return { error: "This applicant didn't leave an email address, so there's no one to reply to." };
+
+  const { data: orgRow } = await supabase.from("organizations").select("name, applications_cc").eq("id", app.org_id).maybeSingle();
+  const org = orgRow as { name: string; applications_cc: string | null } | null;
+  const orgName = (org?.name || "the team").trim();
+
+  // Reply-to = the location's email so replies land in that store's inbox; fall
+  // back to the first configured copy address if the location has none set.
+  let replyTo = "";
+  if (app.location_id) {
+    const { data: loc } = await supabase.from("locations").select("email").eq("id", app.location_id).maybeSingle();
+    replyTo = ((loc as { email?: string } | null)?.email || "").trim();
+  }
+  if (!replyTo) {
+    replyTo = (org?.applications_cc || "").split(/[,\n;]+/).map((s) => s.trim()).find((s) => s.includes("@")) || "";
+  }
+
+  const firstName = (app.name || "").trim().split(/\s+/)[0] || "";
+  const role = app.department?.trim() || null;
+  const { subject, paras } = buildReply(kind as ReplyKind, { firstName, orgName, role });
+  // The From display name is the restaurant (the verified sending domain stays
+  // updates.joinwingman.app); strip header-breaking characters.
+  const fromName = orgName.replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Hiring";
+
+  try {
+    await sendEmail({
+      to: [to],
+      subject,
+      html: replyHtml(paras),
+      from: `${fromName} <reports@updates.joinwingman.app>`,
+      ...(replyTo ? { replyTo } : {}),
+    });
+  } catch {
+    return { error: "Couldn't send the email just now. Please try again." };
+  }
+
+  const now = new Date().toISOString();
+  await supabase.from("job_applications").update({ status: kind === "not_a_fit" ? "not_a_fit" : "contacted", updated_at: now }).eq("id", id);
+  // Recording the send lives in columns added by migration 0172 — best-effort so
+  // a not-yet-applied migration still lets the email + status update go through.
+  await supabase.from("job_applications").update({ reply_sent_kind: kind, reply_sent_at: now }).eq("id", id);
   revalidatePath("/hiring");
   return { error: null };
 }
