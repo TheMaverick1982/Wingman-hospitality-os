@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
-import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug, saveRejectionDetails } from "./applicant-actions";
+import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug, saveRejectionDetails, sendApplicantReply } from "./applicant-actions";
 import { ApplicationFormEditor } from "./application-form-editor";
 import type { ApplicationFormConfig, CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
@@ -31,6 +31,9 @@ export type Applicant = {
   customAnswers: CustomAnswer[];
   screeningGrade: ScreeningGrade | null;
   screeningAnswers: ScreeningAnswer[];
+  // Which canned reply (if any) has already been emailed to this applicant.
+  replySentKind: string | null;
+  replySentAt: string | null;
 };
 
 // The pre-interview screening read: a tier chip, a per-axis 1–5 score with the
@@ -537,6 +540,9 @@ function ApplicantCard({ a }: { a: Applicant }) {
   const [note, setNote] = useState(a.rejectionNote);
   const [doNotHire, setDoNotHire] = useState(a.doNotHire);
   const [rejMsg, setRejMsg] = useState<string | null>(null);
+  const [replyMsg, setReplyMsg] = useState<string | null>(null);
+  const [sentKind, setSentKind] = useState<string | null>(a.replySentKind);
+  const [sentAt, setSentAt] = useState<string | null>(a.replySentAt);
   const [pending, start] = useTransition();
   const tone = toneOf(status);
   const grade = a.screeningGrade;
@@ -553,6 +559,23 @@ function ApplicantCard({ a }: { a: Applicant }) {
       const res = await saveRejectionDetails(a.id, note, dnh);
       setRejMsg(res.error ? res.error : "Saved");
       setTimeout(() => setRejMsg(null), 2000);
+    });
+  }
+  function sendReply(kind: "not_a_fit" | "interested") {
+    if (!a.email) return;
+    const line = kind === "not_a_fit"
+      ? `let them know they weren't selected this time`
+      : `let them know you're interested and will reach out soon`;
+    if (!confirm(`Email ${a.name} at ${a.email} to ${line}?\n\nReplies will go to your location's email.`)) return;
+    setReplyMsg(null);
+    start(async () => {
+      const res = await sendApplicantReply(a.id, kind);
+      if (res.error) { setReplyMsg(res.error); setTimeout(() => setReplyMsg(null), 3500); return; }
+      setSentKind(kind);
+      setSentAt(new Date().toISOString());
+      setStatus(kind === "not_a_fit" ? "not_a_fit" : "contacted");
+      setReplyMsg("Sent");
+      setTimeout(() => setReplyMsg(null), 2500);
     });
   }
   function confirm_() {
@@ -662,6 +685,34 @@ function ApplicantCard({ a }: { a: Applicant }) {
               </button>
               <button onClick={() => setScheduling(false)} className="text-[13px] font-semibold text-muted-2 hover:text-ink">Cancel</button>
               {msg && <span className="text-[12.5px] text-danger self-center">{msg}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Reply to the applicant — a one-click "we're interested" or a gracious
+            "not a fit" note, so people who apply actually hear back. Sends from
+            the restaurant's name; replies go to the location's own inbox. */}
+        {!scheduling && a.email && (
+          <div className="mt-3 rounded-xl bg-paper border border-line p-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-[12px] font-semibold text-charcoal-2">
+                Reply to applicant <span className="font-normal text-muted-2">— emails {a.email}; replies go to your location</span>
+              </div>
+              {sentKind && (
+                <span className="text-[11.5px] text-olive font-semibold">
+                  ✓ Sent {sentKind === "not_a_fit" ? "“not a fit”" : "“interested”"}
+                  {sentAt ? ` · ${new Date(sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <button onClick={() => sendReply("interested")} disabled={pending} className="text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark disabled:opacity-50">
+                Send “we’re interested”
+              </button>
+              <button onClick={() => sendReply("not_a_fit")} disabled={pending} className="text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-1.5 hover:border-brick disabled:opacity-50">
+                Send “not a fit”
+              </button>
+              {replyMsg && <span className={`text-[12px] font-semibold self-center ${replyMsg === "Sent" ? "text-olive" : "text-danger"}`}>{replyMsg}</span>}
             </div>
           </div>
         )}
