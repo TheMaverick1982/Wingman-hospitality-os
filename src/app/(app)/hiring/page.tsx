@@ -455,7 +455,7 @@ export default async function HiringPage({
           title="Applicant reply emails"
           subtitle="The one-click “we’re interested” and “not a good fit” notes you send applicants from their card. Edit the wording to sound like you, or leave the defaults."
         >
-          <ReplyTemplatesPanel templates={replyTemplates} />
+          <ReplyTemplatesPanel templates={replyTemplates} testEmail={profile.email ?? ""} />
         </CollapsibleSection>
       )}
 
