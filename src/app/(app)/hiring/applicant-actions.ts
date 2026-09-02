@@ -76,6 +76,40 @@ export async function updateReplyTemplates(input: unknown): Promise<{ error: str
   return { error: null };
 }
 
+// Send the owner a test of one reply email — the CURRENT editor draft (so they
+// can preview unsaved edits), rendered with a sample applicant so placeholders
+// fill in, delivered to their own account email. Nothing is saved and no
+// applicant is touched.
+export async function sendTestReply(kind: string, subject: string, body: string): Promise<{ error: string | null }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  if (!REPLY_KINDS.includes(kind as ReplyKind)) return { error: "Invalid reply type." };
+  const to = (profile.email || "").trim();
+  if (!to.includes("@")) return { error: "Your account has no email address to send a test to." };
+
+  // Normalize just this one draft (a blank field falls back to that kind's default).
+  const tpl = normalizeReplyTemplates({ [kind]: { subject, body } })[kind as ReplyKind];
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", profile.orgId).maybeSingle();
+  const orgName = ((org as { name?: string } | null)?.name || "Your restaurant").trim();
+
+  const rendered = renderReplyTemplate(tpl, { name: "Jordan Rivera", restaurant: orgName, role: "Server" });
+  const banner = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:12px;color:#6b7280;background:#f3f4f6;border-radius:8px;padding:8px 12px;max-width:560px;margin:0 0 16px;">Test preview — a real applicant sees this addressed to them (sample used here: “Jordan Rivera”, role “Server”). Replies from a real applicant go to your location&rsquo;s email.</div>`;
+  const fromName = orgName.replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Hiring";
+  try {
+    await sendEmail({
+      to: [to],
+      subject: `[Test] ${rendered.subject}`,
+      html: banner + rendered.html,
+      from: `${fromName} <reports@updates.joinwingman.app>`,
+    });
+  } catch {
+    return { error: "Couldn't send the test email just now. Please try again." };
+  }
+  return { error: null };
+}
+
 // Email an applicant a canned reply, and record that it went out. The copy is the
 // org's editable template (or the built-in default), addressed to the applicant
 // by their first name — run through the name-safety filter so a junk/offensive

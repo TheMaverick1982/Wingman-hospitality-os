@@ -743,7 +743,7 @@ export const ARTICLES: HelpArticle[] = [
         "Each note addresses the applicant by their first name automatically. If someone entered junk or something inappropriate as their name, it's filtered out and the email opens with a neutral \"Hi there,\" instead — it's never echoed back at them.",
         "Once sent, the box shows a \"✓ Sent\" marker with the date, so nobody gets emailed twice by accident. (Applicants who didn't leave an email address don't show the reply box.)",
       ] },
-      { kind: "p", text: "Want the wording to sound more like you? Open the \"Applicant reply emails\" section on the Hiring page (near Job openings) to edit both emails — subject and message. Use {{first_name}}, {{restaurant}}, and {{role}} anywhere and they fill in automatically; leave a field blank to fall back to the default, or hit \"Reset to default\" any time." },
+      { kind: "p", text: "Want the wording to sound more like you? Open the \"Applicant reply emails\" section on the Hiring page (near Job openings) to edit both emails — subject and message. Use {{first_name}}, {{restaurant}}, and {{role}} anywhere and they fill in automatically; leave a field blank to fall back to the default, or hit \"Reset to default\" any time. Hit \"Send test to me\" to get a copy of exactly what an applicant receives (with sample details filled in) at your own email before you send it for real." },
       { kind: "note", text: "Every morning, any location with an interview scheduled that day gets a reminder email at the address on file, so a booked interview never slips." },
       { kind: "note", text: "Applicants don't get a login — they're just people who applied. Scheduling and scoring are how they progress." },
     ],
