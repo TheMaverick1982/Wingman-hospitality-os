@@ -8,6 +8,7 @@ import { disconnectClover, syncCloverNow } from "./clover-actions";
 import { disconnectToast, syncToastNow, connectToast } from "./toast-actions";
 import { disconnectLightspeed, syncLightspeedNow } from "./lightspeed-actions";
 import { connectHeartland, disconnectHeartland, syncHeartlandNow } from "./heartland-actions";
+import { connectSevenrooms, disconnectSevenrooms, syncSevenroomsNow } from "./sevenrooms-actions";
 
 export type SquareConnection = {
   merchantId: string;
@@ -50,6 +51,14 @@ export type HeartlandConnection = {
   lastSyncStatus: string | null;
 };
 
+export type SevenroomsConnection = {
+  venueId: string;
+  venueName: string;
+  connectedAt: string;
+  lastSyncAt: string | null;
+  lastSyncStatus: string | null;
+};
+
 function fmt(iso: string | null): string {
   if (!iso) return "never";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -81,6 +90,8 @@ export function DirectIntegrations({
   lightspeedConnections = [],
   heartlandConfigured,
   heartlandConnections = [],
+  sevenroomsConfigured,
+  sevenroomsConnections = [],
 }: {
   configured: boolean;
   connection: SquareConnection | null;
@@ -93,6 +104,8 @@ export function DirectIntegrations({
   lightspeedConnections?: LightspeedConnection[];
   heartlandConfigured?: boolean;
   heartlandConnections?: HeartlandConnection[];
+  sevenroomsConfigured?: boolean;
+  sevenroomsConnections?: SevenroomsConnection[];
 }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -115,6 +128,11 @@ export function DirectIntegrations({
   const [hlMsg, setHlMsg] = useState<string | null>(null);
   const [hlErr, setHlErr] = useState<string | null>(null);
   const [hlToken, setHlToken] = useState("");
+
+  const [srPending, startSr] = useTransition();
+  const [srMsg, setSrMsg] = useState<string | null>(null);
+  const [srErr, setSrErr] = useState<string | null>(null);
+  const [srVenue, setSrVenue] = useState("");
 
   return (
     <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
@@ -615,6 +633,112 @@ export function DirectIntegrations({
         )}
         {toastMsg && <p className="text-sm text-[#15803D] mt-3">{toastMsg}</p>}
         {toastErr && <p className="text-sm text-danger mt-3">{toastErr}</p>}
+      </div>
+
+      {/* ---------- SevenRooms ---------- */}
+      <div className="rounded-xl border border-line p-4 mt-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#1A1A2E] text-white flex items-center justify-center shrink-0 font-semibold">7R</div>
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold text-ink flex items-center gap-2">
+                SevenRooms
+                {sevenroomsConnections.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#15803D] bg-[#E7F6EC] px-2 py-0.5 rounded-full">
+                    <Check size={11} /> {sevenroomsConnections.length} venue{sevenroomsConnections.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              <div className="text-[12.5px] text-muted-2">Sync reservation guest profiles → Guests, per venue</div>
+            </div>
+          </div>
+          <div className="shrink-0">
+            {!sevenroomsConfigured ? (
+              <OnboardingPill />
+            ) : (
+              sevenroomsConnections.length > 0 && (
+                <Btn
+                  small
+                  kind="ghost"
+                  icon={RefreshCw}
+                  disabled={srPending}
+                  onClick={() => {
+                    setSrErr(null); setSrMsg(null);
+                    startSr(async () => {
+                      const res = await syncSevenroomsNow();
+                      if (res.error) setSrErr(res.error);
+                      else setSrMsg(`Synced — ${res.guests} new guest${res.guests === 1 ? "" : "s"}.`);
+                    });
+                  }}
+                >
+                  {srPending ? "Syncing…" : "Sync now"}
+                </Btn>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Connect by Venue ID (SevenRooms is a partner API, no OAuth redirect). */}
+        {sevenroomsConfigured && (
+          <div className="mt-3 pt-3 border-t border-line">
+            <label className="block text-[12.5px] font-semibold text-ink mb-1">Add a venue</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                value={srVenue}
+                onChange={(e) => setSrVenue(e.target.value)}
+                placeholder="SevenRooms Venue ID"
+                className="flex-1 min-w-[220px] rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick"
+              />
+              <button
+                type="button"
+                disabled={srPending || !srVenue.trim()}
+                onClick={() => {
+                  setSrErr(null); setSrMsg(null);
+                  startSr(async () => {
+                    const res = await connectSevenrooms(srVenue);
+                    if (res.error) setSrErr(res.error);
+                    else { setSrMsg(`Connected ${res.name ?? "venue"}.`); setSrVenue(""); }
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark disabled:opacity-50 transition-colors"
+              >
+                <PlugZap size={14} /> {srPending ? "Connecting…" : "Connect"}
+              </button>
+            </div>
+            <p className="text-[11.5px] text-muted-2 mt-1.5">Enable Wingman as a partner integration in SevenRooms, then paste your Venue ID here.</p>
+          </div>
+        )}
+
+        {sevenroomsConnections.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-line flex flex-col gap-2">
+            {sevenroomsConnections.map((c) => (
+              <div key={c.venueId} className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-[12.5px] text-muted-2 flex flex-wrap gap-x-4 gap-y-0.5">
+                  <span className="font-medium text-ink">{c.venueName || c.venueId}</span>
+                  <span>Last sync: {fmt(c.lastSyncAt)}</span>
+                  {c.lastSyncStatus && c.lastSyncStatus !== "ok" && <span className="text-danger">{c.lastSyncStatus}</span>}
+                </div>
+                <button
+                  type="button"
+                  disabled={srPending}
+                  onClick={() => {
+                    if (!window.confirm(`Disconnect ${c.venueName || "this SevenRooms venue"}? Wingman will stop syncing it.`)) return;
+                    setSrErr(null); setSrMsg(null);
+                    startSr(async () => {
+                      const res = await disconnectSevenrooms(c.venueId);
+                      if (res.error) setSrErr(res.error);
+                    });
+                  }}
+                  className="text-[12.5px] font-semibold text-muted-2 hover:text-danger disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {srMsg && <p className="text-sm text-[#15803D] mt-3">{srMsg}</p>}
+        {srErr && <p className="text-sm text-danger mt-3">{srErr}</p>}
       </div>
     </div>
   );

@@ -24,12 +24,13 @@ import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
 import { TrashPanel } from "./trash-panel";
-import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection, type HeartlandConnection } from "./square-card";
+import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection, type HeartlandConnection, type SevenroomsConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
 import { cloverConfigured } from "@/lib/clover";
 import { toastConfigured } from "@/lib/toast";
 import { lightspeedConfigured } from "@/lib/lightspeed";
 import { heartlandConfigured } from "@/lib/heartland-retail";
+import { sevenroomsConfigured } from "@/lib/sevenrooms";
 import { GlobalPaymentsCard, type BillingCardInfo } from "./global-payments-card";
 import { gpConfigured, gpIsSandbox, GP_TEST_CARDS } from "@/lib/global-payments";
 import { getGroupBillingSummary } from "@/lib/franchise-billing";
@@ -573,6 +574,27 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   }));
   const heartlandIsConfigured = heartlandConfigured();
 
+  // SevenRooms connections (safe columns only — no secrets stored).
+  const { data: sevenroomsRows } = await admin
+    .from("sevenrooms_connections")
+    .select("venue_id, venue_name, connected_at, last_sync_at, last_sync_status")
+    .eq("org_id", profile.orgId)
+    .order("connected_at", { ascending: true });
+  const sevenroomsConnections: SevenroomsConnection[] = ((sevenroomsRows ?? []) as {
+    venue_id: string;
+    venue_name: string;
+    connected_at: string;
+    last_sync_at: string | null;
+    last_sync_status: string | null;
+  }[]).map((c) => ({
+    venueId: c.venue_id,
+    venueName: c.venue_name ?? "",
+    connectedAt: c.connected_at,
+    lastSyncAt: c.last_sync_at ?? null,
+    lastSyncStatus: c.last_sync_status ?? null,
+  }));
+  const sevenroomsIsConfigured = sevenroomsConfigured();
+
   // Staff activity trail (owner-only). Paginated — the first page loads here, and
   // "Load more" in the panel pulls older pages via loadMoreActivityAction.
   const { rows: activity, hasMore: activityHasMore } = await listActivity(profile.orgId, 0, undefined, profile.locationTimezone);
@@ -611,6 +633,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 lightspeedConnections={lightspeedConnections}
                 heartlandConfigured={heartlandIsConfigured}
                 heartlandConnections={heartlandConnections}
+                sevenroomsConfigured={sevenroomsIsConfigured}
+                sevenroomsConnections={sevenroomsConnections}
               />
               <ApiKeysManager keys={(apiKeys ?? []) as ApiKeyRow[]} locations={locations.map((l) => ({ id: l.id, name: l.name }))} />
             </div>
