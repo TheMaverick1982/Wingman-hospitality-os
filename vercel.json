@@ -41,6 +41,10 @@
       "schedule": "30 8 * * *"
     },
     {
+      "path": "/api/cron/sevenrooms-sync",
+      "schedule": "45 8 * * *"
+    },
+    {
       "path": "/api/cron/lightspeed-sync",
       "schedule": "0 9 * * *"
     },
