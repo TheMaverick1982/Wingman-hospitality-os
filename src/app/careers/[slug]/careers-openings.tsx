@@ -149,8 +149,8 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
                       <a href={detailHref(o)} className="text-[16px] font-semibold text-ink hover:text-brick transition-colors">{roleLabel(o)}</a>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5 text-[13px] text-muted-2">
                         {o.employment_type && <span className="font-medium">{o.employment_type}</span>}
-                        {o.employment_type && o.pay_note?.trim() && <span>·</span>}
-                        {o.pay_note?.trim() && <span className="font-medium text-charcoal-2">{o.pay_note.trim()}</span>}
+                        {o.employment_type && <span>·</span>}
+                        <span className="font-medium text-charcoal-2">{o.pay_note?.trim() || "Pay based on experience"}</span>
                       </div>
                       {o.ad_copy?.trim() && <ShowMoreText text={o.ad_copy.trim()} />}
                     </div>
