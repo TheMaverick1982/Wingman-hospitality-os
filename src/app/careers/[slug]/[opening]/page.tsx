@@ -104,7 +104,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2 text-[14px] text-muted-2">
           <span className="inline-flex items-center gap-1"><MapPin size={14} />{location ? location.name : "All locations"}</span>
           {op.employment_type && <span>· <span className="font-medium">{op.employment_type}</span></span>}
-          {op.pay_note?.trim() && <span>· <span className="font-medium text-charcoal-2">{op.pay_note.trim()}</span></span>}
+          <span>· <span className="font-medium text-charcoal-2">{op.pay_note?.trim() || "Pay based on experience"}</span></span>
         </div>
 
         <a href={applyHref} className="mt-6 inline-flex items-center justify-center text-[15px] font-semibold text-white bg-brick rounded-full px-7 py-3 hover:bg-brick-dark transition-colors">
