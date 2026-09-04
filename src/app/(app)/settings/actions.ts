@@ -325,6 +325,9 @@ export async function addLocation(_prev: ActionState, formData: FormData): Promi
   const name = String(formData.get("name") || "").trim();
   if (!name) return { error: "Location name is required." };
   const address = String(formData.get("address") || "").trim();
+  const city = String(formData.get("city") || "").trim();
+  const state = String(formData.get("state") || "").trim();
+  const postalCode = String(formData.get("postal_code") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const email = String(formData.get("email") || "").trim();
 
@@ -332,7 +335,7 @@ export async function addLocation(_prev: ActionState, formData: FormData): Promi
   const { data: org } = await supabase.from("organizations").select("id").single();
   if (!org) return { error: "Organization not found." };
 
-  const { error } = await supabase.from("locations").insert({ org_id: org.id, name, address, phone, email });
+  const { error } = await supabase.from("locations").insert({ org_id: org.id, name, address, city, state, postal_code: postalCode, phone, email });
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
@@ -388,6 +391,9 @@ export async function updateLocation(_prev: ActionState, formData: FormData): Pr
   if (!id) return { error: "Missing location." };
   if (!name) return { error: "Location name is required." };
   const address = String(formData.get("address") || "").trim();
+  const city = String(formData.get("city") || "").trim();
+  const state = String(formData.get("state") || "").trim();
+  const postalCode = String(formData.get("postal_code") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const email = String(formData.get("email") || "").trim();
   // Timezone drives when this store's monthly Partners report is sent (8am
@@ -408,7 +414,7 @@ export async function updateLocation(_prev: ActionState, formData: FormData): Pr
   // Only these fields are updatable, and only within the caller's own org.
   const { error } = await supabase
     .from("locations")
-    .update({ name, address, phone, email, ...(timezone ? { timezone } : {}) })
+    .update({ name, address, city, state, postal_code: postalCode, phone, email, ...(timezone ? { timezone } : {}) })
     .eq("id", id)
     .eq("org_id", profile.orgId);
   if (error) return { error: error.message };
@@ -424,7 +430,7 @@ export async function bulkAddLocations(_prev: BatchState, formData: FormData): P
     return { error: "Only the account owner can add locations.", successCount: 0, failures: [] };
   }
 
-  let rows: { name: string; address: string; phone: string; email: string; timezone?: string }[];
+  let rows: { name: string; address: string; city?: string; state?: string; postalCode?: string; phone: string; email: string; timezone?: string }[];
   try {
     rows = JSON.parse(String(formData.get("locationsJson") || "[]"));
   } catch {
@@ -463,6 +469,9 @@ export async function bulkAddLocations(_prev: BatchState, formData: FormData): P
       org_id: org.id,
       name,
       address: (row.address || "").trim(),
+      city: (row.city || "").trim(),
+      state: (row.state || "").trim(),
+      postal_code: (row.postalCode || "").trim(),
       phone: (row.phone || "").trim(),
       email: (row.email || "").trim(),
       ...(timezone ? { timezone } : {}),

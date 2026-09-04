@@ -2,11 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AccessRole } from "@/lib/auth/permissions";
 
-export type Location = { id: string; name: string; address?: string; phone?: string; email?: string; timezone?: string };
+export type Location = {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  phone?: string;
+  email?: string;
+  timezone?: string;
+};
 
 export async function getOrgLocations(): Promise<Location[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("locations").select("id, name, address, phone, email, timezone").order("name");
+  const { data } = await supabase.from("locations").select("id, name, address, city, state, postal_code, phone, email, timezone").order("name");
   return data ?? [];
 }
 

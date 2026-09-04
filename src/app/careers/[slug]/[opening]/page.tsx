@@ -32,8 +32,14 @@ async function load(slug: string, openingId: string) {
 
   let location: JobLocLd | null = null;
   if (op.location_id) {
-    const { data: locData } = await admin.from("locations").select("id, name, address").eq("id", op.location_id).eq("org_id", org.id).maybeSingle();
-    location = (locData as JobLocLd | null) ?? null;
+    const { data: locData } = await admin
+      .from("locations")
+      .select("id, name, address, city, state, postal_code")
+      .eq("id", op.location_id)
+      .eq("org_id", org.id)
+      .maybeSingle();
+    const lr = locData as { id: string; name: string; address: string | null; city: string | null; state: string | null; postal_code: string | null } | null;
+    location = lr ? { id: lr.id, name: lr.name, address: lr.address, city: lr.city, state: lr.state, postalCode: lr.postal_code } : null;
   }
   return { org, opening: op, location };
 }

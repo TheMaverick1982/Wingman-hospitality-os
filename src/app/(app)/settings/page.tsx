@@ -258,7 +258,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 </span>
               )}
               <EditLocationForm
-                location={{ id: l.id, name: l.name, address: l.address ?? "", phone: l.phone ?? "", email: l.email ?? "", timezone: l.timezone ?? "America/New_York" }}
+                location={{ id: l.id, name: l.name, address: l.address ?? "", city: l.city ?? "", state: l.state ?? "", postalCode: l.postal_code ?? "", phone: l.phone ?? "", email: l.email ?? "", timezone: l.timezone ?? "America/New_York" }}
               />
               {locations.length > 1 && <DeleteLocationButton locationId={l.id} locationName={l.name} />}
             </div>
