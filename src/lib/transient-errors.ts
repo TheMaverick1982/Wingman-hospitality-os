@@ -12,7 +12,8 @@ export function isTransientClientError(message: string | undefined | null): bool
   return (
     m.includes("load failed") || // Safari/WebKit fetch failure
     m.includes("failed to fetch") || // Chromium fetch failure
-    m.includes("networkerror") || // Firefox
+    m.includes("networkerror") || // Firefox (no space)
+    m.includes("network error") || // WebKit fetch / axios "Network Error" (with space)
     m.includes("network request failed") ||
     m.includes("the network connection was lost") ||
     m.includes("the request timed out") ||
