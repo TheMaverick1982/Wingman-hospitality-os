@@ -13,10 +13,10 @@ const initialState: BatchState = { error: null, successCount: 0, failures: [] };
 
 // tzTouched: once the operator picks a zone by hand we stop auto-overwriting it
 // from the address, so their choice sticks.
-type Row = { name: string; address: string; phone: string; email: string; timezone: string; tzTouched: boolean };
+type Row = { name: string; address: string; city: string; state: string; postalCode: string; phone: string; email: string; timezone: string; tzTouched: boolean };
 
 function emptyRow(): Row {
-  return { name: "", address: "", phone: "", email: "", timezone: browserTimezoneOrDefault(), tzTouched: false };
+  return { name: "", address: "", city: "", state: "", postalCode: "", phone: "", email: "", timezone: browserTimezoneOrDefault(), tzTouched: false };
 }
 
 export function AddLocationForm({
@@ -38,7 +38,7 @@ export function AddLocationForm({
     setRows([emptyRow()]);
   });
 
-  function updateRow(i: number, field: "name" | "address" | "phone" | "email", value: string) {
+  function updateRow(i: number, field: "name" | "address" | "city" | "state" | "postalCode" | "phone" | "email", value: string) {
     setRows((r) =>
       r.map((row, idx) => {
         if (idx !== i) return row;
@@ -59,7 +59,7 @@ export function AddLocationForm({
   }
 
   const validRows = rows.filter((r) => r.name.trim());
-  const payload = validRows.map((r) => ({ name: r.name, address: r.address, phone: r.phone, email: r.email, timezone: r.timezone }));
+  const payload = validRows.map((r) => ({ name: r.name, address: r.address, city: r.city, state: r.state, postalCode: r.postalCode, phone: r.phone, email: r.email, timezone: r.timezone }));
   const newTotal = currentLocationCount + validRows.length;
   const currentMonthly = currentLocationCount > 0 ? firstDollars + (currentLocationCount - 1) * addlDollars : 0;
   const nextMonthly = newTotal > 0 ? firstDollars + (newTotal - 1) * addlDollars : 0;
@@ -94,11 +94,20 @@ export function AddLocationForm({
                     <Field label="Store email">
                       <input type="email" value={row.email} onChange={(e) => updateRow(i, "email", e.target.value)} className={inputClass} />
                     </Field>
-                    <Field label="Address">
+                    <Field label="Street address">
                       <input value={row.address} onChange={(e) => updateRow(i, "address", e.target.value)} className={inputClass} />
                     </Field>
                     <Field label="Phone">
                       <input type="tel" value={row.phone} onChange={(e) => updateRow(i, "phone", e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="City">
+                      <input value={row.city} onChange={(e) => updateRow(i, "city", e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="State">
+                      <input value={row.state} onChange={(e) => updateRow(i, "state", e.target.value)} placeholder="e.g. TX" className={inputClass} />
+                    </Field>
+                    <Field label="ZIP code">
+                      <input value={row.postalCode} onChange={(e) => updateRow(i, "postalCode", e.target.value)} className={inputClass} />
                     </Field>
                     <div className="col-span-2">
                       <Field label="Time zone (for reports, activity & interview times)">

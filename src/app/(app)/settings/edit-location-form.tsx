@@ -6,16 +6,34 @@ import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { US_TIMEZONES } from "@/lib/us-timezones";
+import { parseUsAddress } from "@/lib/job-posting";
 import { updateLocation, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
-type LocationDetails = { id: string; name: string; address: string; phone: string; email: string; timezone: string };
+type LocationDetails = {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  phone: string;
+  email: string;
+  timezone: string;
+};
 
 export function EditLocationForm({ location }: { location: LocationDetails }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(updateLocation, initialState);
   useCloseOnSuccess(pending, state.error, () => setOpen(false));
+
+  // Pre-fill city/state/ZIP from the free-text address when they haven't been set
+  // yet, so an existing location is one click to a complete, structured address.
+  const parsed = parseUsAddress(location.address);
+  const cityDefault = location.city || parsed.addressLocality || "";
+  const stateDefault = location.state || parsed.addressRegion || "";
+  const zipDefault = location.postalCode || parsed.postalCode || "";
 
   return (
     <>
@@ -37,11 +55,20 @@ export function EditLocationForm({ location }: { location: LocationDetails }) {
               <Field label="Store email">
                 <input name="email" type="email" defaultValue={location.email} className={inputClass} />
               </Field>
-              <Field label="Address">
+              <Field label="Street address">
                 <input name="address" defaultValue={location.address} className={inputClass} />
               </Field>
               <Field label="Phone">
                 <input name="phone" type="tel" defaultValue={location.phone} className={inputClass} />
+              </Field>
+              <Field label="City">
+                <input name="city" defaultValue={cityDefault} className={inputClass} />
+              </Field>
+              <Field label="State">
+                <input name="state" defaultValue={stateDefault} placeholder="e.g. TX" className={inputClass} />
+              </Field>
+              <Field label="ZIP code">
+                <input name="postal_code" defaultValue={zipDefault} className={inputClass} />
               </Field>
               <Field label="Timezone (for reports)">
                 <select name="timezone" defaultValue={location.timezone || "America/New_York"} className={inputClass}>

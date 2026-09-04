@@ -14,7 +14,14 @@ export type JobOpeningLd = {
   created_at: string;
 };
 export type JobOrgLd = { name: string; logo_url: string | null };
-export type JobLocLd = { id: string; name: string; address: string | null };
+export type JobLocLd = {
+  id: string;
+  name: string;
+  address: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+};
 
 export const jobRoleLabel = (o: { title: string | null; department: string }) => o.title?.trim() || o.department;
 
@@ -107,15 +114,21 @@ export function parseUsAddress(raw: string | null | undefined): ParsedAddr {
 }
 
 function place(l: JobLocLd) {
+  // Prefer the location's structured city/state/ZIP fields; fall back to parsing
+  // the free-text address for locations that haven't filled them in yet.
   const a = parseUsAddress(l.address);
+  const city = (l.city ?? "").trim() || a.addressLocality;
+  const region = (l.state ?? "").trim() || a.addressRegion;
+  const postal = (l.postalCode ?? "").trim() || a.postalCode;
+  const street = a.streetAddress || (l.address ?? "").trim() || undefined;
   return {
     "@type": "Place",
     address: {
       "@type": "PostalAddress",
-      ...(a.streetAddress ? { streetAddress: a.streetAddress } : {}),
-      ...(a.addressLocality ? { addressLocality: a.addressLocality } : {}),
-      ...(a.addressRegion ? { addressRegion: a.addressRegion } : {}),
-      ...(a.postalCode ? { postalCode: a.postalCode } : {}),
+      ...(street ? { streetAddress: street } : {}),
+      ...(city ? { addressLocality: city } : {}),
+      ...(region ? { addressRegion: region } : {}),
+      ...(postal ? { postalCode: postal } : {}),
       addressCountry: "US",
     },
   };
