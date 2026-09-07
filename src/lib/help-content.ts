@@ -932,6 +932,13 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Log every touch" },
       { kind: "p", text: "Tap \"Log Activity\" (or the quick call/text icon on any row) to record a call, email, meeting, or a booked event/fundraiser. Booked events and fundraisers can carry the actual revenue they brought in — enter it once the event happens. Every touch resets that contact's follow-up clock." },
+      { kind: "h", text: "Open a contact to see everything" },
+      { kind: "p", text: "Click any contact's company name to open its full record: their info up top, then their whole activity history (every call, email, meeting, and note), any upcoming reach-outs, and quick actions. It's the one place to see where a relationship stands and take the next step." },
+      { kind: "list", items: [
+        "Email them right here — tap \"Email,\" write a subject and message, and send. It goes out from your name with replies routed to your email, and it's logged to their timeline automatically so you always have a record.",
+        "Add a note — jot a detail or a next step and it stacks on the timeline with the date, so the history builds up over time (separate from the contact's \"about\" note).",
+        "Schedule a reach-out — pick a date and what the next step is, and Wingman emails you that morning. Upcoming reach-outs show on the contact with overdue ones flagged in red; tap \"Done\" when you've handled it.",
+      ] },
       { kind: "h", text: "Never let a relationship go cold" },
       { kind: "list", items: [
         "Active connections are ones you've touched in the last 30 days. Anything 30+ days quiet — or never contacted — gets an orange \"Needs Follow-up\" badge.",

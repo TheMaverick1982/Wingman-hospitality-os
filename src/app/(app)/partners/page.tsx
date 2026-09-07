@@ -23,7 +23,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   });
 
   const supabase = await createClient();
-  const [{ data: contactRows }, { data: activityRows }, { data: profileRows }, { data: goalRows }, locations] = await Promise.all([
+  const [{ data: contactRows }, { data: activityRows }, { data: followUpRows }, { data: profileRows }, { data: goalRows }, locations] = await Promise.all([
     supabase
       .from("partner_contacts")
       .select(
@@ -36,6 +36,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       .order("activity_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(300),
+    // Open reach-outs (follow-ups not yet done) — powers the per-contact "next
+    // touch" and the reach-out list in the contact detail.
+    supabase
+      .from("partner_follow_ups")
+      .select("id, contact_id, location_id, due_date, notes, created_by, created_at")
+      .eq("done", false)
+      .order("due_date", { ascending: true }),
     supabase.from("profiles").select("id, full_name"),
     supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getOrgLocations(),
@@ -56,6 +63,16 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   );
 
   const whoById = new Map(((profileRows ?? []) as { id: string; full_name: string }[]).map((p) => [p.id, p.full_name]));
+
+  type FollowUpRow = { id: string; contact_id: string; location_id: string | null; due_date: string; notes: string; created_by: string | null; created_at: string };
+  const allFollowUps = (followUpRows ?? []) as FollowUpRow[];
+  const scopedFollowUps = (effectiveLocation ? allFollowUps.filter((f) => f.location_id === effectiveLocation) : allFollowUps).map((f) => ({
+    id: f.id,
+    contact_id: f.contact_id,
+    due_date: f.due_date,
+    notes: f.notes,
+    createdBy: f.created_by ? (whoById.get(f.created_by) ?? "") : "",
+  }));
 
   // Locations this user can file a contact under. Owners (and all-locations
   // members) get every store; a manager gets only their assigned set.
@@ -112,6 +129,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       showLocationBadges={!effectiveLocation}
       goalTargets={goalTargets}
       isOwner={profile.accessRole === "super_admin"}
+      followUps={scopedFollowUps}
+      repEmail={profile.email ?? ""}
     />
   );
 }

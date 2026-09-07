@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
 import { logActivity as recordActivity } from "@/lib/activity-log";
+import { sendEmail } from "@/lib/email";
 import type { PartnerActivityType } from "@/lib/partners";
 
 export type ActionState = { error: string | null };
@@ -183,4 +184,123 @@ export async function quickLogCallText(contactId: string) {
     created_by: profile.userId,
   });
   revalidatePath("/partners");
+}
+
+// Load the contact's location (source of truth) and confirm the caller can see it.
+async function contactLocation(supabase: Awaited<ReturnType<typeof createClient>>, contactId: string): Promise<{ location_id: string | null } | null> {
+  const { data } = await supabase.from("partner_contacts").select("id, location_id").eq("id", contactId).maybeSingle();
+  return data ? { location_id: (data as { location_id: string | null }).location_id } : null;
+}
+
+// Add a dated note to a contact's timeline (a 'note' activity). Notes stack as
+// history rather than overwriting the contact's single "about" notes field.
+export async function addContactNote(contactId: string, note: string): Promise<ActionState> {
+  const { error: gate, profile } = await requirePartnersAccess();
+  if (gate || !profile) return { error: gate ?? "Access denied." };
+  const text = note.trim();
+  if (!text) return { error: "Write a note first." };
+  const supabase = await createClient();
+  const contact = await contactLocation(supabase, contactId);
+  if (!contact) return { error: "That contact could not be found." };
+  const { error } = await supabase.from("partner_activities").insert({
+    org_id: profile.orgId,
+    contact_id: contactId,
+    location_id: contact.location_id,
+    activity_date: new Date().toISOString().slice(0, 10),
+    activity_type: "note",
+    notes: text.slice(0, 4000),
+    created_by: profile.userId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/partners");
+  return { error: null };
+}
+
+// Schedule a reach-out (a follow-up task with a due date). The existing daily
+// cron emails the creator when it comes due.
+export async function scheduleReachOut(contactId: string, dueDate: string, note: string): Promise<ActionState> {
+  const { error: gate, profile } = await requirePartnersAccess();
+  if (gate || !profile) return { error: gate ?? "Access denied." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return { error: "Pick a date for the reach-out." };
+  const supabase = await createClient();
+  const contact = await contactLocation(supabase, contactId);
+  if (!contact) return { error: "That contact could not be found." };
+  const { error } = await supabase.from("partner_follow_ups").insert({
+    org_id: profile.orgId,
+    contact_id: contactId,
+    location_id: contact.location_id,
+    assigned_to: profile.userId,
+    due_date: dueDate,
+    notes: (note || "").trim().slice(0, 2000),
+    created_by: profile.userId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/partners");
+  return { error: null };
+}
+
+// Mark a scheduled reach-out done (scoped to this org via RLS).
+export async function completeReachOut(followUpId: string): Promise<ActionState> {
+  const { error: gate, profile } = await requirePartnersAccess();
+  if (gate || !profile) return { error: gate ?? "Access denied." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("partner_follow_ups").update({ done: true }).eq("id", followUpId).eq("org_id", profile.orgId);
+  if (error) return { error: error.message };
+  revalidatePath("/partners");
+  return { error: null };
+}
+
+// Email a partner contact from inside Wingman and log it to their timeline. Sent
+// from the rep's name; reply-to is the rep's own email so the contact's reply
+// comes straight back to them, not to Wingman.
+export async function sendContactEmail(contactId: string, subject: string, body: string): Promise<ActionState> {
+  const { error: gate, profile } = await requirePartnersAccess();
+  if (gate || !profile) return { error: gate ?? "Access denied." };
+  const subj = subject.trim();
+  const msg = body.trim();
+  if (!subj) return { error: "Add a subject." };
+  if (!msg) return { error: "Write a message." };
+
+  const supabase = await createClient();
+  const { data: c } = await supabase.from("partner_contacts").select("id, location_id, email, contact_name, company_name").eq("id", contactId).maybeSingle();
+  const contact = c as { location_id: string | null; email: string | null; contact_name: string | null; company_name: string } | null;
+  if (!contact) return { error: "That contact could not be found." };
+  const to = (contact.email || "").trim();
+  if (!to.includes("@")) return { error: "This contact has no email address on file. Add one first." };
+
+  const fromName = (profile.fullName || profile.orgName || "Wingman").replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Wingman";
+  const replyTo = (profile.email || "").trim();
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.6;max-width:560px;">${msg
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px;">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("")}</div>`;
+
+  try {
+    await sendEmail({
+      to: [to],
+      subject: subj.slice(0, 200),
+      html,
+      from: `${fromName} <reports@updates.joinwingman.app>`,
+      ...(replyTo.includes("@") ? { replyTo } : {}),
+    });
+  } catch {
+    return { error: "Couldn't send the email just now. Please try again." };
+  }
+
+  // Log it on the contact's timeline as an email touch (resets the fading clock).
+  await supabase.from("partner_activities").insert({
+    org_id: profile.orgId,
+    contact_id: contactId,
+    location_id: contact.location_id,
+    activity_date: new Date().toISOString().slice(0, 10),
+    activity_type: "email",
+    notes: `Subject: ${subj}\n\n${msg}`.slice(0, 4000),
+    created_by: profile.userId,
+  });
+  revalidatePath("/partners");
+  return { error: null };
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
 }
