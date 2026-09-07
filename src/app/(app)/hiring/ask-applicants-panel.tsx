@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Sparkles, Send, Mail, Phone, MapPin } from "lucide-react";
 import { TIER_META } from "@/lib/screening";
 import { askApplicants, type ApplicantMatch } from "./ask-applicants-actions";
+import { ApplicantDetailModal } from "./applicant-detail-modal";
 
 const EXAMPLES = [
   "Who has real restaurant experience and is available weekends?",
@@ -20,6 +21,7 @@ export function AskApplicantsPanel() {
   const [analyzed, setAnalyzed] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [asked, setAsked] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   function ask(question: string) {
     const question2 = question.trim();
@@ -93,16 +95,19 @@ export function AskApplicantsPanel() {
                   {matches.map((m) => {
                     const tier = m.tier ? TIER_META[m.tier as keyof typeof TIER_META] : null;
                     return (
-                      <div key={m.id} className="bg-white border border-line rounded-xl p-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[14px] font-semibold text-ink">{m.name}</span>
-                          {tier && <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tier.bg} ${tier.fg}`}>{tier.label}{m.overall ? ` · ${m.overall}/5` : ""}</span>}
-                        </div>
-                        <div className="text-[12.5px] text-muted mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                          <span>{m.role}</span>
-                          {m.locationName && <span className="inline-flex items-center gap-1"><MapPin size={12} />{m.locationName}</span>}
-                          <span>applied {new Date(m.appliedDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                        </div>
+                      <div key={m.id} className="bg-white border border-line rounded-xl p-3 hover:border-brick/40 transition-colors">
+                        <button type="button" onClick={() => setOpenId(m.id)} className="w-full text-left group" title="View full details">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[14px] font-semibold text-ink group-hover:text-brick transition-colors">{m.name}</span>
+                            {tier && <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tier.bg} ${tier.fg}`}>{tier.label}{m.overall ? ` · ${m.overall}/5` : ""}</span>}
+                          </div>
+                          <div className="text-[12.5px] text-muted mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                            <span>{m.role}</span>
+                            {m.locationName && <span className="inline-flex items-center gap-1"><MapPin size={12} />{m.locationName}</span>}
+                            <span>applied {new Date(m.appliedDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <span className="text-brick font-medium">View details →</span>
+                          </div>
+                        </button>
                         {(m.email || m.phone) && (
                           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[12.5px]">
                             {m.email && <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-brick font-medium"><Mail size={12} />{m.email}</a>}
@@ -118,6 +123,8 @@ export function AskApplicantsPanel() {
           )}
         </div>
       )}
+
+      {openId && <ApplicantDetailModal id={openId} onClose={() => setOpenId(null)} />}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getSectionAccess, canEditSection } from "@/lib/auth/permissions";
-import { locationScopeOr } from "@/lib/data/locations";
+import { locationScopeOr, canSeeLocation } from "@/lib/data/locations";
 import { recordAiUsage } from "@/lib/ai/usage";
 import { HOSPITALITY_DOCTRINE } from "@/lib/ai-doctrine";
 import type { ScreeningGrade, ScreeningAnswer } from "@/lib/screening";
@@ -164,4 +164,73 @@ export async function askApplicants(question: string): Promise<AskResult> {
   }
 
   return { answer, matches, analyzed: applicants.length, error: null };
+}
+
+export type ApplicantDetail = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  locationName: string;
+  status: string;
+  source: string;
+  appliedDate: string;
+  availability: string;
+  message: string;
+  customAnswers: { label: string; value: string }[];
+  screeningGrade: ScreeningGrade | null;
+  screeningAnswers: { prompt: string; value: string; axis: string }[];
+  hasResume: boolean;
+};
+
+// Full detail for one applicant, for the "Ask about your applicants" result
+// popup. Gated to Hiring editors and scoped to the caller's own org + reachable
+// locations (so a location-limited manager can't open an out-of-scope applicant).
+export async function getApplicantDetail(id: string): Promise<{ detail: ApplicantDetail | null; error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { detail: null, error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "hiring", profile.permissionOverrides) === "none" || !canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) {
+    return { detail: null, error: "You don't have access to Hiring." };
+  }
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("job_applications")
+    .select("id, name, email, phone, department, location_id, availability, message, status, source, created_at, custom_answers, screening_answers, screening_grade, resume_path")
+    .eq("id", id)
+    .eq("org_id", profile.orgId)
+    .maybeSingle();
+  const r = data as (Row & { resume_path: string | null }) | null;
+  if (!r) return { detail: null, error: "Applicant not found." };
+
+  // Enforce the same location scoping as the list.
+  const scope = { accessRole: profile.accessRole, userLocationId: profile.locationId, allLocations: profile.allLocations, accessibleLocationIds: profile.accessibleLocationIds };
+  if (!canSeeLocation(scope, null, r.location_id)) return { detail: null, error: "Applicant not found." };
+
+  let locationName = "";
+  if (r.location_id) {
+    const { data: loc } = await admin.from("locations").select("name").eq("id", r.location_id).maybeSingle();
+    locationName = (loc as { name?: string } | null)?.name ?? "";
+  }
+
+  return {
+    detail: {
+      id: r.id,
+      name: r.name || "(no name)",
+      email: r.email ?? "",
+      phone: r.phone ?? "",
+      role: r.department?.trim() || "Any role",
+      locationName,
+      status: r.status,
+      source: r.source || "",
+      appliedDate: r.created_at,
+      availability: r.availability ?? "",
+      message: r.message ?? "",
+      customAnswers: (r.custom_answers ?? []).filter((c) => String(c.value ?? "").trim()).map((c) => ({ label: c.label, value: String(c.value) })),
+      screeningGrade: r.screening_grade ?? null,
+      screeningAnswers: (r.screening_answers ?? []).filter((a) => String(a.value ?? "").trim()).map((a) => ({ prompt: a.prompt, value: String(a.value), axis: a.axis })),
+      hasResume: Boolean(r.resume_path),
+    },
+    error: null,
+  };
 }
