@@ -4,7 +4,7 @@
 // each store and every touch (call, email, meeting, booked event/fundraiser)
 // against them, so community revenue becomes a measured habit rather than luck.
 
-export type PartnerActivityType = "call_text" | "email" | "meeting" | "event_booked" | "fundraiser_booked";
+export type PartnerActivityType = "call_text" | "email" | "meeting" | "event_booked" | "fundraiser_booked" | "note";
 
 export type PartnerContact = {
   id: string;
@@ -82,9 +82,13 @@ export const ACTIVITY_TYPES: { value: PartnerActivityType; label: string; counts
   { value: "fundraiser_booked", label: "Fundraiser Booked", countsAsEvent: true },
 ];
 
-export const ACTIVITY_LABELS: Record<PartnerActivityType, string> = Object.fromEntries(
-  ACTIVITY_TYPES.map((t) => [t.value, t.label])
-) as Record<PartnerActivityType, string>;
+// ACTIVITY_TYPES are the loggable "touch" types shown in the Log Activity picker.
+// 'note' is not a touch you pick there — it's added from a contact's Notes box —
+// but it still needs a label for the timeline, so include it here explicitly.
+export const ACTIVITY_LABELS: Record<PartnerActivityType, string> = {
+  ...(Object.fromEntries(ACTIVITY_TYPES.map((t) => [t.value, t.label])) as Record<PartnerActivityType, string>),
+  note: "Note",
+};
 
 // Suggested categories for the surrounding-business types a restaurant partners
 // with. Free-text is still allowed; these just seed the dropdown.

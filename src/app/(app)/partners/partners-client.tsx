@@ -19,6 +19,7 @@ import {
 } from "@/lib/partners";
 import { ContactModal, type ContactFormValue } from "./contact-modal";
 import { LogActivitySheet } from "./log-activity-sheet";
+import { ContactDetail, type DetailFollowUp } from "./contact-detail";
 import { ScanCardButton } from "./scan-card-button";
 import { deleteContact, quickLogCallText } from "./actions";
 
@@ -64,6 +65,8 @@ export function PartnersClient({
   showLocationBadges,
   goalTargets,
   isOwner,
+  followUps,
+  repEmail,
 }: {
   contacts: PartnerContact[];
   activities: FeedActivity[];
@@ -78,12 +81,15 @@ export function PartnersClient({
   // Owners set the quarterly partner goals (per store) in Settings; a banner
   // points them there so it's discoverable from where the goals are tracked.
   isOwner?: boolean;
+  followUps: DetailFollowUp[];
+  repEmail: string;
 }) {
   const [tab, setTab] = useState<"contacts" | "activity">("contacts");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("fading");
   const [fadingOnly, setFadingOnly] = useState(false);
   const [modalContact, setModalContact] = useState<ContactFormValue | null | undefined>(undefined);
+  const [detailContact, setDetailContact] = useState<PartnerContact | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
   const [, startTransition] = useTransition();
   const [now] = useState(() => Date.now());
@@ -224,7 +230,7 @@ export function PartnersClient({
           <div key={c.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-semibold text-ink truncate">{c.company_name}</div>
+                <button type="button" onClick={() => setDetailContact(c)} className="font-semibold text-ink truncate hover:text-brick text-left transition-colors">{c.company_name}</button>
                 {(c.contact_name || c.category) && (
                   <div className="text-[13px] text-muted truncate mt-0.5">
                     {c.contact_name}
@@ -419,7 +425,9 @@ export function PartnersClient({
                   const badge = fading ? fadeBadge : activeBadge;
                   return (
                     <tr key={c.id} className="border-b border-line hover:bg-[#FAFAFA] transition-colors">
-                      <td className="px-5 py-3.5 text-ink font-medium">{c.company_name}</td>
+                      <td className="px-5 py-3.5">
+                        <button type="button" onClick={() => setDetailContact(c)} className="text-ink font-medium hover:text-brick text-left transition-colors">{c.company_name}</button>
+                      </td>
                       <td className="px-5 py-3.5 text-muted">{c.contact_name || "—"}</td>
                       <td className="px-5 py-3.5 text-muted">{c.category || "—"}</td>
                       {showLocationBadges && <td className="px-5 py-3.5 text-muted">{locName(c.location_id) ?? "Org-wide"}</td>}
@@ -497,6 +505,18 @@ export function PartnersClient({
           contacts={contactOptions}
           preselectContactId={sheet.preselect}
           onClose={() => setSheet({ open: false, preselect: null })}
+        />
+      )}
+      {detailContact && (
+        <ContactDetail
+          contact={detailContact}
+          activities={activities}
+          followUps={followUps}
+          repEmail={repEmail}
+          canEdit={canEdit}
+          locationName={locName(detailContact.location_id)}
+          onEdit={() => { openEdit(detailContact); setDetailContact(null); }}
+          onClose={() => setDetailContact(null)}
         />
       )}
     </>
