@@ -21,6 +21,7 @@ import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { AskApplicantsPanel } from "./ask-applicants-panel";
 
 // AI generation/refinement server actions run from this route; give them room
 // to finish instead of hitting the platform's short default function timeout.
@@ -412,6 +413,15 @@ export default async function HiringPage({
             ))}
           </div>
         </div>
+      )}
+
+      {canEdit && applicants.length > 0 && (
+        <CollapsibleSection
+          title="Ask about your applicants"
+          subtitle="Sift your applicant pool with plain-english questions — filter, shortlist, compare, spot themes. Wingman reads their answers, screening, and resumes."
+        >
+          <AskApplicantsPanel />
+        </CollapsibleSection>
       )}
 
       <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
