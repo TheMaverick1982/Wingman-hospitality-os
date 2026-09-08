@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Search, ChevronDown } from "lucide-react";
+import { MapPin, Search, ChevronDown, Briefcase } from "lucide-react";
 import { ShowMoreText } from "./show-more-text";
 
 export type OpeningLite = {
@@ -16,28 +16,59 @@ export type Group = { key: string; name: string; items: OpeningLite[] };
 
 const roleLabel = (o: OpeningLite) => o.title?.trim() || o.department;
 
-export function CareersOpenings({ slug, groups, isMulti }: { slug: string; groups: Group[]; isMulti: boolean }) {
+export function CareersOpenings({
+  slug,
+  groups,
+  isMulti,
+  initialRole,
+}: {
+  slug: string;
+  groups: Group[];
+  isMulti: boolean;
+  initialRole?: string | null;
+}) {
+  // Every distinct role on offer (by its displayed label), for the role filter.
+  const allRoles = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of groups) for (const o of g.items) set.add(roleLabel(o));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [groups]);
+  // A ?role= link preselects that role — matched case-insensitively so the link
+  // is forgiving, and ignored (falls back to "all") if that role isn't open now.
+  const matchedInitialRole = useMemo(() => {
+    if (!initialRole) return null;
+    const low = initialRole.trim().toLowerCase();
+    return allRoles.find((r) => r.toLowerCase() === low) ?? null;
+  }, [allRoles, initialRole]);
+  const roleLinkMissed = Boolean(initialRole?.trim()) && !matchedInitialRole;
+
   const [selected, setSelected] = useState<string>("all");
+  const [role, setRole] = useState<string>(matchedInitialRole ?? "all");
   const [query, setQuery] = useState("");
   // Which location sections the visitor has expanded (only used in the default
-  // browse state; search/location-filter force the relevant sections open).
+  // browse state; search/role/location filters force the relevant sections open).
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
 
   // Location dropdown lists specific locations only ("all" means show everything).
   // The all-locations roles (key "all") always show, since they apply everywhere.
   const locationOptions = groups.filter((g) => g.key !== "all");
   const showFilter = isMulti && locationOptions.length > 1;
+  const showRoleFilter = allRoles.length > 1;
 
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
+  const roleFiltered = role !== "all";
+  // Search matches the ROLE (title/department), employment type, and pay — not the
+  // ad body, so typing "manager" returns manager roles, not every ad that happens
+  // to mention a manager.
   const matches = (o: OpeningLite) =>
-    !q ||
-    roleLabel(o).toLowerCase().includes(q) ||
-    (o.employment_type ?? "").toLowerCase().includes(q) ||
-    (o.pay_note ?? "").toLowerCase().includes(q) ||
-    (o.ad_copy ?? "").toLowerCase().includes(q);
+    (!q ||
+      roleLabel(o).toLowerCase().includes(q) ||
+      (o.employment_type ?? "").toLowerCase().includes(q) ||
+      (o.pay_note ?? "").toLowerCase().includes(q)) &&
+    (role === "all" || roleLabel(o) === role);
 
-  // Apply the location filter, then the search, dropping any section left empty.
+  // Apply the location filter, then the role + search, dropping any empty section.
   const visible = useMemo(() => {
     const byLoc =
       selected === "all" ? groups : groups.filter((g) => g.key === selected || g.key === "all");
@@ -45,12 +76,12 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
       .map((g) => ({ ...g, items: g.items.filter(matches) }))
       .filter((g) => g.items.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, selected, q]);
+  }, [groups, selected, role, q]);
 
   const totalShown = visible.reduce((n, g) => n + g.items.length, 0);
-  // Sections collapse only while browsing everything; a search or a picked
-  // location shows the matching roles expanded so nothing needs a second click.
-  const collapsible = isMulti && !searching && selected === "all" && visible.length > 1;
+  // Sections collapse only while browsing everything; a search, a role, or a
+  // picked location shows the matching roles expanded so nothing needs a click.
+  const collapsible = isMulti && !searching && !roleFiltered && selected === "all" && visible.length > 1;
   const allExpanded = collapsible && visible.every((g) => openKeys.has(g.key));
 
   const isOpen = (key: string) => (collapsible ? openKeys.has(key) : true);
@@ -83,6 +114,22 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
               className="w-full text-[14px] bg-transparent outline-none text-charcoal-2 placeholder:text-muted-2"
             />
           </div>
+          {showRoleFilter && (
+            <div className="flex items-center gap-2 shrink-0 rounded-full border border-line bg-white px-3 py-2">
+              <Briefcase size={14} className="text-muted-2" />
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                aria-label="Filter by role"
+                className="text-[13.5px] font-semibold bg-transparent outline-none pr-1 text-charcoal-2"
+              >
+                <option value="all">All roles</option>
+                {allRoles.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {showFilter && (
             <div className="flex items-center gap-2 shrink-0 rounded-full border border-line bg-white px-3 py-2">
               <MapPin size={14} className="text-muted-2" />
@@ -100,11 +147,24 @@ export function CareersOpenings({ slug, groups, isMulti }: { slug: string; group
             </div>
           )}
         </div>
+        {roleLinkMissed && (
+          <p className="text-[12.5px] text-muted-2">
+            That role isn&rsquo;t open right now — here&rsquo;s everything we&rsquo;re hiring for.
+          </p>
+        )}
+        {roleFiltered && (
+          <p className="text-[12.5px] text-muted-2">
+            Showing <span className="font-semibold text-charcoal-2">{role}</span> roles only.{" "}
+            <button type="button" onClick={() => setRole("all")} className="font-semibold text-brick hover:text-brick-dark">
+              Show all roles
+            </button>
+          </p>
+        )}
         <div className="flex items-center justify-between gap-3">
           <div className="text-[13px] text-muted-2">
             {totalShown === 0
               ? "No roles match your search."
-              : `${totalShown} open ${totalShown === 1 ? "role" : "roles"}${isMulti && !searching && selected === "all" ? ` across ${visible.length} ${visible.length === 1 ? "location" : "locations"}` : ""}`}
+              : `${totalShown} open ${totalShown === 1 ? "role" : "roles"}${isMulti && !searching && !roleFiltered && selected === "all" ? ` across ${visible.length} ${visible.length === 1 ? "location" : "locations"}` : ""}`}
           </div>
           {collapsible && (
             <button

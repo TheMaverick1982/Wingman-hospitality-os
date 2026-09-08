@@ -35,14 +35,21 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; role?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const embed = (await searchParams)?.embed === "1";
+  const sp = await searchParams;
+  const embed = sp?.embed === "1";
+  const role = sp?.role?.trim();
   const org = await loadOrg(slug);
   if (!org) return { title: "Careers", robots: { index: false, follow: false } };
-  const title = `Careers at ${org.name} — Now Hiring`;
-  const description = `See open positions at ${org.name} and apply in minutes. Roles by location, updated as we hire.`;
+  // A ?role= ad link gets a role-specific title (good for link previews); the
+  // canonical still points at the base careers page so Google doesn't treat the
+  // filtered variants as duplicates.
+  const title = role ? `${role} — Careers at ${org.name}` : `Careers at ${org.name} — Now Hiring`;
+  const description = role
+    ? `Now hiring ${role} at ${org.name}. Apply in minutes.`
+    : `See open positions at ${org.name} and apply in minutes. Roles by location, updated as we hire.`;
   return {
     title,
     description,
@@ -60,10 +67,12 @@ export default async function CareersPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; role?: string }>;
 }) {
   const { slug } = await params;
-  const embed = (await searchParams)?.embed === "1";
+  const sp = await searchParams;
+  const embed = sp?.embed === "1";
+  const roleParam = sp?.role?.trim() || null;
   const org = await loadOrg(slug);
   if (!org) return notFound();
 
@@ -144,7 +153,7 @@ export default async function CareersPage({
             <p className="text-sm text-muted">Check back soon — new roles are posted here as they open.</p>
           </div>
         ) : (
-          <CareersOpenings slug={slug} groups={groups} isMulti={isMulti} />
+          <CareersOpenings slug={slug} groups={groups} isMulti={isMulti} initialRole={roleParam} />
         )}
 
         <div className="text-center mt-12 text-[12.5px] text-muted-2">
