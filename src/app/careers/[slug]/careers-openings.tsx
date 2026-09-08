@@ -49,9 +49,10 @@ export function CareersOpenings({
   // browse state; search/role/location filters force the relevant sections open).
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
 
-  // Location dropdown lists specific locations only ("all" means show everything).
-  // The all-locations roles (key "all") always show, since they apply everywhere.
-  const locationOptions = groups.filter((g) => g.key !== "all");
+  // Location dropdown lists specific locations only. The company-wide groups
+  // ("all" and "corporate") aren't locations and always show, since they apply
+  // everywhere — so they're excluded from the dropdown but never filtered out.
+  const locationOptions = groups.filter((g) => g.key !== "all" && g.key !== "corporate");
   const showFilter = isMulti && locationOptions.length > 1;
   const showRoleFilter = allRoles.length > 1;
 
@@ -71,7 +72,9 @@ export function CareersOpenings({
   // Apply the location filter, then the role + search, dropping any empty section.
   const visible = useMemo(() => {
     const byLoc =
-      selected === "all" ? groups : groups.filter((g) => g.key === selected || g.key === "all");
+      selected === "all"
+        ? groups
+        : groups.filter((g) => g.key === selected || g.key === "all" || g.key === "corporate");
     return byLoc
       .map((g) => ({ ...g, items: g.items.filter(matches) }))
       .filter((g) => g.items.length > 0);

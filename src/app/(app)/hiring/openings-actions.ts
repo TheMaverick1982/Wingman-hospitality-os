@@ -14,13 +14,16 @@ import { recordAiUsage } from "@/lib/ai/usage";
 export type OpeningInput = {
   id?: string | null;
   department: string;
-  locationId: string | null; // null = all locations
+  locationId: string | null; // null = all locations (or corporate — see isCorporate)
   title?: string;
   payNote?: string;
   employmentType?: string;
   adCopy: string;
   // false = "unlisted": open + shareable by direct link, hidden from the careers hub.
   listOnCareers?: boolean;
+  // true = a corporate / not-location-specific role (no store). Forces location null
+  // and labels it "Corporate" (vs "All locations") on the careers page and admin.
+  isCorporate?: boolean;
 };
 export type OpeningResult = { error: string | null; id?: string; code?: string | null };
 export type AdResult = { error: string | null; adCopy?: string };
@@ -130,9 +133,12 @@ export async function saveOpening(input: OpeningInput): Promise<OpeningResult> {
   if (input.department === OPENING_OTHER_ROLE && !input.title?.trim()) return { error: "Name the custom role." };
 
   const admin = createAdminClient();
+  const corporate = !!input.isCorporate;
   const row = {
     department: input.department,
-    location_id: input.locationId || null,
+    // A corporate role isn't tied to a store, so it always stores a null location.
+    location_id: corporate ? null : input.locationId || null,
+    is_corporate: corporate,
     title: input.title?.trim() || null,
     ad_copy: input.adCopy?.trim() || "",
     pay_note: input.payNote?.trim() || null,

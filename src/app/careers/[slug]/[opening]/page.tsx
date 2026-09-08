@@ -22,11 +22,11 @@ async function load(slug: string, openingId: string) {
 
   const { data: opData } = await admin
     .from("job_openings")
-    .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at, status, list_on_careers")
+    .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at, status, list_on_careers, is_corporate")
     .eq("id", openingId)
     .eq("org_id", org.id)
     .maybeSingle();
-  const op = opData as (JobOpeningLd & { status: string; list_on_careers: boolean }) | null;
+  const op = opData as (JobOpeningLd & { status: string; list_on_careers: boolean; is_corporate: boolean }) | null;
   // Only an open, valid-role opening gets an indexable detail page.
   if (!op || op.status !== "open" || !isOpeningRole(op.department)) return { org, opening: null, location: null };
 
@@ -111,7 +111,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
         <h1 className="text-[28px] sm:text-[34px] font-bold tracking-[-0.02em] text-ink leading-tight">{role}</h1>
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2 text-[14px] text-muted-2">
-          <span className="inline-flex items-center gap-1"><MapPin size={14} />{location ? location.name : "All locations"}</span>
+          <span className="inline-flex items-center gap-1"><MapPin size={14} />{location ? location.name : op.is_corporate ? "Corporate" : "All locations"}</span>
           {op.employment_type && <span>· <span className="font-medium">{op.employment_type}</span></span>}
           <span>· <span className="font-medium text-charcoal-2">{op.pay_note?.trim() || "Pay based on experience"}</span></span>
         </div>

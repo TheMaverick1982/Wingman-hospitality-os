@@ -77,8 +77,24 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
 
   const department = deptF.enabled ? String(formData.get("department") || "").trim() : "";
   if (deptF.enabled && deptF.required && !department) return { error: `Please choose a ${deptF.label.toLowerCase()}.` };
-  const locationId = locF.enabled ? (String(formData.get("locationId") || "").trim() || null) : null;
-  if (locF.enabled && locF.required && !locationId) return { error: `Please choose a ${locF.label.toLowerCase()}.` };
+
+  // If the link carried a job-opening id, validate it belongs to THIS org (so a
+  // forged id can't attach) before tagging the application to it below. Fetched
+  // early because a corporate opening isn't tied to a store — its applicants
+  // aren't shown or asked for a location.
+  let openingId: string | null = null;
+  let openingIsCorporate = false;
+  const openingParam = String(formData.get("opening") || "").trim();
+  if (openingParam) {
+    const { data: op } = await admin.from("job_openings").select("id, is_corporate").eq("id", openingParam).eq("org_id", org.id).maybeSingle();
+    if (op) {
+      openingId = (op as { id: string }).id;
+      openingIsCorporate = Boolean((op as { is_corporate?: boolean }).is_corporate);
+    }
+  }
+
+  const locationId = locF.enabled && !openingIsCorporate ? (String(formData.get("locationId") || "").trim() || null) : null;
+  if (locF.enabled && locF.required && !openingIsCorporate && !locationId) return { error: `Please choose a ${locF.label.toLowerCase()}.` };
   const availability = availF.enabled ? String(formData.get("availability") || "").trim() : "";
   if (availF.enabled && availF.required && !availability) return { error: `Please fill in ${availF.label.toLowerCase()}.` };
   const message = msgF.enabled ? String(formData.get("message") || "").trim() : "";
@@ -146,15 +162,6 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     if (q.required && !String(formData.get(`screen_${q.id}`) || "").trim()) {
       return { error: "Please answer all required questions before submitting." };
     }
-  }
-
-  // If the link carried a job-opening id, validate it belongs to THIS org (so a
-  // forged id can't attach) before tagging the application to it below.
-  let openingId: string | null = null;
-  const openingParam = String(formData.get("opening") || "").trim();
-  if (openingParam) {
-    const { data: op } = await admin.from("job_openings").select("id").eq("id", openingParam).eq("org_id", org.id).maybeSingle();
-    if (op) openingId = (op as { id: string }).id;
   }
 
   const { data: inserted, error } = await admin

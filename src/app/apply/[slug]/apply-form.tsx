@@ -57,6 +57,7 @@ export function ApplyForm({
   config,
   screeningByRole,
   openingId,
+  hideLocation,
   source,
 }: {
   slug: string;
@@ -70,6 +71,8 @@ export function ApplyForm({
   config: ApplicationFormConfig;
   screeningByRole: Record<string, { id: string; prompt: string; required: boolean }[]>;
   openingId?: string | null;
+  // A corporate opening isn't tied to a store, so the location field is hidden.
+  hideLocation?: boolean;
   source?: string;
 }) {
   const [state, formAction, pending] = useActionState(submitApplication.bind(null, slug), initial);
@@ -85,7 +88,7 @@ export function ApplyForm({
   const preferredVisit = builtinSetting(config, "preferredVisit");
   const message = builtinSetting(config, "message");
   const resume = builtinSetting(config, "resume");
-  const showLocation = location.enabled && locations.length > 0;
+  const showLocation = location.enabled && locations.length > 0 && !hideLocation;
 
   if (state.ok) {
     return (

@@ -16,6 +16,7 @@ type Opening = {
   ad_copy: string;
   pay_note: string | null;
   employment_type: string | null;
+  is_corporate: boolean;
   created_at: string;
 };
 type Loc = { id: string; name: string };
@@ -80,7 +81,7 @@ export default async function CareersPage({
   const [{ data: opRows }, { data: locRows }] = await Promise.all([
     admin
       .from("job_openings")
-      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at")
+      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, is_corporate, created_at")
       .eq("org_id", org.id)
       .eq("status", "open")
       .eq("list_on_careers", true)
@@ -100,11 +101,13 @@ export default async function CareersPage({
     g.items.push(o);
   };
   for (const o of openings) {
-    if (o.location_id && locById.has(o.location_id)) pushInto(o.location_id, locById.get(o.location_id)!.name, o);
+    if (o.is_corporate) pushInto("corporate", "Corporate", o);
+    else if (o.location_id && locById.has(o.location_id)) pushInto(o.location_id, locById.get(o.location_id)!.name, o);
     else pushInto("all", isMulti ? "All locations" : "", o);
   }
-  // Specific locations first (alphabetical), "All locations" last.
-  groups.sort((a, b) => (a.key === "all" ? 1 : b.key === "all" ? -1 : a.name.localeCompare(b.name)));
+  // Specific locations first (alphabetical), then "Corporate", then "All locations".
+  const rank = (k: string) => (k === "all" ? 2 : k === "corporate" ? 1 : 0);
+  groups.sort((a, b) => rank(a.key) - rank(b.key) || a.name.localeCompare(b.name));
 
   // Per Google's Job Posting guidelines, the JobPosting structured data lives on
   // each role's own detail page (/careers/<slug>/<opening>) — the "leaf" page —
