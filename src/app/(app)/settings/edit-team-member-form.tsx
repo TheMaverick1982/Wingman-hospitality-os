@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import type { Location } from "@/lib/data/locations";
+import { HIDEABLE_SECTIONS, SECTION_LABELS } from "@/lib/auth/permissions";
 import { editTeamMember, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -22,6 +23,7 @@ export function EditTeamMemberForm({
     access_role: Role;
     all_locations: boolean;
     accessibleLocationIds: string[];
+    hiddenSections: string[];
   };
   locations: Location[];
 }) {
@@ -52,7 +54,20 @@ export function EditTeamMemberForm({
     });
   }
 
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(member.hiddenSections));
+  function toggleHidden(section: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  }
+
   const isSuperAdmin = role === "super_admin";
+  // Per-member section hiding applies to the leadership tiers that see many
+  // sections; staff/developer have a fixed, minimal set.
+  const canHideSections = role === "manager" || role === "shift_lead";
 
   return (
     <>
@@ -136,6 +151,28 @@ export function EditTeamMemberForm({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {canHideSections && (
+              <div className="mb-4">
+                <div className="text-sm font-semibold text-ink mb-1">Hide sections <span className="font-normal text-muted-2">(optional)</span></div>
+                <p className="text-[12.5px] text-muted mb-2">Tick anything this person doesn&rsquo;t need — it disappears from their sidebar and dashboard for a cleaner view. Everything stays visible unless you hide it.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 max-h-52 overflow-y-auto pr-1">
+                  {HIDEABLE_SECTIONS.map((s) => (
+                    <label key={s} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="hiddenSections"
+                        value={s}
+                        checked={hidden.has(s)}
+                        onChange={() => toggleHidden(s)}
+                        className="accent-brick"
+                      />
+                      <span className="text-charcoal-2">{SECTION_LABELS[s]}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
 

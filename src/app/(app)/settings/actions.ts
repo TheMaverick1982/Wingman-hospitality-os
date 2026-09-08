@@ -6,7 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logActivity, listActivity, ACTIVITY_PAGE_SIZE, type ActivityListRow } from "@/lib/activity-log";
-import { EDITABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
+import { EDITABLE_SECTIONS, HIDEABLE_SECTIONS, type PermissionOverrides, type Section } from "@/lib/auth/permissions";
+
+// Build a per-user section_overrides map (hidden sections → "none") from the
+// edit/invite form. Only manager/shift_lead carry these; returns null to clear.
+function buildSectionOverrides(formData: FormData, role: string): Record<string, "none"> | null {
+  if (role !== "manager" && role !== "shift_lead") return null;
+  const hideable = new Set<string>(HIDEABLE_SECTIONS);
+  const hidden = formData.getAll("hiddenSections").map(String).filter((s) => hideable.has(s));
+  if (hidden.length === 0) return null;
+  return Object.fromEntries(hidden.map((s) => [s, "none"]));
+}
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { linkOrCreateStaff } from "@/lib/staff-link";
 import { requestOrgCancellation, resumeOrgSubscription } from "@/lib/billing";
@@ -68,6 +78,10 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
     target_location_ids: allLocations ? [] : locationIds,
   });
   if (assignError) return { error: assignError.message };
+
+  // Per-member hidden sections chosen at invite time (cleaner dashboard).
+  const invitedOverrides = buildSectionOverrides(formData, role);
+  if (invitedOverrides) await admin.from("profiles").update({ section_overrides: invitedOverrides }).eq("id", invited.user.id);
 
   // Tie this login to a Staff record (create or link by email) so they appear on
   // the Staff page with their job role and their metrics land in the right bucket.
@@ -312,6 +326,12 @@ export async function editTeamMember(_prev: ActionState, formData: FormData): Pr
     target_location_ids: allLocations ? [] : locationIds,
   });
   if (error) return { error: error.message };
+
+  // Persist per-member hidden sections (null clears them, e.g. when promoted to
+  // Super Admin or all boxes unchecked). Admin client — target already confirmed
+  // to be in this org above.
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ section_overrides: buildSectionOverrides(formData, role) }).eq("id", userId).eq("org_id", profile.orgId);
 
   revalidatePath("/settings");
   revalidatePath("/", "layout");
