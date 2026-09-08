@@ -76,7 +76,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const supabase = await createClient();
   const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations, section_overrides").order("full_name"),
+    supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations, is_corporate, section_overrides").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents, billed_by_group").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
@@ -201,6 +201,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               const enriched = {
                 ...m,
                 all_locations: (m as { all_locations?: boolean }).all_locations ?? false,
+                is_corporate: (m as { is_corporate?: boolean }).is_corporate ?? false,
                 accessibleCount: accessibleLocationIds.length,
                 accessibleLocationIds,
                 hiddenSections,

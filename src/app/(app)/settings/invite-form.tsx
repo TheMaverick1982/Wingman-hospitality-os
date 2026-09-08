@@ -21,7 +21,7 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
 
   const multiLocation = locations.length > 1;
   const [role, setRole] = useState<"manager" | "shift_lead" | "staff" | "super_admin" | "developer">("manager");
-  const [scope, setScope] = useState<"all" | "specific">("specific");
+  const [scope, setScope] = useState<"all" | "corporate" | "specific">("specific");
   const [checked, setChecked] = useState<Set<string>>(() => new Set(locations[0] ? [locations[0].id] : []));
 
   function toggle(id: string) {
@@ -96,16 +96,20 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
               <p className="text-[13px] text-muted mb-4">
                 A Super Admin has full access to every location and to Settings — treat this like a co-owner.
               </p>
-            ) : !multiLocation ? (
-              <>
-                {locations[0] && <input type="hidden" name="locationIds" value={locations[0].id} />}
-              </>
             ) : (
               <div className="mb-4">
                 <div className="text-sm font-semibold text-ink mb-2">Location access</div>
+                {multiLocation && (
+                  <label className="flex items-center gap-2 text-sm mb-2">
+                    <input type="radio" name="scopeRadio" checked={scope === "all"} onChange={() => setScope("all")} className="accent-brick" />
+                    <span className="text-ink">All locations</span>
+                  </label>
+                )}
                 <label className="flex items-center gap-2 text-sm mb-2">
-                  <input type="radio" name="scopeRadio" checked={scope === "all"} onChange={() => setScope("all")} className="accent-brick" />
-                  <span className="text-ink">All locations</span>
+                  <input type="radio" name="scopeRadio" checked={scope === "corporate"} onChange={() => setScope("corporate")} className="accent-brick" />
+                  <span className="text-ink">
+                    Corporate <span className="font-normal text-muted-2">— not tied to a location</span>
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 text-sm mb-2">
                   <input
@@ -115,25 +119,34 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
                     onChange={() => setScope("specific")}
                     className="accent-brick"
                   />
-                  <span className="text-ink">Specific locations</span>
+                  <span className="text-ink">{multiLocation ? "Specific locations" : "This location"}</span>
                 </label>
-                {scope === "specific" && (
-                  <div className="mt-1 ml-6 flex flex-col gap-1.5 max-h-44 overflow-y-auto">
-                    {locations.map((l) => (
-                      <label key={l.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          name="locationIds"
-                          value={l.id}
-                          checked={checked.has(l.id)}
-                          onChange={() => toggle(l.id)}
-                          className="accent-brick"
-                        />
-                        <span className="text-charcoal-2">{l.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                {scope === "corporate" && (
+                  <p className="text-[12.5px] text-muted ml-6 mb-1">
+                    An HQ role (marketing, finance, ops) — sees every location for the sections they can access.
+                    {canHideSections && " Use “Hide sections” below to keep their dashboard to just their area."}
+                  </p>
                 )}
+                {scope === "specific" &&
+                  (multiLocation ? (
+                    <div className="mt-1 ml-6 flex flex-col gap-1.5 max-h-44 overflow-y-auto">
+                      {locations.map((l) => (
+                        <label key={l.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            name="locationIds"
+                            value={l.id}
+                            checked={checked.has(l.id)}
+                            onChange={() => toggle(l.id)}
+                            className="accent-brick"
+                          />
+                          <span className="text-charcoal-2">{l.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    locations[0] && <input type="hidden" name="locationIds" value={locations[0].id} />
+                  ))}
               </div>
             )}
 
