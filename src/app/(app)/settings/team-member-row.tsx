@@ -15,6 +15,7 @@ export type TeamMember = {
   all_locations: boolean;
   accessibleCount: number;
   accessibleLocationIds: string[];
+  hiddenSections: string[];
   pending: boolean;
   email: string;
 };
@@ -112,6 +113,7 @@ export function TeamMemberRow({
               access_role: member.access_role,
               all_locations: member.all_locations,
               accessibleLocationIds: member.accessibleLocationIds,
+              hiddenSections: member.hiddenSections,
             }}
             locations={locations}
           />

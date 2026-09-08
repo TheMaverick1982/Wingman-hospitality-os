@@ -8,6 +8,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import type { Location } from "@/lib/data/locations";
+import { HIDEABLE_SECTIONS, SECTION_LABELS } from "@/lib/auth/permissions";
 import { inviteTeamMember, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -32,7 +33,18 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
     });
   }
 
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  function toggleHidden(section: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  }
+
   const isSuperAdmin = role === "super_admin";
+  const canHideSections = role === "manager" || role === "shift_lead";
 
   return (
     <>
@@ -122,6 +134,21 @@ export function InviteTeamMemberButton({ locations, departments }: { locations: 
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {canHideSections && (
+              <div className="mb-4">
+                <div className="text-sm font-semibold text-ink mb-1">Hide sections <span className="font-normal text-muted-2">(optional)</span></div>
+                <p className="text-[12.5px] text-muted mb-2">Give them a cleaner dashboard by hiding anything they don&rsquo;t need. You can change this any time by editing the member.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 max-h-44 overflow-y-auto pr-1">
+                  {HIDEABLE_SECTIONS.map((s) => (
+                    <label key={s} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="hiddenSections" value={s} checked={hidden.has(s)} onChange={() => toggleHidden(s)} className="accent-brick" />
+                      <span className="text-charcoal-2">{SECTION_LABELS[s]}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
 

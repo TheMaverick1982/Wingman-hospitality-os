@@ -129,6 +129,7 @@ export const ARTICLES: HelpArticle[] = [
         "Staff — sees the areas relevant to their shift (e.g. Dashboard, Training, their pre-shift checklist).",
       ] },
       { kind: "note", text: "Owners can fine-tune what Managers, Shift Leads, and Staff see per section under Settings → Team & permissions." },
+      { kind: "tip", text: "Want a specific manager to have a leaner dashboard? When you invite or edit them, tick the sections they don't need under \"Hide sections\" — it's per person, so you can give one manager just the floor tools and another the full back office." },
     ],
     links: [{ label: "Managing your team", href: "/help/team-and-permissions" }],
   },
@@ -1038,7 +1039,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Team members & permissions",
     summary: "Invite, edit, and set what each person can access.",
     categoryId: "admin",
-    keywords: ["team", "invite", "members", "permissions", "edit", "remove", "roles", "access"],
+    keywords: ["team", "invite", "members", "permissions", "edit", "remove", "roles", "access", "hide sections", "cleaner dashboard", "declutter"],
     body: [
       { kind: "p", text: "Owners manage the team under Settings → Team & permissions." },
       { kind: "steps", items: [
@@ -1047,6 +1048,14 @@ export const ARTICLES: HelpArticle[] = [
         "Remove: remove a member to revoke their access entirely.",
       ] },
       { kind: "note", text: "Two different things, on purpose: job role (Host, Server, Chef…) drives their training and which metrics they roll into; access level (Staff, Manager, Super Admin) sets what they can see and edit. Someone who works more than one role can carry several — set a primary plus any additional roles on their staff profile (Contact tab), and they get the training, tests, and checklists for each." },
+      { kind: "h", text: "Give a manager a cleaner dashboard" },
+      { kind: "p", text: "Not every manager needs every section. When you invite or edit a Manager or Shift Lead, a \"Hide sections\" checklist lets you tick the areas they don't need — Partners, Menu Engineering, Reporting, and the like. Ticked sections disappear from that person's sidebar and dashboard entirely, so they see a focused view built around what they actually run." },
+      { kind: "list", items: [
+        "It's per person, not per role — hide different things for different managers.",
+        "Hiding a section only affects what they see; it never changes anyone else's view or your own.",
+        "Change it any time from Edit — untick to bring a section back.",
+        "Only Managers and Shift Leads offer the checklist; Super Admins always see everything, and Staff already have a fixed, minimal view.",
+      ] },
       { kind: "tip", text: "Anyone you invite is automatically added to your Staff page under their job role — no need to enter them twice. If they're already on Staff (or were hired from a candidate), the invite just links to that same person, matched by email." },
       { kind: "note", text: "You can't remove or demote the last Super Admin — promote someone else first. Settings and Billing are always owner-only." },
     ],

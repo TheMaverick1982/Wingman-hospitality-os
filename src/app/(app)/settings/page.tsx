@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrgLocations } from "@/lib/data/locations";
 import { getActiveDepartments } from "@/lib/roles";
 import { getPlatformPricing } from "@/lib/pricing";
-import { isManagerOrAbove } from "@/lib/auth/permissions";
+import { isManagerOrAbove, parseUserSectionOverrides } from "@/lib/auth/permissions";
 import type { NotificationKey } from "@/lib/notifications";
 import { Building2, CreditCard, Gift, Lock } from "lucide-react";
 import { InviteTeamMemberButton } from "./invite-form";
@@ -76,7 +76,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const supabase = await createClient();
   const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations").order("full_name"),
+    supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations, section_overrides").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents, billed_by_group").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
@@ -195,11 +195,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             {allMembers.map((m) => {
               const st = statusById.get(m.id);
               const accessibleLocationIds = locationIdsByMember.get(m.id) ?? [];
+              const hiddenSections = Object.entries(parseUserSectionOverrides((m as { section_overrides?: unknown }).section_overrides))
+                .filter(([, access]) => access === "none")
+                .map(([section]) => section);
               const enriched = {
                 ...m,
                 all_locations: (m as { all_locations?: boolean }).all_locations ?? false,
                 accessibleCount: accessibleLocationIds.length,
                 accessibleLocationIds,
+                hiddenSections,
                 pending: st?.pending ?? false,
                 email: st?.email ?? "",
               } as TeamMember;

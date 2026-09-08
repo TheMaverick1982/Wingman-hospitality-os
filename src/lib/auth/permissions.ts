@@ -87,6 +87,88 @@ export const EDITABLE_SECTIONS: Section[] = [
 
 export type PermissionOverrides = Partial<Record<Section, Partial<Record<"manager" | "shift_lead" | "staff", SectionAccess>>>>;
 
+// Human labels for each section, matching the sidebar nav.
+export const SECTION_LABELS: Record<Section, string> = {
+  dashboard: "Dashboard",
+  culture: "Culture",
+  bounceback: "Guest Bounce Back",
+  recovery: "Service Recovery",
+  training: "Training & Standards",
+  journey: "Guest Journey",
+  accountability: "Accountability",
+  hiring: "Hiring",
+  staff: "Staff",
+  growth: "Revenue Growth Planner",
+  menu: "Menu Engineering",
+  audit: "Standout Audit",
+  partners: "Partners",
+  reporting: "Reporting",
+  questions: "Questions",
+  reviews: "Guest Reviews",
+  shift: "Shift",
+  manager_channel: "Manager channel",
+  settings: "Settings",
+};
+
+// Sections an owner can hide from an INDIVIDUAL member (per-user, for a cleaner
+// dashboard) — everything a manager might see except Dashboard (the home) and
+// Settings (owner-only already). Ordered to mirror the sidebar.
+export const HIDEABLE_SECTIONS: Section[] = [
+  "bounceback",
+  "reviews",
+  "recovery",
+  "journey",
+  "shift",
+  "manager_channel",
+  "culture",
+  "training",
+  "accountability",
+  "hiring",
+  "staff",
+  "questions",
+  "growth",
+  "menu",
+  "audit",
+  "partners",
+  "reporting",
+];
+
+// A per-USER section override map (stored on profiles.section_overrides): the
+// individual sections an owner has hidden from (or re-scoped for) one member,
+// on top of the org-wide role defaults. Validated so junk can't widen access.
+export type UserSectionOverrides = Partial<Record<Section, SectionAccess>>;
+
+export function parseUserSectionOverrides(raw: unknown): UserSectionOverrides {
+  if (!raw || typeof raw !== "object") return {};
+  const hideable = new Set<string>(HIDEABLE_SECTIONS);
+  const out: UserSectionOverrides = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (hideable.has(k) && (v === "none" || v === "view" || v === "full")) out[k as Section] = v;
+  }
+  return out;
+}
+
+// Fold a member's own per-section overrides into the org-wide overrides map,
+// keyed by that member's role — so the existing getSectionAccess(role, section,
+// overrides) call sites pick them up with no change. Owners/developers are never
+// re-scoped (they get full / API-only respectively).
+export function applyUserSectionOverrides(
+  orgOverrides: PermissionOverrides | undefined,
+  role: AccessRole,
+  userOverrides: UserSectionOverrides | null | undefined,
+): PermissionOverrides {
+  const merged: PermissionOverrides = {};
+  for (const [sec, byRole] of Object.entries(orgOverrides ?? {})) merged[sec as Section] = { ...byRole };
+  if (!userOverrides || role === "super_admin" || role === "developer") return merged;
+  const roleKey = role as "manager" | "shift_lead" | "staff";
+  for (const [sec, access] of Object.entries(userOverrides)) {
+    if (!access) continue;
+    const s = sec as Section;
+    merged[s] = { ...(merged[s] ?? {}), [roleKey]: access };
+  }
+  return merged;
+}
+
 export function getSectionAccess(role: AccessRole, section: Section, overrides?: PermissionOverrides): SectionAccess {
   if (role === "super_admin") return "full";
   if (section === "settings") return SECTION_ACCESS.settings[role];
