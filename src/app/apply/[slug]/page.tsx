@@ -125,14 +125,15 @@ export default async function ApplyPage({
   let openingId: string | null = null;
   let openingRole: string | null = null;
   let openingLocation: string | null = null;
+  let openingIsCorporate = false;
   if (opening) {
     const { data: op } = await admin
       .from("job_openings")
-      .select("id, department, title, location_id, status")
+      .select("id, department, title, location_id, status, is_corporate")
       .eq("id", opening)
       .eq("org_id", org.id)
       .maybeSingle();
-    const o = op as { id: string; department: string; title: string | null; location_id: string | null; status: string } | null;
+    const o = op as { id: string; department: string; title: string | null; location_id: string | null; status: string; is_corporate?: boolean } | null;
     if (o && o.status === "open") {
       openingId = o.id;
       // Custom-role openings store their real role name in the title; a standard
@@ -140,6 +141,7 @@ export default async function ApplyPage({
       // applying for.
       openingRole = o.title?.trim() || o.department;
       openingLocation = o.location_id;
+      openingIsCorporate = Boolean(o.is_corporate);
     }
   }
 
@@ -173,6 +175,7 @@ export default async function ApplyPage({
       config={formConfig}
       screeningByRole={screeningByRole}
       openingId={openingId}
+      hideLocation={openingIsCorporate}
       source={source}
     />
   );

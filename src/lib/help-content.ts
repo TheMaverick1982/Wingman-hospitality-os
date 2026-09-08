@@ -673,6 +673,7 @@ export const ARTICLES: HelpArticle[] = [
         "Already posted a role at one store and want it at more? Edit that posting and use \"Also post to more locations\" — the original stays as is, and each store you add gets its own new posting and apply link with the same ad.",
         "For the type, pick Full-time, Part-time, and/or Seasonal — you can choose more than one when a role is open to both.",
         "Hiring for something that isn't in the role list? Choose \"+ Custom role\" and type it in (e.g. Baker, Valet, Event Lead). Wingman still writes the ad and the custom name shows on the posting, your careers page, and the apply form.",
+        "Hiring a corporate role that isn't at a restaurant (a marketing lead, a bookkeeper, a regional manager)? Pick \"Corporate (no location)\" instead of a store — there's nothing to choose. It's labeled \"Corporate\" on your careers page (not \"All locations\"), and applicants aren't asked which location they want, since there isn't one.",
       ] },
       { kind: "image", src: "/help/job-openings.png", alt: "Creating a job opening with an AI-written ad and a unique apply link", caption: "Create an opening — Wingman writes the ad and gives you a unique apply link to post on Indeed, Craigslist, or social." },
       { kind: "list", items: [

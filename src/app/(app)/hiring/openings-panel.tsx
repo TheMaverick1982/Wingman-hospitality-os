@@ -21,11 +21,14 @@ export type OpeningRow = {
   code: string | null;
   click_count: number | null;
   list_on_careers?: boolean;
+  is_corporate?: boolean;
 };
 
 type LocOpt = { id: string; name: string };
 
 const ALL_LOCATIONS = "__all__";
+// Sentinel location choice for a corporate / not-location-specific role (no store).
+const CORPORATE = "__corporate__";
 // Sentinel for the role <select> meaning "a custom role I'll type in".
 const CUSTOM_ROLE = "__custom__";
 
@@ -77,6 +80,8 @@ export function OpeningsPanel({
     : "";
 
   const locName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "A location" : "All locations");
+  // What to show for an opening's location — "Corporate" for a not-location-specific role.
+  const openingLocLabel = (o: OpeningRow) => (o.is_corporate ? "Corporate" : locName(o.location_id));
   // Prefer the short branded link (/j/<code>); fall back to the full apply URL for
   // any opening that doesn't have a code yet.
   const shortLink = (o: OpeningRow) => (o.code ? `${siteUrl}/j/${o.code}` : applyUrl ? `${applyUrl}?opening=${o.id}` : "");
@@ -216,7 +221,7 @@ export function OpeningsPanel({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[14.5px] font-semibold text-ink">{o.title?.trim() || o.department}</span>
-                      <span className="text-[12px] text-muted-2">· {locName(o.location_id)}</span>
+                      <span className="text-[12px] text-muted-2">· {openingLocLabel(o)}</span>
                       {isClosed && <span className="text-[11px] font-semibold text-muted-2 bg-paper border border-line rounded-full px-2 py-0.5">Closed</span>}
                       {!isClosed && <span className="text-[11px] font-semibold text-olive bg-olive-tint rounded-full px-2 py-0.5">Open</span>}
                       {!isClosed && o.list_on_careers === false && <span className="text-[11px] font-semibold text-[#B45309] bg-[#FDF3E1] rounded-full px-2 py-0.5">Unlisted</span>}
@@ -366,8 +371,12 @@ function OpeningEditor({
   const department = isCustomRole ? OPENING_OTHER_ROLE : roleChoice;
   // Edit mode edits one opening's single location; create mode can target several
   // locations at once (one opening is created per location, sharing the ad).
-  const [locationId, setLocationId] = useState<string>(opening?.location_id ?? ALL_LOCATIONS);
-  const [locationIds, setLocationIds] = useState<string[]>(opening?.location_id ? [opening.location_id] : [ALL_LOCATIONS]);
+  const [locationId, setLocationId] = useState<string>(
+    opening?.is_corporate ? CORPORATE : opening?.location_id ?? ALL_LOCATIONS
+  );
+  const [locationIds, setLocationIds] = useState<string[]>(
+    opening?.is_corporate ? [CORPORATE] : opening?.location_id ? [opening.location_id] : [ALL_LOCATIONS]
+  );
   const [payNote, setPayNote] = useState(opening?.pay_note ?? "");
   // Employment type is one or more of these (a role can be BOTH full- and
   // part-time), stored as a comma-joined string.
@@ -378,9 +387,11 @@ function OpeningEditor({
   const toggleType = (t: string) => setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const toggleLoc = (id: string) =>
     setLocationIds((prev) => {
+      // "All locations" and "Corporate" are each exclusive — a single posting.
       if (id === ALL_LOCATIONS) return [ALL_LOCATIONS];
-      const withoutAll = prev.filter((x) => x !== ALL_LOCATIONS);
-      return withoutAll.includes(id) ? withoutAll.filter((x) => x !== id) : [...withoutAll, id];
+      if (id === CORPORATE) return [CORPORATE];
+      const withoutSentinels = prev.filter((x) => x !== ALL_LOCATIONS && x !== CORPORATE);
+      return withoutSentinels.includes(id) ? withoutSentinels.filter((x) => x !== id) : [...withoutSentinels, id];
     });
   // Edit mode: fan an existing posting out to more stores — the edited posting
   // stays as is, and each of these creates a NEW posting (same ad, its own link).
@@ -403,8 +414,8 @@ function OpeningEditor({
   // The single location to give the AI for ad context: the edited opening's
   // location, or (on create) the one selected location — otherwise none.
   const genLocation = isEdit
-    ? locationId === ALL_LOCATIONS ? null : locationId
-    : locationIds.length === 1 && locationIds[0] !== ALL_LOCATIONS ? locationIds[0] : null;
+    ? locationId === ALL_LOCATIONS || locationId === CORPORATE ? null : locationId
+    : locationIds.length === 1 && locationIds[0] !== ALL_LOCATIONS && locationIds[0] !== CORPORATE ? locationIds[0] : null;
 
   function generate() {
     setError(null);
@@ -432,12 +443,13 @@ function OpeningEditor({
     startSave(async () => {
       // Editing: update the one opening in place.
       if (isEdit) {
-        const ownLoc = locationId === ALL_LOCATIONS ? null : locationId;
-        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers });
+        const corporate = locationId === CORPORATE;
+        const ownLoc = corporate || locationId === ALL_LOCATIONS ? null : locationId;
+        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate });
         if (res.error) { setError(res.error); return; }
         // Fan out to any additional locations: one NEW posting each (same ad, its
-        // own link). Guard against re-posting to this posting's own location.
-        const extra = alsoLocationIds.filter((id) => id !== ownLoc);
+        // own link). A corporate role isn't fanned out to stores.
+        const extra = corporate ? [] : alsoLocationIds.filter((id) => id !== ownLoc);
         for (const loc of extra) {
           const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers });
           if (r.error) { setError(r.error); return; }
@@ -447,14 +459,15 @@ function OpeningEditor({
         if (res.code) setSavedCode(res.code);
         return;
       }
-      // Creating: one opening per selected location (null = all locations). Share
-      // the same ad/pay/type across them.
-      const targets: (string | null)[] = locationIds.includes(ALL_LOCATIONS) ? [null] : locationIds;
+      // Creating: one opening per selected location (null = all locations). A
+      // corporate role is a single, location-less posting. Share the ad/pay/type.
+      const corporate = locationIds.includes(CORPORATE);
+      const targets: (string | null)[] = corporate || locationIds.includes(ALL_LOCATIONS) ? [null] : locationIds;
       if (targets.length === 0) { setError("Pick at least one location."); return; }
       let lastId: string | null = null;
       let lastCode: string | null = null;
       for (const loc of targets) {
-        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers });
+        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate });
         if (res.error) { setError(res.error); return; }
         lastId = res.id ?? lastId;
         lastCode = res.code ?? lastCode;
@@ -513,18 +526,19 @@ function OpeningEditor({
         <div>
           <label className="text-[13px] font-semibold text-ink mb-1 block">Location</label>
           {isEdit ? (
-            // Editing one opening — a single location (or all).
+            // Editing one opening — a single location, all locations, or corporate.
             <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputClass}>
               <option value={ALL_LOCATIONS}>All locations</option>
+              <option value={CORPORATE}>Corporate (not location-specific)</option>
               {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           ) : (
-            // Creating — pick one or more. "All locations" is exclusive (a single
-            // posting that applies everywhere); otherwise one opening is created
-            // per selected location, sharing this same ad.
+            // Creating — pick one or more. "All locations" and "Corporate" are each
+            // exclusive (a single posting); otherwise one opening is created per
+            // selected location, sharing this same ad.
             <>
               <div className="flex flex-wrap gap-2">
-                {[{ id: ALL_LOCATIONS, name: "All locations" }, ...locations].map((l) => {
+                {[{ id: ALL_LOCATIONS, name: "All locations" }, { id: CORPORATE, name: "Corporate (no location)" }, ...locations].map((l) => {
                   const on = locationIds.includes(l.id);
                   return (
                     <button
@@ -540,17 +554,20 @@ function OpeningEditor({
                   );
                 })}
               </div>
-              {locations.length > 0 && !locationIds.includes(ALL_LOCATIONS) && locationIds.length > 1 && (
+              {locations.length > 0 && !locationIds.includes(ALL_LOCATIONS) && !locationIds.includes(CORPORATE) && locationIds.length > 1 && (
                 <p className="text-[11.5px] text-muted-2 mt-1.5">Creates {locationIds.length} openings — one per location — with this same ad and its own apply link.</p>
               )}
             </>
+          )}
+          {(isEdit ? locationId === CORPORATE : locationIds.includes(CORPORATE)) && (
+            <p className="text-[11.5px] text-muted-2 mt-1.5">A corporate role isn&rsquo;t tied to a store — no location to pick. It shows as &ldquo;Corporate&rdquo; on your careers page and applicants aren&rsquo;t asked to choose a location.</p>
           )}
         </div>
 
         {/* Edit mode: expand an existing posting to more stores. Only offered for a
             specific-location posting (an "all locations" one already covers everyone),
             and only when there are other locations to add. */}
-        {isEdit && locationId !== ALL_LOCATIONS && locations.filter((l) => l.id !== locationId).length > 0 && (
+        {isEdit && locationId !== ALL_LOCATIONS && locationId !== CORPORATE && locations.filter((l) => l.id !== locationId).length > 0 && (
           <div>
             <label className="text-[13px] font-semibold text-ink mb-1 block">Also post to more locations <span className="font-normal text-muted-2">(optional)</span></label>
             <div className="flex flex-wrap gap-2">
