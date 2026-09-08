@@ -1039,7 +1039,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Team members & permissions",
     summary: "Invite, edit, and set what each person can access.",
     categoryId: "admin",
-    keywords: ["team", "invite", "members", "permissions", "edit", "remove", "roles", "access", "hide sections", "cleaner dashboard", "declutter"],
+    keywords: ["team", "invite", "members", "permissions", "edit", "remove", "roles", "access", "hide sections", "cleaner dashboard", "declutter", "corporate", "hq", "not location specific", "location access"],
     body: [
       { kind: "p", text: "Owners manage the team under Settings → Team & permissions." },
       { kind: "steps", items: [
@@ -1056,6 +1056,14 @@ export const ARTICLES: HelpArticle[] = [
         "Change it any time from Edit — untick to bring a section back.",
         "Only Managers and Shift Leads offer the checklist; Super Admins always see everything, and Staff already have a fixed, minimal view.",
       ] },
+      { kind: "h", text: "Location access — including corporate roles" },
+      { kind: "p", text: "When you invite or edit anyone below Super Admin, you set their location access:" },
+      { kind: "list", items: [
+        "All locations — sees every store (for an operator who oversees the whole group).",
+        "Corporate — not tied to a location. For an HQ role (marketing, finance, ops, HR) that isn't based at one store. They see every location for the sections they can access, and there's no store to pick — pair it with \"Hide sections\" to keep them to just their area (e.g. a corporate marketer with only Partners and Hiring).",
+        "Specific locations — pick one or more stores; they only see those.",
+      ] },
+      { kind: "tip", text: "Corporate members show as \"Corporate\" on the team list instead of a home store, so it's clear at a glance who's HQ and who runs a room." },
       { kind: "tip", text: "Anyone you invite is automatically added to your Staff page under their job role — no need to enter them twice. If they're already on Staff (or were hired from a candidate), the invite just links to that same person, matched by email." },
       { kind: "note", text: "You can't remove or demote the last Super Admin — promote someone else first. Settings and Billing are always owner-only." },
     ],

@@ -53,11 +53,16 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Choose their job role." };
 
   // Resolve the location scope for manager/staff (Super Admins get everything).
+  // "corporate" = an HQ role not tied to a store; it sees every location (like
+  // "all") but we flag it so it's labeled Corporate and skips the store picker.
   let allLocations = false;
+  let corporate = false;
   let locationIds: string[] = [];
   if (role !== "super_admin") {
-    allLocations = String(formData.get("scope") || "specific") === "all";
-    locationIds = formData.getAll("locationIds").map(String).filter(Boolean);
+    const scope = String(formData.get("scope") || "specific");
+    corporate = scope === "corporate";
+    allLocations = scope === "all" || corporate;
+    locationIds = allLocations ? [] : formData.getAll("locationIds").map(String).filter(Boolean);
     if (!allLocations && locationIds.length === 0) return { error: "Select at least one location." };
   }
 
@@ -79,9 +84,12 @@ export async function inviteTeamMember(_prev: ActionState, formData: FormData): 
   });
   if (assignError) return { error: assignError.message };
 
-  // Per-member hidden sections chosen at invite time (cleaner dashboard).
-  const invitedOverrides = buildSectionOverrides(formData, role);
-  if (invitedOverrides) await admin.from("profiles").update({ section_overrides: invitedOverrides }).eq("id", invited.user.id);
+  // Per-member hidden sections chosen at invite time (cleaner dashboard) and the
+  // corporate flag (labeled Corporate, not tied to a store).
+  await admin
+    .from("profiles")
+    .update({ section_overrides: buildSectionOverrides(formData, role), is_corporate: corporate })
+    .eq("id", invited.user.id);
 
   // Tie this login to a Staff record (create or link by email) so they appear on
   // the Staff page with their job role and their metrics land in the right bucket.
@@ -309,11 +317,15 @@ export async function editTeamMember(_prev: ActionState, formData: FormData): Pr
   }
 
   // Resolve location scope for manager/staff (Super Admins get everything).
+  // "corporate" sees every location (like "all") but is flagged as an HQ role.
   let allLocations = false;
+  let corporate = false;
   let locationIds: string[] = [];
   if (role !== "super_admin") {
-    allLocations = String(formData.get("scope") || "specific") === "all";
-    locationIds = formData.getAll("locationIds").map(String).filter(Boolean);
+    const scope = String(formData.get("scope") || "specific");
+    corporate = scope === "corporate";
+    allLocations = scope === "all" || corporate;
+    locationIds = allLocations ? [] : formData.getAll("locationIds").map(String).filter(Boolean);
     if (!allLocations && locationIds.length === 0) return { error: "Select at least one location." };
   }
 
@@ -331,7 +343,11 @@ export async function editTeamMember(_prev: ActionState, formData: FormData): Pr
   // Super Admin or all boxes unchecked). Admin client — target already confirmed
   // to be in this org above.
   const admin = createAdminClient();
-  await admin.from("profiles").update({ section_overrides: buildSectionOverrides(formData, role) }).eq("id", userId).eq("org_id", profile.orgId);
+  await admin
+    .from("profiles")
+    .update({ section_overrides: buildSectionOverrides(formData, role), is_corporate: corporate })
+    .eq("id", userId)
+    .eq("org_id", profile.orgId);
 
   revalidatePath("/settings");
   revalidatePath("/", "layout");

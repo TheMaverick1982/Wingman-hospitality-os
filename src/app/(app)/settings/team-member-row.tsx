@@ -13,6 +13,7 @@ export type TeamMember = {
   access_role: "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
   location_id: string | null;
   all_locations: boolean;
+  is_corporate: boolean;
   accessibleCount: number;
   accessibleLocationIds: string[];
   hiddenSections: string[];
@@ -22,7 +23,8 @@ export type TeamMember = {
 
 type Role = "super_admin" | "manager" | "shift_lead" | "staff" | "developer";
 
-function locationLabel(role: Role, allLocations: boolean, accessibleCount: number, home: string | null, locations: Location[]): string {
+function locationLabel(role: Role, allLocations: boolean, isCorporate: boolean, accessibleCount: number, home: string | null, locations: Location[]): string {
+  if (isCorporate) return "Corporate";
   if (role === "super_admin" || allLocations) return "All locations";
   const homeName = locations.find((l) => l.id === home)?.name ?? "—";
   return accessibleCount > 1 ? `${homeName} +${accessibleCount - 1}` : homeName;
@@ -68,7 +70,7 @@ export function TeamMemberRow({
       <Pill>{role === "manager" ? "Manager" : role === "shift_lead" ? "Shift Lead" : role === "developer" ? "Developer" : "Staff"}</Pill>
     );
 
-  const locLabel = locationLabel(role, member.all_locations, member.accessibleCount, member.location_id, locations);
+  const locLabel = locationLabel(role, member.all_locations, member.is_corporate, member.accessibleCount, member.location_id, locations);
 
   // The current user's own row is read-only, to avoid self-lockout footguns.
   if (isCurrentUser) {
@@ -112,6 +114,7 @@ export function TeamMemberRow({
               full_name: member.full_name,
               access_role: member.access_role,
               all_locations: member.all_locations,
+              is_corporate: member.is_corporate,
               accessibleLocationIds: member.accessibleLocationIds,
               hiddenSections: member.hiddenSections,
             }}
