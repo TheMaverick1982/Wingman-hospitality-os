@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode, Code2 } from "lucide-react";
+import { Sparkles, Plus, Copy, Check, X, Pencil, Trash2, QrCode, Code2, FileText, Eye, EyeOff } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { Modal } from "@/components/ui/modal";
 import { inputClass } from "@/components/ui/field";
 import { OPENING_OTHER_ROLE } from "@/lib/constants";
-import { generateOpeningAd, saveOpening, setOpeningStatus, deleteOpening } from "./openings-actions";
+import { generateOpeningAd, saveOpening, setOpeningStatus, setOpeningListed, deleteOpening } from "./openings-actions";
 
 export type OpeningRow = {
   id: string;
@@ -20,6 +20,7 @@ export type OpeningRow = {
   created_at: string;
   code: string | null;
   click_count: number | null;
+  list_on_careers?: boolean;
 };
 
 type LocOpt = { id: string; name: string };
@@ -78,6 +79,9 @@ export function OpeningsPanel({
   // Prefer the short branded link (/j/<code>); fall back to the full apply URL for
   // any opening that doesn't have a code yet.
   const shortLink = (o: OpeningRow) => (o.code ? `${siteUrl}/j/${o.code}` : applyUrl ? `${applyUrl}?opening=${o.id}` : "");
+  // Direct link to this opening's own public page (role + full description + Apply
+  // button), shareable even when the opening is unlisted from the careers hub.
+  const jobPageLink = (o: OpeningRow) => (careersUrl ? `${careersUrl}/${o.id}` : "");
 
   async function copy(text: string, key: string) {
     try {
@@ -178,6 +182,7 @@ export function OpeningsPanel({
                       <span className="text-[12px] text-muted-2">· {locName(o.location_id)}</span>
                       {isClosed && <span className="text-[11px] font-semibold text-muted-2 bg-paper border border-line rounded-full px-2 py-0.5">Closed</span>}
                       {!isClosed && <span className="text-[11px] font-semibold text-olive bg-olive-tint rounded-full px-2 py-0.5">Open</span>}
+                      {!isClosed && o.list_on_careers === false && <span className="text-[11px] font-semibold text-[#B45309] bg-[#FDF3E1] rounded-full px-2 py-0.5">Unlisted</span>}
                     </div>
                     <div className="text-[12px] text-muted-2 mt-0.5">
                       {o.department === OPENING_OTHER_ROLE ? "Custom role" : o.department}
@@ -197,6 +202,22 @@ export function OpeningsPanel({
                       {!isClosed && shortLink(o) && (
                         <button type="button" onClick={() => copy(shortLink(o), `link:${o.id}`)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick">
                           {copiedId === `link:${o.id}` ? <Check size={12} /> : <Copy size={12} />} {copiedId === `link:${o.id}` ? "Copied" : "Apply link"}
+                        </button>
+                      )}
+                      {!isClosed && jobPageLink(o) && (
+                        <button type="button" title="Copy a direct link to this posting's own page (role + full description + Apply button)" onClick={() => copy(jobPageLink(o), `page:${o.id}`)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick">
+                          {copiedId === `page:${o.id}` ? <Check size={12} /> : <FileText size={12} />} {copiedId === `page:${o.id}` ? "Copied" : "Job page"}
+                        </button>
+                      )}
+                      {!isClosed && (
+                        <button
+                          type="button"
+                          onClick={() => startBusy(async () => { await setOpeningListed(o.id, o.list_on_careers === false); })}
+                          disabled={busyId}
+                          title={o.list_on_careers === false ? "Show this role on your public careers page" : "Hide this role from your careers page (its direct link still works)"}
+                          className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-2 border border-line rounded-full px-2.5 py-1 hover:border-brick hover:text-brick disabled:opacity-50"
+                        >
+                          {o.list_on_careers === false ? <><Eye size={12} /> List</> : <><EyeOff size={12} /> Unlist</>}
                         </button>
                       )}
                       {!isClosed && o.code && (
@@ -315,6 +336,8 @@ function OpeningEditor({
   // part-time), stored as a comma-joined string.
   const [types, setTypes] = useState<string[]>(parseEmploymentTypes(opening?.employment_type));
   const employmentType = types.join(", ");
+  // Whether this opening shows on the public careers hub (unlisted = direct link only).
+  const [listOnCareers, setListOnCareers] = useState(opening?.list_on_careers !== false);
   const toggleType = (t: string) => setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const toggleLoc = (id: string) =>
     setLocationIds((prev) => {
@@ -373,13 +396,13 @@ function OpeningEditor({
       // Editing: update the one opening in place.
       if (isEdit) {
         const ownLoc = locationId === ALL_LOCATIONS ? null : locationId;
-        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy });
+        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers });
         if (res.error) { setError(res.error); return; }
         // Fan out to any additional locations: one NEW posting each (same ad, its
         // own link). Guard against re-posting to this posting's own location.
         const extra = alsoLocationIds.filter((id) => id !== ownLoc);
         for (const loc of extra) {
-          const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy });
+          const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers });
           if (r.error) { setError(r.error); return; }
         }
         if (extra.length > 0) { onClose(); return; }
@@ -394,7 +417,7 @@ function OpeningEditor({
       let lastId: string | null = null;
       let lastCode: string | null = null;
       for (const loc of targets) {
-        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy });
+        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers });
         if (res.error) { setError(res.error); return; }
         lastId = res.id ?? lastId;
         lastCode = res.code ?? lastCode;
@@ -441,6 +464,14 @@ function OpeningEditor({
             <input value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="e.g. $18–22/hr + tips" className={inputClass} />
           </div>
         </div>
+
+        <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
+          <input type="checkbox" checked={listOnCareers} onChange={(e) => setListOnCareers(e.target.checked)} className="mt-0.5 accent-brick" />
+          <span className="text-[13px]">
+            <span className="font-semibold text-ink">Show on your public careers page</span>
+            <span className="block text-[12px] text-muted-2">On by default. Turn off to keep this role off your careers page and out of search — you can still share its direct link (the &ldquo;Job page&rdquo; link on the opening).</span>
+          </span>
+        </label>
 
         <div>
           <label className="text-[13px] font-semibold text-ink mb-1 block">Location</label>

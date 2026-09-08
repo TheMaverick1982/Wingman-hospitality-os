@@ -22,11 +22,11 @@ async function load(slug: string, openingId: string) {
 
   const { data: opData } = await admin
     .from("job_openings")
-    .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at, status")
+    .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at, status, list_on_careers")
     .eq("id", openingId)
     .eq("org_id", org.id)
     .maybeSingle();
-  const op = opData as (JobOpeningLd & { status: string }) | null;
+  const op = opData as (JobOpeningLd & { status: string; list_on_careers: boolean }) | null;
   // Only an open, valid-role opening gets an indexable detail page.
   if (!op || op.status !== "open" || !isOpeningRole(op.department)) return { org, opening: null, location: null };
 
@@ -58,6 +58,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
+    // An unlisted opening is shareable by direct link but kept out of search.
+    ...(op.list_on_careers === false ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical: `/careers/${slug}/${op.id}` },
     openGraph: { title, description, url: `/careers/${slug}/${op.id}`, type: "website" },
   };
@@ -71,9 +73,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
   const role = jobRoleLabel(op);
   const applyHref = `/apply/${slug}?opening=${op.id}&src=careers`;
-  // The canonical JobPosting for Google Jobs lives here, on the leaf page, plus a
-  // breadcrumb trail (Home → Careers at <org> → <role>).
-  const jsonLd = {
+  // An unlisted opening is shareable by direct link but not indexed — so it emits
+  // no JobPosting/Breadcrumb structured data (it's noindexed too). Listed openings
+  // carry the canonical JobPosting for Google Jobs plus a breadcrumb trail.
+  const jsonLd = op.list_on_careers === false ? null : {
     "@context": "https://schema.org",
     "@graph": [
       buildJobPosting(op, org, location ? [location] : [], SITE),
@@ -90,7 +93,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
   return (
     <div className="min-h-full bg-paper force-light">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
       <div className="max-w-[720px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
         <Link href={`/careers/${slug}`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-brick mb-8">
           <ArrowLeft size={15} /> All open roles at {org.name}

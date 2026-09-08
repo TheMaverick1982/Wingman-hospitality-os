@@ -74,6 +74,7 @@ export default async function CareersPage({
       .select("id, department, location_id, title, ad_copy, pay_note, employment_type, created_at")
       .eq("org_id", org.id)
       .eq("status", "open")
+      .eq("list_on_careers", true)
       .order("created_at", { ascending: false }),
     admin.from("locations").select("id, name").eq("org_id", org.id).order("name"),
   ]);

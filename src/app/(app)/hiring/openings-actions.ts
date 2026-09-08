@@ -19,6 +19,8 @@ export type OpeningInput = {
   payNote?: string;
   employmentType?: string;
   adCopy: string;
+  // false = "unlisted": open + shareable by direct link, hidden from the careers hub.
+  listOnCareers?: boolean;
 };
 export type OpeningResult = { error: string | null; id?: string; code?: string | null };
 export type AdResult = { error: string | null; adCopy?: string };
@@ -135,6 +137,7 @@ export async function saveOpening(input: OpeningInput): Promise<OpeningResult> {
     ad_copy: input.adCopy?.trim() || "",
     pay_note: input.payNote?.trim() || null,
     employment_type: input.employmentType?.trim() || null,
+    ...(input.listOnCareers !== undefined ? { list_on_careers: input.listOnCareers } : {}),
   };
 
   if (input.id) {
@@ -185,6 +188,19 @@ export async function setOpeningStatus(id: string, status: "open" | "closed"): P
     .update({ status, closed_at: status === "closed" ? new Date().toISOString() : null })
     .eq("id", id)
     .eq("org_id", profile.orgId);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Quick toggle: list this opening on the public careers hub, or unlist it (still
+// open + shareable by its direct link).
+export async function setOpeningListed(id: string, listed: boolean): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "hiring", profile.permissionOverrides)) return { error: "Not authorized." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("job_openings").update({ list_on_careers: listed }).eq("id", id).eq("org_id", profile.orgId);
   if (error) return { error: error.message };
   revalidatePath("/hiring");
   return { error: null };

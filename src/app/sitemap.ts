@@ -63,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const admin = createAdminClient();
     const [{ data: orgRows }, { data: openRows }] = await Promise.all([
       admin.from("organizations").select("id, public_slug").not("public_slug", "is", null).eq("apply_enabled", true),
-      admin.from("job_openings").select("id, org_id, created_at").eq("status", "open"),
+      admin.from("job_openings").select("id, org_id, created_at").eq("status", "open").eq("list_on_careers", true),
     ]);
     // Slug per eligible org.
     const slugByOrg = new Map<string, string>();
