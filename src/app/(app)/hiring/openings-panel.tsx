@@ -65,6 +65,7 @@ export function OpeningsPanel({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showCareersEmbed, setShowCareersEmbed] = useState(false);
   const [showCareersQr, setShowCareersQr] = useState(false);
+  const [roleLink, setRoleLink] = useState("");
 
   // Copy-paste iframe for the careers page — customers embed the whole "now
   // hiring, by location" page on their own site. The tiny listener resizes the
@@ -95,6 +96,15 @@ export function OpeningsPanel({
 
   const open = openings.filter((o) => o.status === "open");
   const closed = openings.filter((o) => o.status !== "open");
+
+  // Distinct role labels among the LISTED open roles (unlisted ones aren't on the
+  // careers page, so a role link couldn't surface them). Used to build a link that
+  // pre-filters the careers page to one role — e.g. for a "hiring managers" ad.
+  const linkableRoles = Array.from(
+    new Set(open.filter((o) => o.list_on_careers !== false).map((o) => o.title?.trim() || o.department))
+  ).sort((a, b) => a.localeCompare(b));
+  const activeRoleLink = roleLink || linkableRoles[0] || "";
+  const roleCareersUrl = careersUrl && activeRoleLink ? `${careersUrl}?role=${encodeURIComponent(activeRoleLink)}` : "";
 
   return (
     <div>
@@ -160,6 +170,33 @@ export function OpeningsPanel({
                 className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[12px] font-mono text-charcoal-2 outline-none resize-none"
               />
               <p className="text-[11.5px] text-muted-2 mt-1.5">Paste into any page or website builder that allows an HTML/embed block. It resizes to fit and always shows your current open roles — close a role and it drops off automatically.</p>
+            </div>
+          )}
+
+          {linkableRoles.length > 1 && roleCareersUrl && (
+            <div className="mt-3 pt-3 border-t border-brick/15">
+              <div className="text-[12.5px] font-semibold text-ink mb-1">Link to just one role</div>
+              <p className="text-[12px] text-muted mb-2">Running an ad for a specific role (say, managers)? Share a careers link that shows only that role.</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={activeRoleLink}
+                  onChange={(e) => setRoleLink(e.target.value)}
+                  aria-label="Role to link to"
+                  className="text-[12.5px] font-semibold bg-white border border-line rounded-full px-3 py-1.5 outline-none text-charcoal-2"
+                >
+                  {linkableRoles.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <span className="text-[12px] text-muted-2 font-mono truncate min-w-0 max-w-full">{roleCareersUrl.replace(/^https?:\/\//, "")}</span>
+                <button
+                  type="button"
+                  onClick={() => copy(roleCareersUrl, "role-link")}
+                  className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-brick rounded-full px-3.5 py-1.5 hover:bg-brick-dark transition-colors shrink-0"
+                >
+                  {copiedId === "role-link" ? <Check size={13} /> : <Copy size={13} />} {copiedId === "role-link" ? "Copied" : "Copy role link"}
+                </button>
+              </div>
             </div>
           )}
         </div>
