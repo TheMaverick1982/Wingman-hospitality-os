@@ -84,12 +84,14 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
   // aren't shown or asked for a location.
   let openingId: string | null = null;
   let openingIsCorporate = false;
+  let openingNotifyEmail = "";
   const openingParam = String(formData.get("opening") || "").trim();
   if (openingParam) {
-    const { data: op } = await admin.from("job_openings").select("id, is_corporate").eq("id", openingParam).eq("org_id", org.id).maybeSingle();
+    const { data: op } = await admin.from("job_openings").select("id, is_corporate, notify_email").eq("id", openingParam).eq("org_id", org.id).maybeSingle();
     if (op) {
       openingId = (op as { id: string }).id;
       openingIsCorporate = Boolean((op as { is_corporate?: boolean }).is_corporate);
+      openingNotifyEmail = ((op as { notify_email?: string | null }).notify_email || "").trim();
     }
   }
 
@@ -240,7 +242,8 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     if (!up.error) await admin.from("job_applications").update({ resume_path: path }).eq("id", appId);
   }
 
-  // Notify the location's email on file (fallback to the monitor address),
+  // Notify the location's email on file (fallback to the monitor address), the
+  // opening's own notify email if set (corporate openings have no store email),
   // plus any catch-all copy addresses the owner configured.
   let locEmail = "";
   if (validLoc) {
@@ -251,7 +254,7 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
     .split(/[,\n;]+/)
     .map((s) => s.trim())
     .filter((s) => s.includes("@"));
-  const recipients = [...new Set([locEmail, ...ccList].filter(Boolean))];
+  const recipients = [...new Set([locEmail, openingNotifyEmail, ...ccList].filter(Boolean))];
   if (recipients.length === 0) recipients.push(FALLBACK_ALERT);
 
   // The application is always recorded; the notify email is what the account can

@@ -316,7 +316,7 @@ export default async function HiringPage({
     // stays visible in a single-store view too (scopeOr always allows null).
     let openingsQ = supabase
       .from("job_openings")
-      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count, list_on_careers, is_corporate")
+      .select("id, department, location_id, title, ad_copy, pay_note, employment_type, status, created_at, code, click_count, list_on_careers, is_corporate, notify_email")
       .order("created_at", { ascending: false });
     if (scopeOr) openingsQ = openingsQ.or(scopeOr);
     const { data: opRows } = await openingsQ;

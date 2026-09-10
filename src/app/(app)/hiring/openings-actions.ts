@@ -24,6 +24,9 @@ export type OpeningInput = {
   // true = a corporate / not-location-specific role (no store). Forces location null
   // and labels it "Corporate" (vs "All locations") on the careers page and admin.
   isCorporate?: boolean;
+  // Where to send new-application alerts for a corporate opening (no store email to
+  // fall back to). Ignored for location-based openings.
+  notifyEmail?: string;
 };
 export type OpeningResult = { error: string | null; id?: string; code?: string | null };
 export type AdResult = { error: string | null; adCopy?: string };
@@ -134,11 +137,15 @@ export async function saveOpening(input: OpeningInput): Promise<OpeningResult> {
 
   const admin = createAdminClient();
   const corporate = !!input.isCorporate;
+  // A notification email only applies to a corporate opening (no store to route to).
+  const notifyEmail = corporate ? input.notifyEmail?.trim() || null : null;
+  if (notifyEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notifyEmail)) return { error: "Enter a valid notification email address." };
   const row = {
     department: input.department,
     // A corporate role isn't tied to a store, so it always stores a null location.
     location_id: corporate ? null : input.locationId || null,
     is_corporate: corporate,
+    notify_email: notifyEmail,
     title: input.title?.trim() || null,
     ad_copy: input.adCopy?.trim() || "",
     pay_note: input.payNote?.trim() || null,

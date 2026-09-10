@@ -22,6 +22,7 @@ export type OpeningRow = {
   click_count: number | null;
   list_on_careers?: boolean;
   is_corporate?: boolean;
+  notify_email?: string | null;
 };
 
 type LocOpt = { id: string; name: string };
@@ -384,6 +385,8 @@ function OpeningEditor({
   const employmentType = types.join(", ");
   // Whether this opening shows on the public careers hub (unlisted = direct link only).
   const [listOnCareers, setListOnCareers] = useState(opening?.list_on_careers !== false);
+  // Corporate openings have no store email, so the owner can set where alerts go.
+  const [notifyEmail, setNotifyEmail] = useState(opening?.notify_email ?? "");
   const toggleType = (t: string) => setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const toggleLoc = (id: string) =>
     setLocationIds((prev) => {
@@ -445,7 +448,7 @@ function OpeningEditor({
       if (isEdit) {
         const corporate = locationId === CORPORATE;
         const ownLoc = corporate || locationId === ALL_LOCATIONS ? null : locationId;
-        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate });
+        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate, notifyEmail });
         if (res.error) { setError(res.error); return; }
         // Fan out to any additional locations: one NEW posting each (same ad, its
         // own link). A corporate role isn't fanned out to stores.
@@ -467,7 +470,7 @@ function OpeningEditor({
       let lastId: string | null = null;
       let lastCode: string | null = null;
       for (const loc of targets) {
-        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate });
+        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate, notifyEmail });
         if (res.error) { setError(res.error); return; }
         lastId = res.id ?? lastId;
         lastCode = res.code ?? lastCode;
@@ -560,7 +563,18 @@ function OpeningEditor({
             </>
           )}
           {(isEdit ? locationId === CORPORATE : locationIds.includes(CORPORATE)) && (
-            <p className="text-[11.5px] text-muted-2 mt-1.5">A corporate role isn&rsquo;t tied to a store — no location to pick. It shows as &ldquo;Corporate&rdquo; on your careers page and applicants aren&rsquo;t asked to choose a location.</p>
+            <div className="mt-2">
+              <p className="text-[11.5px] text-muted-2 mb-1.5">A corporate role isn&rsquo;t tied to a store — no location to pick. It shows as &ldquo;Corporate&rdquo; on your careers page and applicants aren&rsquo;t asked to choose a location.</p>
+              <label className="text-[13px] font-semibold text-ink mb-1 block">Send application alerts to <span className="font-normal text-muted-2">(optional)</span></label>
+              <input
+                type="email"
+                value={notifyEmail}
+                onChange={(e) => setNotifyEmail(e.target.value)}
+                placeholder="e.g. hr@yourcompany.com"
+                className={inputClass}
+              />
+              <p className="text-[11.5px] text-muted-2 mt-1">Since a corporate role has no store email, new applications for it are emailed here (plus any account-wide copy addresses in Settings). Leave blank to use only those.</p>
+            </div>
           )}
         </div>
 
