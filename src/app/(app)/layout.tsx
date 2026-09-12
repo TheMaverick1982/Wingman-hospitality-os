@@ -13,6 +13,7 @@ import { Sidebar } from "@/components/app-shell/sidebar";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { Topbar } from "@/components/app-shell/topbar";
 import { ScrollReset } from "@/components/app-shell/scroll-reset";
+import { LockBodyScroll } from "@/components/app-shell/lock-body-scroll";
 import { ImpersonationBanner } from "@/components/app-shell/impersonation-banner";
 import { DemoBanner } from "@/components/app-shell/demo-banner";
 import { DemoViewToggle } from "@/components/app-shell/demo-view-toggle";
@@ -101,6 +102,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="fixed inset-0 flex overflow-hidden">
+      {/* Lock the document scroll while the fixed app shell is mounted so iOS
+          can't rubber-band the body and shove the sticky top bar/menu out of
+          view (only #app-scroll should ever scroll). Restored on unmount. */}
+      <LockBodyScroll />
       <Sidebar
         accessRole={profile.accessRole}
         fullName={profile.fullName}
@@ -153,7 +158,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userLocationName={profile.locationName}
           language={profile.language}
         />
-        <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex-1 bg-paper">
+        <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden overscroll-contain flex-1 bg-paper">
           <ScrollReset targetId="app-scroll" />
           {/* Contain the PAGE here: if any page component uses useSearchParams()
               (which opts into a Suspense/CSR bailout on a param navigation), the
