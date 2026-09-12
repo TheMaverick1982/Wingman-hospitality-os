@@ -3,13 +3,17 @@
 import { useEffect } from "react";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { reportClientError } from "@/lib/report-client-error";
+import { isVersionSkewError, reloadOnceForSkew } from "@/lib/is-version-skew";
 
 // App-segment error boundary: catches runtime errors on any signed-in page,
 // reports them to the monitor, and shows a calm recovery screen instead of a
 // blank crash.
-export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function AppError({ error }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     reportClientError(error);
+    // A stale tab after a deploy can't recover by re-rendering — pull the current
+    // deployment with a one-time hard reload.
+    if (isVersionSkewError(error)) reloadOnceForSkew();
   }, [error]);
 
   return (
@@ -23,10 +27,10 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
           We&rsquo;ve been notified automatically and we&rsquo;re on it. Try again — it often just works on a second attempt.
         </p>
         <button
-          onClick={reset}
+          onClick={() => window.location.reload()}
           className="inline-flex items-center gap-2 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors"
         >
-          <RefreshCw size={15} /> Try again
+          <RefreshCw size={15} /> Reload the page
         </button>
       </div>
     </div>
