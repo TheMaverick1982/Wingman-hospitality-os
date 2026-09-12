@@ -2,12 +2,16 @@
 
 import { useEffect } from "react";
 import { reportClientError } from "@/lib/report-client-error";
+import { isVersionSkewError, reloadOnceForSkew } from "@/lib/is-version-skew";
 
 // Last-resort boundary: catches errors thrown in the root layout itself. It
 // replaces the whole document, so it must render its own <html>/<body>.
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     reportClientError(error);
+    // A stale tab after a deploy can't recover by re-rendering — pull the current
+    // deployment with a one-time hard reload.
+    if (isVersionSkewError(error)) reloadOnceForSkew();
   }, [error]);
 
   return (
@@ -20,10 +24,10 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
               We&rsquo;ve been notified automatically. Please try again.
             </p>
             <button
-              onClick={reset}
+              onClick={() => window.location.reload()}
               style={{ fontSize: 14, fontWeight: 600, color: "#fff", background: "#0a6cff", border: "none", borderRadius: 999, padding: "10px 20px", cursor: "pointer" }}
             >
-              Try again
+              Reload
             </button>
           </div>
         </div>
