@@ -151,6 +151,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const [tab, setTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  // Sort order. "fit" keeps the best→worst tier grouping (the default); the date
+  // orders render a flat chronological list instead.
+  const [sort, setSort] = useState<"fit" | "newest" | "oldest">("fit");
   const [tagDraft, setTagDraft] = useState("");
   const [taggedCopied, setTaggedCopied] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -233,6 +236,13 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   // Only group by tier when at least one shown applicant has actually been
   // screened; otherwise a single flat (score-then-date) list reads cleaner.
   const anyGraded = pool.some((a) => a.screeningGrade);
+  // Date comparator for the chronological sorts.
+  const byDate = (dir: 1 | -1) => (a: Applicant, b: Applicant) =>
+    (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
+  const sortComparator = sort === "newest" ? byDate(-1) : sort === "oldest" ? byDate(1) : byScoreThenDate;
+  // Tier grouping only makes sense for the default "best fit" sort; a date sort
+  // means the person wants a straight chronological list, so we flatten it.
+  const grouped = tab === "active" && anyGraded && sort === "fit";
 
   function copyLink() {
     if (!liveUrl) return;
@@ -487,6 +497,26 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         </div>
       )}
 
+      {/* Sort order — best fit (grouped) or by date. */}
+      {shown.length > 1 && (
+        <div className="flex items-center justify-end gap-2 mb-3">
+          <label htmlFor="applicant-sort" className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2">Sort</label>
+          <div className="flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5">
+            <SlidersHorizontal size={13} className="text-muted-2" />
+            <select
+              id="applicant-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as "fit" | "newest" | "oldest")}
+              className="text-[12.5px] font-semibold bg-transparent outline-none pr-1 text-charcoal-2"
+            >
+              <option value="fit">Best fit</option>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       {shown.length === 0 ? (
         <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
           <p className="text-sm text-muted">
@@ -497,7 +527,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
                 : "Nothing matches these filters."}
           </p>
         </div>
-      ) : tab === "active" && anyGraded ? (
+      ) : grouped ? (
         <div className="flex flex-col gap-5">
           {GROUP_ORDER.map((g) => {
             const members = shown.filter((a) => groupOf(a) === g).sort(byScoreThenDate);
@@ -523,7 +553,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {[...shown].sort(byScoreThenDate).map((a) => <ApplicantCard key={a.id} a={a} />)}
+          {[...shown].sort(sortComparator).map((a) => <ApplicantCard key={a.id} a={a} />)}
         </div>
       )}
     </div>
