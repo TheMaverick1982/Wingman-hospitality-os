@@ -40,25 +40,29 @@ export function Topbar({
   const currentLocation = useLocationParam();
   const setLocation = useSetLocationParam();
 
-  // Last-known-good cache for the switcher's data. This top bar lives in the
-  // always-mounted app shell, and its location list is server-rendered. If any
-  // render ever hands us an EMPTY list — a transient RLS/cookie hiccup on an RSC
-  // refetch, a mid-navigation blip — we fall back to the last non-empty list we
-  // saw instead of hiding the switcher. This is the durable cure for the
-  // recurring "location dropdown disappears" report: once shown, it stays shown
-  // for the whole session, whatever the server momentarily returns. Uses React's
-  // supported "store info from previous renders" pattern (a guarded setState in
-  // render, never in an effect), so it can't loop and needs no ref.
-  const [lastGood, setLastGood] = useState({ locations, canSwitch, orgIsMultiLocation, userLocationName });
-  if (locations.length > 0 && locations !== lastGood.locations) {
-    setLastGood({ locations, canSwitch, orgIsMultiLocation, userLocationName });
+  // Monotonic last-known-good cache for the switcher's data. This top bar lives in
+  // the always-mounted app shell, and its inputs are server-rendered. A transient
+  // RLS/cookie hiccup on an RSC refetch can momentarily hand us an EMPTY list OR a
+  // degraded profile (canSwitch/orgIsMultiLocation flipping false) — either of
+  // which used to hide the switcher. So we only ever UPGRADE toward the richest
+  // state we've seen and never downgrade: once the switcher can show, it stays
+  // shown for the whole session, whatever the server momentarily returns. Uses
+  // React's supported "store info from previous renders" pattern (a guarded
+  // setState in render, never an effect), and converges because the server props
+  // are a stable ref between client re-renders — so it can't loop.
+  const [best, setBest] = useState({ locations, canSwitch, orgIsMultiLocation, userLocationName });
+  const locs = locations.length > 0 ? locations : best.locations;
+  const canSw = canSwitch || best.canSwitch;
+  const multi = orgIsMultiLocation || best.orgIsMultiLocation;
+  const locName = userLocationName ?? best.userLocationName;
+  if (
+    locs !== best.locations ||
+    canSw !== best.canSwitch ||
+    multi !== best.orgIsMultiLocation ||
+    locName !== best.userLocationName
+  ) {
+    setBest({ locations: locs, canSwitch: canSw, orgIsMultiLocation: multi, userLocationName: locName });
   }
-
-  const haveList = locations.length > 0;
-  const locs = haveList ? locations : lastGood.locations;
-  const canSw = haveList ? canSwitch : canSwitch || lastGood.canSwitch;
-  const multi = haveList ? orgIsMultiLocation : orgIsMultiLocation || lastGood.orgIsMultiLocation;
-  const locName = userLocationName ?? lastGood.userLocationName;
 
   // Show a real switcher only when the member can span >1 location; otherwise,
   // in a multi-location org, just label their home location.
