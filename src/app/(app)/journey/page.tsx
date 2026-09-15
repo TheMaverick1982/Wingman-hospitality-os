@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveEffectiveLocation } from "@/lib/data/locations";
 import { canEditSection } from "@/lib/auth/permissions";
 import { JourneyClient, type Stage } from "./journey-client";
+import { GuestNav } from "@/components/guests/guest-nav";
 
 export const metadata: Metadata = { title: "Guest Journey" };
 
@@ -58,6 +59,7 @@ export default async function JourneyPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="flex flex-col gap-6">
+      <GuestNav />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink">Guest Journey</h1>

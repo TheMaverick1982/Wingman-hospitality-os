@@ -8,6 +8,7 @@ import { ensureSurveyLinks } from "@/lib/guest-survey-links";
 import { gbpConfigured } from "@/lib/google-business";
 import { ReviewsClient, type ReviewRow, type SurveyLinkRow } from "./reviews-client";
 import { GoogleReviewsPanel, type GoogleLocationRow, type GoogleReviewLite, type ReviewInsightLite } from "./google-reviews-panel";
+import { GuestNav } from "@/components/guests/guest-nav";
 
 export const metadata = { title: "Guest Reviews · Wingman" };
 
@@ -156,7 +157,9 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   const showGoogle = canManage || Boolean(googleAccountEmail);
 
   return (
-    <ReviewsClient
+    <>
+      <GuestNav />
+      <ReviewsClient
       siteUrl={SITE}
       links={linkRows}
       responses={responses}
@@ -174,6 +177,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
           />
         ) : null
       }
-    />
+      />
+    </>
   );
 }

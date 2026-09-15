@@ -146,3 +146,16 @@ body {
 .safe-inset-b {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/*
+ * Hide the scrollbar on horizontally-scrollable strips (e.g. the Guests tab bar)
+ * while keeping them scrollable — the visible bar is noise on a short tab row,
+ * and touch scroll on the app needs no bar.
+ */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
