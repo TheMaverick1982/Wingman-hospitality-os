@@ -8,6 +8,7 @@ import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { ArrowLeft, ArrowRight, ClipboardList } from "lucide-react";
 import { translateTexts } from "@/lib/translate";
 import { TestsClient } from "./tests-client";
+import { BatchRoleTests } from "./batch-role-tests";
 
 // AI generation runs from this route — give it room past the default timeout.
 export const maxDuration = 60;
@@ -41,6 +42,24 @@ export default async function TestsPage() {
   ]);
 
   const activeDepts = ALL_DEPARTMENTS.filter((d) => (meta ?? []).some((m) => m.department === d));
+
+  // Roles that have training content but no auto-generated test yet — powers the
+  // one-click "create a test for every role" card. Only computed for editors, and
+  // it excludes roles that already have a source_department test so the batch can
+  // never overwrite an owner's existing/customized test. (Both queries are
+  // org-scoped by RLS.)
+  let rolesNeedingTest = 0;
+  if (canEdit) {
+    const [{ data: stdDepts }, { data: srcTests }] = await Promise.all([
+      supabase.from("department_standards").select("department"),
+      supabase.from("tests").select("source_department").not("source_department", "is", null),
+    ]);
+    const hasContent = new Set(((stdDepts ?? []) as { department: string }[]).map((s) => s.department));
+    const haveTest = new Set(
+      ((srcTests ?? []) as { source_department: string | null }[]).map((t) => t.source_department).filter(Boolean) as string[],
+    );
+    rolesNeedingTest = activeDepts.filter((d) => hasContent.has(d) && !haveTest.has(d)).length;
+  }
   const questionCount = new Map<string, number>();
   for (const r of (qCounts ?? []) as { test_id: string }[]) questionCount.set(r.test_id, (questionCount.get(r.test_id) ?? 0) + 1);
   // Per-test assignment tally (assigned total + passed) for the list summary.
@@ -136,6 +155,8 @@ export default async function TestsPage() {
           )}
         </div>
       </div>
+
+      {canEdit && rolesNeedingTest > 0 && <BatchRoleTests count={rolesNeedingTest} />}
 
       <TestsClient
         tests={rows}
