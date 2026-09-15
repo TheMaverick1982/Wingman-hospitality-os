@@ -56,6 +56,8 @@ export function ReviewsClient({
   scopeLocationId: string | null;
   googleSlot?: React.ReactNode;
 }) {
+  const hasGoogle = Boolean(googleSlot);
+  const [tab, setTab] = useState<"survey" | "google">("survey");
   const [copied, setCopied] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -108,8 +110,29 @@ export function ReviewsClient({
         </p>
       </div>
 
-      {googleSlot}
+      {hasGoogle && (
+        <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 w-full sm:w-auto sm:self-start">
+          {([
+            { id: "survey" as const, label: "Survey feedback" },
+            { id: "google" as const, label: "Google reviews" },
+          ]).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex-1 sm:flex-none text-[13px] font-semibold rounded-full px-4 py-2 transition-colors ${
+                tab === t.id ? "bg-white text-ink shadow-sm" : "text-charcoal-2 hover:text-ink"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
+      {hasGoogle && <div hidden={tab !== "google"}>{googleSlot}</div>}
+
+      <div hidden={hasGoogle && tab !== "survey"} className="flex flex-col gap-6">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-line rounded-2xl p-5">
@@ -245,6 +268,7 @@ export function ReviewsClient({
             })}
           </div>
         )}
+      </div>
       </div>
 
       {qr && (
