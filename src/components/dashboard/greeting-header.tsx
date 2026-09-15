@@ -8,7 +8,7 @@ function greetingForHour(hour: number): string {
   return "Good evening";
 }
 
-export function GreetingHeader({ firstName, greetingLocation }: { firstName: string; greetingLocation: string }) {
+export function GreetingHeader({ firstName, greetingLocation, empty = false }: { firstName: string; greetingLocation: string; empty?: boolean }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -29,7 +29,11 @@ export function GreetingHeader({ firstName, greetingLocation }: { firstName: str
         <h1 className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.12] text-ink mb-1.5 text-balance">
           {greeting}, {firstName}
         </h1>
-        <p className="text-base text-muted">Here&apos;s how {greetingLocation} is holding the standard today.</p>
+        <p className="text-base text-muted">
+          {empty
+            ? `Let's get ${greetingLocation} set up — your numbers fill in here as you go.`
+            : `Here's how ${greetingLocation} is holding the standard today.`}
+        </p>
       </div>
       <div className="text-sm text-muted-2 font-medium sm:whitespace-nowrap sm:text-right shrink-0">
         {dateLabel} {dateLabel && timeLabel ? "·" : ""} {timeLabel}
