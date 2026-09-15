@@ -24,6 +24,69 @@ export async function updateWeeklyFocus(_prev: ActionState, formData: FormData):
   return { error: null };
 }
 
+// Save the org's core values (add / edit / reorder / remove). Diffed by id so an
+// existing value's hiring criteria (the hiring_question / green_flag / red_flag
+// that live on the same row) are preserved on edit — only title, description, and
+// order change. New rows are inserted; rows the owner removed are deleted (which
+// also removes that value from the universal hiring criteria, by design).
+export type CoreValueInput = { id: string | null; title: string; description: string };
+
+export async function updateCoreValues(values: CoreValueInput[]): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "culture", profile.permissionOverrides) !== "full")
+    return { error: "You don't have access to edit core values." };
+
+  // Keep only rows with a real title; cap counts and lengths.
+  const clean = (Array.isArray(values) ? values : [])
+    .map((v) => ({
+      id: typeof v?.id === "string" && v.id ? v.id : null,
+      title: String(v?.title ?? "").trim().slice(0, 80),
+      description: String(v?.description ?? "").trim().slice(0, 400),
+    }))
+    .filter((v) => v.title)
+    .slice(0, 12);
+  if (clean.length === 0) return { error: "Add at least one core value." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const orgId = (org as { id: string }).id;
+
+  const { data: existingRows } = await supabase.from("core_values").select("id").eq("org_id", orgId);
+  const existingIds = new Set(((existingRows ?? []) as { id: string }[]).map((r) => r.id));
+  const keptIds = new Set<string>();
+
+  for (let i = 0; i < clean.length; i++) {
+    const v = clean[i];
+    if (v.id && existingIds.has(v.id)) {
+      keptIds.add(v.id);
+      const { error } = await supabase
+        .from("core_values")
+        .update({ title: v.title, description: v.description, sort_order: i })
+        .eq("id", v.id)
+        .eq("org_id", orgId);
+      if (error) return { error: error.message };
+    } else {
+      const { error } = await supabase
+        .from("core_values")
+        .insert({ org_id: orgId, title: v.title, description: v.description, sort_order: i });
+      if (error) return { error: error.message };
+    }
+  }
+
+  // Delete rows the owner removed from the list.
+  const toDelete = [...existingIds].filter((id) => !keptIds.has(id));
+  if (toDelete.length > 0) {
+    const { error } = await supabase.from("core_values").delete().eq("org_id", orgId).in("id", toDelete);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/culture");
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
 const CULTURE_TEXT_FIELDS = { x_factor: true, weekly_experiment: true, owner_mindset: true } as const;
 
 export async function updateCultureText(_prev: ActionState, formData: FormData): Promise<ActionState> {
