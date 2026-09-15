@@ -68,7 +68,7 @@ function timeAgo(iso: string): string {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; home?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) return null;
@@ -82,7 +82,7 @@ export default async function DashboardPage({
   }
   const isSuperAdmin = profile.accessRole === "super_admin";
 
-  const { location } = await searchParams;
+  const { location, home } = await searchParams;
   const effectiveLocation = resolveEffectiveLocation({
     accessRole: profile.accessRole,
     userLocationId: profile.locationId,
@@ -92,6 +92,13 @@ export default async function DashboardPage({
   });
 
   const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
+  // A brand-new owner (nothing set up yet) has nothing useful on the dashboard —
+  // send them to the calm, guided Start Here flow instead of an empty operating
+  // cockpit. The moment they complete ANY setup step it opens normally; `?home=1`
+  // always lets them view the dashboard anyway (so it's never a hard trap).
+  if (isSuperAdmin && onboarding && onboarding.doneCount === 0 && home !== "1") {
+    redirect("/start-here");
+  }
   // Momentum drives the "this week" verdict's next-move even before setup is
   // finished; the full Momentum CARD is still held back until setup is done
   // (during setup, Start Here drives the habits).
@@ -382,7 +389,7 @@ export default async function DashboardPage({
 
   return (
     <>
-      <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} />
+      <GreetingHeader firstName={firstName} greetingLocation={greetingLocation} empty={isEmptyDashboard} />
 
       <NeedsYouNow items={needItems} />
       <ShiftBoardCard notes={shiftBoard} />
@@ -568,6 +575,11 @@ export default async function DashboardPage({
         </div>
       )}
 
+      {/* The operating grid (retention chart, flags, sign-off log, activity,
+          business health, benchmarks) is hidden until there's real data — an
+          empty account shouldn't face a wall of zero-charts and "—" dashes. The
+          top KPI row already shows a sample preview for this state. */}
+      {!isEmptyDashboard && (<>
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">Retention &amp; operations</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
@@ -739,6 +751,7 @@ export default async function DashboardPage({
           </div>
         )}
       </div>
+      </>)}
     </>
   );
 }
