@@ -11,6 +11,8 @@ import { WeeklyFocusForm } from "./weekly-focus-form";
 import { CultureTextForm } from "./culture-text-form";
 import { MindsetEditor } from "./mindset-editor";
 import { CoreValuesEditor } from "./core-values-editor";
+import { ExperimentOutcomeForm } from "./experiment-outcome-form";
+import { ExperimentLog, type LoggedExperiment } from "./experiment-log";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -51,7 +53,7 @@ export default async function CulturePage() {
 
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
-  const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
+  const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, { data: experiments }, staff] = await Promise.all([
     supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, owner_mindset, system_generated").single(),
     supabase.from("core_values").select("id, title, description").order("sort_order"),
     supabase
@@ -59,8 +61,24 @@ export default async function CulturePage() {
       .select("id, author, about, tag, value_id, message, occurred_on, core_values:value_id(title)")
       .order("occurred_on", { ascending: false }),
     supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("occurred_on", ninetyDaysAgo),
+    supabase
+      .from("culture_experiments")
+      .select("id, hypothesis, outcome, outcome_note, closed_on")
+      .order("closed_on", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(12),
     getStaffMembers(null),
   ]);
+
+  const experimentLog: LoggedExperiment[] = ((experiments ?? []) as {
+    id: string; hypothesis: string; outcome: string | null; outcome_note: string | null; closed_on: string | null;
+  }[]).map((e) => ({
+    id: e.id,
+    hypothesis: e.hypothesis,
+    outcome: e.outcome,
+    outcomeNote: e.outcome_note,
+    closedOn: e.closed_on,
+  }));
 
   // Culture statement + values are seeded defaults until the wizard personalizes
   // them (system_generated). Flag that to editors so they know to make it theirs.
@@ -195,15 +213,26 @@ export default async function CulturePage() {
           <h3 className="font-display text-base font-semibold text-[#b45309] mb-1">This week&apos;s experiment</h3>
           <p className="text-xs text-[#b45309] mb-2">One small test to run this week — a new upsell, a new touch, a new table-side line.</p>
           {canEdit ? (
-            <CultureTextForm
-              field="weekly_experiment"
-              initialValue={org?.weekly_experiment ?? ""}
-              placeholder="e.g. Every server offers a dessert by name this week — see if attach rate moves."
-            />
+            <>
+              <CultureTextForm
+                field="weekly_experiment"
+                initialValue={org?.weekly_experiment ?? ""}
+                placeholder="e.g. Every server offers a dessert by name this week — see if attach rate moves."
+              />
+              {(org?.weekly_experiment ?? "").trim() && <ExperimentOutcomeForm />}
+            </>
           ) : (
             <p className="text-sm text-[#b45309]">{org?.weekly_experiment || "Nothing set yet."}</p>
           )}
         </div>
+      </div>
+
+      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-0.5">Experiment log</div>
+        <p className="text-[13px] text-muted mb-4">
+          Every test you ran and how it turned out. Small bets, tracked — so you keep the ones that worked and drop the ones that didn&apos;t.
+        </p>
+        <ExperimentLog items={experimentLog} canEdit={canEdit} />
       </div>
 
       {!isStaff && (
