@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Star, RefreshCw, Sparkles, Link2, ChevronDown, TrendingUp, ThumbsUp, AlertTriangle, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Star, RefreshCw, Sparkles, Link2, ChevronDown, TrendingUp, ThumbsUp, AlertTriangle, X, Plus, Unlink } from "lucide-react";
 import {
   listConnectableGoogleLocations,
   connectGoogleLocation,
   refreshGoogleLocation,
   disconnectGoogleLocation,
+  disconnectGoogleAccount,
   type ConnectableLocation,
 } from "./google-actions";
 
@@ -61,18 +63,19 @@ function timeAgo(iso: string | null): string {
 
 export function GoogleReviewsPanel({
   configured,
-  accountEmail,
+  accountEmails,
   rows,
   reviewsByLocation,
   canManage,
 }: {
   configured: boolean;
-  accountEmail: string | null;
+  accountEmails: string[];
   rows: GoogleLocationRow[];
   reviewsByLocation: Record<string, GoogleReviewLite[]>;
   canManage: boolean;
 }) {
   const connectedCount = rows.filter((r) => r.connected).length;
+  const hasAccount = accountEmails.length > 0;
 
   return (
     <section className="mt-8">
@@ -90,7 +93,7 @@ export function GoogleReviewsPanel({
         </div>
       )}
 
-      {configured && !accountEmail && canManage && (
+      {configured && !hasAccount && canManage && (
         <a
           href="/api/integrations/google-business/connect"
           className="inline-flex items-center gap-2 text-[14px] font-semibold text-white bg-brick rounded-full px-5 py-2.5 hover:bg-brick-dark transition-colors"
@@ -98,15 +101,19 @@ export function GoogleReviewsPanel({
           <Link2 size={15} /> Connect Google
         </a>
       )}
-      {configured && !accountEmail && !canManage && (
+      {configured && !hasAccount && !canManage && (
         <div className="rounded-xl border border-line bg-paper px-4 py-3 text-[13px] text-muted-2">No Google account connected yet. Ask an owner to connect it.</div>
       )}
 
-      {configured && accountEmail && (
+      {configured && hasAccount && (
         <>
-          <div className="text-[12.5px] text-muted-2 mb-3">
-            Connected as <span className="font-medium text-charcoal-2">{accountEmail}</span> · {connectedCount} location{connectedCount === 1 ? "" : "s"} linked
-          </div>
+          <AccountHeader emails={accountEmails} connectedCount={connectedCount} canManage={canManage} />
+          {canManage && rows.length > 1 && (
+            <p className="text-[12.5px] text-muted-2 mb-3">
+              Link each location to its Google listing below. Locations that live under a different Google login? Use
+              <span className="font-medium text-charcoal-2"> Connect another account</span> above, then link them.
+            </p>
+          )}
           <div className="flex flex-col gap-4">
             {rows.map((r) => (
               <LocationCard key={r.locationId} row={r} reviews={reviewsByLocation[r.locationId] ?? []} canManage={canManage} />
@@ -115,6 +122,48 @@ export function GoogleReviewsPanel({
         </>
       )}
     </section>
+  );
+}
+
+// The connected-account bar: who's connected, plus (for managers) connect
+// another Google login and a full disconnect — the account-level control that
+// was missing (per-location X only unlinks one store, the account stays on).
+function AccountHeader({ emails, connectedCount, canManage }: { emails: string[]; connectedCount: number; canManage: boolean }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  function disconnectAll() {
+    if (!confirm("Disconnect Google entirely? This unlinks every location and removes cached Google reviews. You can reconnect anytime.")) return;
+    start(async () => {
+      await disconnectGoogleAccount();
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3">
+      <div className="text-[12.5px] text-muted-2 min-w-0">
+        Connected as <span className="font-medium text-charcoal-2">{emails.join(", ")}</span> · {connectedCount} location{connectedCount === 1 ? "" : "s"} linked
+      </div>
+      {canManage && (
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="/api/integrations/google-business/connect"
+            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-3 py-1.5 hover:border-brick hover:text-brick transition-colors"
+          >
+            <Plus size={13} /> Connect another account
+          </a>
+          <button
+            type="button"
+            onClick={disconnectAll}
+            disabled={pending}
+            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-muted-2 border border-line rounded-full px-3 py-1.5 hover:border-danger hover:text-danger disabled:opacity-50 transition-colors"
+          >
+            <Unlink size={13} /> {pending ? "Disconnecting…" : "Disconnect Google"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

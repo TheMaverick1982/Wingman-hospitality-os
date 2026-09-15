@@ -105,8 +105,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   // cached rating / AI insight, and a few recent reviews. All via the admin
   // client (tokens live in a deny-all table; only non-secret fields are read).
   const gConfigured = gbpConfigured();
-  const { data: acctRow } = await admin.from("google_business_accounts").select("email").eq("org_id", profile.orgId).limit(1).maybeSingle();
-  const googleAccountEmail = (acctRow as { email: string } | null)?.email ?? null;
+  const { data: acctRows } = await admin.from("google_business_accounts").select("email").eq("org_id", profile.orgId);
+  const googleAccountEmails = ((acctRows ?? []) as { email: string }[]).map((r) => r.email).filter(Boolean);
 
   const { data: gMapRows } = await admin
     .from("google_review_locations")
@@ -154,7 +154,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       };
     });
 
-  const showGoogle = canManage || Boolean(googleAccountEmail);
+  const showGoogle = canManage || googleAccountEmails.length > 0;
 
   return (
     <>
@@ -170,7 +170,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
         showGoogle ? (
           <GoogleReviewsPanel
             configured={gConfigured}
-            accountEmail={googleAccountEmail}
+            accountEmails={googleAccountEmails}
             rows={googleRows}
             reviewsByLocation={reviewsByLocation}
             canManage={canManage}
