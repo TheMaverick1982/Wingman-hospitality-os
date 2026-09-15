@@ -26,6 +26,7 @@ export type Applicant = {
   preferredVisitAt: string | null;
   interviewAt: string | null;
   interviewDetails: string;
+  interviewInviteSentAt: string | null;
   status: string;
   createdAt: string;
   customAnswers: CustomAnswer[];
@@ -566,6 +567,8 @@ function ApplicantCard({ a }: { a: Applicant }) {
   const [when, setWhen] = useState(utcToWallClockInput(a.interviewAt, a.locationTimezone));
   const [details, setDetails] = useState(a.interviewDetails);
   const [scheduling, setScheduling] = useState(false);
+  const [emailInvite, setEmailInvite] = useState(true);
+  const [inviteSentAt, setInviteSentAt] = useState<string | null>(a.interviewInviteSentAt);
   const [msg, setMsg] = useState<string | null>(null);
   const [note, setNote] = useState(a.rejectionNote);
   const [doNotHire, setDoNotHire] = useState(a.doNotHire);
@@ -609,9 +612,12 @@ function ApplicantCard({ a }: { a: Applicant }) {
     });
   }
   function confirm_() {
+    const willEmail = emailInvite && !!a.email;
     start(async () => {
-      const res = await confirmInterview(a.id, when, details);
-      if (res.error) { setMsg(res.error); setTimeout(() => setMsg(null), 2500); }
+      const res = await confirmInterview(a.id, when, details, willEmail);
+      if (res.error) { setMsg(res.error); setTimeout(() => setMsg(null), 2500); return; }
+      if (res.invited) setInviteSentAt(new Date().toISOString());
+      if (res.inviteNote) { setMsg(res.inviteNote); setTimeout(() => setMsg(null), 3500); }
       // On success the row moves to the candidates area; revalidate refetches.
     });
   }
@@ -709,11 +715,20 @@ function ApplicantCard({ a }: { a: Applicant }) {
               <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
               <input value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Details — who's interviewing, where, what to bring…" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] text-ink outline-none focus:border-brick" />
             </div>
+            {a.email ? (
+              <label className="flex items-start gap-2 text-[12.5px] text-charcoal-2 cursor-pointer select-none">
+                <input type="checkbox" checked={emailInvite} onChange={(e) => setEmailInvite(e.target.checked)} className="mt-0.5 accent-brick" />
+                <span>Email {a.name || "the applicant"} the date, time &amp; location <span className="text-muted-2">— from your restaurant, with a note to call if anything changes. Edit the wording under “Interview invitation email” above.</span></span>
+              </label>
+            ) : (
+              <div className="text-[12px] text-muted-2">No email on file for this applicant — you can still schedule; they just won&rsquo;t get a confirmation.</div>
+            )}
             <div className="flex items-center gap-2">
               <button onClick={confirm_} disabled={pending || !when} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brick rounded-full px-4 py-2 hover:bg-brick-dark disabled:opacity-50">
-                <Check size={14} /> {pending ? "Confirming…" : "Confirm interview"}
+                <Check size={14} /> {pending ? "Confirming…" : (emailInvite && a.email ? "Confirm & email invite" : "Confirm interview")}
               </button>
               <button onClick={() => setScheduling(false)} className="text-[13px] font-semibold text-muted-2 hover:text-ink">Cancel</button>
+              {inviteSentAt && <span className="text-[12px] text-olive font-semibold self-center">✓ Invite emailed</span>}
               {msg && <span className="text-[12.5px] text-danger self-center">{msg}</span>}
             </div>
           </div>
