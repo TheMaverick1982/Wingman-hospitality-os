@@ -45,15 +45,33 @@ describe("computeLaunchPlan", () => {
     expect(p.nextActions).toHaveLength(0);
   });
 
-  it("flags overdue milestones once their target day has passed", () => {
-    // Day ~11: wizard (day 2), training (3), staff (5), hiring (6), playbook (7),
-    // firstGuest (9), culture (10) are past due; spotCheck (13) is not yet.
+  it("never scolds: past-due milestones read 'due', never 'overdue'", () => {
+    // Day ~11: every phase up to "guests" has started, so those milestones are
+    // "due" (do it when ready) — but nothing is ever marked "overdue".
     const p = computeLaunchPlan(NONE, createdDaysAgo(10), NOW);
     expect(p.dayNumber).toBe(11);
-    expect(p.overdueCount).toBe(7);
-    expect(p.onTrack).toBe(false);
-    const spot = p.phases.flatMap((ph) => ph.milestones).find((m) => m.key === "spotCheck");
-    expect(spot?.status).toBe("upcoming"); // habit phase starts day 12; still day 11
+    expect(p.overdueCount).toBe(0);
+    expect(p.onTrack).toBe(true);
+    const byKey = Object.fromEntries(p.phases.flatMap((ph) => ph.milestones).map((m) => [m.key, m]));
+    expect(byKey.wizard.status).toBe("due");
+    expect(byKey.culture.status).toBe("due");
+    expect(byKey.spotCheck.status).toBe("upcoming"); // habit phase starts day 12; still day 11
+  });
+
+  it("reports setup progress separately from usage milestones", () => {
+    // Setup milestones: wizard, training, staff, hiring, playbook (5). Mark the
+    // usage ones done but no setup done -> setupDoneCount 0, setupAllDone false.
+    const usageOnly = { ...NONE, firstGuest: true, culture: true, spotCheck: true };
+    const p = computeLaunchPlan(usageOnly, createdDaysAgo(1), NOW);
+    expect(p.setupTotalCount).toBe(5);
+    expect(p.setupDoneCount).toBe(0);
+    expect(p.setupAllDone).toBe(false);
+
+    const setupDone = { ...NONE, wizard: true, training: true, staff: true, hiring: true, playbook: true };
+    const q = computeLaunchPlan(setupDone, createdDaysAgo(1), NOW);
+    expect(q.setupDoneCount).toBe(5);
+    expect(q.setupAllDone).toBe(true);
+    expect(q.allDone).toBe(false); // usage milestones still open
   });
 
   it("upcoming before a phase starts, due within the window", () => {

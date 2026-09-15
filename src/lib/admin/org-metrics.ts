@@ -6,7 +6,7 @@ type Admin = ReturnType<typeof createAdminClient>;
 export type OrgSetup = { steps: { label: string; done: boolean }[]; doneCount: number; total: number };
 
 // Setup/onboarding progress for a specific org, read with the service-role
-// client (no RLS). Mirrors lib/onboarding.ts: 'wingman'-sourced rows are the
+// client (no RLS). Like lib/launch-plan.ts: 'wingman'-sourced rows are the
 // signal a section was actually built out, not left at seeded defaults.
 export async function getOrgSetup(admin: Admin, orgId: string): Promise<OrgSetup> {
   const [{ data: org }, { count: standards }, { count: training }, { count: traits }, { count: staff }, { count: playbook }] = await Promise.all([

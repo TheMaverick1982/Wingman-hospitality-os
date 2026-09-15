@@ -42,6 +42,12 @@ export type LaunchPlan = {
   doneCount: number;
   totalCount: number;
   allDone: boolean;
+  // The "setup" milestones only (build it: wizard, training, staff, hiring,
+  // playbook) — this is the single "is the account set up?" signal the dashboard
+  // uses, so there's ONE source of truth instead of a rival onboarding checklist.
+  setupDoneCount: number;
+  setupTotalCount: number;
+  setupAllDone: boolean;
   onTrack: boolean;
   overdueCount: number;
   nextActions: LaunchMilestone[]; // up to 3 undone, earliest target first
@@ -196,6 +202,8 @@ export function computeLaunchPlan(signals: LaunchSignals, createdAtMs: number, n
   }));
 
   const doneCount = all.filter((m) => m.done).length;
+  const setupMilestones = all.filter((m) => m.kind === "setup");
+  const setupDoneCount = setupMilestones.filter((m) => m.done).length;
   const overdueCount = all.filter((m) => m.status === "overdue").length;
   const nextActions = all
     .filter((m) => !m.done)
@@ -209,6 +217,9 @@ export function computeLaunchPlan(signals: LaunchSignals, createdAtMs: number, n
     doneCount,
     totalCount: all.length,
     allDone: doneCount === all.length,
+    setupDoneCount,
+    setupTotalCount: setupMilestones.length,
+    setupAllDone: setupDoneCount === setupMilestones.length,
     onTrack: overdueCount === 0,
     overdueCount,
     nextActions,
