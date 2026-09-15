@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, Camera, ImageOff, Loader2 } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Camera, ImageOff, Loader2, Sparkles } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import type { RecipeStep } from "@/lib/data/recipes";
 import {
@@ -11,6 +11,7 @@ import {
   moveRecipeStep,
   uploadRecipeStepImage,
   removeRecipeStepImage,
+  draftRecipeWithAI,
 } from "../actions";
 
 // Shrink a phone photo to a small WebP in the browser before it's ever uploaded,
@@ -33,6 +34,19 @@ async function resizeToWebp(file: File, maxDim = 1400, quality = 0.75): Promise<
 
 export function RecipeEditor({ menuItemId, steps, canEdit }: { menuItemId: string; steps: RecipeStep[]; canEdit: boolean }) {
   const [pending, start] = useTransition();
+  const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  async function draft() {
+    setDraftError(null);
+    setDrafting(true);
+    try {
+      const res = await draftRecipeWithAI(menuItemId);
+      if (res.error) setDraftError(res.error);
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   if (steps.length === 0) {
     return (
@@ -44,11 +58,24 @@ export function RecipeEditor({ menuItemId, steps, canEdit }: { menuItemId: strin
             : "A manager hasn't added the steps for this dish yet."}
         </p>
         {canEdit && (
-          <div className="mt-4 flex justify-center">
-            <Btn icon={Plus} onClick={() => start(() => addRecipeStep(menuItemId))} disabled={pending}>
-              Add the first step
-            </Btn>
-          </div>
+          <>
+            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+              <Btn icon={drafting ? undefined : Sparkles} onClick={draft} disabled={drafting || pending}>
+                {drafting ? (
+                  <><Loader2 size={15} className="animate-spin" /> Drafting…</>
+                ) : (
+                  "Draft with AI"
+                )}
+              </Btn>
+              <Btn kind="ghost" icon={Plus} onClick={() => start(() => addRecipeStep(menuItemId))} disabled={pending || drafting}>
+                Add the first step
+              </Btn>
+            </div>
+            <p className="text-[12.5px] text-muted-2 mt-3 max-w-md mx-auto">
+              AI drafts the steps from this dish&rsquo;s name and description — then you review, fix anything, and snap photos.
+            </p>
+            {draftError && <p className="text-[13px] font-semibold text-brick mt-2">{draftError}</p>}
+          </>
         )}
       </div>
     );
