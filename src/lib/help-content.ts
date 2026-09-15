@@ -350,9 +350,10 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Connect your Google reviews" },
       { kind: "p", text: "In the Google reviews section on this page, connect your Google Business Profile and Wingman pulls each location's Google reviews and reads them for you — overall rating and trend, what guests consistently love, where you're slipping (the recurring complaints), the themes, and a few concrete actions to raise your rating. It refreshes automatically every week, and you can hit Refresh anytime." },
       { kind: "list", items: [
-        "An owner taps \"Connect Google\" and signs in with the Google account that manages your listings (this uses Google's official Business Profile access — read-only; Wingman never posts anything).",
-        "Then link each Wingman location to its matching Google location — so multi-location groups get a separate read per store, respecting the location filter at the top of the page.",
-        "Each location shows its live star rating, review count, an AI \"Wingman's read\" (strengths, where to improve, themes, do-this-next), and you can expand the recent reviews. Disconnect a location anytime; cached reviews are removed.",
+        "An owner taps \"Connect Google\" and signs in with the Google account that manages your listings (this uses Google's official Business Profile access — read-only; Wingman never posts anything). On the Google consent screen, tick every permission box — if the Business Profile box isn't checked, linking a location fails with an \"insufficient scopes\" error.",
+        "From the \"All locations\" view you'll see every location listed at once — link each Wingman location to its matching Google location right there, no need to switch into each store.",
+        "Locations under a DIFFERENT Google login? Use \"Connect another account\" to add that login too, then link its stores — one account can't see another account's listings.",
+        "Each location shows its live star rating, review count, an AI \"Wingman's read\" (strengths, where to improve, themes, do-this-next), and you can expand the recent reviews. Unlink a single location with its ✕, or use \"Disconnect Google\" to remove the whole account and every link.",
       ] },
       { kind: "note", text: "Connecting requires the one-time Google Business Profile API approval on your Google account (Google grants it on request, usually within about a week). Once approved, connecting takes a minute." },
     ],

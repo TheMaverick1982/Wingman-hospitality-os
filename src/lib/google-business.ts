@@ -40,7 +40,10 @@ export function gbpAuthUrl(state: string): string {
     `state=${encodeURIComponent(state)}`,
     "access_type=offline",
     "include_granted_scopes=true",
-    "prompt=consent",
+    // select_account lets an owner add a SECOND Google login (different locations
+    // under a different account); consent re-shows the permission checkboxes so
+    // the business.manage scope is always granted.
+    `prompt=${encodeURIComponent("select_account consent")}`,
   ];
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.join("&")}`;
 }
