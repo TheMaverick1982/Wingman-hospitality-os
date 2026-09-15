@@ -57,8 +57,8 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
   {
     key: "manager_channel",
     group: "Team",
-    label: "Manager channel posts",
-    description: "When someone posts a new message (not a reply) in the Manager channel, email the other managers so nothing important is missed. Managers are always pushed in-app; this toggle controls the email copy.",
+    label: "Manager updates posts",
+    description: "When someone posts a new message (not a reply) in Manager updates, email the other managers so nothing important is missed. Managers are always pushed in-app; this toggle controls the email copy.",
     audience: "Managers",
   },
   {

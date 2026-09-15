@@ -70,7 +70,7 @@ export function ManagerChannelClient({ threads }: { threads: ManagerThread[] }) 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <div>
-        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Manager channel</h1>
+        <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Manager updates</h1>
         <p className="text-base text-muted max-w-xl">
           One place for owners, managers, and shift leads to talk — pass along updates, flag issues, and keep each other
           in the loop. Staff don&rsquo;t see this.

@@ -56,7 +56,7 @@ export const SCORE_STATEMENTS: ScoreStatement[] = [
     area: "Experience focus",
     fixes: [
       { label: "Guest Journey", href: "/journey", why: "Design every touchpoint on purpose instead of leaving it to chance." },
-      { label: "Standout Audit", href: "/audit", why: "Pressure-test your experience against what a standout restaurant does." },
+      { label: "Experience Audit", href: "/audit", why: "Pressure-test your experience against what a standout restaurant does." },
     ],
   },
   {
