@@ -56,7 +56,7 @@ export default async function CulturePage() {
     supabase.from("core_values").select("id, title, description").order("sort_order"),
     supabase
       .from("culture_moments")
-      .select("id, author, about, tag, message, occurred_on")
+      .select("id, author, about, tag, value_id, message, occurred_on, core_values:value_id(title)")
       .order("occurred_on", { ascending: false }),
     supabase.from("culture_moments").select("id", { count: "exact", head: true }).gte("occurred_on", ninetyDaysAgo),
     getStaffMembers(null),
@@ -79,6 +79,21 @@ export default async function CulturePage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
 
+  // "Recognized values" rolls recognition up to the org's real core values — how
+  // often each value the owner defined actually shows up in the wins feed.
+  const valueTally = Object.entries(
+    allMoments.reduce<Record<string, number>>((acc, m) => {
+      const cv = (m as { core_values?: { title: string } | { title: string }[] | null }).core_values;
+      const row = Array.isArray(cv) ? cv[0] : cv;
+      const title = row?.title?.trim();
+      if (title) acc[title] = (acc[title] ?? 0) + 1;
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const valueTallyMax = valueTally.length ? Math.max(...valueTally.map(([, n]) => n)) : 0;
+
   // Recent feed with celebrate counts (kind + reactions). Guarded internally.
   const wins = await getRecentWins(profile.orgId, profile.userId, 6);
 
@@ -94,7 +109,7 @@ export default async function CulturePage() {
             Print / PDF
           </a>
           {!canEdit && <Pill>View only</Pill>}
-          <WinComposer staff={staff} />
+          <WinComposer staff={staff} values={(coreValues ?? []).map((v) => ({ id: (v as { id: string }).id, title: (v as { title: string }).title }))} />
         </div>
       </div>
 
@@ -261,7 +276,7 @@ export default async function CulturePage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="text-xs font-semibold text-brick-dark bg-brick-tint px-2.5 py-0.5 rounded-full">{w.tag}</span>
+                      {w.tag && <span className="text-xs font-semibold text-brick-dark bg-brick-tint px-2.5 py-0.5 rounded-full">{w.tag}</span>}
                       <WinCelebrate momentId={w.id} initialCount={w.reactions} initialReacted={w.reactedByMe} />
                       <span className="text-[12.5px] text-muted-2">{daysAgoLabel(w.occurredOn)}</span>
                     </div>
@@ -275,25 +290,48 @@ export default async function CulturePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Most recognized</div>
-          <div className="flex flex-col gap-3.5">
-            {leaderboard.map(([name, count], i) => {
-              const tone = toneFor(name);
-              return (
-                <div key={name} className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-muted-2 w-4 tabular-nums">{i + 1}</span>
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${tone.bg} ${tone.fg}`}>
-                    {initialsOf(name)}
-                  </span>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-ink">{name}</div>
+        <div className="flex flex-col gap-5">
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+            <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-5">Most recognized</div>
+            <div className="flex flex-col gap-3.5">
+              {leaderboard.map(([name, count], i) => {
+                const tone = toneFor(name);
+                return (
+                  <div key={name} className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-muted-2 w-4 tabular-nums">{i + 1}</span>
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${tone.bg} ${tone.fg}`}>
+                      {initialsOf(name)}
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-ink">{name}</div>
+                    </div>
+                    <span className="text-sm font-bold tabular-nums text-ink">{count}</span>
                   </div>
-                  <span className="text-sm font-bold tabular-nums text-ink">{count}</span>
+                );
+              })}
+              {leaderboard.length === 0 && <p className="text-sm text-muted">No recognitions yet.</p>}
+            </div>
+          </div>
+
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+            <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Values in action</div>
+            <p className="text-[12.5px] text-muted mb-5">How often each of your core values shows up in recognition.</p>
+            <div className="flex flex-col gap-3.5">
+              {valueTally.map(([title, count]) => (
+                <div key={title}>
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <span className="text-sm font-semibold text-ink truncate">{title}</span>
+                    <span className="text-sm font-bold tabular-nums text-ink shrink-0">{count}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-brick-tint overflow-hidden">
+                    <div className="h-full rounded-full bg-brick" style={{ width: `${valueTallyMax ? Math.round((count / valueTallyMax) * 100) : 0}%` }} />
+                  </div>
                 </div>
-              );
-            })}
-            {leaderboard.length === 0 && <p className="text-sm text-muted">No recognitions yet.</p>}
+              ))}
+              {valueTally.length === 0 && (
+                <p className="text-sm text-muted">No values recognized yet. Tag a win with a core value to see it here.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

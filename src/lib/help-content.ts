@@ -290,10 +290,11 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "image", src: "/help/wins-feed.png", alt: "The Wins feed with celebrate buttons", caption: "Wins & shout-outs the whole team can post — and celebrate." },
       { kind: "steps", items: [
         "Open Culture (or the Recent wins card on your dashboard) and tap \"Share a win.\"",
-        "Pick \"Share a win\" or \"Recognize a teammate,\" add a tag, and say what happened.",
+        "Pick \"Share a win\" or \"Recognize a teammate,\" choose which core value it shows, and say what happened.",
         "Post it — it's attributed to you and appears in the feed right away.",
       ] },
-      { kind: "p", text: "Anyone can tap 🎉 Celebrate on a post to pile on. The \"Most recognized\" list on the Culture page ranks the teammates getting the most shout-outs, so the people quietly carrying shifts get seen." },
+      { kind: "p", text: "Recognition ties back to your own core values. When you post, you pick which value the win reflects — so shout-outs roll up to the handful of things you actually stand for, not a generic tag. (Orgs that haven't set values yet fall back to a simple tag.)" },
+      { kind: "p", text: "Anyone can tap 🎉 Celebrate on a post to pile on. The \"Most recognized\" list on the Culture page ranks the teammates getting the most shout-outs, and the \"Values in action\" card shows how often each of your core values is showing up in recognition — so you can see which values are living on the floor and which are being quietly ignored." },
       { kind: "tip", text: "Specific beats generic every time — \"turned a walkout into a five-star table\" lands harder than \"great job.\" Recognition the team gives each other is some of the stickiest culture you can build." },
     ],
   },
