@@ -174,7 +174,11 @@ export function WizardForm({ orgName }: { orgName: string }) {
 
           {step === 2 && (
             <div>
-              <Field label="What does great guest experience actually look like at your place?">
+              <p className="text-sm text-muted mb-4">
+                Both of these are <span className="font-semibold text-charcoal-2">optional</span> — they just help Wingman
+                tailor your draft. Skip them and we&rsquo;ll use smart defaults you can edit anytime.
+              </p>
+              <Field label="What does great guest experience look like at your place? (optional)">
                 <textarea
                   value={greatService}
                   onChange={(e) => setGreatService(e.target.value)}
@@ -183,7 +187,7 @@ export function WizardForm({ orgName }: { orgName: string }) {
                   className={inputClass}
                 />
               </Field>
-              <Field label="What's the #1 gap you see right now — from guests or staff?">
+              <Field label="What's the #1 gap you see right now — from guests or staff? (optional)">
                 <textarea
                   value={painPoint}
                   onChange={(e) => setPainPoint(e.target.value)}
@@ -252,8 +256,8 @@ export function WizardForm({ orgName }: { orgName: string }) {
                 <Row label="Priorities" value={priorities.length ? priorities.join(", ") : "General excellence"} />
               </div>
               <p className="text-xs text-muted flex items-center gap-1 mb-2">
-                <RefreshCw size={12} /> This replaces your current culture statement, core values, and
-                training for the selected departments.
+                <RefreshCw size={12} /> This drafts your culture statement, core values, and starting standards for the
+                selected roles — you can edit or rewrite any of it afterward.
               </p>
 
               <div className="flex items-center justify-between mt-6">

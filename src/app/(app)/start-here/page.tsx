@@ -8,8 +8,8 @@ import { GetStartedTour } from "./get-started-tour";
 
 const STATUS_PILL: Record<string, { label: string; className: string } | null> = {
   done: null,
-  due: { label: "Do this now", className: "text-brick-dark bg-brick-tint" },
-  overdue: { label: "Overdue", className: "text-[#B45309] bg-gold-tint" },
+  due: { label: "Do next", className: "text-brick-dark bg-brick-tint" },
+  overdue: null, // no longer produced — the plan never scolds
   upcoming: { label: "Coming up", className: "text-muted bg-paper" },
 };
 
@@ -22,19 +22,18 @@ export default async function StartHerePage() {
   if (!plan) return null;
 
   const pct = Math.round((plan.doneCount / plan.totalCount) * 100);
-  const dayLabel = plan.dayNumber > plan.totalDays ? `Day ${plan.dayNumber}` : `Day ${plan.dayNumber} of ${plan.totalDays}`;
 
   return (
     <div className="max-w-[780px] mx-auto w-full">
       <div className="mb-2 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.06em] uppercase text-brick mb-1.5">
-            <Rocket size={14} /> Your 14-day launch
+            <Rocket size={14} /> Getting set up
           </div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Get {profile.orgName} running</h1>
           <p className="text-base text-muted max-w-[540px]">
-            Restaurants that win with Wingman are the ones that roll it out fast. Here&rsquo;s your plan — a couple of moves
-            every few days. New here? Take the tour first.
+            A short, friendly checklist to get the most out of Wingman — do it at your own pace, a couple of moves at a
+            time. Most of it&rsquo;s already set up for you. New here? Take the tour first.
           </p>
         </div>
         <GetStartedTour />
@@ -53,10 +52,10 @@ export default async function StartHerePage() {
         </div>
       ) : (
         <>
-          {/* Progress + on-track status */}
+          {/* Progress — calm and encouraging, never a deadline */}
           <div className="mt-6 bg-white border border-line rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4 mb-2.5">
-              <span className="text-[13px] font-semibold text-charcoal-2">{dayLabel}</span>
+              <span className="text-[13px] font-semibold text-charcoal-2">Setup progress</span>
               <span className="text-[13px] font-semibold text-muted">
                 {plan.doneCount} of {plan.totalCount} done · {pct}%
               </span>
@@ -64,10 +63,10 @@ export default async function StartHerePage() {
             <div className="h-2 rounded-full bg-line overflow-hidden">
               <div className="h-full rounded-full bg-brick transition-all" style={{ width: `${pct}%` }} />
             </div>
-            <div className={`mt-3 text-[13px] font-medium ${plan.onTrack ? "text-[#15803d]" : "text-[#B45309]"}`}>
-              {plan.onTrack
-                ? "✓ On track — nothing overdue. Keep the momentum."
-                : `${plan.overdueCount} milestone${plan.overdueCount === 1 ? "" : "s"} slipped past their target day. Knock these out first.`}
+            <div className="mt-3 text-[13px] font-medium text-[#15803d]">
+              {plan.doneCount === 0
+                ? "Let’s get you going — start with your next move below."
+                : `Nice — ${plan.doneCount} down. Keep going whenever you have a minute.`}
             </div>
           </div>
 

@@ -154,9 +154,14 @@ const MILESTONE_DEFS: MilestoneDef[] = [
   },
 ];
 
-function statusFor(done: boolean, dayNumber: number, startDay: number, dueByDay: number): MilestoneStatus {
+// A calm, encouraging status — never "overdue." A brand-new owner exploring for a
+// few days should never be scolded by software they just bought. Milestones are
+// simply "done," "due" (do it when you're ready — the current phase), or
+// "upcoming" (a later phase). The phase windows below are gentle suggested order,
+// not deadlines. ("overdue" is retained in the type only for back-compat; it's
+// never produced.)
+function statusFor(done: boolean, dayNumber: number, startDay: number): MilestoneStatus {
   if (done) return "done";
-  if (dayNumber > dueByDay) return "overdue";
   if (dayNumber >= startDay) return "due";
   return "upcoming";
 }
@@ -178,7 +183,7 @@ export function computeLaunchPlan(signals: LaunchSignals, createdAtMs: number, n
       kind: d.kind,
       dueByDay: d.dueByDay,
       done,
-      status: statusFor(done, dayNumber, startDay, d.dueByDay),
+      status: statusFor(done, dayNumber, startDay),
     };
   });
 
