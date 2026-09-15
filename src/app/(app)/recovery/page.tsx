@@ -11,6 +11,7 @@ import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { DiscountModalButton } from "./discount-modal";
 import { RevenueForm } from "./revenue-form";
 import { deleteDiscount } from "./actions";
+import { GuestNav } from "@/components/guests/guest-nav";
 
 const CATEGORY_COLORS = ["bg-[#DC2626]", "bg-[#D97706]", "bg-[#D97706]", "bg-brick", "bg-muted-2"];
 
@@ -55,6 +56,7 @@ export default async function RecoveryPage({
 
   return (
     <>
+      <GuestNav />
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Every comp has a reason</h1>

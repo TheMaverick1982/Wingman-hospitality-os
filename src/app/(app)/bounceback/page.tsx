@@ -5,6 +5,7 @@ import { getOrgLocations, resolveEffectiveLocation } from "@/lib/data/locations"
 import { canEditSection, getSectionAccess } from "@/lib/auth/permissions";
 import type { GuestWithVisits } from "@/lib/hospitality";
 import { GuestsClient } from "./guests-client";
+import { GuestNav } from "@/components/guests/guest-nav";
 
 export default async function BounceBackPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const profile = await getCurrentProfile();
@@ -42,12 +43,15 @@ export default async function BounceBackPage({ searchParams }: { searchParams: P
   const scopedLocationName = effectiveLocation ? (locations.find((l) => l.id === effectiveLocation)?.name ?? null) : null;
 
   return (
-    <GuestsClient
-      guests={scopedGuests}
-      locations={locations}
-      defaultLocationId={effectiveLocation ?? profile.locationId}
-      canEdit={canEdit}
-      scopedLocationName={scopedLocationName}
-    />
+    <>
+      <GuestNav />
+      <GuestsClient
+        guests={scopedGuests}
+        locations={locations}
+        defaultLocationId={effectiveLocation ?? profile.locationId}
+        canEdit={canEdit}
+        scopedLocationName={scopedLocationName}
+      />
+    </>
   );
 }

@@ -7,9 +7,7 @@ import {
   LayoutGrid,
   Heart,
   RotateCcw,
-  Receipt,
   GraduationCap,
-  Footprints,
   AlertTriangle,
   Briefcase,
   Users,
@@ -30,15 +28,15 @@ import {
   ChevronDown,
   MessageCircleQuestion,
   MessagesSquare,
-  Star,
   Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
+import { accessibleGuestTabs } from "@/lib/guest-tabs";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { SidebarLocationStat, type LocationStat } from "./sidebar-location-stat";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; section: Section; tier: "core" | "more" };
+type NavItem = { href: string; label: string; icon: LucideIcon; section: Section; tier: "core" | "more"; matchPrefixes?: string[] };
 
 // A single, tiered nav model powers a calm default (progressive disclosure): the
 // CORE sections a restaurant touches most are always visible; everything else
@@ -49,16 +47,15 @@ type NavItem = { href: string; label: string; icon: LucideIcon; section: Section
 // order within each tier.
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard", tier: "core" },
-  { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback", tier: "core" },
+  // "Guests" is injected here at render time — it collapses the four guest tools
+  // (Bounce Back, Reviews, Service Recovery, Journey) into one entry whose href
+  // and visibility depend on which of those this person can access.
   { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring", tier: "core" },
   { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training", tier: "core" },
   { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability", tier: "core" },
   { href: "/staff", label: "Staff", icon: Users, section: "staff", tier: "core" },
   { href: "/culture", label: "Culture", icon: Heart, section: "culture", tier: "core" },
   // Everything below is tucked under "More" until the owner reaches for it.
-  { href: "/reviews", label: "Guest Reviews", icon: Star, section: "reviews", tier: "more" },
-  { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery", tier: "more" },
-  { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey", tier: "more" },
   { href: "/shift", label: "Shift", icon: Megaphone, section: "shift", tier: "more" },
   { href: "/manager-channel", label: "Manager channel", icon: MessagesSquare, section: "manager_channel", tier: "more" },
   { href: "/questions", label: "Questions", icon: MessageCircleQuestion, section: "questions", tier: "more" },
@@ -79,9 +76,7 @@ const MOBILE_FLOOR_ORDER = [
   "/dashboard",
   "/shift",
   "/manager-channel",
-  "/bounceback",
-  "/recovery",
-  "/reviews",
+  "/guests",
   "/culture",
   "/questions",
   "/accountability",
@@ -93,7 +88,7 @@ const MOBILE_FLOOR_ORDER = [
   // while they're out in the community (manager/owner-only by permission).
   "/partners",
 ];
-const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/reporting"];
+const MOBILE_MANAGE_ORDER = ["/staff", "/growth", "/menu", "/audit", "/reporting"];
 const ALL_NAV_ITEMS: NavItem[] = NAV_ITEMS;
 
 // Is the current route one of the "more" (collapsed) sections? Used to keep the
@@ -144,6 +139,30 @@ export function Sidebar({
 
   const canSee = (section: Section) => getSectionAccess(accessRole, section, permissionOverrides) !== "none";
 
+  // The four guest tools collapse into one "Guests" entry. Its href is the first
+  // tab this person can open; when only one is accessible we use that tool's full
+  // name so the entry still self-describes (e.g. staff who only get Guest Journey).
+  const guestTabs = accessibleGuestTabs(accessRole, permissionOverrides);
+  const guestsItem: NavItem | null =
+    guestTabs.length === 0
+      ? null
+      : {
+          href: guestTabs[0].href,
+          label: guestTabs.length > 1 ? "Guests" : guestTabs[0].soloLabel,
+          icon: RotateCcw,
+          section: guestTabs[0].section,
+          tier: "core",
+          matchPrefixes: guestTabs.map((t) => t.href),
+        };
+  // Insert the Guests entry right after Dashboard in any nav list.
+  const withGuests = (items: NavItem[]): NavItem[] => {
+    if (!guestsItem) return items;
+    const out = [...items];
+    const di = out.findIndex((i) => i.href === "/dashboard");
+    out.splice(di >= 0 ? di + 1 : 0, 0, guestsItem);
+    return out;
+  };
+
   // Mobile drawer for managers/owners: split into "on the floor" (flat, up top)
   // and a collapsed "Set up & manage" group. Staff already get a lean flat nav,
   // and desktop keeps its full grouped nav — so this only reshapes the phone.
@@ -151,7 +170,9 @@ export function Sidebar({
   const [manageOpen, setManageOpen] = useState(false);
   const byHref = new Map(ALL_NAV_ITEMS.map((it) => [it.href, it] as const));
   const resolveNav = (hrefs: string[]): NavItem[] =>
-    hrefs.map((h) => byHref.get(h)).filter((it): it is NavItem => !!it && canSee(it.section));
+    hrefs
+      .map((h) => (h === "/guests" ? guestsItem : byHref.get(h)))
+      .filter((it): it is NavItem => !!it && (it === guestsItem || canSee(it.section)));
   const floorItems = isMobileZoned ? resolveNav(MOBILE_FLOOR_ORDER) : [];
   const manageItems = isMobileZoned ? resolveNav(MOBILE_MANAGE_ORDER) : [];
 
@@ -186,7 +207,9 @@ export function Sidebar({
   };
 
   const navLink = (item: NavItem) => {
-    const active = pathname.startsWith(item.href);
+    const active = item.matchPrefixes
+      ? item.matchPrefixes.some((p) => pathname.startsWith(p))
+      : pathname.startsWith(item.href);
     const badge = item.href === "/questions" && questionsBadge > 0 ? questionsBadge : 0;
     return (
       <Link
@@ -238,7 +261,7 @@ export function Sidebar({
         )}
         {isStaff ? (
           // Staff see only a handful of sections — flat, no group headers or "More".
-          NAV_ITEMS.filter((it) => canSee(it.section)).map((it) => navLink(it))
+          withGuests(NAV_ITEMS.filter((it) => canSee(it.section))).map((it) => navLink(it))
         ) : isMobileZoned ? (
           // Manager/owner on the phone: "on the floor" flat, then one collapsed
           // "Set up & manage" group for the desktop-first setup/analysis surfaces.
@@ -267,7 +290,7 @@ export function Sidebar({
         ) : (
           // Desktop: the core sections flat, then one "More" expander for the rest.
           (() => {
-            const coreItems = NAV_ITEMS.filter((it) => it.tier === "core" && canSee(it.section));
+            const coreItems = withGuests(NAV_ITEMS.filter((it) => it.tier === "core" && canSee(it.section)));
             const moreItems = NAV_ITEMS.filter((it) => it.tier === "more" && canSee(it.section));
             const moreHasActive = moreItems.some((it) => pathname.startsWith(it.href));
             return (
