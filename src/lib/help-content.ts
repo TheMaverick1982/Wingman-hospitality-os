@@ -274,6 +274,8 @@ export const ARTICLES: HelpArticle[] = [
         "Share wins and recognize teammates in the Wins feed — anyone on the team can post, and anyone can celebrate.",
         "Keep your core values front and center for the whole team.",
       ] },
+      { kind: "h", text: "Editing your core values" },
+      { kind: "p", text: "Your core values sit below the mindset. Owners and managers can tap \"Edit\" to add, rename, reword, reorder (the up/down arrows), or remove them — they come pre-filled with a strong starting set, so make them yours. They show on every role guide and help ground the AI. One thing to know: removing a value also removes it from your universal hiring criteria, since your values are what you screen candidates against." },
       { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing." },
     ],
   },

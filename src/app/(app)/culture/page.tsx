@@ -10,6 +10,7 @@ import { getRecentWins } from "@/lib/wins-data";
 import { WeeklyFocusForm } from "./weekly-focus-form";
 import { CultureTextForm } from "./culture-text-form";
 import { MindsetEditor } from "./mindset-editor";
+import { CoreValuesEditor } from "./core-values-editor";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -52,7 +53,7 @@ export default async function CulturePage() {
   const ninetyDaysAgo = daysAgoIso(90);
   const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, staff] = await Promise.all([
     supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, owner_mindset, system_generated").single(),
-    supabase.from("core_values").select("title, description").order("sort_order"),
+    supabase.from("core_values").select("id, title, description").order("sort_order"),
     supabase
       .from("culture_moments")
       .select("id, author, about, tag, message, occurred_on")
@@ -145,20 +146,24 @@ export default async function CulturePage() {
         )}
       </div>
 
-      <div>
-        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Core values</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {(coreValues ?? []).map((v, i) => (
-            <div key={v.title} className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-              <div className="w-9 h-9 rounded-[10px] bg-brick-tint text-brick flex items-center justify-center text-[15px] font-bold mb-4">
-                {String(i + 1).padStart(2, "0")}
+      {canEdit ? (
+        <CoreValuesEditor values={(coreValues ?? []) as { id: string; title: string; description: string }[]} />
+      ) : (
+        <div>
+          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Core values</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {(coreValues ?? []).map((v, i) => (
+              <div key={(v as { id: string }).id} className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+                <div className="w-9 h-9 rounded-[10px] bg-brick-tint text-brick flex items-center justify-center text-[15px] font-bold mb-4">
+                  {String(i + 1).padStart(2, "0")}
+                </div>
+                <div className="text-base font-semibold tracking-[-0.01em] text-ink mb-1.5">{v.title}</div>
+                <div className="text-[13px] text-muted leading-[1.45]">{v.description}</div>
               </div>
-              <div className="text-base font-semibold tracking-[-0.01em] text-ink mb-1.5">{v.title}</div>
-              <div className="text-[13px] text-muted leading-[1.45]">{v.description}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-2 pt-1">This week</div>
 

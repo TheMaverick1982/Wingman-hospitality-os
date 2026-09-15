@@ -28,7 +28,7 @@ export const SCORE_STATEMENTS: ScoreStatement[] = [
     text: "I can describe my hospitality culture in one sentence.",
     area: "A clear culture",
     fixes: [
-      { label: "Owner's Mindset", href: "/settings", why: "Put your hospitality philosophy into words — it grounds every AI-built standard and the whole team." },
+      { label: "Owner's Mindset", href: "/culture", why: "Put your hospitality philosophy into words — it grounds every AI-built standard and the whole team." },
       { label: "Guest Journey", href: "/journey", why: "Turn that philosophy into a named, ordered experience the team trains on." },
     ],
   },
