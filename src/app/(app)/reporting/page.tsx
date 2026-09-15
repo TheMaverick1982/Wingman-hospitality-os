@@ -13,7 +13,7 @@ import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { RoiLedgerCard } from "@/components/reporting/roi-ledger-card";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
-import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
+import { Heart, RotateCcw, Receipt, GraduationCap, AlertTriangle, Briefcase, TrendingUp, Gauge } from "lucide-react";
 import { ScheduleReportModalButton } from "./schedule-report-modal";
 import { ReportNarrative } from "./report-narrative";
 import { deleteReportSchedule } from "./actions";
@@ -402,6 +402,12 @@ export default async function ReportingPage({
               </Link>
             ))}
           </div>
+          <Link
+            href="/hospitality-score"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-xl px-3.5 py-2 hover:border-brick hover:text-brick transition-colors"
+          >
+            <Gauge size={15} /> Hospitality Score
+          </Link>
           {isSuperAdmin && <ScheduleReportModalButton />}
           <ExportCsvButton
             filename="wingman-report.csv"

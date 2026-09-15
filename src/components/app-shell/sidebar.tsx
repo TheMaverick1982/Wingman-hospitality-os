@@ -32,68 +32,49 @@ import {
   MessagesSquare,
   Star,
   Megaphone,
-  Gauge,
   type LucideIcon,
 } from "lucide-react";
 import { getSectionAccess, ROLE_LABELS, type AccessRole, type Section, type PermissionOverrides } from "@/lib/auth/permissions";
 import { WingmanLogo } from "@/components/ui/wingman-logo";
 import { SidebarLocationStat, type LocationStat } from "./sidebar-location-stat";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; section: Section };
+type NavItem = { href: string; label: string; icon: LucideIcon; section: Section; tier: "core" | "more" };
 
-// Dashboard and Reporting are pinned on their own (top and bottom of the list);
-// everything else is grouped so the desktop nav stays short and scroll-free.
-const DASHBOARD_ITEM: NavItem = { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard" };
-const REPORTING_ITEM: NavItem = { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting" };
-// Guest Bounce Back is the most-used tool on the floor, so on mobile it's also
-// surfaced as a one-tap shortcut above the Guests group (see below). It still
-// lives inside Guests as its canonical home.
-const BOUNCEBACK_ITEM: NavItem = { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback" };
-
-const NAV_GROUPS: { id: string; label: string; items: NavItem[] }[] = [
-  {
-    id: "guests",
-    label: "Guests",
-    items: [
-      BOUNCEBACK_ITEM,
-      { href: "/reviews", label: "Guest Reviews", icon: Star, section: "reviews" },
-      { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery" },
-      { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey" },
-    ],
-  },
-  {
-    id: "team",
-    label: "Team",
-    items: [
-      { href: "/shift", label: "Shift", icon: Megaphone, section: "shift" },
-      { href: "/manager-channel", label: "Manager channel", icon: MessagesSquare, section: "manager_channel" },
-      { href: "/culture", label: "Culture", icon: Heart, section: "culture" },
-      { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training" },
-      { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability" },
-      { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring" },
-      { href: "/staff", label: "Staff", icon: Users, section: "staff" },
-      { href: "/questions", label: "Questions", icon: MessageCircleQuestion, section: "questions" },
-    ],
-  },
-  {
-    id: "growth",
-    label: "Growth",
-    items: [
-      { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth" },
-      { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu" },
-      { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit" },
-      { href: "/hospitality-score", label: "Hospitality Score", icon: Gauge, section: "reporting" },
-      { href: "/partners", label: "Partners", icon: Handshake, section: "partners" },
-    ],
-  },
+// A single, tiered nav model powers a calm default (progressive disclosure): the
+// CORE sections a restaurant touches most are always visible; everything else
+// lives behind one "More" expander, so a first-time owner sees ~7 destinations
+// instead of ~19. The active page is never hidden — "More" auto-opens whenever
+// the current page is a "more" section. Mobile keeps its own floor/manage split
+// (below); staff get a flat, permission-filtered list. Order here is the display
+// order within each tier.
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, section: "dashboard", tier: "core" },
+  { href: "/bounceback", label: "Guest Bounce Back", icon: RotateCcw, section: "bounceback", tier: "core" },
+  { href: "/hiring", label: "Hiring", icon: Briefcase, section: "hiring", tier: "core" },
+  { href: "/training", label: "Training & Standards", icon: GraduationCap, section: "training", tier: "core" },
+  { href: "/accountability", label: "Accountability", icon: AlertTriangle, section: "accountability", tier: "core" },
+  { href: "/staff", label: "Staff", icon: Users, section: "staff", tier: "core" },
+  { href: "/culture", label: "Culture", icon: Heart, section: "culture", tier: "core" },
+  // Everything below is tucked under "More" until the owner reaches for it.
+  { href: "/reviews", label: "Guest Reviews", icon: Star, section: "reviews", tier: "more" },
+  { href: "/recovery", label: "Service Recovery", icon: Receipt, section: "recovery", tier: "more" },
+  { href: "/journey", label: "Guest Journey", icon: Footprints, section: "journey", tier: "more" },
+  { href: "/shift", label: "Shift", icon: Megaphone, section: "shift", tier: "more" },
+  { href: "/manager-channel", label: "Manager channel", icon: MessagesSquare, section: "manager_channel", tier: "more" },
+  { href: "/questions", label: "Questions", icon: MessageCircleQuestion, section: "questions", tier: "more" },
+  { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth", tier: "more" },
+  { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu", tier: "more" },
+  { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit", tier: "more" },
+  { href: "/partners", label: "Partners", icon: Handshake, section: "partners", tier: "more" },
+  { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting", tier: "more" },
 ];
 
-const NAV_STATE_KEY = "wm.nav.openGroups";
+const MORE_STATE_KEY = "wm.nav.moreOpen";
 
 // Mobile only: the phone leads with the in-the-moment "on the floor" tools; the
 // setup / analysis surfaces collapse into one "Set up & manage" group (they're
-// really desktop work). Desktop keeps the full grouped nav unchanged. Ordered by
-// href; anything the role can't see (or an unknown href) simply drops out.
+// really desktop work). Ordered by href; anything the role can't see (or an
+// unknown href) simply drops out.
 const MOBILE_FLOOR_ORDER = [
   "/dashboard",
   "/shift",
@@ -112,25 +93,13 @@ const MOBILE_FLOOR_ORDER = [
   // while they're out in the community (manager/owner-only by permission).
   "/partners",
 ];
-const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/hospitality-score", "/reporting"];
-const ALL_NAV_ITEMS: NavItem[] = [DASHBOARD_ITEM, REPORTING_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
+const MOBILE_MANAGE_ORDER = ["/staff", "/journey", "/growth", "/menu", "/audit", "/reporting"];
+const ALL_NAV_ITEMS: NavItem[] = NAV_ITEMS;
 
-// Items shown for a group in a given variant. On mobile, Guest Bounce Back is
-// surfaced as a pinned shortcut above the Guests group, so it's removed from the
-// group itself there — otherwise it would appear (and highlight) twice.
-function groupItemsFor(group: { id: string; items: NavItem[] }, variant: "desktop" | "drawer"): NavItem[] {
-  if (variant === "drawer" && group.id === "guests") {
-    return group.items.filter((it) => it.href !== BOUNCEBACK_ITEM.href);
-  }
-  return group.items;
-}
-
-// The group whose section matches the current route (or null on Dashboard/
-// Reporting). Uses the variant's visible items, so on mobile Bounce Back doesn't
-// count toward — and needlessly auto-open — the Guests group.
-function activeGroupId(pathname: string, variant: "desktop" | "drawer"): string | null {
-  const g = NAV_GROUPS.find((grp) => groupItemsFor(grp, variant).some((it) => pathname.startsWith(it.href)));
-  return g?.id ?? null;
+// Is the current route one of the "more" (collapsed) sections? Used to keep the
+// More expander open whenever the active page lives inside it.
+function isMoreActive(pathname: string): boolean {
+  return NAV_ITEMS.some((it) => it.tier === "more" && pathname.startsWith(it.href));
 }
 
 function initialsOf(fullName: string): string {
@@ -186,38 +155,29 @@ export function Sidebar({
   const floorItems = isMobileZoned ? resolveNav(MOBILE_FLOOR_ORDER) : [];
   const manageItems = isMobileZoned ? resolveNav(MOBILE_MANAGE_ORDER) : [];
 
-  // Collapsible nav groups. Start with only the group containing the current
-  // page open — computed from the pathname so server and client render the same
-  // markup — then load the visitor's saved open/closed choices on the client.
-  // The active group is always forced open so the current page is never hidden.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map((g) => [g.id, g.id === activeGroupId(pathname, variant)]))
-  );
+  // The single "More" expander. Start open iff the current page is a "more"
+  // section (so the active page is never hidden and server/client markup match),
+  // then honor the visitor's saved choice on mount. The active-page effect keeps
+  // it open when navigating into a "more" section.
+  const [moreOpen, setMoreOpen] = useState<boolean>(() => isMoreActive(pathname));
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(NAV_STATE_KEY) || "{}") as Record<string, boolean>;
-      setOpenGroups((prev) => {
-        const merged = { ...prev };
-        for (const g of NAV_GROUPS) if (g.id in saved) merged[g.id] = saved[g.id];
-        const active = activeGroupId(pathname, variant);
-        if (active) merged[active] = true;
-        return merged;
-      });
+      const saved = localStorage.getItem(MORE_STATE_KEY);
+      if (saved === "1") setMoreOpen(true);
+      else if (saved === "0") setMoreOpen(isMoreActive(pathname));
     } catch {
       // ignore unreadable/blocked storage
     }
-    // Load once on mount; the pathname effect below keeps the active group open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    const active = activeGroupId(pathname, variant);
-    if (active) setOpenGroups((prev) => (prev[active] ? prev : { ...prev, [active]: true }));
-  }, [pathname, variant]);
-  const toggleGroup = (id: string) => {
-    setOpenGroups((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
+    if (isMoreActive(pathname)) setMoreOpen(true);
+  }, [pathname]);
+  const toggleMore = () => {
+    setMoreOpen((prev) => {
+      const next = !prev;
       try {
-        localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next));
+        localStorage.setItem(MORE_STATE_KEY, next ? "1" : "0");
       } catch {
         // ignore unwritable storage
       }
@@ -276,20 +236,9 @@ export function Sidebar({
             Start here
           </Link>
         )}
-        {!isMobileZoned && canSee(DASHBOARD_ITEM.section) && navLink(DASHBOARD_ITEM)}
-
-        {/* Mobile: pin Guest Bounce Back above the Guests group for one-tap
-            access — it's the tool staff reach for constantly on the floor.
-            (In the manager mobile split it lives in the "on the floor" list.) */}
-        {variant === "drawer" && !isMobileZoned && canSee(BOUNCEBACK_ITEM.section) && (
-          <div className="mt-1.5">{navLink(BOUNCEBACK_ITEM)}</div>
-        )}
-
         {isStaff ? (
-          // Staff see only a handful of sections — show them flat, no collapsible group headers.
-          NAV_GROUPS.flatMap((group) => groupItemsFor(group, variant).filter((it) => canSee(it.section))).map((it) =>
-            navLink(it)
-          )
+          // Staff see only a handful of sections — flat, no group headers or "More".
+          NAV_ITEMS.filter((it) => canSee(it.section)).map((it) => navLink(it))
         ) : isMobileZoned ? (
           // Manager/owner on the phone: "on the floor" flat, then one collapsed
           // "Set up & manage" group for the desktop-first setup/analysis surfaces.
@@ -316,30 +265,33 @@ export function Sidebar({
             )}
           </>
         ) : (
-          NAV_GROUPS.map((group) => {
-            const items = groupItemsFor(group, variant).filter((it) => canSee(it.section));
-            if (items.length === 0) return null; // hide a group the role can't see into
-            const open = openGroups[group.id];
-            const hasActive = items.some((it) => pathname.startsWith(it.href));
+          // Desktop: the core sections flat, then one "More" expander for the rest.
+          (() => {
+            const coreItems = NAV_ITEMS.filter((it) => it.tier === "core" && canSee(it.section));
+            const moreItems = NAV_ITEMS.filter((it) => it.tier === "more" && canSee(it.section));
+            const moreHasActive = moreItems.some((it) => pathname.startsWith(it.href));
             return (
-              <div key={group.id} className="mt-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.id)}
-                  aria-expanded={open}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
-                >
-                  {/* Tint the label when its section holds the current page but is collapsed. */}
-                  <span className={!open && hasActive ? "text-brick" : ""}>{group.label}</span>
-                  <ChevronDown size={14} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
-                </button>
-                {open && <div className="flex flex-col gap-0.5">{items.map((it) => navLink(it))}</div>}
-              </div>
+              <>
+                {coreItems.map((it) => navLink(it))}
+                {moreItems.length > 0 && (
+                  <div className="mt-1.5">
+                    <button
+                      type="button"
+                      onClick={toggleMore}
+                      aria-expanded={moreOpen}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2 hover:text-ink transition-colors"
+                    >
+                      {/* Tint "More" when it holds the current page but is collapsed. */}
+                      <span className={!moreOpen && moreHasActive ? "text-brick" : ""}>More</span>
+                      <ChevronDown size={14} className={`transition-transform duration-150 ${moreOpen ? "" : "-rotate-90"}`} />
+                    </button>
+                    {moreOpen && <div className="flex flex-col gap-0.5">{moreItems.map((it) => navLink(it))}</div>}
+                  </div>
+                )}
+              </>
             );
-          })
+          })()
         )}
-
-        {!isMobileZoned && canSee(REPORTING_ITEM.section) && <div className="mt-1.5">{navLink(REPORTING_ITEM)}</div>}
 
         {/* Developer role: API-only. Its single home is the API access page. */}
         {isDeveloperRole && (
