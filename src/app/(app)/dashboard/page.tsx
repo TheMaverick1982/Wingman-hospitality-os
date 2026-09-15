@@ -426,7 +426,7 @@ export default async function DashboardPage({
         >
           <Rocket size={16} className="text-brick shrink-0" />
           <span className="text-sm text-brick-dark flex-1">
-            <span className="font-semibold">Finish setting up your account</span> — {onboarding.doneCount} of {onboarding.steps.length} steps done.
+            <span className="font-semibold">Finish setting up your account</span> — pick up where you left off, at your own pace.
           </span>
           <span className="text-sm font-semibold text-brick-dark whitespace-nowrap">Start here →</span>
         </Link>
