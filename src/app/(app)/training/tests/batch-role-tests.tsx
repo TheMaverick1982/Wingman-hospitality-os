@@ -34,11 +34,15 @@ export function BatchRoleTests({ count }: { count: number }) {
     }
     setTotal(roles.length);
     let made = 0;
+    let fromStandards = 0;
     for (const role of roles) {
       setCurrent(role);
-      const res = await createOrUpdateTestFromRole(role);
+      // fallbackOnLimit: if the hourly AI limit is spent, build the test straight
+      // from the role's standards instead of stopping — so setup always finishes.
+      const res = await createOrUpdateTestFromRole(role, { fallbackOnLimit: true });
       if (res.error) {
-        // A rate limit or one-off failure — stop cleanly, keep what we made.
+        // A genuine failure (e.g. a role with no training yet) — stop cleanly,
+        // keep what we made.
         setMsg(
           made > 0
             ? `Created ${made} test${made === 1 ? "" : "s"}. ${res.error} Click again in a bit to finish the rest.`
@@ -51,11 +55,16 @@ export function BatchRoleTests({ count }: { count: number }) {
         return;
       }
       made += 1;
+      if (res.fallback) fromStandards += 1;
       setDone(made);
     }
     setCurrent(null);
     setRunning(false);
-    setMsg(`Done — created ${made} ready-to-assign test${made === 1 ? "" : "s"}, one per role. Review or assign any of them below.`);
+    setMsg(
+      fromStandards > 0
+        ? `Done — created ${made} ready-to-assign test${made === 1 ? "" : "s"}, one per role. ${fromStandards} ${fromStandards === 1 ? "was" : "were"} built straight from your standards (the hourly AI limit was reached) — open any to review, and use “Update the test” later to enrich it with AI.`
+        : `Done — created ${made} ready-to-assign test${made === 1 ? "" : "s"}, one per role. Review or assign any of them below.`,
+    );
     setMsgTone("ok");
     router.refresh();
   }
