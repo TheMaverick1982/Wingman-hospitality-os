@@ -42,6 +42,15 @@ const SECTIONS = [
     ],
   },
   {
+    h: "Google user data (Business Profile)",
+    body: [
+      "If you choose to connect your Google Business Profile, Wingman uses Google's official Business Profile APIs to read data on your behalf: the Google accounts and business locations you manage, and the reviews on those locations (rating, text, reviewer display name, and your replies). Wingman requests read access only — it never posts, edits, or deletes anything on your Google Business Profile.",
+      "We use this data solely to show your reviews inside Wingman and to generate an AI summary for you — your rating and trend, recurring themes, and suggested actions to improve. It is shown only to the authorized members of your own Wingman account. We do not use Google user data for advertising, we do not sell it, and we do not transfer it to others except as needed to provide this feature (our hosting and AI processors) or where required by law.",
+      "You can disconnect at any time from the Reviews page (per location, or the whole Google account), and you can revoke Wingman's access directly from your Google Account permissions. On disconnect, the cached Google reviews for that connection are removed from Wingman.",
+      "Wingman's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
+    ],
+  },
+  {
     h: "Sharing and processors",
     body: [
       "We share data only with trusted processors that help us run the service (hosting, payments, email), each bound by contract to protect it. We may disclose data if required by law.",
@@ -91,7 +100,7 @@ export default function PrivacyPage() {
         <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] leading-[1.05] tracking-[-0.03em] font-bold text-ink mb-4">
           Privacy Policy
         </h1>
-        <p className="text-base text-muted-2">Last updated July 9, 2026</p>
+        <p className="text-base text-muted-2">Last updated September 15, 2026</p>
       </div>
 
       <div className="max-w-[820px] mx-auto px-6 sm:px-10 pt-6 pb-20 sm:pb-24">
