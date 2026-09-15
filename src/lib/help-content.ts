@@ -485,6 +485,8 @@ export const ARTICLES: HelpArticle[] = [
         "Paste your existing training, upload a file, or answer a few questions and let Wingman write a complete program.",
         "Review the draft — edit or remove any item — then click \"Save program\". Nothing is saved until you do.",
       ] },
+      { kind: "h", text: "Have one handbook that covers everyone?" },
+      { kind: "p", text: "If your standards live in a single handbook or SOP that spans several roles, use \"Import a handbook for all roles\" at the top of Training by role. Upload the PDF (or paste the text) once, and Wingman splits it into a training program for every role you run — you review each role, uncheck any you don't want, and save the rest in one go. It replaces each role's AI-built items and keeps anything you typed yourself." },
       { kind: "h", text: "Refine with AI" },
       { kind: "p", text: "Once a program exists, use \"Refine with AI\" to improve it conversationally — ask it to add items, suggest ideas, reword, or remove. You review every proposed change before anything is applied." },
       { kind: "tip", text: "Try open-ended prompts like \"What am I missing for wine service?\" or \"Add items about remembering regulars' names.\"" },
