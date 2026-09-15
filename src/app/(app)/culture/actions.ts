@@ -116,13 +116,13 @@ export async function addCultureMoment(_prev: ActionState, formData: FormData): 
   const kind = String(formData.get("kind") || "shoutout");
   const about = String(formData.get("about") || "").trim();
   const tag = String(formData.get("tag") || "");
+  const valueId = String(formData.get("valueId") || "").trim();
   const message = String(formData.get("message") || "").trim();
 
   const isWin = kind === "win";
   if (!WIN_KIND_IDS.includes(kind as (typeof WIN_KIND_IDS)[number])) return { error: "Invalid post type." };
   if (!message) return { error: "Add a few words about it." };
   if (!isWin && !about) return { error: "Pick the teammate you're recognizing." };
-  if (!CULTURE_TAGS.includes(tag as (typeof CULTURE_TAGS)[number])) return { error: "Invalid tag." };
 
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
@@ -130,11 +130,27 @@ export async function addCultureMoment(_prev: ActionState, formData: FormData): 
     return { error: "You don't have access to post here." };
 
   const supabase = await createClient();
+
+  // Prefer tagging the org's own core value (recognition rolls up to the values
+  // the owner defined). Fall back to the legacy generic tag when no value is
+  // chosen (e.g. an org with no values yet). One of the two must be valid.
+  let valueTag: string | null = null;
+  let genericTag: string | null = null;
+  if (valueId) {
+    const { data: v } = await supabase.from("core_values").select("id").eq("id", valueId).eq("org_id", profile.orgId).maybeSingle();
+    if (!v) return { error: "Pick a value." };
+    valueTag = valueId;
+  } else {
+    if (!CULTURE_TAGS.includes(tag as (typeof CULTURE_TAGS)[number])) return { error: "Pick a value." };
+    genericTag = tag;
+  }
+
   const { error } = await supabase.from("culture_moments").insert({
     org_id: profile.orgId,
     author: profile.fullName || "A teammate",
     about: isWin ? "" : about,
-    tag,
+    tag: genericTag,
+    value_id: valueTag,
     kind: isWin ? "win" : "shoutout",
     message,
     created_by: profile.userId,

@@ -15,7 +15,7 @@ const initialState: ActionState = { error: null };
 
 // Team-wide Wins composer. Anyone shares a win or recognizes a teammate; the
 // post is attributed to them server-side. Replaces the old manager-only modal.
-export function WinComposer({ staff, label = "Share a win" }: { staff: StaffOption[]; label?: string }) {
+export function WinComposer({ staff, values = [], label = "Share a win" }: { staff: StaffOption[]; values?: { id: string; title: string }[]; label?: string }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<WinKind>("win");
   const [state, formAction, pending] = useActionState(addCultureMoment, initialState);
@@ -55,13 +55,23 @@ export function WinComposer({ staff, label = "Share a win" }: { staff: StaffOpti
               </Field>
             )}
 
-            <Field label="Tag">
-              <select name="tag" defaultValue={CULTURE_TAGS[0]} className={inputClass}>
-                {CULTURE_TAGS.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </Field>
+            {values.length > 0 ? (
+              <Field label="Which value does this show?">
+                <select name="valueId" defaultValue={values[0].id} className={inputClass}>
+                  {values.map((v) => (
+                    <option key={v.id} value={v.id}>{v.title}</option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <Field label="Tag">
+                <select name="tag" defaultValue={CULTURE_TAGS[0]} className={inputClass}>
+                  {CULTURE_TAGS.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             <Field label={kind === "win" ? "What went well?" : "What did they do?"}>
               <textarea
