@@ -7,6 +7,7 @@ import type { Location } from "@/lib/data/locations";
 import type { StaffMember } from "@/lib/data/staff";
 import { RoleChecklist } from "./role-checklist";
 import { MenuTrainingSection, type MenuItem } from "./menu-training-section";
+import { HandbookImport } from "./handbook-import";
 
 export type ChecklistItem = { id: string; item: string; source: "wingman" | "custom" };
 
@@ -59,9 +60,16 @@ export function TrainingClient({
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-4">
-        <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink shrink-0">Training by role</span>
-        <span className="text-sm text-muted">Guest experience first, then role skills · click a role to build</span>
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 sm:gap-4 mb-4">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Training by role</span>
+          <span className="text-sm text-muted">Guest experience first, then role skills · click a role to build</span>
+        </div>
+        {isGm && (
+          <div className="shrink-0">
+            <HandbookImport />
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {roles.map((d) => {

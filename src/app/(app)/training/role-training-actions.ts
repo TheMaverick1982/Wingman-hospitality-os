@@ -8,6 +8,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { canEditSection } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
 import { recordAiUsage } from "@/lib/ai/usage";
+import { getActiveDepartments } from "@/lib/roles";
 
 export type BuildState = {
   error: string | null;
@@ -518,4 +519,126 @@ export async function deleteChecklistItem(list: ListKey, id: string) {
   await supabase.from("staff_training_progress").delete().eq("item_type", LIST_ITEM_TYPE[list]).eq("item_id", id);
   await supabase.from(LIST_TABLE[list]).delete().eq("id", id);
   revalidatePath("/training");
+}
+
+// ── One handbook → many roles ────────────────────────────────────────────────
+// Upload ONE handbook / SOP that covers several roles and have Wingman split it
+// into per-role training in a single pass, instead of importing the same
+// document once per role. The owner reviews per role, then saves the ones they
+// want. Reuses saveRoleTraining for persistence (so 'custom' items are kept and
+// only 'wingman' output is replaced).
+
+export type RoleProgram = { department: string; hospitality_items: string[]; role_items: string[]; track_label?: string };
+export type HandbookState = { error: string | null; programs?: RoleProgram[] };
+
+const MULTI_ROLE_SHAPE = `{"roles": [{"department": string, "hospitality_items": [string], "role_items": [string], "track_label": string}]}`;
+
+function multiRolePrompt(roles: string[], material: string | null): string {
+  return `${material ? `Below is` : `Attached is`} a restaurant's handbook / training material that may cover several roles at once.
+
+Build a training program for EACH of these roles, and ONLY these roles: ${roles.join(", ")}.
+
+For every role:
+- "hospitality_items": guest-experience behaviors for that role (recognition, personalization, service recovery, guiding the guest).
+- "role_items": role-specific technical/operational skills unique to being a great version of that role.
+- "track_label": a short (2-4 word) name for that role's skill track.
+Pull anything relevant from the document for each role, then ADD best-practice items so each role's program is complete (not just a transcription). Every item under 16 words, a concrete observable action a manager can check off. If the document says nothing about a role, still produce a solid best-practice program for it.
+${material ? `\nHANDBOOK TEXT:\n"""\n${material}\n"""\n` : ""}
+Respond with ONLY valid JSON, no markdown fences, no commentary, matching exactly this shape:
+${MULTI_ROLE_SHAPE}`;
+}
+
+export async function generateHandbookForRoles(_prev: HandbookState, formData: FormData): Promise<HandbookState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to generate training content." };
+  }
+
+  const roles = (await getActiveDepartments()).slice(0, 12);
+  if (roles.length === 0) return { error: "Add your roles first (Manage roles), then import a handbook across them." };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
+  if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+
+  const mode = String(formData.get("mode") || "");
+  let content: unknown;
+  if (mode === "upload") {
+    const file = formData.get("file") as File | null;
+    if (!file || file.size === 0) return { error: "Choose your handbook (PDF or image) first." };
+    if (file.size > 10 * 1024 * 1024) return { error: "File is too large — 10MB max." };
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) return { error: "Upload a PDF or image (JPG/PNG) of your handbook." };
+    const bytes = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const block = isPdf
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: bytes } }
+      : { type: "image", source: { type: "base64", media_type: file.type, data: bytes } };
+    content = [block, { type: "text", text: multiRolePrompt(roles, null) }];
+  } else if (mode === "paste") {
+    const pastedText = String(formData.get("pastedText") || "").trim();
+    if (!pastedText) return { error: "Paste your handbook text first." };
+    if (pastedText.length > 40000) return { error: "That's a lot of text — trim it to the essentials (40,000 characters max)." };
+    content = multiRolePrompt(roles, pastedText.slice(0, 40000));
+  } else {
+    return { error: "Choose upload or paste." };
+  }
+
+  let programs: RoleProgram[];
+  try {
+    const response = await callAnthropic(apiKey, {
+      model: "claude-sonnet-5",
+      max_tokens: 12000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Anthropic API returned ${response.status}: ${body.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    await recordAiUsage({ orgId: profile.orgId, feature: "handbook_multi_role", model: "claude-sonnet-5", usage: data.usage });
+    const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n").trim();
+    if (!text) throw new Error("The AI couldn't read that file. If it's a scanned image, try a text-based PDF or a clear photo.");
+    const parsed = JSON.parse(extractJsonObject(text)) as { roles?: unknown };
+    const raw = Array.isArray(parsed.roles) ? parsed.roles : [];
+    programs = raw
+      .map((r) => r as Partial<RoleProgram>)
+      .filter((r) => r && typeof r.department === "string" && roles.includes(r.department as Department))
+      .map((r) => ({
+        department: r.department as string,
+        hospitality_items: (Array.isArray(r.hospitality_items) ? r.hospitality_items : []).map((s) => String(s).trim()).filter(Boolean).slice(0, 40),
+        role_items: (Array.isArray(r.role_items) ? r.role_items : []).map((s) => String(s).trim()).filter(Boolean).slice(0, 40),
+        track_label: typeof r.track_label === "string" ? r.track_label.slice(0, 60) : undefined,
+      }))
+      .filter((r) => r.hospitality_items.length > 0 || r.role_items.length > 0);
+    if (programs.length === 0) throw new Error("Couldn't read role programs from that document. Try a clearer or shorter file.");
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't process that handbook. Try again." };
+  }
+
+  return { error: null, programs };
+}
+
+// Persist selected role programs from a handbook import — one saveRoleTraining
+// call per role, so each role's 'custom' items are preserved and only 'wingman'
+// output is replaced (same rules as a single-role import).
+export async function saveHandbookForRoles(programs: RoleProgram[]): Promise<{ error: string | null; savedRoles?: number }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (!canEditSection(profile.accessRole, "training", profile.permissionOverrides)) {
+    return { error: "You don't have access to save training content." };
+  }
+  const clean = (Array.isArray(programs) ? programs : []).filter((p) => p && ALL_DEPARTMENTS.includes(p.department as Department));
+  if (clean.length === 0) return { error: "Nothing selected to save." };
+
+  let saved = 0;
+  for (const p of clean) {
+    const res = await saveRoleTraining(p.department, p.hospitality_items ?? [], p.role_items ?? [], p.track_label);
+    if (res.error) return { error: `Saved ${saved} role${saved === 1 ? "" : "s"}. ${p.department}: ${res.error}` };
+    saved += 1;
+  }
+  revalidatePath("/training");
+  return { error: null, savedRoles: saved };
 }
