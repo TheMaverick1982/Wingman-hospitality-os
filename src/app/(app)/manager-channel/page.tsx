@@ -4,7 +4,7 @@ import { getSectionAccess } from "@/lib/auth/permissions";
 import { getManagerThreads } from "@/lib/manager-channel";
 import { ManagerChannelClient } from "./manager-channel-client";
 
-export const metadata = { title: "Manager channel · Wingman" };
+export const metadata = { title: "Manager updates · Wingman" };
 
 // The manager channel: one org-wide channel for owners, managers, and shift
 // leads to post updates and reply in threads. Staff never see it.

@@ -57,11 +57,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/culture", label: "Culture", icon: Heart, section: "culture", tier: "core" },
   // Everything below is tucked under "More" until the owner reaches for it.
   { href: "/shift", label: "Shift", icon: Megaphone, section: "shift", tier: "more" },
-  { href: "/manager-channel", label: "Manager channel", icon: MessagesSquare, section: "manager_channel", tier: "more" },
+  { href: "/manager-channel", label: "Manager updates", icon: MessagesSquare, section: "manager_channel", tier: "more" },
   { href: "/questions", label: "Questions", icon: MessageCircleQuestion, section: "questions", tier: "more" },
   { href: "/growth", label: "Revenue Growth Planner", icon: TrendingUp, section: "growth", tier: "more" },
   { href: "/menu", label: "Menu Engineering", icon: UtensilsCrossed, section: "menu", tier: "more" },
-  { href: "/audit", label: "Standout Audit", icon: ClipboardCheck, section: "audit", tier: "more" },
+  { href: "/audit", label: "Experience Audit", icon: ClipboardCheck, section: "audit", tier: "more" },
   { href: "/partners", label: "Partners", icon: Handshake, section: "partners", tier: "more" },
   { href: "/reporting", label: "Reporting", icon: BarChart3, section: "reporting", tier: "more" },
 ];

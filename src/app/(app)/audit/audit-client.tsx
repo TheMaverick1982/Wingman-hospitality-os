@@ -78,11 +78,11 @@ export function AuditClient({
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Standout Audit</h1>
+          <h1 className="text-[30px] font-bold tracking-[-0.02em] text-ink mb-1.5">Experience Audit</h1>
           <p className="text-base text-muted max-w-2xl">
             One walkthrough, two scores: the <span className="font-semibold text-ink">5-Gap Diagnosis</span> finds the
-            one constraint holding you back, and the <span className="font-semibold text-ink">Standout Audit</span>{" "}
-            reads the live guest experience across seven domains.
+            one constraint holding you back, and the <span className="font-semibold text-ink">7-domain audit</span>{" "}
+            reads the live guest experience across your floor.
           </p>
         </div>
         {canEdit ? (
@@ -154,7 +154,7 @@ export function AuditClient({
             </div>
 
             <div className="bg-white border border-line rounded-2xl p-7 shadow-sm">
-              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Standout Audit — 7 domains</div>
+              <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-4">Experience audit — 7 domains</div>
               <div className="flex flex-col gap-3">
                 {AUDIT_DOMAINS.map((d, i) => {
                   const pct = (latest.domain_scores[i] / 5) * 100;
@@ -262,7 +262,7 @@ export function AuditClient({
               ))}
             </div>
 
-            <div className="mb-2 text-sm font-semibold text-ink">Standout Audit — 7 domains</div>
+            <div className="mb-2 text-sm font-semibold text-ink">Experience audit — 7 domains</div>
             <div className="text-xs text-muted mb-3">Score the live guest experience you just walked.</div>
             <div className="flex flex-col gap-3 mb-6">
               {AUDIT_DOMAINS.map((d, i) => (

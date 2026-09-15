@@ -42,7 +42,7 @@ KEY FEATURES
 - Guest bounce-back: track guests across visits 1–4, incentives, and reactions to drive return visits.
 - Accountability: daily checklists, spot-checks, coaching flags, pre-shift checks, discount tracking.
 - Growth planning: a 10/10/10 calculator to model more customers, higher average sale, and more frequent visits.
-- Standout Audit + 5-gap diagnosis with a health score and action plan.
+- Experience Audit + 5-gap diagnosis with a health score and action plan.
 - Menu engineering and business-health metrics (from POS data).
 - Team playbook, multi-location support, and role-based permissions.
 

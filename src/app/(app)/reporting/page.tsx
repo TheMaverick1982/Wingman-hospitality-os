@@ -610,7 +610,7 @@ export default async function ReportingPage({
                 <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Health score over time</span>
                 <span className="text-[13px] text-muted">last {auditTrend.length} audits</span>
               </div>
-              <p className="text-[13px] text-muted mb-5">Your Standout Audit score, audit to audit — is the operation actually getting stronger?</p>
+              <p className="text-[13px] text-muted mb-5">Your Experience Audit score, audit to audit — is the operation actually getting stronger?</p>
               <div className="flex items-end gap-3 h-32">
                 {auditTrend.map((a, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">

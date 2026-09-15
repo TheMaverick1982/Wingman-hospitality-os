@@ -100,13 +100,13 @@ export const SECTION_LABELS: Record<Section, string> = {
   staff: "Staff",
   growth: "Revenue Growth Planner",
   menu: "Menu Engineering",
-  audit: "Standout Audit",
+  audit: "Experience Audit",
   partners: "Partners",
   reporting: "Reporting",
   questions: "Questions",
   reviews: "Guest Reviews",
   shift: "Shift",
-  manager_channel: "Manager channel",
+  manager_channel: "Manager updates",
   settings: "Settings",
 };
 
