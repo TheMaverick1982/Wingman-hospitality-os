@@ -109,6 +109,65 @@ export async function updateCultureText(_prev: ActionState, formData: FormData):
   return { error: null };
 }
 
+const EXPERIMENT_OUTCOMES = ["worked", "no_change", "mixed"] as const;
+export type ExperimentOutcome = (typeof EXPERIMENT_OUTCOMES)[number];
+
+// Close the weekly-experiment loop. Recording how the currently-running
+// experiment went archives it (with its result) into the experiment log and
+// clears organizations.weekly_experiment so the next one can be set. This is
+// what turns the weekly experiment from a write-only field into a history the
+// team can learn from ("we tried dessert-by-name — attach rate moved" / "no
+// change"). Additive: nothing existing is deleted.
+export async function closeExperiment(outcome: string, note: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "culture", profile.permissionOverrides) !== "full")
+    return { error: "You don't have access to record experiment outcomes." };
+  if (!EXPERIMENT_OUTCOMES.includes(outcome as ExperimentOutcome)) return { error: "Pick an outcome." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id, weekly_experiment").single();
+  if (!org) return { error: "Organization not found." };
+  const hypothesis = String((org as { weekly_experiment?: string | null }).weekly_experiment ?? "").trim();
+  if (!hypothesis) return { error: "There's no experiment running to record." };
+
+  const { error: insErr } = await supabase.from("culture_experiments").insert({
+    org_id: (org as { id: string }).id,
+    hypothesis,
+    outcome,
+    outcome_note: note.trim().slice(0, 400) || null,
+    closed_on: new Date().toISOString().slice(0, 10),
+    created_by: profile.userId,
+  });
+  if (insErr) return { error: insErr.message };
+
+  const { error: clearErr } = await supabase
+    .from("organizations")
+    .update({ weekly_experiment: "" })
+    .eq("id", (org as { id: string }).id);
+  if (clearErr) return { error: clearErr.message };
+
+  revalidatePath("/culture");
+  revalidatePath("/dashboard");
+  return { error: null };
+}
+
+// Remove a logged experiment (manager moderation / mistakes). The log is small,
+// non-critical culture history, so a hard delete is fine (RLS enforces manager).
+export async function deleteExperiment(id: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "culture", profile.permissionOverrides) !== "full")
+    return { error: "Not allowed." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("culture_experiments").delete().eq("id", id).eq("org_id", profile.orgId);
+  if (error) return { error: "Couldn't remove that." };
+
+  revalidatePath("/culture");
+  return { error: null };
+}
+
 // Post to the Wins feed. Team-wide and self-attributed: any team member with
 // culture access shares a win (no target) or recognizes a teammate. The author
 // is always the poster (created_by = auth.uid()), so no one posts as someone else.

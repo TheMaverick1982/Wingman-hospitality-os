@@ -263,7 +263,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Culture — your standard, in your words",
     summary: "Set the weekly pre-shift focus and recognize the moments that build your culture.",
     categoryId: "operations",
-    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus", "owner's mindset", "ownership"],
+    keywords: ["culture", "values", "pre-shift focus", "recognition", "culture moments", "weekly focus", "weekly experiment", "experiment log", "did it work", "owner's mindset", "ownership"],
     body: [
       { kind: "p", text: "Culture is the standard every hire is trained to and every shift is measured against — written in your own words." },
       { kind: "image", src: "/help/culture.png", alt: "The Culture screen", caption: "Culture — your values, weekly pre-shift focus, and recognition." },
@@ -276,7 +276,9 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Editing your core values" },
       { kind: "p", text: "Your core values sit below the mindset. Owners and managers can tap \"Edit\" to add, rename, reword, reorder (the up/down arrows), or remove them — they come pre-filled with a strong starting set, so make them yours. They show on every role guide and help ground the AI. One thing to know: removing a value also removes it from your universal hiring criteria, since your values are what you screen candidates against." },
-      { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing." },
+      { kind: "h", text: "The weekly experiment — and closing the loop" },
+      { kind: "p", text: "Set one small test to run this week — a new upsell, a new touch, a new table-side line. When the week's over, tap \"How did it go? Record the result\" on the experiment and pick It worked / Mixed / No change, with a note on what you learned. That moves it into the Experiment log below and clears the field for your next test. Over time the log becomes a record of what actually moves the needle in your restaurant — keep the wins, drop the duds — instead of a field you overwrite and forget." },
+      { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing. The experiment is where you find your next lever: run small bets and let the log tell you which ones to keep." },
     ],
   },
   {
