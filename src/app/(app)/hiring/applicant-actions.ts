@@ -8,7 +8,8 @@ import { canEditSection } from "@/lib/auth/permissions";
 import { normalizeFormConfig } from "@/lib/application-form";
 import { sendEmail } from "@/lib/email";
 import { REPLY_KINDS, type ReplyKind, normalizeReplyTemplates, renderReplyTemplate } from "@/lib/applicant-reply";
-import { wallClockToUtc } from "@/lib/timezone";
+import { normalizeInterviewInvite, renderInterviewInvite } from "@/lib/interview-invite";
+import { wallClockToUtc, formatInZone } from "@/lib/timezone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentProfile } from "@/lib/auth/profile";
 
@@ -186,20 +187,144 @@ export async function sendApplicantReply(id: string, kind: string): Promise<{ er
 }
 
 // Confirm an interview: set the date/time + details and move the application
-// into the candidates area (status 'interviewing').
-export async function confirmInterview(id: string, when: string, details: string): Promise<{ error: string | null }> {
+// into the candidates area (status 'interviewing'). When sendInvite is true (the
+// default) the applicant is emailed the date, time, location and a "call if
+// something changes" note — the org's editable invite copy, from the restaurant's
+// name, with replies routed to the location. The email is best-effort: the
+// scheduling always succeeds even if the send fails; the result reports whether
+// the invite went out.
+export async function confirmInterview(
+  id: string,
+  when: string,
+  details: string,
+  sendInvite: boolean = true,
+): Promise<{ error: string | null; invited?: boolean; inviteNote?: string }> {
   const profile = await gate();
   if (!profile) return { error: "Not authorized." };
   if (!when) return { error: "Pick an interview date and time." };
   const supabase = await createClient();
   const tz = await applicationTimezone(supabase, id, profile);
   const iso = (wallClockToUtc(when, tz) ?? new Date(when)).toISOString();
+  const trimmedDetails = (details || "").slice(0, 2000);
   const { error } = await supabase
     .from("job_applications")
-    .update({ interview_at: iso, interview_details: (details || "").slice(0, 2000), status: "interviewing", updated_at: new Date().toISOString() })
+    .update({ interview_at: iso, interview_details: trimmedDetails, status: "interviewing", updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/hiring");
+
+  if (!sendInvite) return { error: null, invited: false };
+
+  // Send the invite email — best effort; never blocks or fails the scheduling.
+  try {
+    const { data: appRow } = await supabase
+      .from("job_applications")
+      .select("name, email, department, location_id, org_id")
+      .eq("id", id)
+      .maybeSingle();
+    const app = appRow as { name: string; email: string | null; department: string | null; location_id: string | null; org_id: string } | null;
+    const to = (app?.email || "").trim();
+    if (!app || !to.includes("@")) {
+      return { error: null, invited: false, inviteNote: "No email on file — nothing sent." };
+    }
+
+    const { data: orgRow } = await supabase.from("organizations").select("name, applications_cc, interview_invite_template").eq("id", app.org_id).maybeSingle();
+    const org = orgRow as { name: string; applications_cc: string | null; interview_invite_template?: unknown } | null;
+    const orgName = (org?.name || "our team").trim();
+    const tpl = normalizeInterviewInvite(org?.interview_invite_template ?? null);
+
+    let locName = "", locAddress: string | null = null, locPhone: string | null = null, replyTo = "";
+    if (app.location_id) {
+      const { data: loc } = await supabase.from("locations").select("name, address, phone, email").eq("id", app.location_id).maybeSingle();
+      const l = loc as { name?: string; address?: string | null; phone?: string | null; email?: string | null } | null;
+      locName = (l?.name || "").trim();
+      locAddress = l?.address ?? null;
+      locPhone = l?.phone ?? null;
+      replyTo = (l?.email || "").trim();
+    }
+    if (!replyTo) {
+      replyTo = (org?.applications_cc || "").split(/[,\n;]+/).map((s) => s.trim()).find((s) => s.includes("@")) || "";
+    }
+
+    const { subject, html } = renderInterviewInvite(tpl, {
+      name: app.name || null,
+      restaurant: orgName,
+      role: app.department?.trim() || null,
+      date: formatInZone(iso, tz, { weekday: "long", month: "long", day: "numeric" }),
+      time: formatInZone(iso, tz, { hour: "numeric", minute: "2-digit" }),
+      location: locName,
+      address: locAddress,
+      phone: locPhone,
+      details: trimmedDetails || null,
+    });
+    const fromName = orgName.replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Hiring";
+    await sendEmail({
+      to: [to],
+      subject,
+      html,
+      from: `${fromName} <reports@updates.joinwingman.app>`,
+      ...(replyTo ? { replyTo } : {}),
+    });
+    await supabase.from("job_applications").update({ interview_invite_sent_at: new Date().toISOString() }).eq("id", id);
+    revalidatePath("/hiring");
+    return { error: null, invited: true };
+  } catch {
+    return { error: null, invited: false, inviteNote: "Interview saved, but the email couldn't send just now." };
+  }
+}
+
+// Save the org's editable interview-invite copy. A blank field falls back to the
+// built-in default (normalizeInterviewInvite), so it can't be saved empty.
+export async function updateInterviewInvite(input: unknown): Promise<{ error: string | null }> {
+  if (!(await gate())) return { error: "Not authorized." };
+  const tpl = normalizeInterviewInvite(input);
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+  const { error } = await supabase.from("organizations").update({ interview_invite_template: tpl }).eq("id", (org as { id: string }).id);
+  if (error) return { error: error.message };
+  revalidatePath("/hiring");
+  return { error: null };
+}
+
+// Send the owner a test of the interview invite — the CURRENT editor draft,
+// rendered with a sample applicant + interview so placeholders fill in, delivered
+// to their own account email. Nothing is saved and no applicant is touched.
+export async function sendTestInvite(subject: string, body: string): Promise<{ error: string | null }> {
+  const profile = await gate();
+  if (!profile) return { error: "Not authorized." };
+  const to = (profile.email || "").trim();
+  if (!to.includes("@")) return { error: "Your account has no email address to send a test to." };
+
+  const tpl = normalizeInterviewInvite({ subject, body });
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", profile.orgId).maybeSingle();
+  const orgName = ((org as { name?: string } | null)?.name || "Your restaurant").trim();
+
+  const sample = new Date(Date.now() + 3 * 86400000);
+  const { subject: subj, html } = renderInterviewInvite(tpl, {
+    name: "Jordan Rivera",
+    restaurant: orgName,
+    role: "Server",
+    date: sample.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+    time: "2:00 PM",
+    location: `${orgName} — Main Street`,
+    address: "123 Main Street, Austin, TX 78701",
+    phone: "(512) 555-0123",
+    details: "Ask for Sam at the host stand; the interview takes about 20 minutes.",
+  });
+  const banner = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:12px;color:#6b7280;background:#f3f4f6;border-radius:8px;padding:8px 12px;max-width:560px;margin:0 0 16px;">Test preview — a real applicant sees this with their own interview details filled in (sample used here: “Jordan Rivera”, role “Server”). Their replies go to your location&rsquo;s email.</div>`;
+  const fromName = orgName.replace(/["\\\r\n<>]/g, "").slice(0, 60) || "Hiring";
+  try {
+    await sendEmail({
+      to: [to],
+      subject: `[Test] ${subj}`,
+      html: banner + html,
+      from: `${fromName} <reports@updates.joinwingman.app>`,
+    });
+  } catch {
+    return { error: "Couldn't send the test email just now. Please try again." };
+  }
   return { error: null };
 }
 

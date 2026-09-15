@@ -656,7 +656,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Application form & applicants",
     summary: "A public form to collect applications, plus a tracker to schedule visits and move people to hiring.",
     categoryId: "team",
-    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields", "screening questions", "screen candidates", "pre-interview", "grade applicants", "ai screening", "spam", "bot", "captcha", "junk applications"],
+    keywords: ["apply", "application", "applicant", "job", "hire", "careers", "form", "embed", "link", "landing page", "resume", "new hire", "customize form", "custom fields", "custom questions", "edit form", "required fields", "screening questions", "screen candidates", "pre-interview", "grade applicants", "ai screening", "spam", "bot", "captcha", "junk applications", "interview email", "interview confirmation", "interview invitation", "schedule interview", "confirmation email"],
     body: [
       { kind: "p", text: "Wingman gives you a ready-made application form so candidates can apply online — no website required. Every submission lands in an Applicants tracker inside Hiring." },
       { kind: "h", text: "Share it, or embed it on your site" },
@@ -748,7 +748,8 @@ export const ARTICLES: HelpArticle[] = [
         "Each application has a status — New, Reviewed, or Rejected — plus their resume if they attached one. Rejected applications move to a \"Rejected (Archived)\" tab (out of your main list) that you click to see; when you reject someone you can add a private note on why and flag \"Do not hire\" so they're never reconsidered. Filter the active pipeline by status or by job role, and use the Sort control to switch between Best fit (grouped by screening tier, the default) and Newest or Oldest first when you'd rather work through them by date.",
         "The top of the page shows \"Applications by fit\" — how your inbound applications screened (Strong fit / Worth a look / Probably pass / Not yet screened) — so you can read lead quality at a glance before spending an interview.",
         "When you're ready, click \"Schedule interview\", pick a date/time, add details (who's interviewing, where, what to bring), and Confirm.",
-        "Confirming moves them out of Applications and into your candidates area under \"Interviews scheduled.\"",
+        "By default, confirming also emails the applicant their interview details — the date, time, and location, plus a note to call if anything changes — sent from your restaurant's name, with replies routed to your location's email. Uncheck \"Email the applicant\" on any booking to skip it (e.g. if you already told them in person). Applicants with no email on file just aren't sent one. You can edit the wording of this email under \"Interview invitation email\" on the Hiring page — with a \"Send test to me\" button to preview it.",
+        "Confirming moves them out of Applications and into your candidates area under \"Interviews scheduled,\" and shows a \"✓ Invite emailed\" marker when the confirmation went out.",
         "When it's time, click \"Interview & score\" — it opens a combined card pre-filled with their name, role, and location and linked back to the application. The exact questions to ask sit right under each trait (with green-flag / red-flag cues), so you run the interview from it and then score against your real standards. Save it and they become a candidate (then Hire from the scorecard as always).",
       ] },
       { kind: "h", text: "Reply to applicants in one click" },

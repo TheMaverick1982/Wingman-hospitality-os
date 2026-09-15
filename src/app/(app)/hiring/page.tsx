@@ -17,6 +17,8 @@ import { ApplicantsPanel, type Applicant } from "./applicants-panel";
 import { OpeningsPanel, type OpeningRow } from "./openings-panel";
 import { ReplyTemplatesPanel } from "./reply-templates-panel";
 import { normalizeReplyTemplates } from "@/lib/applicant-reply";
+import { InterviewInvitePanel } from "./interview-invite-panel";
+import { normalizeInterviewInvite } from "@/lib/interview-invite";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
 import { ScrollToButton } from "./scroll-to-button";
@@ -156,11 +158,11 @@ export default async function HiringPage({
   // Interview scheduling columns land with migration 0087. Read them in isolation
   // so a not-yet-applied migration degrades to "no interview scheduled" instead of
   // erroring the applications query and blanking the whole list.
-  const interviewById = new Map<string, { at: string | null; details: string }>();
+  const interviewById = new Map<string, { at: string | null; details: string; inviteSentAt: string | null }>();
   {
-    const { data: ivRows } = await hiringAdmin.from("job_applications").select("id, interview_at, interview_details").eq("org_id", profile.orgId);
-    for (const r of (ivRows ?? []) as { id: string; interview_at: string | null; interview_details: string | null }[]) {
-      interviewById.set(r.id, { at: r.interview_at ?? null, details: r.interview_details ?? "" });
+    const { data: ivRows } = await hiringAdmin.from("job_applications").select("id, interview_at, interview_details, interview_invite_sent_at").eq("org_id", profile.orgId);
+    for (const r of (ivRows ?? []) as { id: string; interview_at: string | null; interview_details: string | null; interview_invite_sent_at?: string | null }[]) {
+      interviewById.set(r.id, { at: r.interview_at ?? null, details: r.interview_details ?? "", inviteSentAt: r.interview_invite_sent_at ?? null });
     }
   }
 
@@ -251,6 +253,7 @@ export default async function HiringPage({
     preferredVisitAt: a.preferred_visit_at,
     interviewAt: interviewById.get(a.id)?.at ?? null,
     interviewDetails: interviewById.get(a.id)?.details ?? "",
+    interviewInviteSentAt: interviewById.get(a.id)?.inviteSentAt ?? null,
     status: a.status,
     createdAt: a.created_at,
     customAnswers: customAnswersById.get(a.id) ?? [],
@@ -301,6 +304,15 @@ export default async function HiringPage({
   {
     const { data: rtRow } = await supabase.from("organizations").select("application_reply_templates").single();
     if (rtRow) replyTemplates = normalizeReplyTemplates((rtRow as { application_reply_templates: unknown }).application_reply_templates);
+  }
+
+  // The org's editable interview-invitation email copy (falls back to defaults).
+  // Column lands with migration 0184 — read in isolation so a not-yet-applied
+  // migration degrades to the built-in default instead of breaking the page.
+  let inviteTemplate = normalizeInterviewInvite(null);
+  {
+    const { data: iiRow } = await supabase.from("organizations").select("interview_invite_template").single();
+    if (iiRow) inviteTemplate = normalizeInterviewInvite((iiRow as { interview_invite_template: unknown }).interview_invite_template);
   }
 
   // Job openings (the job_openings table + job_applications.opening_id land with
@@ -466,6 +478,15 @@ export default async function HiringPage({
           subtitle="The one-click “we’re interested” and “not a good fit” notes you send applicants from their card. Edit the wording to sound like you, or leave the defaults."
         >
           <ReplyTemplatesPanel templates={replyTemplates} testEmail={profile.email ?? ""} />
+        </CollapsibleSection>
+      )}
+
+      {canEdit && (
+        <CollapsibleSection
+          title="Interview invitation email"
+          subtitle="Sent to an applicant when you book their interview — the date, time, location, and a note to call if anything changes. Edit the wording, or leave the default."
+        >
+          <InterviewInvitePanel template={inviteTemplate} testEmail={profile.email ?? ""} />
         </CollapsibleSection>
       )}
 
