@@ -378,28 +378,56 @@ ${schema}`;
 // made from it), straight from the Training page. Generates fresh questions from
 // the role's current standards and pushes the test into the prebuilt tests area,
 // ready to assign. Keeps a single test per role via source_department.
-export async function createOrUpdateTestFromRole(department: string): Promise<{ error: string | null; id?: string; updated?: boolean }> {
-  const profile = await canBuild();
-  if (!profile) return { error: "You don't have access to build tests." };
-  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
-  if (!(await consumeAiLimit(profile))) return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+// Clearly-wrong hospitality behaviors used as multiple-choice distractors in the
+// deterministic (no-AI) fallback test. They're universally bad practices, so the
+// role's real standard is always the correct answer — a fair, auto-scorable quiz
+// that needs no model.
+const FALLBACK_DISTRACTORS = [
+  "Wait for guests to flag you down before checking on them",
+  "Guess at allergens instead of checking the recipe",
+  "Skip the pre-shift check when you're busy",
+  "Leave a table's water empty until they ask",
+  "Clear plates before everyone at the table has finished",
+  "Let a complaint wait until a manager is free",
+  "Assume a first-time guest already knows the menu",
+  "Ring in an order without repeating it back",
+  "Ignore this week's focus during a rush",
+  "Hand off a guest problem instead of owning it",
+];
 
-  const supabase = await createClient();
-  const { data: org } = await supabase.from("organizations").select("id").single();
-  if (!org) return { error: "Organization not found." };
+// Build a study-then-quiz day straight from the role's own standards — no model
+// call. Used as an instant fallback so batch setup never stalls at the AI hourly
+// wall. Each question asks which option is one of the team's real standards
+// (correct = a real standard, distractors = generic bad practices).
+function buildFallbackDays(department: string, lines: string[]): ProposedDay[] {
+  const picks = lines.map((l) => l.trim()).filter(Boolean).slice(0, 10);
+  const content =
+    `Your ${department} standards — read these, then answer the quick check below.\n\n` +
+    picks.map((l) => `• ${l}`).join("\n");
 
-  const [{ data: standards }, { data: items }] = await Promise.all([
-    supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
-    supabase.from("department_training_items").select("item").eq("department", department).order("sort_order"),
-  ]);
-  const material = [
-    ...(standards ?? []).map((s) => `- ${(s as { item: string }).item}`),
-    ...(items ?? []).map((s) => `- ${(s as { item: string }).item}`),
-  ].join("\n");
-  if (!material.trim()) return { error: `No training content found for ${department} yet — build its training first.` };
+  const questions: TestQuestion[] = picks.slice(0, 8).map((standard, i) => {
+    // Rotate through the distractor pool so questions don't repeat the same wrong
+    // options, and rotate the correct answer's position so it isn't always first.
+    const distractors = [0, 1, 2].map((k) => FALLBACK_DISTRACTORS[(i + k) % FALLBACK_DISTRACTORS.length]);
+    const correctIndex = i % 4;
+    const options = [...distractors];
+    options.splice(correctIndex, 0, standard.slice(0, 200));
+    return {
+      day_number: 1,
+      kind: "multiple_choice" as QuestionKind,
+      prompt: `Which of these is part of your ${department} standard?`,
+      options: options.slice(0, 4),
+      correct_index: correctIndex,
+      explanation: "This is one of your team's own standards.",
+    };
+  });
 
+  return [{ day_number: 1, title: `${department} standards`, content: content.slice(0, 4000), questions }];
+}
+
+function buildRoleTestPrompt(department: string, material: string): string {
   const schema = `{"days": [{"day_number": 1, "title": string, "content": string, "questions": [{"kind": "multiple_choice" | "true_false", "prompt": string, "options": [string], "correct_index": number, "explanation": string}]}]}`;
-  const prompt = `Build a learn-then-quiz for the ${department} role based ONLY on this restaurant's own training standards below.
+  return `Build a learn-then-quiz for the ${department} role based ONLY on this restaurant's own training standards below.
 Give ONE day with:
 - "title": a short focus for the day.
 - "content": clear teaching/study text the employee reads BEFORE the questions — a few tight paragraphs or bullet lines that actually teach these standards, so someone could learn from it and then pass. This is the learning section.
@@ -412,15 +440,54 @@ ${material.slice(0, 8000)}
 
 Respond with ONLY valid JSON, matching exactly:
 ${schema}`;
+}
 
-  let days: ProposedDay[];
-  try {
-    const text = await callModel(TEST_SYSTEM, prompt, 7000, profile.orgId);
-    const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
-    days = normalizeDays(parsed.days ?? [], 1, "study_quiz");
-    if (!days[0] || days[0].questions.length === 0) throw new Error("Couldn't write questions from that training. Try again.");
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "Generation failed. Try again." };
+export async function createOrUpdateTestFromRole(
+  department: string,
+  opts?: { fallbackOnLimit?: boolean },
+): Promise<{ error: string | null; id?: string; updated?: boolean; fallback?: boolean }> {
+  const profile = await canBuild();
+  if (!profile) return { error: "You don't have access to build tests." };
+  if (!ALL_DEPARTMENTS.includes(department as Department)) return { error: "Pick a role." };
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { error: "Organization not found." };
+
+  const [{ data: standards }, { data: items }] = await Promise.all([
+    supabase.from("department_standards").select("item").eq("department", department).order("sort_order"),
+    supabase.from("department_training_items").select("item").eq("department", department).order("sort_order"),
+  ]);
+  const lines = [
+    ...(standards ?? []).map((s) => (s as { item: string }).item),
+    ...(items ?? []).map((s) => (s as { item: string }).item),
+  ];
+  const material = lines.map((l) => `- ${l}`).join("\n");
+  if (!material.trim()) return { error: `No training content found for ${department} yet — build its training first.` };
+
+  // Try the model first for the best quiz. If the hourly AI limit is spent (or a
+  // generation fails) AND the caller allows it (batch setup), fall back to a
+  // deterministic quiz built straight from the standards, so setup never stalls.
+  let days: ProposedDay[] | null = null;
+  let usedFallback = false;
+  const withinLimit = await consumeAiLimit(profile);
+  if (withinLimit) {
+    try {
+      const text = await callModel(TEST_SYSTEM, buildRoleTestPrompt(department, material), 7000, profile.orgId);
+      const parsed = JSON.parse(extractJson(text)) as { days?: RawDay[] };
+      const norm = normalizeDays(parsed.days ?? [], 1, "study_quiz");
+      if (norm[0] && norm[0].questions.length > 0) days = norm;
+    } catch {
+      days = null;
+    }
+  }
+  if (!days) {
+    if (!opts?.fallbackOnLimit) {
+      return { error: withinLimit ? "Couldn't write questions from that training. Try again." : "You've reached the hourly limit for AI generation. Please try again a bit later." };
+    }
+    days = buildFallbackDays(department, lines);
+    usedFallback = true;
+    if (!days[0] || days[0].questions.length === 0) return { error: `Not enough training content for ${department} yet — build its training first.` };
   }
 
   // Already made into a test? Replace its content, keep its settings.
@@ -435,7 +502,7 @@ ${schema}`;
     await supabase.from("tests").update({ day_count: 1, mode: "study_quiz", updated_at: new Date().toISOString() }).eq("id", testId);
     revalidatePath("/training");
     revalidatePath("/training/tests");
-    return { error: null, id: testId, updated: true };
+    return { error: null, id: testId, updated: true, fallback: usedFallback };
   }
 
   const settings: TestSettings = {
@@ -452,7 +519,7 @@ ${schema}`;
   };
   const res = await applyTest(settings, days, "training", department);
   revalidatePath("/training");
-  return res.id ? { error: null, id: res.id, updated: false } : { error: res.error };
+  return res.id ? { error: null, id: res.id, updated: false, fallback: usedFallback } : { error: res.error };
 }
 
 // List active roles that have training content but no auto-generated test yet.
