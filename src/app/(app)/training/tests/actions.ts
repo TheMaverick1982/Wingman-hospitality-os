@@ -455,6 +455,32 @@ ${schema}`;
   return res.id ? { error: null, id: res.id, updated: false } : { error: res.error };
 }
 
+// List active roles that have training content but no auto-generated test yet.
+// Powers the one-click "create a test for every role" setup. It deliberately
+// EXCLUDES any role that already has a source_department test, so a batch run can
+// never overwrite a test the owner already built or customized.
+export async function listRolesNeedingTest(): Promise<{ roles: string[]; error: string | null }> {
+  const profile = await canBuild();
+  if (!profile) return { roles: [], error: "Not authorized." };
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("id").single();
+  if (!org) return { roles: [], error: "Organization not found." };
+  const orgId = (org as { id: string }).id;
+
+  const [{ data: meta }, { data: standards }, { data: existingTests }] = await Promise.all([
+    supabase.from("department_meta").select("department"),
+    supabase.from("department_standards").select("department"),
+    supabase.from("tests").select("source_department").eq("org_id", orgId).not("source_department", "is", null),
+  ]);
+  const active = new Set(((meta ?? []) as { department: string }[]).map((m) => m.department));
+  const hasContent = new Set(((standards ?? []) as { department: string }[]).map((s) => s.department));
+  const haveTest = new Set(
+    ((existingTests ?? []) as { source_department: string | null }[]).map((t) => t.source_department).filter(Boolean) as string[],
+  );
+  const roles = (ALL_DEPARTMENTS as readonly string[]).filter((d) => active.has(d) && hasContent.has(d) && !haveTest.has(d));
+  return { roles, error: null };
+}
+
 // One-click "turn this recipe into a test" (or update the one already made from
 // it), straight from a dish's recipe page. The AI writes a learn-then-quiz from
 // the recipe's own steps so a cook can prove they know how to make the dish to

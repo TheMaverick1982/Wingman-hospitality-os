@@ -527,10 +527,12 @@ export const ARTICLES: HelpArticle[] = [
     title: "Tests & exams — build, score, and verify what your team knows",
     summary: "Turn training into an auto-scored test, built by AI or from your own material.",
     categoryId: "team",
-    keywords: ["test", "tests", "exam", "quiz", "score", "pass", "retake", "food test", "bartender test", "menu test", "lto", "assign", "day", "study", "certification"],
+    keywords: ["test", "tests", "exam", "quiz", "score", "pass", "retake", "food test", "bartender test", "menu test", "lto", "assign", "day", "study", "certification", "test for every role", "bulk tests", "set up tests", "all roles"],
     body: [
       { kind: "p", text: "Inside Training & Standards, a \"Test your team\" banner sits right at the top with a Start a test button. A test verifies what your team actually retained — auto-scored multiple-choice and true/false questions, built the same way you build everything else in Wingman." },
-      { kind: "h", text: "The fastest way: Start a test" },
+      { kind: "h", text: "Setting up? Create a test for every role at once" },
+      { kind: "p", text: "New to Wingman, or just added roles? On the Tests & exams page you'll see a \"Set up a test for every role\" card. One click writes a ready-to-assign, auto-scored test for each of your roles, built from that role's own training standards — instead of building them one at a time. It shows live progress as it goes, and it never touches a role that already has a test, so any test you've already built or customized is left exactly as it is. The card disappears once every role has a test." },
+      { kind: "h", text: "The fastest way to hand them out: Start a test" },
       { kind: "p", text: "Click Start a test to hand tests out in one move — no need to open each test first. Pick who takes it (one person, a whole role, or all staff), check off the test(s) you want them to take, optionally set a due date, and send. Everyone gets an email with a link, and if you assign several at once they get one email listing them all. When you send to all staff, Wingman honors each test's target roles automatically — so a bartender test won't land on the line cooks." },
       { kind: "h", text: "Build a test three ways" },
       { kind: "list", items: [
