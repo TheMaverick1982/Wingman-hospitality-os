@@ -14,7 +14,7 @@ import {
   type SpotCheck,
 } from "@/lib/hospitality";
 import { computeCoachingFlags } from "@/lib/coaching-flags";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getLaunchPlan } from "@/lib/launch-plan";
 import { getMomentum } from "@/lib/momentum";
 import { computeGuestRevenue } from "@/lib/guest-revenue";
 import { MomentumCard } from "@/components/dashboard/momentum-card";
@@ -91,19 +91,24 @@ export default async function DashboardPage({
     accessibleLocationIds: profile.accessibleLocationIds,
   });
 
-  const onboarding = isSuperAdmin ? await getOnboardingStatus() : null;
+  // One setup checklist, one source of truth: the launch plan (Start Here) also
+  // drives the dashboard's setup states, so an owner never sees two rival
+  // "what's left to do" lists that disagree.
+  const launch = isSuperAdmin ? await getLaunchPlan() : null;
+  const setupDoneCount = launch?.setupDoneCount ?? 0;
+  const setupAllDone = launch?.setupAllDone ?? false;
   // A brand-new owner (nothing set up yet) has nothing useful on the dashboard —
   // send them to the calm, guided Start Here flow instead of an empty operating
   // cockpit. The moment they complete ANY setup step it opens normally; `?home=1`
   // always lets them view the dashboard anyway (so it's never a hard trap).
-  if (isSuperAdmin && onboarding && onboarding.doneCount === 0 && home !== "1") {
+  if (isSuperAdmin && launch && setupDoneCount === 0 && home !== "1") {
     redirect("/start-here");
   }
   // Momentum drives the "this week" verdict's next-move even before setup is
   // finished; the full Momentum CARD is still held back until setup is done
   // (during setup, Start Here drives the habits).
   const momentum = isSuperAdmin ? await getMomentum(effectiveLocation) : null;
-  const weeklyMoves = isSuperAdmin && onboarding?.allDone ? await getWeeklyMoves() : null;
+  const weeklyMoves = isSuperAdmin && setupAllDone ? await getWeeklyMoves() : null;
   const supabase = await createClient();
 
   const [
@@ -362,7 +367,7 @@ export default async function DashboardPage({
 
   // Pair the "this week" cards and the two status pills side-by-side on desktop
   // (instead of a tall stack) to declutter the top of the page.
-  const showMomentum = Boolean(momentum && onboarding?.allDone);
+  const showMomentum = Boolean(momentum && setupAllDone);
   const showMoves = Boolean(weeklyMoves);
   const showFocus = Boolean(org?.weekly_focus);
   const showAudit = Boolean(latestAudit && auditConstraint);
@@ -396,7 +401,7 @@ export default async function DashboardPage({
       <WinsCard wins={wins} />
       <GuestSentimentCard sentiment={guestSentiment} />
 
-      {onboarding && onboarding.doneCount === 0 && (
+      {launch && setupDoneCount === 0 && (
         <div className="bg-[#0A0A0A] rounded-[20px] p-7 sm:p-9 text-white">
           <div className="flex items-center gap-2 text-[#4D97FF] mb-3">
             <Rocket size={16} />
@@ -419,14 +424,14 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {onboarding && !onboarding.allDone && onboarding.doneCount > 0 && (
+      {launch && !setupAllDone && setupDoneCount > 0 && (
         <Link
           href="/start-here"
           className="flex items-center gap-3 bg-brick-tint rounded-2xl px-6 py-4 hover:brightness-[0.98] transition-[filter]"
         >
           <Rocket size={16} className="text-brick shrink-0" />
           <span className="text-sm text-brick-dark flex-1">
-            <span className="font-semibold">Finish setting up your account</span> — pick up where you left off, at your own pace.
+            <span className="font-semibold">Finish setting up your account</span> — {setupDoneCount} of {launch.setupTotalCount} done. Pick up where you left off, at your own pace.
           </span>
           <span className="text-sm font-semibold text-brick-dark whitespace-nowrap">Start here →</span>
         </Link>
@@ -438,7 +443,7 @@ export default async function DashboardPage({
 
       {(showMomentum || showMoves) && (
         <div className={`grid grid-cols-1 gap-5 ${showMomentum && showMoves ? "lg:grid-cols-2 items-start" : ""}`}>
-          {momentum && onboarding?.allDone && <MomentumCard momentum={momentum} />}
+          {momentum && setupAllDone && <MomentumCard momentum={momentum} />}
           {weeklyMoves && (
             <WeeklyMovesCard
               initialMoves={weeklyMoves.moves}

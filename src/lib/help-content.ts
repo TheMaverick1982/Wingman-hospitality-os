@@ -1017,9 +1017,14 @@ export const ARTICLES: HelpArticle[] = [
     categoryId: "getting-started",
     keywords: ["setup", "wizard", "onboarding", "get started", "build system", "quick start"],
     body: [
-      { kind: "p", text: "The Setup Wizard is the fastest way to stand up Wingman: answer a few questions about your restaurant and it generates your culture, values, pre-shift focus, and role training in one pass." },
+      { kind: "p", text: "The Setup Wizard is the fastest way to stand up Wingman: confirm a few basics and it generates your culture, values, pre-shift focus, and role training in one pass. It's three short steps, and only the first needs your input." },
       { kind: "image", src: "/help/setup-wizard.png", alt: "The Setup Wizard screen", caption: "The Setup Wizard — go from zero to a full system in a few answers." },
-      { kind: "note", text: "The Setup Wizard is owner-only. You can always refine anything it creates afterward." },
+      { kind: "steps", items: [
+        "Your restaurant — confirm your name, concept, and price point. The roles most restaurants run are already selected for you; add or remove any (you can change roles later on the Training page).",
+        "Tailor it (optional) — tell Wingman what great service looks like, your biggest gap, what to emphasize, and any signature touch. Skip it entirely and Wingman uses smart defaults.",
+        "Generate — review what will be built and tap Generate. Your culture, values, standards, and training are drafted in about a minute.",
+      ] },
+      { kind: "note", text: "The Setup Wizard is owner-only. You can always refine anything it creates afterward — nothing here is permanent." },
     ],
     links: [{ label: "Building training programs", href: "/help/training-programs" }],
   },
