@@ -404,6 +404,9 @@ function OpeningEditor({
   const [mustHaves, setMustHaves] = useState("");
   const [existing, setExisting] = useState("");
   const [adCopy, setAdCopy] = useState(opening?.ad_copy ?? "");
+  // Which location's name is baked into the current ad text, so when the same ad
+  // is posted to OTHER locations we can swap that name for each store's own.
+  const [adSourceLocId, setAdSourceLocId] = useState<string | null>(opening?.location_id ?? null);
   const [genPending, startGen] = useTransition();
   const [savePending, startSave] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -433,8 +436,19 @@ function OpeningEditor({
         existing: existing || undefined,
       });
       if (res.error) setError(res.error);
-      else if (res.adCopy) setAdCopy(res.adCopy);
+      else if (res.adCopy) { setAdCopy(res.adCopy); setAdSourceLocId(genLocation); }
     });
+  }
+
+  // The ad text for a specific target location: if the ad was written for one
+  // location (its name is in the copy) and we're posting to a DIFFERENT store,
+  // swap that location's name for the target's so each posting reads correctly.
+  function adForLocation(targetLocId: string | null): string {
+    if (!adSourceLocId || !targetLocId || targetLocId === adSourceLocId) return adCopy;
+    const from = locations.find((l) => l.id === adSourceLocId)?.name?.trim();
+    const to = locations.find((l) => l.id === targetLocId)?.name?.trim();
+    if (!from || !to || from === to) return adCopy;
+    return adCopy.split(from).join(to);
   }
 
   function save() {
@@ -448,13 +462,13 @@ function OpeningEditor({
       if (isEdit) {
         const corporate = locationId === CORPORATE;
         const ownLoc = corporate || locationId === ALL_LOCATIONS ? null : locationId;
-        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate, notifyEmail });
+        const res = await saveOpening({ id: opening!.id, department, title, locationId: ownLoc, payNote, employmentType, adCopy: adForLocation(ownLoc), listOnCareers, isCorporate: corporate, notifyEmail });
         if (res.error) { setError(res.error); return; }
-        // Fan out to any additional locations: one NEW posting each (same ad, its
-        // own link). A corporate role isn't fanned out to stores.
+        // Fan out to any additional locations: one NEW posting each (ad rewritten
+        // for that store, its own link). A corporate role isn't fanned out.
         const extra = corporate ? [] : alsoLocationIds.filter((id) => id !== ownLoc);
         for (const loc of extra) {
-          const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers });
+          const r = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy: adForLocation(loc), listOnCareers });
           if (r.error) { setError(r.error); return; }
         }
         if (extra.length > 0) { onClose(); return; }
@@ -470,7 +484,7 @@ function OpeningEditor({
       let lastId: string | null = null;
       let lastCode: string | null = null;
       for (const loc of targets) {
-        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy, listOnCareers, isCorporate: corporate, notifyEmail });
+        const res = await saveOpening({ id: null, department, title, locationId: loc, payNote, employmentType, adCopy: adForLocation(loc), listOnCareers, isCorporate: corporate, notifyEmail });
         if (res.error) { setError(res.error); return; }
         lastId = res.id ?? lastId;
         lastCode = res.code ?? lastCode;
