@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Copy, Check, QrCode, Star, MessageSquare, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, type ReviewDigestFrequency } from "./actions";
+import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, type ReviewDigestFrequency } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -47,6 +47,7 @@ export function ReviewsClient({
   askServer,
   hasGoogleReviews,
   digestFrequency = "off",
+  digestCc = "",
   scopeLocationId,
   googleSlot,
 }: {
@@ -57,6 +58,7 @@ export function ReviewsClient({
   askServer: boolean;
   hasGoogleReviews?: boolean;
   digestFrequency?: ReviewDigestFrequency;
+  digestCc?: string;
   scopeLocationId: string | null;
   googleSlot?: React.ReactNode;
 }) {
@@ -72,6 +74,9 @@ export function ReviewsClient({
   const [savingAsk, startAsk] = useTransition();
   const [digest, setDigest] = useState<ReviewDigestFrequency>(digestFrequency);
   const [savingDigest, startDigest] = useTransition();
+  const [cc, setCc] = useState(digestCc);
+  const [ccSaved, setCcSaved] = useState(false);
+  const [savingCc, startCc] = useTransition();
 
   function chooseDigest(next: ReviewDigestFrequency) {
     const prev = digest;
@@ -79,6 +84,14 @@ export function ReviewsClient({
     startDigest(async () => {
       const res = await setReviewDigestFrequency(next);
       if (res.error) setDigest(prev);
+    });
+  }
+
+  function saveCc() {
+    setCcSaved(false);
+    startCc(async () => {
+      const res = await setReviewDigestCc(cc);
+      if (!res.error) { setCcSaved(true); setTimeout(() => setCcSaved(false), 2500); }
     });
   }
 
@@ -180,6 +193,26 @@ export function ReviewsClient({
               ))}
             </div>
           </div>
+
+          {digest !== "off" && (
+            <div className="mt-3">
+              <label className="block text-[12.5px] font-semibold text-ink mb-1">Also send to (master copy)</label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  onBlur={saveCc}
+                  placeholder="owner@restaurant.com, regional@…"
+                  className="flex-1 min-w-[220px] rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none focus:border-brick"
+                />
+                <button type="button" onClick={saveCc} disabled={savingCc} className="text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick disabled:opacity-50">
+                  {savingCc ? "Saving…" : "Save"}
+                </button>
+              </div>
+              <p className="text-[12px] text-muted-2 mt-1.5">Each location&rsquo;s report always goes to its managers — these addresses get a copy of every location&rsquo;s report too. Separate several with commas. {ccSaved && <span className="text-olive font-semibold">Saved</span>}</p>
+            </div>
+          )}
         </div>
       )}
 
