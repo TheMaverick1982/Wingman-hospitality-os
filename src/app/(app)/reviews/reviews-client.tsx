@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Copy, Check, QrCode, Star, MessageSquare, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary, setSurveyAskServer } from "./actions";
+import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, type ReviewDigestFrequency } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -46,6 +46,7 @@ export function ReviewsClient({
   canManage,
   askServer,
   hasGoogleReviews,
+  digestFrequency = "off",
   scopeLocationId,
   googleSlot,
 }: {
@@ -55,6 +56,7 @@ export function ReviewsClient({
   canManage: boolean;
   askServer: boolean;
   hasGoogleReviews?: boolean;
+  digestFrequency?: ReviewDigestFrequency;
   scopeLocationId: string | null;
   googleSlot?: React.ReactNode;
 }) {
@@ -68,6 +70,17 @@ export function ReviewsClient({
   const [ask, setAsk] = useState(askServer);
   const [askErr, setAskErr] = useState<string | null>(null);
   const [savingAsk, startAsk] = useTransition();
+  const [digest, setDigest] = useState<ReviewDigestFrequency>(digestFrequency);
+  const [savingDigest, startDigest] = useTransition();
+
+  function chooseDigest(next: ReviewDigestFrequency) {
+    const prev = digest;
+    setDigest(next);
+    startDigest(async () => {
+      const res = await setReviewDigestFrequency(next);
+      if (res.error) setDigest(prev);
+    });
+  }
 
   function toggleAsk(next: boolean) {
     setAsk(next);
@@ -140,6 +153,33 @@ export function ReviewsClient({
               ))}
             </div>
           )}
+
+          {/* Auto-send this report to each location's managers + the owner. */}
+          <div className="mt-4 pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[13.5px] font-semibold text-ink">Email this report automatically</div>
+              <p className="text-[12.5px] text-muted-2 mt-0.5">Sends each location&rsquo;s report to its managers and you {digest === "off" ? "" : digest === "weekly" ? "every Monday" : "on the 1st"}.</p>
+            </div>
+            <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 shrink-0">
+              {([
+                { id: "off" as const, label: "Off" },
+                { id: "weekly" as const, label: "Weekly" },
+                { id: "monthly" as const, label: "Monthly" },
+              ]).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => chooseDigest(o.id)}
+                  disabled={savingDigest}
+                  className={`text-[12.5px] font-semibold rounded-full px-3 py-1.5 transition-colors disabled:opacity-60 ${
+                    digest === o.id ? "bg-brick text-white" : "text-charcoal-2 hover:text-ink"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

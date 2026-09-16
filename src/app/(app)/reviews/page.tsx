@@ -53,9 +53,14 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   // The "ask who served them" survey switch. Guarded — the column lands with
   // migration 0162, so default to on until it's applied.
   let askServer = true;
+  let digestFrequency: "off" | "weekly" | "monthly" = "off";
   {
-    const { data, error } = await admin.from("organizations").select("survey_ask_server").eq("id", profile.orgId).maybeSingle();
-    if (!error && data) askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
+    const { data, error } = await admin.from("organizations").select("survey_ask_server, review_digest_frequency").eq("id", profile.orgId).maybeSingle();
+    if (!error && data) {
+      askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
+      const f = (data as { review_digest_frequency?: string }).review_digest_frequency;
+      if (f === "weekly" || f === "monthly") digestFrequency = f;
+    }
   }
 
   const locName = (id: string | null) => (id ? locations.find((l) => l.id === id)?.name ?? "A location" : "");
@@ -167,6 +172,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       canManage={canManage}
       askServer={askServer}
       hasGoogleReviews={hasGoogleReviews}
+      digestFrequency={digestFrequency}
       scopeLocationId={effectiveLocation ?? null}
       googleSlot={
         showGoogle ? (
