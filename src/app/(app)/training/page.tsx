@@ -12,6 +12,7 @@ import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { PageTabs } from "@/components/ui/page-tabs";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { MenuTrainingSection } from "./menu-training-section";
 import { SignoffLog } from "./signoff-log";
@@ -343,6 +344,24 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
+      <PageTabs
+        storageKey="wm.training.tab"
+        tabs={[
+          {
+            id: "roles",
+            label: "Training by role",
+            content: (
+              <>
+                {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
+                <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hasCentralMenu={Boolean(foodMenuDept || barMenuDept)} />
+              </>
+            ),
+          },
+          {
+            id: "tests",
+            label: "Tests & habits",
+            content: (
+              <>
       {myTests.length > 0 && (
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
           <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Your tests &amp; results</div>
@@ -423,44 +442,54 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      {!isStaff && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
-
-      {!isStaff && (foodMenuDept || barMenuDept) && (
-        <div id="menu" className="scroll-mt-24">
-          <CollapsibleSection
-            title="Menu"
-            subtitle="One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs below automatically."
-            count={menuItemCount}
-          >
-            <div className="flex flex-col gap-6 pt-2">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
-                <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
-                <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
-              </div>
-              {foodMenuDept && (
-                <div>
-                  {hasBothMenus && (
-                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
-                  )}
-                  <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
-                </div>
-              )}
-              {barMenuDept && (
-                <div>
-                  {hasBothMenus && (
-                    <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
-                  )}
-                  <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
-                </div>
-              )}
-            </div>
-          </CollapsibleSection>
-        </div>
-      )}
-
-      <TrainingClient data={data} summaries={summaries} departments={renderDepts} isGm={canEdit} staff={staff} locations={locations} roleTestDepts={roleTestDepts} canViewRecipes={canViewRecipes} hasCentralMenu={Boolean(foodMenuDept || barMenuDept)} />
-
-      {!isStaff && <SignoffLog signoffs={allSignoffs} />}
+              </>
+            ),
+          },
+          ...((foodMenuDept || barMenuDept)
+            ? [{
+                id: "menu",
+                label: "Menu",
+                content: (
+                  <div id="menu" className="scroll-mt-24">
+                    <CollapsibleSection
+                      title="Menu"
+                      subtitle="One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs automatically."
+                      count={menuItemCount}
+                    >
+                      <div className="flex flex-col gap-6 pt-2">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
+                          <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
+                          <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
+                        </div>
+                        {foodMenuDept && (
+                          <div>
+                            {hasBothMenus && (
+                              <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
+                            )}
+                            <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                          </div>
+                        )}
+                        {barMenuDept && (
+                          <div>
+                            {hasBothMenus && (
+                              <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
+                            )}
+                            <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleSection>
+                  </div>
+                ),
+              }]
+            : []),
+          {
+            id: "signoffs",
+            label: "Sign-off log",
+            content: <SignoffLog signoffs={allSignoffs} />,
+          },
+        ]}
+      />
     </>
   );
 }

@@ -476,7 +476,7 @@ export const ARTICLES: HelpArticle[] = [
     categoryId: "team",
     keywords: ["training", "standards", "role", "build training", "refine", "ai", "checklist", "sign-off"],
     body: [
-      { kind: "p", text: "Training & Standards holds a program for each role you run, split into hospitality behaviors and role-specific skills." },
+      { kind: "p", text: "Training & Standards holds a program for each role you run, split into hospitality behaviors and role-specific skills. The page is organized into tabs: Training by role, Tests & habits (assign tests and set up monthly refreshers), Menu, and your Sign-off log." },
       { kind: "image", src: "/help/training.png", alt: "The Training & Standards screen", caption: "A role's training program, with the Build and Refine with AI actions." },
       { kind: "h", text: "Choosing your roles" },
       { kind: "p", text: "You only see the roles your restaurant actually runs — the ones you picked in the Setup Wizard. Seventeen built-in roles are available, covering front of house, the kitchen, the counter, and management (Host, Server, Busser, Food Runner, Bartender, Barista, Cashier, Chef, Sous Chef, Line Cook, Prep Cook, Dishwasher, Expo, Sommelier, Kitchen Manager, Manager, Assistant Manager). Use \"Manage roles\" at the top of Training or Hiring to add one you have (it comes pre-filled with starter standards, duties, and interview questions) or remove one you don't — a pizza spot can drop Barista and Sommelier in a couple taps, while a bigger kitchen can add Sous Chef and Kitchen Manager. Removing a role only hides it; its content is kept if you add it back." },
