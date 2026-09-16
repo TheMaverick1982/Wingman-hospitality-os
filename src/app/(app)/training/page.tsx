@@ -124,6 +124,25 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     questions: qCount.get(t.id) ?? 0,
   }));
 
+  // Inline "Your tests" archive for the Tests & habits tab — each active test with
+  // its pass rate + how many are still outstanding, linking to full results.
+  const testArchive: { id: string; title: string; assigned: number; passed: number; outstanding: number }[] = [];
+  if (canEdit && allTestRows.length > 0) {
+    const { data: assignRows } = await supabase.from("test_assignments").select("test_id, status");
+    const tally = new Map<string, { total: number; passed: number; outstanding: number }>();
+    for (const r of (assignRows ?? []) as { test_id: string; status: string }[]) {
+      const e = tally.get(r.test_id) ?? { total: 0, passed: 0, outstanding: 0 };
+      e.total++;
+      if (r.status === "passed") e.passed++;
+      if (r.status === "assigned" || r.status === "in_progress") e.outstanding++;
+      tally.set(r.test_id, e);
+    }
+    for (const t of allTestRows) {
+      const e = tally.get(t.id) ?? { total: 0, passed: 0, outstanding: 0 };
+      testArchive.push({ id: t.id, title: t.title, assigned: e.total, passed: e.passed, outstanding: e.outstanding });
+    }
+  }
+
   // Continuing-education = learn-then-quiz tests flagged to rotate monthly. Show
   // whether one exists org-wide (all staff) vs. role-specific, for the banner.
   const monthlyTests = allTestRows.filter((t) => t.rotates_monthly && t.mode === "study_quiz");
@@ -439,6 +458,44 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
             </div>
           </div>
         </div>
+        </div>
+      )}
+
+      {canEdit && testArchive.length > 0 && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Your tests</div>
+            <Link href="/training/tests" className="text-[13px] font-semibold text-brick hover:text-brick-dark">Build &amp; manage →</Link>
+          </div>
+          <p className="text-[13px] text-muted mb-4">How each test is doing at a glance. Open one to see who passed and who hasn&rsquo;t.</p>
+          <div className="flex flex-col divide-y divide-line">
+            {testArchive.map((t) => (
+              <Link key={t.id} href={`/training/tests/${t.id}/assign`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 group">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-semibold text-ink truncate group-hover:text-brick transition-colors">{t.title}</div>
+                  <div className="text-[12.5px] text-muted-2 mt-0.5">
+                    {t.assigned > 0 ? (
+                      <>
+                        {t.passed}/{t.assigned} passed
+                        {t.outstanding > 0 && <span className="text-[#B45309]"> · {t.outstanding} outstanding</span>}
+                      </>
+                    ) : (
+                      "Not assigned yet"
+                    )}
+                  </div>
+                </div>
+                {t.assigned > 0 && (
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span className="text-[15px] font-bold tabular-nums text-ink">{Math.round((t.passed / t.assigned) * 100)}%</span>
+                    <div className="w-16 h-1.5 rounded-full bg-[#F1F1F1] overflow-hidden">
+                      <div className="h-full rounded-full bg-[#16A34A]" style={{ width: `${Math.round((t.passed / t.assigned) * 100)}%` }} />
+                    </div>
+                  </div>
+                )}
+                <ArrowRight size={15} className="shrink-0 text-muted-2 group-hover:text-brick transition-colors" />
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
