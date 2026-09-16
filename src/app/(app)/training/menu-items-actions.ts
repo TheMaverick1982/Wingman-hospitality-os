@@ -175,12 +175,23 @@ Respond with ONLY a valid JSON array, no markdown fences, no commentary, matchin
   return { error: null, parsedCount: dishes.length };
 }
 
-export async function updateMenuItemMetrics(id: string, popularityPct: number | null, profitAmount: number | null) {
+// Popularity + cost-per-plate for the menu-engineering quadrant. The owner enters
+// what the plate COSTS (not the profit); Wingman derives the gross profit
+// (price − plate cost) that the quadrant sorts on, so no one does the math by
+// hand. Passing plateCost = null clears the plate cost but leaves any
+// previously-entered profit untouched (older items set profit directly).
+export async function updateMenuItemMetrics(id: string, popularityPct: number | null, plateCost: number | null) {
   const supabase = await createClient();
-  await supabase
-    .from("menu_items")
-    .update({ popularity_pct: popularityPct, profit_amount: profitAmount })
-    .eq("id", id);
+  const update: { popularity_pct: number | null; plate_cost: number | null; profit_amount?: number | null } = {
+    popularity_pct: popularityPct,
+    plate_cost: plateCost,
+  };
+  if (plateCost != null) {
+    const { data: row } = await supabase.from("menu_items").select("price").eq("id", id).maybeSingle();
+    const price = (row as { price: number | null } | null)?.price;
+    if (price != null) update.profit_amount = Math.round((price - plateCost) * 100) / 100;
+  }
+  await supabase.from("menu_items").update(update).eq("id", id);
   revalidatePath("/training");
 }
 

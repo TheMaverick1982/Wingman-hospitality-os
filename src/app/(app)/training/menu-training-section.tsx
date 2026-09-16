@@ -34,6 +34,7 @@ export type MenuItem = {
   source: "wingman" | "custom";
   popularity_pct: number | null;
   profit_amount: number | null;
+  plate_cost: number | null;
   archived_at?: string | null;
   recipeStepCount?: number;
   // Limited Time Offer: rotating monthly special, pinned to its own section.
@@ -423,14 +424,20 @@ const editInitial: EditMenuItemState = { error: null };
 
 function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: MenuItem; canEdit: boolean; selected?: boolean; onToggle?: () => void; showRecipe?: boolean }) {
   const [popularity, setPopularity] = useState(item.popularity_pct?.toString() ?? "");
-  const [profit, setProfit] = useState(item.profit_amount?.toString() ?? "");
+  const [plateCost, setPlateCost] = useState(item.plate_cost?.toString() ?? "");
   const [editing, setEditing] = useState(false);
   const [editState, editAction, editPending] = useActionState(updateMenuItem, editInitial);
   useCloseOnSuccess(editPending, editState.error, () => setEditing(false));
 
   function save() {
-    updateMenuItemMetrics(item.id, popularity === "" ? null : Number(popularity), profit === "" ? null : Number(profit));
+    updateMenuItemMetrics(item.id, popularity === "" ? null : Number(popularity), plateCost === "" ? null : Number(plateCost));
   }
+
+  // Live profit read from price − plate cost (what the quadrant sorts on).
+  const priceNum = item.price;
+  const costNum = plateCost === "" ? null : Number(plateCost);
+  const margin = priceNum != null && costNum != null && Number.isFinite(costNum) ? priceNum - costNum : null;
+  const foodCostPct = margin != null && priceNum ? Math.round((costNum! / priceNum) * 100) : null;
 
   if (editing) {
     return (
@@ -516,7 +523,7 @@ function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: 
         </div>
       </div>
       {canEdit && (
-        <div className="flex items-center gap-3 pt-2 border-t border-line">
+        <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-line">
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Popularity
             <input
@@ -532,19 +539,28 @@ function MenuItemRow({ item, canEdit, selected, onToggle, showRecipe }: { item: 
             %
           </label>
           <label className="flex items-center gap-1.5 text-xs text-muted">
-            Profit
+            Plate cost
             $
             <input
               type="number"
               step="0.01"
-              value={profit}
-              onChange={(e) => setProfit(e.target.value)}
+              min={0}
+              value={plateCost}
+              onChange={(e) => setPlateCost(e.target.value)}
               onBlur={save}
-              placeholder="GP"
+              placeholder="cost"
               className="w-16 rounded-md border border-line-strong px-2 py-1 text-xs"
             />
           </label>
-          <span className="text-[11px] text-muted-2">Needed for the menu engineering matrix</span>
+          {margin != null ? (
+            <span className="text-[11px] font-semibold text-olive">
+              ${margin.toFixed(2)} profit{foodCostPct != null ? ` · ${foodCostPct}% food cost` : ""}
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-2">
+              {item.price == null ? "Add a price to see profit" : "Enter plate cost — profit feeds the matrix"}
+            </span>
+          )}
         </div>
       )}
     </div>
