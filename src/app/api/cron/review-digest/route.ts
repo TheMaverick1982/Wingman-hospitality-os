@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   const { data: orgs, error } = await admin
     .from("organizations")
-    .select("id, name, review_digest_frequency, review_digest_sent_at, is_demo")
+    .select("id, name, review_digest_frequency, review_digest_sent_at, review_digest_cc, is_demo")
     .in("review_digest_frequency", ["weekly", "monthly"])
     .or("is_demo.is.null,is_demo.eq.false")
     .limit(1000);
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   const errors: string[] = [];
 
   for (const raw of orgs ?? []) {
-    const org = raw as { id: string; name: string; review_digest_frequency: string; review_digest_sent_at: string | null };
+    const org = raw as { id: string; name: string; review_digest_frequency: string; review_digest_sent_at: string | null; review_digest_cc: string | null };
     const due = org.review_digest_frequency === "weekly" ? isMonday : isFirst;
     if (!due) { skipped++; continue; }
     // Don't re-send within 3 days (cron reruns / retries).
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
 
     const period = org.review_digest_frequency === "weekly" ? "This week" : "This month";
     const ownerEmails = await getOrgOwnerEmails(admin, org.id);
+    const ccEmails = (org.review_digest_cc || "").split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
     const { data: locs } = await admin.from("locations").select("id, name, email").eq("org_id", org.id);
     const locations = (locs ?? []) as { id: string; name: string; email: string | null }[];
 
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     let anySent = false;
     for (const loc of locations) {
       const to = (loc.email || "").trim();
-      const recipients = Array.from(new Set([to, ...ownerEmails].filter(Boolean)));
+      const recipients = Array.from(new Set([to, ...ownerEmails, ...ccEmails].filter(Boolean)));
       if (recipients.length === 0) continue;
 
       const res = await composeReviewSummary(admin, { orgId: org.id, orgName: org.name, scopeLocationId: loc.id });

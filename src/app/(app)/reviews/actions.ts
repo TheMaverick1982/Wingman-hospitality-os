@@ -28,6 +28,22 @@ export async function setReviewDigestFrequency(freq: ReviewDigestFrequency): Pro
   return { error: null };
 }
 
+// A master copy address (or several) that also receives the report digest, on
+// top of each location's managers. Same free-form format as hiring's copy list.
+export async function setReviewDigestCc(value: string): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "reviews", profile.permissionOverrides) !== "full") {
+    return { error: "Only managers can change this." };
+  }
+  const cleaned = value.split(/[,\n;]+/).map((s) => s.trim()).filter(Boolean).slice(0, 20).join(", ").slice(0, 600);
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ review_digest_cc: cleaned }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that. Try again." };
+  revalidatePath("/reviews");
+  return { error: null };
+}
+
 // Toggle the guest survey's "Who took care of you?" staff picker for the whole
 // org. Manager-gated (reviews "full" access), same bar as the AI summary.
 export async function setSurveyAskServer(enabled: boolean): Promise<{ error: string | null }> {

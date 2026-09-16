@@ -54,12 +54,14 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   // migration 0162, so default to on until it's applied.
   let askServer = true;
   let digestFrequency: "off" | "weekly" | "monthly" = "off";
+  let digestCc = "";
   {
-    const { data, error } = await admin.from("organizations").select("survey_ask_server, review_digest_frequency").eq("id", profile.orgId).maybeSingle();
+    const { data, error } = await admin.from("organizations").select("survey_ask_server, review_digest_frequency, review_digest_cc").eq("id", profile.orgId).maybeSingle();
     if (!error && data) {
       askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
       const f = (data as { review_digest_frequency?: string }).review_digest_frequency;
       if (f === "weekly" || f === "monthly") digestFrequency = f;
+      digestCc = (data as { review_digest_cc?: string | null }).review_digest_cc ?? "";
     }
   }
 
@@ -173,6 +175,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       askServer={askServer}
       hasGoogleReviews={hasGoogleReviews}
       digestFrequency={digestFrequency}
+      digestCc={digestCc}
       scopeLocationId={effectiveLocation ?? null}
       googleSlot={
         showGoogle ? (
