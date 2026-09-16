@@ -67,28 +67,50 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
 
   const admin = createAdminClient();
 
-  // The main profile read is the ONE query that decides "is this user set up?" —
-  // if it comes back empty the app bounces to onboarding. A TRANSIENT failure
-  // here (network blip, a brief Postgres/PostgREST hiccup, a pooler reset) must
-  // not be mistaken for "no account," or a set-up owner gets thrown to
-  // onboarding. So retry a soft read error a couple times before giving up. We
-  // keep the null-on-failure contract that every caller relies on (server
-  // actions, routes, layouts all treat null as "not available"); the onboarding
-  // page then distinguishes a genuine new user from a read failure with a much
-  // simpler query, and shows a non-looping recovery screen for the latter.
-  let data: unknown = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await admin
-      .from("profiles")
-      .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, section_overrides, locations!location_id(name, timezone), organizations(name, permission_overrides, is_demo, demo_expires_at)")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (!res.error) { data = res.data; break; }
-    // Small backoff before retrying a soft read error.
-    if (attempt < 2) await new Promise((r) => setTimeout(r, 120 * (attempt + 1)));
+  // The profile read is the ONE query that decides "is this user set up?" — if it
+  // comes back empty the app bounces to onboarding. It must be as robust as
+  // possible, so we DELIBERATELY avoid PostgREST relationship-embeds here: an
+  // embed (`organizations(...)`, `locations!location_id(...)`) depends on
+  // relationship detection that can error for the whole query — and a set-up
+  // owner would be locked out even though their row is perfectly fine. Instead we
+  // read the profile's own scalar columns, then fetch the org and location as
+  // separate, individually-guarded queries. A transient failure is retried; a
+  // missing newer column falls back to a minimal read so login still works.
+  type ProfileScalars = {
+    full_name: string;
+    access_role: AccessRole;
+    location_id: string | null;
+    org_id: string;
+    is_platform_admin: boolean;
+    platform_access: string[] | null;
+    all_locations: boolean;
+    section_overrides: unknown;
+  };
+  const FULL_COLS = "full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, section_overrides";
+  const MIN_COLS = "full_name, access_role, location_id, org_id";
+  let scalars: Partial<ProfileScalars> | null = null;
+  for (let attempt = 0; attempt < 3 && !scalars; attempt++) {
+    const res = await admin.from("profiles").select(FULL_COLS).eq("id", user.id).maybeSingle();
+    if (!res.error) { scalars = (res.data as ProfileScalars | null); break; }
+    // A soft error might be a transient blip OR a missing newer column. Retry
+    // with backoff; on the final attempt, drop to the minimal always-present
+    // column set so a schema drift can't lock a real owner out entirely.
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 120 * (attempt + 1)));
+    } else {
+      const fb = await admin.from("profiles").select(MIN_COLS).eq("id", user.id).maybeSingle();
+      if (!fb.error) scalars = (fb.data as Partial<ProfileScalars> | null);
+    }
   }
 
-  const [{ data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
+  if (!scalars || !scalars.org_id) return null;
+
+  // Org + home location as separate guarded reads (never fatal to login).
+  const [{ data: orgRow }, { data: locRow }, { data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
+    admin.from("organizations").select("name, permission_overrides, is_demo, demo_expires_at").eq("id", scalars.org_id).maybeSingle(),
+    scalars.location_id
+      ? admin.from("locations").select("name, timezone").eq("id", scalars.location_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
     // Language preference lives in its own guarded read so that if the migration
     // adding the column hasn't landed yet, a missing column can't break login —
@@ -100,20 +122,17 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const preferredLanguage = (langRow as { preferred_language?: string | null } | null)?.preferred_language ?? null;
   const franchiseRow = (franchiseAdminRow as { group_id: string; role: "admin" | "viewer" } | null) ?? null;
 
-  if (!data) return null;
-  // `Database` is a loose placeholder type today, so postgrest-js can't infer
-  // that these embeds are single rows (many-to-one FKs) rather than arrays.
-  const profile = data as unknown as {
-    full_name: string;
-    access_role: AccessRole;
-    location_id: string | null;
-    org_id: string;
-    is_platform_admin: boolean;
-    platform_access: string[] | null;
-    all_locations: boolean;
-    section_overrides: unknown;
-    locations: { name: string; timezone: string | null } | null;
-    organizations: { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null; demo_expires_at: string | null } | null;
+  const profile = {
+    full_name: scalars.full_name ?? "",
+    access_role: (scalars.access_role ?? "staff") as AccessRole,
+    location_id: scalars.location_id ?? null,
+    org_id: scalars.org_id,
+    is_platform_admin: scalars.is_platform_admin ?? false,
+    platform_access: scalars.platform_access ?? null,
+    all_locations: scalars.all_locations ?? false,
+    section_overrides: scalars.section_overrides ?? null,
+    locations: (locRow as { name: string; timezone: string | null } | null) ?? null,
+    organizations: (orgRow as { name: string; permission_overrides: PermissionOverrides | null; is_demo: boolean | null; demo_expires_at: string | null } | null) ?? null,
   };
 
   const base: CurrentProfile = {
