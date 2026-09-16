@@ -66,12 +66,29 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (!user) return null;
 
   const admin = createAdminClient();
-  const [{ data }, { data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
-    admin
+
+  // The main profile read is the ONE query that decides "is this user set up?" —
+  // if it comes back empty the app bounces to onboarding. A TRANSIENT failure
+  // here (network blip, a brief Postgres/PostgREST hiccup, a pooler reset) must
+  // not be mistaken for "no account," or a set-up owner gets thrown to
+  // onboarding. So retry a soft read error a couple times before giving up. We
+  // keep the null-on-failure contract that every caller relies on (server
+  // actions, routes, layouts all treat null as "not available"); the onboarding
+  // page then distinguishes a genuine new user from a read failure with a much
+  // simpler query, and shows a non-looping recovery screen for the latter.
+  let data: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await admin
       .from("profiles")
       .select("full_name, access_role, location_id, org_id, is_platform_admin, platform_access, all_locations, section_overrides, locations!location_id(name, timezone), organizations(name, permission_overrides, is_demo, demo_expires_at)")
       .eq("id", user.id)
-      .maybeSingle(),
+      .maybeSingle();
+    if (!res.error) { data = res.data; break; }
+    // Small backoff before retrying a soft read error.
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 120 * (attempt + 1)));
+  }
+
+  const [{ data: locRows }, { data: langRow }, { data: franchiseAdminRow }] = await Promise.all([
     admin.from("profile_locations").select("location_id").eq("profile_id", user.id),
     // Language preference lives in its own guarded read so that if the migration
     // adding the column hasn't landed yet, a missing column can't break login —

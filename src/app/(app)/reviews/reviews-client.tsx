@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Copy, Check, QrCode, Star, MessageSquare, Sparkles } from "lucide-react";
+import { Copy, Check, QrCode, Star, MessageSquare, Sparkles, Heart } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, type ReviewDigestFrequency } from "./actions";
+import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, recognizeFromReview, type ReviewDigestFrequency } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -18,6 +18,8 @@ export type ReviewRow = {
   id: string;
   locationName: string;
   serverFirstName: string;
+  hasServer: boolean;
+  recognized: boolean;
   ratings: Record<string, number>;
   comment: string;
   createdAt: string;
@@ -77,6 +79,22 @@ export function ReviewsClient({
   const [cc, setCc] = useState(digestCc);
   const [ccSaved, setCcSaved] = useState(false);
   const [savingCc, startCc] = useTransition();
+  // Locally track which reviews have been turned into a Wins-feed shout-out, so
+  // the button flips to "Recognized" the moment it's tapped.
+  const [recognized, setRecognized] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(responses.filter((r) => r.recognized).map((r) => [r.id, true])),
+  );
+  const [recognizing, setRecognizing] = useState<string | null>(null);
+  const [, startRecognize] = useTransition();
+
+  function recognize(id: string) {
+    setRecognizing(id);
+    startRecognize(async () => {
+      const res = await recognizeFromReview(id);
+      setRecognizing(null);
+      if (!res.error) setRecognized((m) => ({ ...m, [id]: true }));
+    });
+  }
 
   function chooseDigest(next: ReviewDigestFrequency) {
     const prev = digest;
@@ -341,6 +359,24 @@ export function ReviewsClient({
                     </div>
                   )}
                   {r.comment && <p className="text-[14px] text-ink leading-relaxed mt-2 whitespace-pre-wrap">{r.comment}</p>}
+                  {canManage && r.hasServer && r.serverFirstName && (
+                    <div className="mt-2.5 pt-2.5 border-t border-line/70">
+                      {recognized[r.id] ? (
+                        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-olive">
+                          <Check size={13} /> Recognized on the Wins feed
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => recognize(r.id)}
+                          disabled={recognizing === r.id}
+                          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/40 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50"
+                        >
+                          <Heart size={13} /> {recognizing === r.id ? "Posting…" : `Recognize ${r.serverFirstName}`}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

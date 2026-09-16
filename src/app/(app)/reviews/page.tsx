@@ -82,7 +82,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   // Responses archive.
   let q = admin
     .from("guest_survey_responses")
-    .select("id, location_id, server_staff_id, ratings, comment, created_at")
+    .select("id, location_id, server_staff_id, ratings, comment, created_at, recognized_at")
     .eq("org_id", profile.orgId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
@@ -97,10 +97,13 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     ratings: Record<string, number> | null;
     comment: string | null;
     created_at: string;
+    recognized_at?: string | null;
   }[]).map((r) => ({
     id: r.id,
     locationName: locName(r.location_id),
     serverFirstName: staffFirstName(r.server_staff_id),
+    hasServer: !!r.server_staff_id,
+    recognized: !!r.recognized_at,
     ratings: r.ratings ?? {},
     comment: r.comment ?? "",
     createdAt: r.created_at,

@@ -29,16 +29,35 @@ export default async function OnboardingPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Defense in depth: getCurrentProfile() can transiently return null (a session
-  // / read race, e.g. right after a deploy or a token refresh), which would drop
-  // an existing owner onto this create-org form. A user who already has a profile
-  // is set up — send them to the dashboard instead of ever showing the form. (The
-  // create_organization RPC also hard-refuses a second org, so no data can be
-  // created either way; this just prevents the alarming screen.)
+  // Defense in depth: getCurrentProfile() returned null above, but this user may
+  // in fact already have an organization — that means the profile read is failing
+  // transiently, NOT that they're a new user. We must NEVER auto-redirect back to
+  // /dashboard here: /dashboard bounces to /onboarding when getCurrentProfile is
+  // null, so a redirect from this page would create an infinite loop
+  // (ERR_TOO_MANY_REDIRECTS). Instead show a calm "reload" recovery screen — a
+  // manual reload lets the transient condition clear without ever looping. (The
+  // create_organization RPC also hard-refuses a second org, so no data is at risk
+  // either way; this just keeps a set-up owner off the create-org form.)
   {
     const admin = createAdminClient();
     const { data: existingRow } = await admin.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
-    if ((existingRow as { org_id?: string } | null)?.org_id) redirect("/dashboard");
+    if ((existingRow as { org_id?: string } | null)?.org_id) {
+      return (
+        <div className="mx-auto max-w-sm py-16 text-center">
+          <h1 className="font-display text-2xl font-semibold mb-2 text-ink">Just a moment…</h1>
+          <p className="text-sm text-muted mb-6">
+            We&rsquo;re having trouble loading your account right now. Your data is safe — this usually clears in a few
+            seconds. Reload to try again.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-full bg-brick px-5 py-2.5 text-sm font-semibold text-white hover:bg-brick-dark transition-colors"
+          >
+            Reload
+          </a>
+        </div>
+      );
+    }
   }
 
   const pendingOrgName = user.user_metadata?.pending_org_name as string | undefined;

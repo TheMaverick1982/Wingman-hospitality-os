@@ -28,6 +28,55 @@ export async function setReviewDigestFrequency(freq: ReviewDigestFrequency): Pro
   return { error: null };
 }
 
+// Guest review -> Wins feed. Turn a survey response that named a server into a
+// one-tap shout-out on the Culture page, tied to that teammate — so real guest
+// praise becomes team recognition without retyping it. Idempotent per response.
+export async function recognizeFromReview(responseId: string): Promise<{ error: string | null; staffName?: string }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "reviews", profile.permissionOverrides) !== "full") {
+    return { error: "Only managers can do that." };
+  }
+  const admin = createAdminClient();
+  const { data: resp } = await admin
+    .from("guest_survey_responses")
+    .select("id, org_id, server_staff_id, comment, recognized_at")
+    .eq("id", responseId)
+    .eq("org_id", profile.orgId)
+    .maybeSingle();
+  const r = resp as { id: string; server_staff_id: string | null; comment: string | null; recognized_at: string | null } | null;
+  if (!r) return { error: "Review not found." };
+  if (!r.server_staff_id) return { error: "This review didn't name a team member." };
+  if (r.recognized_at) return { error: null }; // already recognized — no-op
+
+  const { data: staff } = await admin.from("staff_members").select("full_name").eq("id", r.server_staff_id).eq("org_id", profile.orgId).maybeSingle();
+  const staffName = (staff as { full_name?: string } | null)?.full_name?.trim();
+  if (!staffName) return { error: "Couldn't find that team member." };
+
+  const comment = (r.comment ?? "").trim();
+  const message = comment
+    ? `A guest called them out: “${comment.slice(0, 400)}”`
+    : `A guest left a great review and named ${staffName.split(/\s+/)[0]}.`;
+
+  const { error: insErr } = await admin.from("culture_moments").insert({
+    org_id: profile.orgId,
+    author: profile.fullName || "A manager",
+    about: staffName,
+    tag: null,
+    value_id: null,
+    kind: "shoutout",
+    message,
+    created_by: profile.userId,
+  });
+  if (insErr) return { error: "Couldn't post that shout-out. Try again." };
+
+  await admin.from("guest_survey_responses").update({ recognized_at: new Date().toISOString() }).eq("id", r.id).eq("org_id", profile.orgId);
+  revalidatePath("/reviews");
+  revalidatePath("/culture");
+  revalidatePath("/dashboard");
+  return { error: null, staffName };
+}
+
 // A master copy address (or several) that also receives the report digest, on
 // top of each location's managers. Same free-form format as hiring's copy list.
 export async function setReviewDigestCc(value: string): Promise<{ error: string | null }> {
