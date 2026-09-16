@@ -281,6 +281,9 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing. The experiment is where you find your next lever: run small bets and let the log tell you which ones to keep." },
       { kind: "h", text: "Team pulse — the anonymous monthly check-in" },
       { kind: "p", text: "Near the top of Culture, everyone on the team gets a 30-second, completely anonymous monthly check-in: do they feel recognized, are the values clear, are they proud to work here — plus an optional comment. It's the earliest warning sign for turnover, straight from the team. Owners and managers see the Team pulse card: this month's averages (out of 5) with the change from last month, the response count, and the anonymous comments. Answers are never tied to a person — Wingman stores who checked in separately from what they said, so no one can trace a comment back to anyone." },
+      { kind: "h", text: "Monthly culture recap (auto-emailed)" },
+      { kind: "p", text: "Turn on the Monthly culture recap (managers/owners, on the Culture page) and on the 1st of each month Wingman AI-writes a one-page recap of how your culture actually showed up — the month's recognition (how much, who stood out, which core values appeared), the anonymous team pulse and its trend, and the experiments you ran and how they turned out — then emails it to you and your managers. It's the month in a minute, without opening the app. Tap \"Preview recap\" anytime to see what it would say right now." },
+      { kind: "tip", text: "Read the recap right before your first manager huddle of the month — it hands you the recognition to call out and the pulse trend to act on, already written." },
     ],
   },
   {

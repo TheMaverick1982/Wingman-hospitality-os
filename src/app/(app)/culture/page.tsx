@@ -14,6 +14,7 @@ import { CoreValuesEditor } from "./core-values-editor";
 import { ExperimentOutcomeForm } from "./experiment-outcome-form";
 import { ExperimentLog, type LoggedExperiment } from "./experiment-log";
 import { PulseComposer } from "./pulse-composer";
+import { CultureRecapCard } from "./culture-recap-card";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -55,7 +56,7 @@ export default async function CulturePage() {
   const supabase = await createClient();
   const ninetyDaysAgo = daysAgoIso(90);
   const [{ data: org }, { data: coreValues }, { data: moments }, { count: momentsThisQtr }, { data: experiments }, staff] = await Promise.all([
-    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, owner_mindset, system_generated").single(),
+    supabase.from("organizations").select("philosophy, weekly_focus, x_factor, weekly_experiment, owner_mindset, system_generated, culture_recap_enabled").single(),
     supabase.from("core_values").select("id, title, description").order("sort_order"),
     supabase
       .from("culture_moments")
@@ -236,6 +237,10 @@ export default async function CulturePage() {
             </>
           )}
         </div>
+      )}
+
+      {canEdit && (
+        <CultureRecapCard enabled={(org as { culture_recap_enabled?: boolean } | null)?.culture_recap_enabled ?? false} />
       )}
 
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">

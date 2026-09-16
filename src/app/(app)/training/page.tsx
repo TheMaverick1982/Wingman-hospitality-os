@@ -11,7 +11,6 @@ import { getStaffMembers } from "@/lib/data/staff";
 import { getRecipeStepCounts } from "@/lib/data/recipes";
 import { resolveMyStaff } from "@/lib/data/my-staff";
 import { Pill } from "@/components/ui/pill";
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { PageTabs } from "@/components/ui/page-tabs";
 import { TrainingClient, type DeptData, type RoleSummary } from "./training-client";
 import { MenuTrainingSection } from "./menu-training-section";
@@ -507,35 +506,36 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                 id: "menu",
                 label: "Menu",
                 content: (
-                  <div id="menu" className="scroll-mt-24">
-                    <CollapsibleSection
-                      title="Menu"
-                      subtitle="One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs automatically."
-                      count={menuItemCount}
-                    >
-                      <div className="flex flex-col gap-6 pt-2">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
-                          <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
-                          <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
-                        </div>
-                        {foodMenuDept && (
-                          <div>
-                            {hasBothMenus && (
-                              <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
-                            )}
-                            <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
-                          </div>
-                        )}
-                        {barMenuDept && (
-                          <div>
-                            {hasBothMenus && (
-                              <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
-                            )}
-                            <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
-                          </div>
-                        )}
+                  // Its own tab now, so it opens straight to the menu — no extra
+                  // collapse to click through. (id kept so /training#menu lands here.)
+                  <div id="menu" className="scroll-mt-24 flex flex-col gap-6">
+                    <div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">Menu</h2>
+                        <span className="text-[12.5px] font-semibold text-muted-2 tabular-nums">{menuItemCount} item{menuItemCount === 1 ? "" : "s"}</span>
                       </div>
-                    </CollapsibleSection>
+                      <p className="text-[13px] text-muted mt-1 max-w-2xl">One place to upload and manage your menu. Wingman reads a photo or PDF and builds category, allergen, pairing, and upsell training plus recipes — and it shows up on the matching role tabs automatically.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
+                      <span>Managing profit? Popularity, food cost, and the Stars/Dogs matrix live in</span>
+                      <Link href="/menu" className="font-semibold text-brick hover:text-brick-dark">Menu Engineering →</Link>
+                    </div>
+                    {foodMenuDept && (
+                      <div>
+                        {hasBothMenus && (
+                          <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Food menu</div>
+                        )}
+                        <MenuTrainingSection department={foodMenuDept} menuLabel="food" items={data[foodMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                      </div>
+                    )}
+                    {barMenuDept && (
+                      <div>
+                        {hasBothMenus && (
+                          <div className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-2">Bar menu</div>
+                        )}
+                        <MenuTrainingSection department={barMenuDept} menuLabel="bar" items={data[barMenuDept].menuItems} canEdit={canEdit} canViewRecipes={canViewRecipes} />
+                      </div>
+                    )}
                   </div>
                 ),
               }]
