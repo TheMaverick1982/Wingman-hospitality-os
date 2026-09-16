@@ -400,43 +400,59 @@ export default async function HiringPage({
       <PageTabs
         storageKey="wm.hiring.tab"
         tabs={[
+          ...(canEdit
+            ? [{
+                id: "applications",
+                label: `Applications${applicants.length > 0 ? ` (${applicants.length})` : ""}`,
+                content: (
+                  <>
+                    {applicants.length > 0 && (
+                      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+                        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Applications by fit</div>
+                        <p className="text-[13px] text-muted mb-4">How your inbound applications screened, before you spend an interview.</p>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          {fitTiles.map((t) => (
+                            <div key={t.key} className="bg-[#FAFAFA] rounded-[14px] p-4 flex items-center justify-between gap-2">
+                              <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full ${t.bg} ${t.fg}`}>{t.label}</span>
+                              <span className="text-[22px] font-bold text-ink tabular-nums">{t.n}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {applicants.length > 0 && (
+                      <CollapsibleSection
+                        title="Ask about your applicants"
+                        subtitle="Sift your applicant pool with plain-english questions — filter, shortlist, compare, spot themes. Wingman reads their answers, screening, and resumes."
+                      >
+                        <AskApplicantsPanel />
+                      </CollapsibleSection>
+                    )}
+
+                    <div id="applications" className="scroll-mt-24">
+                      <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
+                    </div>
+                  </>
+                ),
+              },
+              {
+                id: "interviews",
+                label: `Interviews${interviews.length > 0 ? ` (${interviews.length})` : ""}`,
+                content: interviews.length > 0 ? (
+                  <InterviewsPanel interviews={interviews} />
+                ) : (
+                  <div className="bg-white border border-line rounded-2xl p-8 text-center shadow-sm">
+                    <p className="text-[15px] text-muted">No interviews scheduled. Book one from an applicant&rsquo;s card in Applications.</p>
+                  </div>
+                ),
+              }]
+            : []),
           {
-            id: "applicants",
-            label: `Applicants${applicants.length > 0 ? ` (${applicants.length})` : ""}`,
+            id: "candidates",
+            label: `Candidates${allCandidates.length > 0 ? ` (${allCandidates.length})` : ""}`,
             content: (
               <>
-                {canEdit && applicants.length > 0 && (
-                  <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-                    <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Applications by fit</div>
-                    <p className="text-[13px] text-muted mb-4">How your inbound applications screened, before you spend an interview.</p>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {fitTiles.map((t) => (
-                        <div key={t.key} className="bg-[#FAFAFA] rounded-[14px] p-4 flex items-center justify-between gap-2">
-                          <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full ${t.bg} ${t.fg}`}>{t.label}</span>
-                          <span className="text-[22px] font-bold text-ink tabular-nums">{t.n}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {canEdit && applicants.length > 0 && (
-                  <CollapsibleSection
-                    title="Ask about your applicants"
-                    subtitle="Sift your applicant pool with plain-english questions — filter, shortlist, compare, spot themes. Wingman reads their answers, screening, and resumes."
-                  >
-                    <AskApplicantsPanel />
-                  </CollapsibleSection>
-                )}
-
-                {canEdit && (
-                  <div id="applications" className="scroll-mt-24">
-                    <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
-                  </div>
-                )}
-
-                {canEdit && interviews.length > 0 && <InterviewsPanel interviews={interviews} />}
-
                 <CandidatesPanel
                   candidates={allCandidates.map((c) => ({
                     id: c.id,
