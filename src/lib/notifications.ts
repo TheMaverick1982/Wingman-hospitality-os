@@ -14,7 +14,9 @@ export type NotificationKey =
   | "partner_monthly_report"
   | "staff_question"
   | "shift_feedback"
-  | "manager_channel";
+  | "manager_channel"
+  | "culture_wins"
+  | "culture_focus";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -60,6 +62,20 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     label: "Manager updates posts",
     description: "When someone posts a new message (not a reply) in Manager updates, email the other managers so nothing important is missed. Managers are always pushed in-app; this toggle controls the email copy.",
     audience: "Managers",
+  },
+  {
+    key: "culture_wins",
+    group: "Culture",
+    label: "Wins & recognition (push to the team)",
+    description: "When anyone shares a win or recognizes a teammate — including a guest review turned into a shout-out — send a phone notification to the whole team who have the app, so recognition is felt in the moment. This controls that in-app push (there's no email for it).",
+    audience: "Everyone with the app",
+  },
+  {
+    key: "culture_focus",
+    group: "Culture",
+    label: "Weekly focus & experiment (push to the team)",
+    description: "When a manager sets this week's pre-shift focus or the weekly experiment, notify the whole team who have the app so everyone starts the week pointed at the same thing. This controls that in-app push (there's no email for it).",
+    audience: "Everyone with the app",
   },
   {
     key: "test_overdue",
