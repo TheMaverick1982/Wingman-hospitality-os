@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Bell } from "lucide-react";
-import { NOTIFICATION_TYPES, NOTIFICATION_GROUPS, type NotificationKey } from "@/lib/notifications";
+import { NOTIFICATION_TYPES, NOTIFICATION_GROUPS, isNotificationEnabled, type NotificationKey } from "@/lib/notifications";
 import { updateNotificationSettings } from "./notification-actions";
 
 function Toggle({ on, disabled, onChange }: { on: boolean; disabled: boolean; onChange: () => void }) {
@@ -21,10 +21,12 @@ function Toggle({ on, disabled, onChange }: { on: boolean; disabled: boolean; on
 }
 
 export function NotificationSettings({ initial }: { initial: Partial<Record<NotificationKey, boolean>> }) {
-  // Local mirror of the saved state; a key is ON unless explicitly false.
+  // Local mirror of the saved state. Most keys are ON unless explicitly false;
+  // the opt-in keys (whole-team culture push) are OFF until turned on — both
+  // handled by isNotificationEnabled so the toggle matches what actually sends.
   const [state, setState] = useState<Record<string, boolean>>(() => {
     const s: Record<string, boolean> = {};
-    for (const n of NOTIFICATION_TYPES) s[n.key] = initial?.[n.key] !== false;
+    for (const n of NOTIFICATION_TYPES) s[n.key] = isNotificationEnabled(initial, n.key);
     return s;
   });
   const [saved, setSaved] = useState(false);

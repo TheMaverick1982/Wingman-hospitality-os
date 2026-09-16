@@ -123,8 +123,19 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
 
 export type NotificationSettings = Partial<Record<NotificationKey, boolean>> | null | undefined;
 
-// A notification is on unless it's been explicitly turned off (set to false).
+// Most notifications are ON by default (turning one OFF is what gets stored).
+// A few are OPT-IN — off until an owner deliberately turns them on — because
+// they fan out to the whole team's phones and shouldn't start buzzing everyone
+// automatically. These default off: enabled only when explicitly set to true.
+export const DEFAULT_OFF_KEYS: ReadonlySet<NotificationKey> = new Set<NotificationKey>([
+  "culture_wins",
+  "culture_focus",
+]);
+
+// A notification is on unless explicitly turned off — except the opt-in keys
+// above, which are off unless explicitly turned on.
 export function isNotificationEnabled(settings: NotificationSettings, key: NotificationKey): boolean {
+  if (DEFAULT_OFF_KEYS.has(key)) return settings?.[key] === true;
   return settings?.[key] !== false;
 }
 
