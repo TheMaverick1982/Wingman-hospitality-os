@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { CULTURE_TAGS } from "@/lib/constants";
 import { WIN_KIND_IDS } from "@/lib/wins";
+import { consumeAiLimit } from "@/lib/rate-limit";
+import { composeCultureRecap } from "@/lib/culture-recap";
 
 export type ActionState = { error: string | null };
 
@@ -166,6 +169,40 @@ export async function deleteExperiment(id: string): Promise<ActionState> {
 
   revalidatePath("/culture");
   return { error: null };
+}
+
+// Owner opt-in for the Monthly Culture Recap email: an AI-written summary of the
+// month's recognition, anonymous pulse, and experiments, auto-emailed to the
+// owner + managers on the 1st. Manager-gated (culture "full" access). Stored per
+// org; the culture-recap cron reads it.
+export async function setCultureRecapEnabled(enabled: boolean): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "culture", profile.permissionOverrides) !== "full")
+    return { error: "Only managers can change this." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ culture_recap_enabled: enabled }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that setting. Try again." };
+  revalidatePath("/culture");
+  return { error: null };
+}
+
+export type CultureRecapPreviewState = { error: string | null; summary?: string; monthLabel?: string };
+
+// On-demand preview of the recap the cron would send — so an owner can see it
+// before turning the monthly email on. Manager-gated + rate-limited like other
+// AI generation.
+export async function previewCultureRecap(): Promise<CultureRecapPreviewState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (getSectionAccess(profile.accessRole, "culture", profile.permissionOverrides) !== "full")
+    return { error: "Only managers can generate this." };
+  if (!(await consumeAiLimit(profile))) {
+    return { error: "You've reached the hourly limit for AI generation. Please try again a bit later." };
+  }
+  const admin = createAdminClient();
+  const res = await composeCultureRecap(admin, { orgId: profile.orgId, orgName: profile.orgName });
+  return { error: res.error, summary: res.summary, monthLabel: res.monthLabel };
 }
 
 // Post to the Wins feed. Team-wide and self-attributed: any team member with
