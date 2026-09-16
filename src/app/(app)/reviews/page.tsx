@@ -155,6 +155,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     });
 
   const showGoogle = canManage || googleAccountEmails.length > 0;
+  const hasGoogleReviews = Array.from(gMapByLoc.values()).some((m) => (m.review_count ?? 0) > 0);
 
   return (
     <>
@@ -165,6 +166,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       responses={responses}
       canManage={canManage}
       askServer={askServer}
+      hasGoogleReviews={hasGoogleReviews}
       scopeLocationId={effectiveLocation ?? null}
       googleSlot={
         showGoogle ? (

@@ -26,7 +26,7 @@ export async function setSurveyAskServer(enabled: boolean): Promise<{ error: str
   return { error: null };
 }
 
-const SYSTEM = `You are an elite restaurant operations advisor. You read raw guest survey feedback for ONE restaurant and write a short, honest readout the operator can act on today.
+const SYSTEM = `You are an elite restaurant operations advisor. You read raw guest feedback for ONE restaurant — from two sources: the restaurant's own guest survey, and its public Google reviews — and write a short, honest, COMBINED readout the operator can act on today. Weigh both sources together; where a theme shows up in both, that's a strong signal worth calling out.
 
 ${HOSPITALITY_DOCTRINE}
 
@@ -34,7 +34,7 @@ Output THREE sections with these exact markdown bold headers and nothing else be
 **What guests love** — 2–4 concise bullets naming the themes guests praised.
 **Where to improve** — 2–4 specific, actionable bullets drawn ONLY from the feedback.
 **This week** — one sentence: the single highest-leverage fix to make now.
-Keep it tight and concrete. Never invent feedback that isn't in the data.`;
+Keep it tight and concrete. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)"). Never invent feedback that isn't in the data.`;
 
 export async function generateReviewSummary(scopeLocationId: string | null): Promise<ReviewSummaryState> {
   const profile = await getCurrentProfile();
@@ -59,12 +59,31 @@ export async function generateReviewSummary(scopeLocationId: string | null): Pro
   if (scopeLocationId) q = q.eq("location_id", scopeLocationId);
   const { data } = await q;
   const rows = (data ?? []) as { ratings: Record<string, number> | null; comment: string | null }[];
-  if (rows.length === 0) return { error: "No guest feedback yet to summarize." };
+
+  // Also pull recent Google reviews (when connected) so the readout is one
+  // combined view across the survey AND public Google reputation. Guarded so a
+  // not-yet-migrated / unconnected org just falls back to survey-only.
+  let gRows: { star_rating: number; comment: string | null }[] = [];
+  try {
+    let gq = admin
+      .from("google_reviews")
+      .select("star_rating, comment, review_created_at")
+      .eq("org_id", profile.orgId)
+      .order("review_created_at", { ascending: false })
+      .limit(100);
+    if (scopeLocationId) gq = gq.eq("location_id", scopeLocationId);
+    const { data: gData } = await gq;
+    gRows = ((gData ?? []) as { star_rating: number; comment: string | null }[]).filter((r) => (r.comment ?? "").trim());
+  } catch {
+    gRows = [];
+  }
+
+  if (rows.length === 0 && gRows.length === 0) return { error: "No guest feedback yet to summarize." };
 
   const { data: org } = await admin.from("organizations").select("owner_mindset").eq("id", profile.orgId).maybeSingle();
   const mindset = (org as { owner_mindset?: string | null } | null)?.owner_mindset ?? "";
 
-  const lines = rows
+  const surveyLines = rows
     .map((r) => {
       const rt = Object.entries(r.ratings ?? {})
         .map(([k, v]) => `${(RATING_LABEL[k] ?? k).replace(/\?$/, "")}: ${v}/5`)
@@ -74,9 +93,16 @@ export async function generateReviewSummary(scopeLocationId: string | null): Pro
     })
     .join("\n");
 
-  const prompt = `Guest survey feedback for ${profile.orgName} (${rows.length} response${rows.length === 1 ? "" : "s"}).${
+  const googleLines = gRows.map((r) => `- [${r.star_rating}/5] "${(r.comment ?? "").trim()}"`).join("\n");
+
+  const blocks = [
+    rows.length > 0 ? `SURVEY FEEDBACK (${rows.length} response${rows.length === 1 ? "" : "s"}):\n${surveyLines}` : "",
+    gRows.length > 0 ? `GOOGLE REVIEWS (${gRows.length} with comments):\n${googleLines}` : "",
+  ].filter(Boolean).join("\n\n");
+
+  const prompt = `Combined guest feedback for ${profile.orgName}.${
     mindset ? `\n\nThe owner's mindset (reflect its spirit): ${mindset}` : ""
-  }\n\nResponses:\n${lines}\n\nWrite the three-section readout.`;
+  }\n\n${blocks}\n\nWrite the three-section combined readout across both sources.`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {

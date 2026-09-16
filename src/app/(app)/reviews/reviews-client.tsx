@@ -45,6 +45,7 @@ export function ReviewsClient({
   responses,
   canManage,
   askServer,
+  hasGoogleReviews,
   scopeLocationId,
   googleSlot,
 }: {
@@ -53,6 +54,7 @@ export function ReviewsClient({
   responses: ReviewRow[];
   canManage: boolean;
   askServer: boolean;
+  hasGoogleReviews?: boolean;
   scopeLocationId: string | null;
   googleSlot?: React.ReactNode;
 }) {
@@ -110,6 +112,37 @@ export function ReviewsClient({
         </p>
       </div>
 
+      {/* Unified AI readout — spans BOTH survey feedback and Google reviews, at the
+          top so it's the first thing you see regardless of which tab is active. */}
+      {canManage && (responses.length > 0 || hasGoogleReviews) && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+            <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">What your guests are telling you</div>
+            <button
+              type="button"
+              onClick={summarize}
+              disabled={summarizing}
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/40 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50"
+            >
+              <Sparkles size={13} /> {summarizing ? "Reading reviews…" : summary ? "Refresh" : "Summarize with AI"}
+            </button>
+          </div>
+          {!summary && !summaryError && (
+            <p className="text-[13px] text-muted">
+              One AI read across your survey feedback{hasGoogleReviews ? " and your Google reviews" : ""} — what guests love, where to improve, and the one fix to make this week.
+            </p>
+          )}
+          {summaryError && <p className="text-sm text-danger mt-1">{summaryError}</p>}
+          {summary && (
+            <div className="text-[14px] text-charcoal-2 leading-relaxed mt-2 flex flex-col gap-1">
+              {summary.split("\n").filter((l) => l.trim()).map((line, i) => (
+                <div key={i}>{renderInline(line)}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {hasGoogle && (
         <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 w-full sm:w-auto sm:self-start">
           {([
@@ -151,34 +184,6 @@ export function ReviewsClient({
           <div className="text-[26px] font-bold text-olive tabular-nums">{positives}</div>
         </div>
       </div>
-
-      {/* AI readout */}
-      {canManage && responses.length > 0 && (
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-            <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">What the feedback is telling you</div>
-            <button
-              type="button"
-              onClick={summarize}
-              disabled={summarizing}
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/40 rounded-full px-3 py-1.5 hover:bg-brick-tint disabled:opacity-50"
-            >
-              <Sparkles size={13} /> {summarizing ? "Reading reviews…" : summary ? "Refresh" : "Summarize with AI"}
-            </button>
-          </div>
-          {!summary && !summaryError && (
-            <p className="text-[13px] text-muted">Let AI read your recent guest feedback and tell you what guests love and where to improve.</p>
-          )}
-          {summaryError && <p className="text-sm text-danger mt-1">{summaryError}</p>}
-          {summary && (
-            <div className="text-[14px] text-charcoal-2 leading-relaxed mt-2 flex flex-col gap-1">
-              {summary.split("\n").filter((l) => l.trim()).map((line, i) => (
-                <div key={i}>{renderInline(line)}</div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Share links */}
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
