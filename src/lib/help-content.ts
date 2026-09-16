@@ -279,6 +279,8 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "The weekly experiment — and closing the loop" },
       { kind: "p", text: "Set one small test to run this week — a new upsell, a new touch, a new table-side line. When the week's over, tap \"How did it go? Record the result\" on the experiment and pick It worked / Mixed / No change, with a note on what you learned. That moves it into the Experiment log below and clears the field for your next test. Over time the log becomes a record of what actually moves the needle in your restaurant — keep the wins, drop the duds — instead of a field you overwrite and forget." },
       { kind: "tip", text: "The weekly focus is the fastest lever you have — change it each week to keep the team pointed at one thing. The experiment is where you find your next lever: run small bets and let the log tell you which ones to keep." },
+      { kind: "h", text: "Team pulse — the anonymous monthly check-in" },
+      { kind: "p", text: "Near the top of Culture, everyone on the team gets a 30-second, completely anonymous monthly check-in: do they feel recognized, are the values clear, are they proud to work here — plus an optional comment. It's the earliest warning sign for turnover, straight from the team. Owners and managers see the Team pulse card: this month's averages (out of 5) with the change from last month, the response count, and the anonymous comments. Answers are never tied to a person — Wingman stores who checked in separately from what they said, so no one can trace a comment back to anyone." },
     ],
   },
   {
