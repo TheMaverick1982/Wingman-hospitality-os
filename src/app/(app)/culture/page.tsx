@@ -13,6 +13,7 @@ import { MindsetEditor } from "./mindset-editor";
 import { CoreValuesEditor } from "./core-values-editor";
 import { ExperimentOutcomeForm } from "./experiment-outcome-form";
 import { ExperimentLog, type LoggedExperiment } from "./experiment-log";
+import { PulseComposer } from "./pulse-composer";
 
 const AVATAR_TONES = [
   { bg: "bg-brick-tint", fg: "text-brick-dark" },
@@ -115,6 +116,47 @@ export default async function CulturePage() {
   // Recent feed with celebrate counts (kind + reactions). Guarded internally.
   const wins = await getRecentWins(profile.orgId, profile.userId, 6);
 
+  // ── Staff culture pulse (anonymous monthly check-in) ──────────────────────
+  const pulsePeriod = new Date().toISOString().slice(0, 7);
+  const prevDate = new Date();
+  prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
+  const prevPeriod = prevDate.toISOString().slice(0, 7);
+
+  // Has THIS person already checked in this month? (their marker is private)
+  const { data: myPulseMark } = await supabase
+    .from("culture_pulse_submissions")
+    .select("period")
+    .eq("org_id", profile.orgId)
+    .eq("user_id", profile.userId)
+    .eq("period", pulsePeriod)
+    .maybeSingle();
+  const pulseDone = !!myPulseMark;
+
+  type PulseAgg = { count: number; recognized: number | null; valuesClear: number | null; proud: number | null; comments: string[] };
+  function aggregatePulse(rows: { recognized: number | null; values_clear: number | null; proud: number | null; comment: string | null }[]): PulseAgg {
+    const avg = (nums: number[]) => (nums.length ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : null);
+    return {
+      count: rows.length,
+      recognized: avg(rows.map((r) => r.recognized).filter((n): n is number => n != null)),
+      valuesClear: avg(rows.map((r) => r.values_clear).filter((n): n is number => n != null)),
+      proud: avg(rows.map((r) => r.proud).filter((n): n is number => n != null)),
+      comments: rows.map((r) => (r.comment ?? "").trim()).filter(Boolean).slice(0, 12),
+    };
+  }
+  // Manager aggregate (RLS returns rows only to managers/owners). Read both this
+  // month and last month for the trend.
+  let pulseNow: PulseAgg = { count: 0, recognized: null, valuesClear: null, proud: null, comments: [] };
+  let pulsePrev: PulseAgg = { count: 0, recognized: null, valuesClear: null, proud: null, comments: [] };
+  if (canEdit) {
+    const { data: pulseRows } = await supabase
+      .from("culture_pulse_responses")
+      .select("period, recognized, values_clear, proud, comment")
+      .in("period", [pulsePeriod, prevPeriod]);
+    const rows = (pulseRows ?? []) as { period: string; recognized: number | null; values_clear: number | null; proud: number | null; comment: string | null }[];
+    pulseNow = aggregatePulse(rows.filter((r) => r.period === pulsePeriod));
+    pulsePrev = aggregatePulse(rows.filter((r) => r.period === prevPeriod));
+  }
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
@@ -140,6 +182,61 @@ export default async function CulturePage() {
           </div>
         </div>
       </div>
+
+      {/* Team pulse — the anonymous monthly check-in (entry for everyone) and the
+          manager read on how the team actually feels. */}
+      <PulseComposer alreadyDone={pulseDone} />
+
+      {canEdit && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+            <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Team pulse</div>
+            <span className="text-[12.5px] font-semibold text-muted-2">
+              {pulseNow.count} response{pulseNow.count === 1 ? "" : "s"} this month{pulsePrev.count > 0 ? ` · ${pulsePrev.count} last month` : ""}
+            </span>
+          </div>
+          <p className="text-[13px] text-muted mb-4">Anonymous — how the team feels about recognition, clarity, and pride. The earliest warning sign for turnover.</p>
+          {pulseNow.count === 0 && pulsePrev.count === 0 ? (
+            <p className="text-sm text-muted">No check-ins yet. When your team submits this month&rsquo;s culture check, their anonymous scores show here.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {([
+                  { label: "Feel recognized", now: pulseNow.recognized, prev: pulsePrev.recognized },
+                  { label: "Clear on our values", now: pulseNow.valuesClear, prev: pulsePrev.valuesClear },
+                  { label: "Proud to work here", now: pulseNow.proud, prev: pulsePrev.proud },
+                ]).map((m) => {
+                  const delta = m.now != null && m.prev != null ? Math.round((m.now - m.prev) * 10) / 10 : null;
+                  return (
+                    <div key={m.label} className="bg-paper border border-line rounded-xl p-4">
+                      <div className="text-[12.5px] text-muted-2 font-medium">{m.label}</div>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-[26px] font-bold text-ink tabular-nums">{m.now != null ? m.now.toFixed(1) : "—"}</span>
+                        <span className="text-[12px] text-muted-2">/ 5</span>
+                        {delta != null && delta !== 0 && (
+                          <span className={`text-[12px] font-semibold ${delta > 0 ? "text-[#15803D]" : "text-danger"}`}>
+                            {delta > 0 ? "+" : ""}{delta}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {pulseNow.comments.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-2 mb-2">What they said (anonymous)</div>
+                  <div className="flex flex-col gap-2">
+                    {pulseNow.comments.map((c, i) => (
+                      <div key={i} className="text-[13.5px] text-charcoal-2 bg-paper border border-line rounded-xl px-3.5 py-2.5 leading-[1.45]">{c}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-0.5">
