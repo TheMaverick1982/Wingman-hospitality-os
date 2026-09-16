@@ -15,6 +15,7 @@ import { CandidatesPanel } from "./candidate-scorecards";
 import { ApplicantsPanel, type Applicant } from "./applicants-panel";
 import { OpeningsPanel, type OpeningRow } from "./openings-panel";
 import { ReplyTemplatesPanel } from "./reply-templates-panel";
+import { ApplicationFormEditor } from "./application-form-editor";
 import { normalizeReplyTemplates } from "@/lib/applicant-reply";
 import { InterviewInvitePanel } from "./interview-invite-panel";
 import { normalizeInterviewInvite } from "@/lib/interview-invite";
@@ -431,7 +432,7 @@ export default async function HiringPage({
                     )}
 
                     <div id="applications" className="scroll-mt-24">
-                      <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
+                      <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} />
                     </div>
                   </>
                 ),
@@ -523,6 +524,21 @@ export default async function HiringPage({
             content: (
               <>
                 {canEdit && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
+
+                {canEdit && (
+                  <CollapsibleSection
+                    title="Application form"
+                    subtitle="The questions applicants fill in — turn built-in fields (phone, resume, availability…) on or off, mark them required, and add your own custom questions."
+                  >
+                    {applyUrl && (
+                      <div className="flex justify-end -mt-1 mb-3">
+                        <a href={`${applyUrl}?preview=1`} target="_blank" rel="noopener" className="text-[12.5px] font-semibold text-brick hover:text-brick-dark">Preview your form ↗</a>
+                      </div>
+                    )}
+                    <ApplicationFormEditor initial={formConfig} />
+                  </CollapsibleSection>
+                )}
+
                 <CollapsibleSection
                   title="Interview criteria & questions"
                   subtitle="The traits and interview questions you screen every candidate against, per role. Set once, then open to refine."

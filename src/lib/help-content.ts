@@ -741,7 +741,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "What the applicant fills in" },
       { kind: "p", text: "By default: name, contact, the role and location they want, availability, when they could come in, an optional note, and an optional résumé. When they submit, the email on file for that location — plus any catch-all copies — get notified right away (unless you've turned that email off in Settings → Notifications)." },
       { kind: "h", text: "Customize the form & add your own questions" },
-      { kind: "p", text: "Click \"Customize form\" (under Applicants) to make the form yours — changes go live instantly on both your link and your embed. There's a \"Preview\" link to see exactly what applicants see." },
+      { kind: "p", text: "Open Hiring → Setup and expand \"Application form\" to make the form yours — changes go live instantly on both your link and your embed. There's a \"Preview your form\" link to see exactly what applicants see." },
       { kind: "list", items: [
         "Standard fields — turn any built-in field on or off, mark it required, and rename its label (e.g. call \"Anything else?\" → \"Why do you want to work here?\"). Your applicant's name is always asked.",
         "Custom questions — add your own: short text, a paragraph, a dropdown (with your choices), Yes/No, or a number. Mark any of them required, and drag them into the order you want.",
