@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
 import { composeReviewSummary } from "@/lib/review-summary";
+import { pushCultureMomentToTeam } from "@/lib/culture-notify";
 
 export type ReviewSummaryState = { error: string | null; summary?: string };
 
@@ -71,6 +72,17 @@ export async function recognizeFromReview(responseId: string): Promise<{ error: 
   if (insErr) return { error: "Couldn't post that shout-out. Try again." };
 
   await admin.from("guest_survey_responses").update({ recognized_at: new Date().toISOString() }).eq("id", r.id).eq("org_id", profile.orgId);
+
+  // Buzz the team — a guest just called this teammate out by name.
+  await pushCultureMomentToTeam({
+    orgId: profile.orgId,
+    authorId: profile.userId,
+    authorName: profile.fullName || "A manager",
+    kind: "shoutout",
+    about: staffName,
+    message,
+  });
+
   revalidatePath("/reviews");
   revalidatePath("/culture");
   revalidatePath("/dashboard");

@@ -14,7 +14,9 @@ export type NotificationKey =
   | "partner_monthly_report"
   | "staff_question"
   | "shift_feedback"
-  | "manager_channel";
+  | "manager_channel"
+  | "culture_wins"
+  | "culture_focus";
 
 export type NotificationType = {
   key: NotificationKey;
@@ -62,6 +64,20 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
     audience: "Managers",
   },
   {
+    key: "culture_wins",
+    group: "Culture",
+    label: "Wins & recognition (push to the team)",
+    description: "When anyone shares a win or recognizes a teammate — including a guest review turned into a shout-out — send a phone notification to the whole team who have the app, so recognition is felt in the moment. This controls that in-app push (there's no email for it).",
+    audience: "Everyone with the app",
+  },
+  {
+    key: "culture_focus",
+    group: "Culture",
+    label: "Weekly focus & experiment (push to the team)",
+    description: "When a manager sets this week's pre-shift focus or the weekly experiment, notify the whole team who have the app so everyone starts the week pointed at the same thing. This controls that in-app push (there's no email for it).",
+    audience: "Everyone with the app",
+  },
+  {
     key: "test_overdue",
     group: "Training & tests",
     label: "Test not finished by deadline",
@@ -107,8 +123,19 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
 
 export type NotificationSettings = Partial<Record<NotificationKey, boolean>> | null | undefined;
 
-// A notification is on unless it's been explicitly turned off (set to false).
+// Most notifications are ON by default (turning one OFF is what gets stored).
+// A few are OPT-IN — off until an owner deliberately turns them on — because
+// they fan out to the whole team's phones and shouldn't start buzzing everyone
+// automatically. These default off: enabled only when explicitly set to true.
+export const DEFAULT_OFF_KEYS: ReadonlySet<NotificationKey> = new Set<NotificationKey>([
+  "culture_wins",
+  "culture_focus",
+]);
+
+// A notification is on unless explicitly turned off — except the opt-in keys
+// above, which are off unless explicitly turned on.
 export function isNotificationEnabled(settings: NotificationSettings, key: NotificationKey): boolean {
+  if (DEFAULT_OFF_KEYS.has(key)) return settings?.[key] === true;
   return settings?.[key] !== false;
 }
 

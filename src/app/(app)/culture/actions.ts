@@ -9,6 +9,7 @@ import { CULTURE_TAGS } from "@/lib/constants";
 import { WIN_KIND_IDS } from "@/lib/wins";
 import { consumeAiLimit } from "@/lib/rate-limit";
 import { composeCultureRecap } from "@/lib/culture-recap";
+import { pushCultureMomentToTeam, pushWeeklyCultureToTeam } from "@/lib/culture-notify";
 
 export type ActionState = { error: string | null };
 
@@ -21,6 +22,9 @@ export async function updateWeeklyFocus(_prev: ActionState, formData: FormData):
 
   const { error } = await supabase.from("organizations").update({ weekly_focus: weeklyFocus }).eq("id", org.id);
   if (error) return { error: error.message };
+
+  // Point the whole team at the new focus (push to everyone with the app).
+  await pushWeeklyCultureToTeam({ orgId: (org as { id: string }).id, kind: "focus", text: weeklyFocus });
 
   revalidatePath("/culture");
   revalidatePath("/dashboard");
@@ -106,6 +110,11 @@ export async function updateCultureText(_prev: ActionState, formData: FormData):
     .update({ [field]: value })
     .eq("id", org.id);
   if (error) return { error: error.message };
+
+  // Only the weekly experiment is team-facing; x_factor / owner_mindset aren't.
+  if (field === "weekly_experiment") {
+    await pushWeeklyCultureToTeam({ orgId: (org as { id: string }).id, kind: "experiment", text: value });
+  }
 
   revalidatePath("/culture");
   revalidatePath("/dashboard");
@@ -253,6 +262,16 @@ export async function addCultureMoment(_prev: ActionState, formData: FormData): 
   });
 
   if (error) return { error: error.message };
+
+  // Buzz the rest of the team's phones — recognition felt in the moment.
+  await pushCultureMomentToTeam({
+    orgId: profile.orgId,
+    authorId: profile.userId,
+    authorName: profile.fullName || "A teammate",
+    kind: isWin ? "win" : "shoutout",
+    about: isWin ? null : about,
+    message,
+  });
 
   revalidatePath("/culture");
   revalidatePath("/dashboard");
