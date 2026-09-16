@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { isNativeIOS } from "@/lib/native/platform";
 import { captureReferralForCurrentUser } from "@/lib/affiliate";
@@ -27,6 +28,18 @@ export default async function OnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // Defense in depth: getCurrentProfile() can transiently return null (a session
+  // / read race, e.g. right after a deploy or a token refresh), which would drop
+  // an existing owner onto this create-org form. A user who already has a profile
+  // is set up — send them to the dashboard instead of ever showing the form. (The
+  // create_organization RPC also hard-refuses a second org, so no data can be
+  // created either way; this just prevents the alarming screen.)
+  {
+    const admin = createAdminClient();
+    const { data: existingRow } = await admin.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
+    if ((existingRow as { org_id?: string } | null)?.org_id) redirect("/dashboard");
+  }
 
   const pendingOrgName = user.user_metadata?.pending_org_name as string | undefined;
   const pendingLocationName = user.user_metadata?.pending_location_name as string | undefined;
