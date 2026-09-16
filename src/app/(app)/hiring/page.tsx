@@ -9,7 +9,6 @@ import { ALL_DEPARTMENTS, OPENING_OTHER_ROLE, type Department } from "@/lib/cons
 import { normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
 import { TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningQuestion } from "@/lib/screening";
 import { ScreeningQuestionsPanel, type ScreeningRole } from "./screening-questions-panel";
-import { Users, Inbox } from "lucide-react";
 import { HiringClient, type HiringTrait } from "./hiring-client";
 import { CandidateModalButton, type ScoreTrait } from "./candidate-modal";
 import { CandidatesPanel } from "./candidate-scorecards";
@@ -21,8 +20,8 @@ import { InterviewInvitePanel } from "./interview-invite-panel";
 import { normalizeInterviewInvite } from "@/lib/interview-invite";
 import { InterviewsPanel } from "./interviews-panel";
 import { RoleManager } from "../role-manager";
-import { ScrollToButton } from "./scroll-to-button";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { PageTabs } from "@/components/ui/page-tabs";
 import { AskApplicantsPanel } from "./ask-applicants-panel";
 
 // AI generation/refinement server actions run from this route; give them room
@@ -366,20 +365,6 @@ export default async function HiringPage({
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2 flex-wrap justify-end">
-          {canEdit && (
-            <ScrollToButton
-              targetId="applications"
-              className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
-            >
-              <Inbox size={15} /> See Applications{applicants.length > 0 ? ` (${applicants.length})` : ""}
-            </ScrollToButton>
-          )}
-          <ScrollToButton
-            targetId="candidate-scorecards"
-            className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-charcoal-2 border border-line rounded-full px-4 py-2.5 hover:border-brick hover:text-brick transition-colors"
-          >
-            <Users size={15} /> See candidates{allCandidates.length > 0 ? ` (${allCandidates.length})` : ""}
-          </ScrollToButton>
           <CandidateModalButton
             // Remount on a new score request so the mount-time auto-open fires
             // even when "Score after interview" navigates within /hiring (a
@@ -412,138 +397,153 @@ export default async function HiringPage({
         </div>
       </div>
 
-      {canEdit && applicants.length > 0 && (
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Applications by fit</div>
-          <p className="text-[13px] text-muted mb-4">How your inbound applications screened, before you spend an interview. Dig into them in Applications below.</p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {fitTiles.map((t) => (
-              <div key={t.key} className="bg-[#FAFAFA] rounded-[14px] p-4 flex items-center justify-between gap-2">
-                <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full ${t.bg} ${t.fg}`}>{t.label}</span>
-                <span className="text-[22px] font-bold text-ink tabular-nums">{t.n}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {canEdit && applicants.length > 0 && (
-        <CollapsibleSection
-          title="Ask about your applicants"
-          subtitle="Sift your applicant pool with plain-english questions — filter, shortlist, compare, spot themes. Wingman reads their answers, screening, and resumes."
-        >
-          <AskApplicantsPanel />
-        </CollapsibleSection>
-      )}
-
-      <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />
-
-      <CollapsibleSection
-        title="Interview criteria & questions"
-        subtitle="The traits and interview questions you screen every candidate against, per role. Set once, then open to refine."
-      >
-        <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
-      </CollapsibleSection>
-
-      {canEdit && screeningRoles.length > 0 && (
-        <CollapsibleSection
-          title="Screening questions"
-          subtitle="Short questions candidates answer on your application form, per role — Wingman drafts and grades them. Build once, open to tweak."
-        >
-          <ScreeningQuestionsPanel roles={screeningRoles} questionsByRole={screeningQuestionsByRole} />
-        </CollapsibleSection>
-      )}
-
-      {canEdit && (
-        <CollapsibleSection
-          title="Job openings"
-          subtitle="Post a role for a location, get an AI-written ad + a branded link to share on Indeed, Craigslist, or social. Set up once, open to post more."
-        >
-          <OpeningsPanel
-            openings={openings}
-            counts={openingCounts}
-            locations={openingLocations}
-            departments={activeDepts}
-            applyUrl={applyUrl}
-            careersUrl={careersUrl}
-            siteUrl={SITE}
-            canEdit={canEdit}
-          />
-        </CollapsibleSection>
-      )}
-
-      {canEdit && (
-        <CollapsibleSection
-          title="Applicant reply emails"
-          subtitle="The one-click “we’re interested” and “not a good fit” notes you send applicants from their card. Edit the wording to sound like you, or leave the defaults."
-        >
-          <ReplyTemplatesPanel templates={replyTemplates} testEmail={profile.email ?? ""} />
-        </CollapsibleSection>
-      )}
-
-      {canEdit && (
-        <CollapsibleSection
-          title="Interview invitation email"
-          subtitle="Sent to an applicant when you book their interview — the date, time, location, and a note to call if anything changes. Edit the wording, or leave the default."
-        >
-          <InterviewInvitePanel template={inviteTemplate} testEmail={profile.email ?? ""} />
-        </CollapsibleSection>
-      )}
-
-      <div className="lg:max-w-md">
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Values scorecard</div>
-          {latestCandidate ? (
-            <>
-              <div className="text-[13px] text-muted mb-5">
-                {latestCandidate.name} · {latestCandidate.department} candidate
-              </div>
-              <div className="flex flex-col gap-4">
-                {latestScorecard.map((s) => (
-                  <div key={s.title}>
-                    <div className="flex items-baseline justify-between mb-1.5">
-                      <span className="text-sm font-medium text-ink">{s.title}</span>
-                      <span className="text-[13px] font-semibold text-muted tabular-nums">{s.score}/5</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2, 3, 4].map((i) => (
-                        <span key={i} className={`flex-1 h-1.5 rounded-full ${i < s.score ? "bg-brick" : "bg-line"}`} />
+      <PageTabs
+        storageKey="wm.hiring.tab"
+        tabs={[
+          {
+            id: "applicants",
+            label: `Applicants${applicants.length > 0 ? ` (${applicants.length})` : ""}`,
+            content: (
+              <>
+                {canEdit && applicants.length > 0 && (
+                  <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+                    <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Applications by fit</div>
+                    <p className="text-[13px] text-muted mb-4">How your inbound applications screened, before you spend an interview.</p>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {fitTiles.map((t) => (
+                        <div key={t.key} className="bg-[#FAFAFA] rounded-[14px] p-4 flex items-center justify-between gap-2">
+                          <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full ${t.bg} ${t.fg}`}>{t.label}</span>
+                          <span className="text-[22px] font-bold text-ink tabular-nums">{t.n}</span>
+                        </div>
                       ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted mt-2">No candidates scored yet.</p>
-          )}
-        </div>
-      </div>
+                )}
 
-      {canEdit && (
-        <div id="applications" className="scroll-mt-24">
-          <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
-        </div>
-      )}
+                {canEdit && applicants.length > 0 && (
+                  <CollapsibleSection
+                    title="Ask about your applicants"
+                    subtitle="Sift your applicant pool with plain-english questions — filter, shortlist, compare, spot themes. Wingman reads their answers, screening, and resumes."
+                  >
+                    <AskApplicantsPanel />
+                  </CollapsibleSection>
+                )}
 
-      {canEdit && interviews.length > 0 && <InterviewsPanel interviews={interviews} />}
+                {canEdit && (
+                  <div id="applications" className="scroll-mt-24">
+                    <ApplicantsPanel applicants={applicants} applyUrl={applyUrl} applySlug={orgApplyRow?.public_slug ?? null} applicationsCc={applicationsCc} logoUrl={orgLogoUrl} formConfig={formConfig} />
+                  </div>
+                )}
 
-      <CandidatesPanel
-        candidates={allCandidates.map((c) => ({
-          id: c.id,
-          name: c.name,
-          department: c.department,
-          locationId: c.location_id,
-          locationName: locationName(c.location_id),
-          date: c.occurred_on,
-          avg: c.scores.length ? c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length : 0,
-          recommendation: c.recommendation,
-          hired: hiredCandidateIds.has(c.id),
-        }))}
-        locations={locations.map((l) => ({ id: l.id, name: l.name }))}
-        departments={Array.from(new Set([...activeDepts, ...allCandidates.map((c) => c.department as string)]))}
-        canEdit={canEdit}
-        isSuperAdmin={isSuperAdmin}
+                {canEdit && interviews.length > 0 && <InterviewsPanel interviews={interviews} />}
+
+                <CandidatesPanel
+                  candidates={allCandidates.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    department: c.department,
+                    locationId: c.location_id,
+                    locationName: locationName(c.location_id),
+                    date: c.occurred_on,
+                    avg: c.scores.length ? c.scores.reduce((a: number, b: number) => a + b, 0) / c.scores.length : 0,
+                    recommendation: c.recommendation,
+                    hired: hiredCandidateIds.has(c.id),
+                  }))}
+                  locations={locations.map((l) => ({ id: l.id, name: l.name }))}
+                  departments={Array.from(new Set([...activeDepts, ...allCandidates.map((c) => c.department as string)]))}
+                  canEdit={canEdit}
+                  isSuperAdmin={isSuperAdmin}
+                />
+
+                {latestCandidate && (
+                  <div className="lg:max-w-md">
+                    <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+                      <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Values scorecard</div>
+                      <div className="text-[13px] text-muted mb-5">
+                        {latestCandidate.name} · {latestCandidate.department} candidate
+                      </div>
+                      <div className="flex flex-col gap-4">
+                        {latestScorecard.map((s) => (
+                          <div key={s.title}>
+                            <div className="flex items-baseline justify-between mb-1.5">
+                              <span className="text-sm font-medium text-ink">{s.title}</span>
+                              <span className="text-[13px] font-semibold text-muted tabular-nums">{s.score}/5</span>
+                            </div>
+                            <div className="flex gap-1.5">
+                              {[0, 1, 2, 3, 4].map((i) => (
+                                <span key={i} className={`flex-1 h-1.5 rounded-full ${i < s.score ? "bg-brick" : "bg-line"}`} />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ),
+          },
+          ...(canEdit
+            ? [{
+                id: "openings",
+                label: "Job openings",
+                content: (
+                  <OpeningsPanel
+                    openings={openings}
+                    counts={openingCounts}
+                    locations={openingLocations}
+                    departments={activeDepts}
+                    applyUrl={applyUrl}
+                    careersUrl={careersUrl}
+                    siteUrl={SITE}
+                    canEdit={canEdit}
+                  />
+                ),
+              }]
+            : []),
+          {
+            id: "setup",
+            label: "Setup",
+            content: (
+              <>
+                {canEdit && <RoleManager active={activeDepts} inactive={inactiveDepts} canManage={canEdit} />}
+                <CollapsibleSection
+                  title="Interview criteria & questions"
+                  subtitle="The traits and interview questions you screen every candidate against, per role. Set once, then open to refine."
+                >
+                  <HiringClient coreValues={coreValues ?? []} traitsByDept={traitsByDept} departments={activeDepts} canEdit={canEdit} />
+                </CollapsibleSection>
+
+                {canEdit && screeningRoles.length > 0 && (
+                  <CollapsibleSection
+                    title="Screening questions"
+                    subtitle="Short questions candidates answer on your application form, per role — Wingman drafts and grades them. Build once, open to tweak."
+                  >
+                    <ScreeningQuestionsPanel roles={screeningRoles} questionsByRole={screeningQuestionsByRole} />
+                  </CollapsibleSection>
+                )}
+
+                {canEdit && (
+                  <CollapsibleSection
+                    title="Applicant reply emails"
+                    subtitle="The one-click “we’re interested” and “not a good fit” notes you send applicants from their card. Edit the wording to sound like you, or leave the defaults."
+                  >
+                    <ReplyTemplatesPanel templates={replyTemplates} testEmail={profile.email ?? ""} />
+                  </CollapsibleSection>
+                )}
+
+                {canEdit && (
+                  <CollapsibleSection
+                    title="Interview invitation email"
+                    subtitle="Sent to an applicant when you book their interview — the date, time, location, and a note to call if anything changes. Edit the wording, or leave the default."
+                  >
+                    <InterviewInvitePanel template={inviteTemplate} testEmail={profile.email ?? ""} />
+                  </CollapsibleSection>
+                )}
+              </>
+            ),
+          },
+        ]}
       />
     </>
   );
