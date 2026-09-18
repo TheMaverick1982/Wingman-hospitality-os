@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isTransientClientError } from "@/lib/transient-errors";
+import { isVersionSkewError } from "@/lib/is-version-skew";
 
 // The built-in error monitor. reportError() records a runtime error, grouped by
 // a stable fingerprint (so the same bug is one row with a count), and emails an
@@ -43,8 +44,15 @@ export async function reportError(input: {
     const rawMessage = err instanceof Error ? err.message : String(err ?? "Unknown error");
     const message = (rawMessage || "Unknown error").slice(0, 500);
     const stack = err instanceof Error && err.stack ? err.stack.slice(0, 4000) : undefined;
+    const digest = (err as { digest?: string } | null)?.digest;
     const route = input.route ? String(input.route).slice(0, 300) : undefined;
     if (isControlFlow(message, stack)) return;
+    // Version skew: a browser tab on an OLD deployment POSTs a Server Action ID the
+    // NEW deployment no longer has ("Failed to find Server Action…"). It's expected
+    // whenever we deploy while someone has a page open, it's not a code bug, and the
+    // error boundaries already recover it with a one-time hard reload to the current
+    // deployment. Don't record it as a bug or alert on it (any source).
+    if (isVersionSkewError({ message, digest })) return;
     // A dropped connection / failed RSC navigation / chunk 404 in the browser is a
     // transient network blip, not a code bug — the error boundary already recovers
     // with "Try again". Don't record these as bugs or alert on them.
