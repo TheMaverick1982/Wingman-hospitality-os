@@ -66,9 +66,13 @@ export async function GET(request: NextRequest) {
 
     const weekly = org.review_digest_frequency === "weekly";
     const period = weekly ? "This week" : "This month";
-    // Only summarize the trailing period so each report covers NEW feedback and
-    // never re-reports old reviews: weekly = last 7 days, monthly = last 31 days.
-    const sinceIso = new Date(Date.now() - (weekly ? 7 : 31) * DAY_MS).toISOString();
+    // Window each report to exactly the feedback since the LAST report — so nothing
+    // is re-reported and nothing is missed, even if a run was skipped or the month
+    // isn't 31 days. Floor it at one period back (so the very first report, or one
+    // after a long gap, still only covers a sensible window, not all history).
+    const floorMs = Date.now() - (weekly ? 7 : 31) * DAY_MS;
+    const lastMs = org.review_digest_sent_at ? new Date(org.review_digest_sent_at).getTime() : 0;
+    const sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
     const periodLabel = weekly ? "the last week" : "the last month";
     const ownerEmails = await getOrgOwnerEmails(admin, org.id);
     const ccEmails = (org.review_digest_cc || "").split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
