@@ -12,6 +12,10 @@ import { GuestNav } from "@/components/guests/guest-nav";
 
 export const metadata = { title: "Guest Reviews · Wingman" };
 
+// The "Send a test now" ownership-recap action fans out an AI summary per
+// location; give it room to finish instead of the platform's short default.
+export const maxDuration = 120;
+
 // The Guest Reviews archive: per-location survey share links (QR + short link)
 // and every survey response. Read via the admin client scoped to the org (access
 // is enforced here). Deliberately separate from Guest Bounce Back.

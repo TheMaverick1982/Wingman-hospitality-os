@@ -58,19 +58,21 @@ export async function GET(request: NextRequest) {
     const includeActions = org.review_exec_include_actions !== false;
     const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", org.id).order("name");
     const locations = (locs ?? []) as { id: string; name: string }[];
-    const sections: { locationName: string; summary: string }[] = [];
-    for (const loc of locations) {
-      const r = await composeReviewSummary(admin, {
-        orgId: org.id,
-        orgName: org.name,
-        scopeLocationId: loc.id,
-        includeActions,
-        includeQuotes: true,
-        sinceIso,
-        periodLabel,
-      });
-      if (!r.error && r.summary) sections.push({ locationName: loc.name, summary: r.summary });
-    }
+    const results = await Promise.all(
+      locations.map(async (loc) => {
+        const r = await composeReviewSummary(admin, {
+          orgId: org.id,
+          orgName: org.name,
+          scopeLocationId: loc.id,
+          includeActions,
+          includeQuotes: true,
+          sinceIso,
+          periodLabel,
+        });
+        return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
+      }),
+    );
+    const sections = results.filter((s): s is { locationName: string; summary: string } => s !== null);
     if (sections.length === 0) { skipped++; continue; } // no NEW feedback at any location this period
 
     const period = daily ? "Today" : "This week";
