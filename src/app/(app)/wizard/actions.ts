@@ -76,7 +76,13 @@ Rules:
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 1500,
+        // Scale the output budget with the number of departments: each one needs
+        // 6-8 checklist items, so a flat cap (previously 1500) truncated the JSON
+        // mid-object for larger restaurants — every department selected meant the
+        // response was cut off and JSON.parse failed with "Unexpected end of JSON
+        // input." ~700 tokens/department plus headroom for culture + values,
+        // capped so it stays well within the 60s route budget.
+        max_tokens: Math.min(8000, 1600 + selectedDepts.length * 700),
         system: `You are an elite hospitality systems consultant who designs complete, world-class guest-experience operating systems for restaurants. Consistent, elevated hospitality is engineered through the disciplined combination of culture, training, and repeatable, inspected standards -- and is ultimately measured by guest retention and real revenue lift, not by good intentions.
 
 ${HOSPITALITY_DOCTRINE}
@@ -93,6 +99,14 @@ Draw on these principles to shape the culture statement, core values, per-depart
 
     const data = await response.json();
     await recordAiUsage({ orgId: profile.orgId, feature: "setup_wizard", model: "claude-sonnet-5", usage: data.usage });
+    // If the model hit the output ceiling, the JSON is cut off — say so plainly
+    // instead of surfacing a raw "Unexpected end of JSON input" parser error.
+    if (data.stop_reason === "max_tokens") {
+      return {
+        error:
+          "Your setup covers a lot of roles, so the draft got cut off before it finished. Try generating with a few fewer departments selected, then add the rest afterward — you can edit everything later.",
+      };
+    }
     const text = (data.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
@@ -101,7 +115,12 @@ Draw on these principles to shape the culture statement, core values, per-depart
     const first = cleaned.indexOf("{");
     const last = cleaned.lastIndexOf("}");
     if (first !== -1 && last !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
-    generated = JSON.parse(cleaned);
+    try {
+      generated = JSON.parse(cleaned);
+    } catch {
+      // A malformed/partial JSON payload shouldn't show the raw parser message.
+      return { error: "The draft didn't come back cleanly. Please tap “Generate my system” again." };
+    }
 
     if (!generated.departments || !generated.core_values || generated.core_values.length === 0) {
       throw new Error("The generator returned an incomplete response. Try again.");
