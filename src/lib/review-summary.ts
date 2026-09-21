@@ -34,10 +34,23 @@ export type ComposeResult = { error: string | null; summary?: string; surveyCoun
 
 export async function composeReviewSummary(
   admin: SupabaseClient,
-  opts: { orgId: string; orgName: string; scopeLocationId: string | null; includeActions?: boolean; includeQuotes?: boolean },
+  opts: {
+    orgId: string;
+    orgName: string;
+    scopeLocationId: string | null;
+    includeActions?: boolean;
+    includeQuotes?: boolean;
+    // Only summarize feedback on/after this ISO timestamp. Scheduled reports pass
+    // their period (last day/week/month) so each report covers ONLY new feedback
+    // and never re-reports the same old reviews. Omit for an all-time read (the
+    // on-demand "Summarize with AI" button).
+    sinceIso?: string | null;
+    periodLabel?: string; // e.g. "the last week" — for the prompt when windowed
+  },
 ): Promise<ComposeResult> {
   const includeActions = opts.includeActions !== false; // default on
   const includeQuotes = opts.includeQuotes === true; // default off
+  const windowed = !!opts.sinceIso;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
@@ -49,10 +62,14 @@ export async function composeReviewSummary(
     .order("created_at", { ascending: false })
     .limit(150);
   if (opts.scopeLocationId) sq = sq.eq("location_id", opts.scopeLocationId);
+  if (opts.sinceIso) sq = sq.gte("created_at", opts.sinceIso);
   const { data: sData } = await sq;
   const rows = (sData ?? []) as { ratings: Record<string, number> | null; comment: string | null }[];
 
-  let gRows: { star_rating: number; comment: string | null }[] = [];
+  // Pull ALL Google reviews (star-only ones are still signal), not just those with
+  // a written comment — a location like a Google-only store often has ratings with
+  // little text, and it should still get a report.
+  let gAll: { star_rating: number; comment: string | null }[] = [];
   try {
     let gq = admin
       .from("google_reviews")
@@ -61,13 +78,45 @@ export async function composeReviewSummary(
       .order("review_created_at", { ascending: false })
       .limit(100);
     if (opts.scopeLocationId) gq = gq.eq("location_id", opts.scopeLocationId);
+    if (opts.sinceIso) gq = gq.gte("review_created_at", opts.sinceIso);
     const { data: gData } = await gq;
-    gRows = ((gData ?? []) as { star_rating: number; comment: string | null }[]).filter((r) => (r.comment ?? "").trim());
+    gAll = (gData ?? []) as { star_rating: number; comment: string | null }[];
   } catch {
-    gRows = [];
+    gAll = [];
+  }
+  const gCommented = gAll.filter((r) => (r.comment ?? "").trim());
+
+  // Cached Google rating + count from the location mapping, so even a store with a
+  // Google presence but no synced individual reviews still has something to report.
+  let gRating: number | null = null;
+  let gCount = 0;
+  try {
+    let mq = admin.from("google_review_locations").select("average_rating, review_count").eq("org_id", opts.orgId);
+    if (opts.scopeLocationId) mq = mq.eq("location_id", opts.scopeLocationId);
+    const { data: mData } = await mq;
+    const maps = (mData ?? []) as { average_rating: number | null; review_count: number | null }[];
+    let weighted = 0;
+    let denom = 0;
+    for (const m of maps) {
+      const c = m.review_count ?? 0;
+      gCount += c;
+      if (m.average_rating != null && c > 0) { weighted += m.average_rating * c; denom += c; }
+    }
+    if (denom > 0) gRating = Math.round((weighted / denom) * 10) / 10;
+  } catch {
+    /* rating context is best-effort */
   }
 
-  if (rows.length === 0 && gRows.length === 0) return { error: "No guest feedback yet to summarize." };
+  // What counts as "there's something to report." A windowed (scheduled) report
+  // needs NEW feedback in the period — the standing cumulative rating alone must
+  // not trigger a fresh email every period, or owners get the same numbers on
+  // repeat. An all-time read (the button) treats the rating/count as feedback too.
+  const hasNew = rows.length > 0 || gAll.length > 0;
+  const hasAny = hasNew || gCount > 0 || gRating != null;
+  if (windowed ? !hasNew : !hasAny) {
+    return { error: windowed ? "No new guest feedback this period." : "No guest feedback yet to summarize." };
+  }
+  const showGoogleBlock = windowed ? gAll.length > 0 : (gAll.length > 0 || gCount > 0 || gRating != null);
 
   const { data: org } = await admin.from("organizations").select("owner_mindset").eq("id", opts.orgId).maybeSingle();
   const mindset = (org as { owner_mindset?: string | null } | null)?.owner_mindset ?? "";
@@ -81,16 +130,21 @@ export async function composeReviewSummary(
       return `- [${rt || "no ratings"}]${c ? ` "${c}"` : ""}`;
     })
     .join("\n");
-  const googleLines = gRows.map((r) => `- [${r.star_rating}/5] "${(r.comment ?? "").trim()}"`).join("\n");
+  const googleLines = gCommented.map((r) => `- [${r.star_rating}/5] "${(r.comment ?? "").trim()}"`).join("\n");
+  const googleHeader = `GOOGLE REVIEWS${gRating != null ? ` (overall ${gRating}/5${gCount ? ` across ${gCount} reviews` : ""})` : gCount ? ` (${gCount} reviews)` : ""}`;
+  const googleBlock = showGoogleBlock
+    ? `${googleHeader}:\n${gCommented.length ? googleLines : "(mostly star ratings — few or no written comments yet; report the rating and encourage collecting more written feedback)"}`
+    : "";
 
   const blocks = [
     rows.length > 0 ? `SURVEY FEEDBACK (${rows.length} response${rows.length === 1 ? "" : "s"}):\n${surveyLines}` : "",
-    gRows.length > 0 ? `GOOGLE REVIEWS (${gRows.length} with comments):\n${googleLines}` : "",
+    googleBlock,
   ].filter(Boolean).join("\n\n");
 
+  const scopeNote = windowed ? ` This is only the feedback from ${opts.periodLabel ?? "the recent period"} — summarize just what's here.` : "";
   const prompt = `Combined guest feedback for ${opts.orgName}.${
     mindset ? `\n\nThe owner's mindset (reflect its spirit): ${mindset}` : ""
-  }\n\n${blocks}\n\nWrite the ${includeActions ? "three" : "two"}-section combined readout across both sources.`;
+  }\n\n${blocks}\n\nWrite the ${includeActions ? "three" : "two"}-section combined readout across both sources.${scopeNote}`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -110,7 +164,7 @@ export async function composeReviewSummary(
       .join("\n")
       .trim();
     if (!text) throw new Error("The summary came back empty. Try again.");
-    return { error: null, summary: text, surveyCount: rows.length, googleCount: gRows.length };
+    return { error: null, summary: text, surveyCount: rows.length, googleCount: gAll.length || gCount };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't generate the summary. Try again." };
   }

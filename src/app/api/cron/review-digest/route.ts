@@ -64,7 +64,12 @@ export async function GET(request: NextRequest) {
     // Don't re-send within 3 days (cron reruns / retries).
     if (org.review_digest_sent_at && Date.now() - new Date(org.review_digest_sent_at).getTime() < 3 * DAY_MS) { skipped++; continue; }
 
-    const period = org.review_digest_frequency === "weekly" ? "This week" : "This month";
+    const weekly = org.review_digest_frequency === "weekly";
+    const period = weekly ? "This week" : "This month";
+    // Only summarize the trailing period so each report covers NEW feedback and
+    // never re-reports old reviews: weekly = last 7 days, monthly = last 31 days.
+    const sinceIso = new Date(Date.now() - (weekly ? 7 : 31) * DAY_MS).toISOString();
+    const periodLabel = weekly ? "the last week" : "the last month";
     const ownerEmails = await getOrgOwnerEmails(admin, org.id);
     const ccEmails = (org.review_digest_cc || "").split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
     const { data: locs } = await admin.from("locations").select("id, name, email").eq("org_id", org.id);
@@ -77,8 +82,8 @@ export async function GET(request: NextRequest) {
       const recipients = Array.from(new Set([to, ...ownerEmails, ...ccEmails].filter(Boolean)));
       if (recipients.length === 0) continue;
 
-      const res = await composeReviewSummary(admin, { orgId: org.id, orgName: org.name, scopeLocationId: loc.id });
-      if (res.error || !res.summary) continue; // no feedback for this location yet
+      const res = await composeReviewSummary(admin, { orgId: org.id, orgName: org.name, scopeLocationId: loc.id, sinceIso, periodLabel });
+      if (res.error || !res.summary) continue; // no NEW feedback for this location this period
 
       const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;">
         <p style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#b45309;font-weight:600;margin:0 0 4px;">${esc(period)}'s guest feedback</p>
