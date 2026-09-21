@@ -68,15 +68,20 @@ export async function GET(request: NextRequest) {
     if (recipients.length === 0) { skipped++; continue; }
 
     // Company-wide: scopeLocationId null aggregates every location. Quotes on;
-    // the "This week" action follows the owner's toggle.
+    // the "This week" action follows the owner's toggle. Only the trailing period
+    // (daily = last day, weekly = last 7 days) so each recap covers NEW feedback
+    // and never re-reports old reviews.
+    const sinceIso = new Date(Date.now() - (daily ? 1 : 7) * 24 * HOUR_MS).toISOString();
     const res = await composeReviewSummary(admin, {
       orgId: org.id,
       orgName: org.name,
       scopeLocationId: null,
       includeActions: org.review_exec_include_actions !== false,
       includeQuotes: true,
+      sinceIso,
+      periodLabel: daily ? "the last day" : "the last week",
     });
-    if (res.error || !res.summary) { skipped++; continue; } // no feedback yet
+    if (res.error || !res.summary) { skipped++; continue; } // no NEW feedback this period
 
     const period = daily ? "Today" : "This week";
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;">
