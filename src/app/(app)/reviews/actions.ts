@@ -105,6 +105,47 @@ export async function setReviewDigestCc(value: string): Promise<{ error: string 
   return { error: null };
 }
 
+export type ExecRecapFrequency = "off" | "daily" | "weekly";
+
+// The ownership recap is the company-wide (all-locations) exec view of guest
+// feedback, emailed to specific ownership addresses. It's controlled by the
+// OWNER only — a stricter bar than the per-location digest — so these three are
+// gated to super_admin, not just "reviews full" access.
+export async function setExecRecapFrequency(freq: ExecRecapFrequency): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (profile.accessRole !== "super_admin") return { error: "Only the owner can change this." };
+  if (!["off", "daily", "weekly"].includes(freq)) return { error: "Invalid choice." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ review_exec_frequency: freq }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that setting. Try again." };
+  revalidatePath("/reviews");
+  return { error: null };
+}
+
+export async function setExecRecapEmails(value: string): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (profile.accessRole !== "super_admin") return { error: "Only the owner can change this." };
+  const cleaned = value.split(/[,\n;]+/).map((s) => s.trim()).filter(Boolean).slice(0, 20).join(", ").slice(0, 600);
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ review_exec_emails: cleaned }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that. Try again." };
+  revalidatePath("/reviews");
+  return { error: null };
+}
+
+export async function setExecRecapIncludeActions(enabled: boolean): Promise<{ error: string | null }> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (profile.accessRole !== "super_admin") return { error: "Only the owner can change this." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ review_exec_include_actions: enabled }).eq("id", profile.orgId);
+  if (error) return { error: "Couldn't save that setting. Try again." };
+  revalidatePath("/reviews");
+  return { error: null };
+}
+
 // Toggle the guest survey's "Who took care of you?" staff picker for the whole
 // org. Manager-gated (reviews "full" access), same bar as the AI summary.
 export async function setSurveyAskServer(enabled: boolean): Promise<{ error: string | null }> {

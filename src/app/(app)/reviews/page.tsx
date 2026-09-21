@@ -55,13 +55,20 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   let askServer = true;
   let digestFrequency: "off" | "weekly" | "monthly" = "off";
   let digestCc = "";
+  let execFrequency: "off" | "daily" | "weekly" = "off";
+  let execEmails = "";
+  let execIncludeActions = true;
   {
-    const { data, error } = await admin.from("organizations").select("survey_ask_server, review_digest_frequency, review_digest_cc").eq("id", profile.orgId).maybeSingle();
+    const { data, error } = await admin.from("organizations").select("survey_ask_server, review_digest_frequency, review_digest_cc, review_exec_frequency, review_exec_emails, review_exec_include_actions").eq("id", profile.orgId).maybeSingle();
     if (!error && data) {
       askServer = (data as { survey_ask_server?: boolean }).survey_ask_server !== false;
       const f = (data as { review_digest_frequency?: string }).review_digest_frequency;
       if (f === "weekly" || f === "monthly") digestFrequency = f;
       digestCc = (data as { review_digest_cc?: string | null }).review_digest_cc ?? "";
+      const ef = (data as { review_exec_frequency?: string }).review_exec_frequency;
+      if (ef === "daily" || ef === "weekly") execFrequency = ef;
+      execEmails = (data as { review_exec_emails?: string | null }).review_exec_emails ?? "";
+      execIncludeActions = (data as { review_exec_include_actions?: boolean }).review_exec_include_actions !== false;
     }
   }
 
@@ -175,10 +182,14 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       links={linkRows}
       responses={responses}
       canManage={canManage}
+      isSuperAdmin={profile.accessRole === "super_admin"}
       askServer={askServer}
       hasGoogleReviews={hasGoogleReviews}
       digestFrequency={digestFrequency}
       digestCc={digestCc}
+      execFrequency={execFrequency}
+      execEmails={execEmails}
+      execIncludeActions={execIncludeActions}
       scopeLocationId={effectiveLocation ?? null}
       googleSlot={
         showGoogle ? (

@@ -8,22 +8,36 @@ import { RATING_LABEL } from "@/lib/guest-survey";
 // one AI summary. Shared by the on-demand "Summarize with AI" button and the
 // scheduled digest cron, so both produce the identical three-section read.
 
-const SYSTEM = `You are an elite restaurant operations advisor. You read raw guest feedback for ONE restaurant — from two sources: the restaurant's own guest survey, and its public Google reviews — and write a short, honest, COMBINED readout the operator can act on today. Weigh both sources together; where a theme shows up in both, that's a strong signal worth calling out.
+// Build the system prompt for the read. `includeActions` adds the one-line
+// "This week" fix (owners can turn it off for a pure love/improve read);
+// `includeQuotes` asks the model to back each theme with a short verbatim guest
+// quote from the data.
+function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
+  const sections = [
+    "**What guests love** — 2–4 concise bullets naming the themes guests praised.",
+    "**Where to improve** — 2–4 specific, actionable bullets drawn ONLY from the feedback.",
+  ];
+  if (includeActions) sections.push("**This week** — one sentence: the single highest-leverage fix to make now.");
+  const quoteRule = includeQuotes
+    ? ` Support each theme with a SHORT direct quote pulled verbatim from the feedback, in quotation marks (3–15 words, exactly as written — never paraphrased or invented). If a point has no matching quote in the data, leave it unquoted.`
+    : "";
+  return `You are an elite restaurant operations advisor. You read raw guest feedback for ONE restaurant — from two sources: the restaurant's own guest survey, and its public Google reviews — and write a short, honest, COMBINED readout the operator can act on today. Weigh both sources together; where a theme shows up in both, that's a strong signal worth calling out.
 
 ${HOSPITALITY_DOCTRINE}
 
-Output THREE sections with these exact markdown bold headers and nothing else before or after:
-**What guests love** — 2–4 concise bullets naming the themes guests praised.
-**Where to improve** — 2–4 specific, actionable bullets drawn ONLY from the feedback.
-**This week** — one sentence: the single highest-leverage fix to make now.
-Keep it tight and concrete. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)"). Never invent feedback that isn't in the data.`;
+Output ${includeActions ? "THREE" : "TWO"} section${includeActions ? "s" : "s"} with these exact markdown bold headers and nothing else before or after:
+${sections.join("\n")}
+Keep it tight and concrete. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)").${quoteRule} Never invent feedback or quotes that aren't in the data.`;
+}
 
 export type ComposeResult = { error: string | null; summary?: string; surveyCount?: number; googleCount?: number };
 
 export async function composeReviewSummary(
   admin: SupabaseClient,
-  opts: { orgId: string; orgName: string; scopeLocationId: string | null },
+  opts: { orgId: string; orgName: string; scopeLocationId: string | null; includeActions?: boolean; includeQuotes?: boolean },
 ): Promise<ComposeResult> {
+  const includeActions = opts.includeActions !== false; // default on
+  const includeQuotes = opts.includeQuotes === true; // default off
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { error: "Wingman's AI is temporarily unavailable. Please try again in a moment." };
 
@@ -76,13 +90,13 @@ export async function composeReviewSummary(
 
   const prompt = `Combined guest feedback for ${opts.orgName}.${
     mindset ? `\n\nThe owner's mindset (reflect its spirit): ${mindset}` : ""
-  }\n\n${blocks}\n\nWrite the three-section combined readout across both sources.`;
+  }\n\n${blocks}\n\nWrite the ${includeActions ? "three" : "two"}-section combined readout across both sources.`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: 700, system: SYSTEM, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: includeQuotes ? 1000 : 700, system: buildSystem(includeActions, includeQuotes), messages: [{ role: "user", content: prompt }] }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
