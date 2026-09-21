@@ -17,7 +17,7 @@ function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
     "**Where to improve** — 2–4 short factual bullets. Name the specific problem and, where the data shows it, the likely cause. If there's no real signal, write one line saying so — don't pad.",
   ];
   if (includeActions) sections.push("**This week** — one direct sentence: the single highest-leverage fix. No preamble.");
-  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes that back up the points above. Each on its own line, verbatim in quotation marks (exact text, never paraphrased or invented), tagged (Google) or (survey). Quotes only — no commentary.');
+  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes that back up the points above. Each on its own line, in quotation marks, tagged (Google) or (survey). Use the guest\'s exact words; if a quote runs long, trim to the key phrase with an ellipsis (…) — keep each under ~25 words. Never invent or paraphrase. Quotes only — no commentary.');
   return `You are a restaurant operations analyst writing a guest-feedback briefing for a busy operator. You read raw feedback for ONE restaurant from two sources — the restaurant's own guest survey and its public Google reviews — and report what the data says.
 
 ${HOSPITALITY_DOCTRINE}
@@ -153,7 +153,7 @@ export async function composeReviewSummary(
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: includeQuotes ? 1600 : 1000, system: buildSystem(includeActions, includeQuotes), messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: includeQuotes ? 2600 : 1200, system: buildSystem(includeActions, includeQuotes), messages: [{ role: "user", content: prompt }] }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
