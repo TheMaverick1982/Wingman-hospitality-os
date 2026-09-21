@@ -13,20 +13,20 @@ import { RATING_LABEL } from "@/lib/guest-survey";
 // guest-quotes section at the BOTTOM (positives, then negatives, then quotes).
 function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
   const sections = [
-    "**What guests love** — 2–4 short factual bullets. Name the specific thing praised (dish, person, behavior). No adjectives about the restaurant, no filler.",
-    "**Where to improve** — 2–4 short factual bullets. Name the specific problem and, where the data shows it, the likely cause. If there's no real signal, write one line saying so — don't pad.",
+    "**What guests love** — 2–4 short bullets. Each states one specific thing guests praised (dish, person, behavior), with the count or rating if the data shows it. Just what they said — no interpretation.",
+    "**Where to improve** — 2–4 short bullets. Each states one specific thing guests complained about, with the count or rating if the data shows it. Just what they said — do NOT add the cause, the impact, or a fix. If there's no real signal, write one line saying so.",
   ];
-  if (includeActions) sections.push("**This week** — one direct sentence: the single highest-leverage fix. No preamble.");
-  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes that back up the points above. Each on its own line, in quotation marks, tagged (Google) or (survey). Use the guest\'s exact words; if a quote runs long, trim to the key phrase with an ellipsis (…) — keep each under ~25 words. Never invent or paraphrase. Quotes only — no commentary.');
-  return `You are a restaurant operations analyst writing a guest-feedback briefing for a busy operator. You read raw feedback for ONE restaurant from two sources — the restaurant's own guest survey and its public Google reviews — and report what the data says.
+  if (includeActions) sections.push("**This week** — one direct sentence naming the single fix to make. This is the ONLY place any recommendation belongs.");
+  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes. Each on its own line, in quotation marks, tagged (Google) or (survey). Use the guest\'s exact words; if a quote runs long, trim to the key phrase with an ellipsis (…) — keep each under ~25 words. Never invent or paraphrase. Quotes only — no commentary.');
+  return `You are compiling a guest-feedback report for a restaurant operator from two sources — the restaurant's own guest survey and its public Google reviews. Report ONLY what guests said. Do not interpret it, explain what it means, note its impact, or recommend what to do about it${includeActions ? ' (except the single "This week" line)' : ""}.
 
 ${HOSPITALITY_DOCTRINE}
 
 WRITING STYLE — this matters as much as the content:
-- Direct and factual. State what the data shows; do not editorialize.
-- No soft-pedaling or hedging ("might", "seems", "perhaps", "a bit"), no motivational or congratulatory language, no restating the obvious.
-- Prefer specifics and numbers (ratings, counts, dish names) over adjectives.
-- Every line must carry new information. Cut filler words. Short sentences.
+- Facts only. Report what guests reported — nothing about what it means or what to do.
+- No interpretation, no cause analysis, no impact commentary, no advice${includeActions ? ' outside the "This week" line' : ""}.
+- No soft-pedaling or hedging ("might", "seems", "perhaps", "a bit"), no motivational or congratulatory language.
+- Prefer specifics and numbers (ratings, counts, dish names) over adjectives. Short sentences. Cut filler.
 
 Output the sections below, in this exact order, each with its EXACT markdown bold header and nothing else before or after. ALWAYS include every header, even a light one (write one short factual line rather than dropping it). Finish every section — never cut off mid-sentence:
 ${sections.join("\n")}
@@ -147,7 +147,7 @@ export async function composeReviewSummary(
   const scopeNote = windowed ? ` This is only the feedback from ${opts.periodLabel ?? "the recent period"} — report just what's here.` : "";
   const prompt = `Guest feedback for ${opts.orgName}, across the survey and Google reviews.${
     mindset ? `\n\nThe owner's mindset (for context only): ${mindset}` : ""
-  }\n\n${blocks}\n\nWrite the briefing in the sections specified, direct and factual.${scopeNote}`;
+  }\n\n${blocks}\n\nReport in the sections specified — facts only, no interpretation or advice${includeActions ? ' except the "This week" line' : ""}.${scopeNote}`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
