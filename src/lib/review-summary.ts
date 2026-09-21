@@ -9,25 +9,28 @@ import { RATING_LABEL } from "@/lib/guest-survey";
 // scheduled digest cron, so both produce the identical three-section read.
 
 // Build the system prompt for the read. `includeActions` adds the one-line
-// "This week" fix (owners can turn it off for a pure love/improve read);
-// `includeQuotes` asks the model to back each theme with a short verbatim guest
-// quote from the data.
+// "This week" fix (owners can turn it off); `includeQuotes` adds a verbatim
+// guest-quotes section at the BOTTOM (positives, then negatives, then quotes).
 function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
   const sections = [
-    "**What guests love** — 2–4 concise bullets naming the themes guests praised.",
-    "**Where to improve** — 2–4 specific, actionable bullets drawn ONLY from the feedback.",
+    "**What guests love** — 2–4 short factual bullets. Name the specific thing praised (dish, person, behavior). No adjectives about the restaurant, no filler.",
+    "**Where to improve** — 2–4 short factual bullets. Name the specific problem and, where the data shows it, the likely cause. If there's no real signal, write one line saying so — don't pad.",
   ];
-  if (includeActions) sections.push("**This week** — one sentence: the single highest-leverage fix to make now.");
-  const quoteRule = includeQuotes
-    ? ` Support each theme with a SHORT direct quote pulled verbatim from the feedback, in quotation marks (3–15 words, exactly as written — never paraphrased or invented). If a point has no matching quote in the data, leave it unquoted.`
-    : "";
-  return `You are an elite restaurant operations advisor. You read raw guest feedback for ONE restaurant — from two sources: the restaurant's own guest survey, and its public Google reviews — and write a short, honest, COMBINED readout the operator can act on today. Weigh both sources together; where a theme shows up in both, that's a strong signal worth calling out.
+  if (includeActions) sections.push("**This week** — one direct sentence: the single highest-leverage fix. No preamble.");
+  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes that back up the points above. Each on its own line, verbatim in quotation marks (exact text, never paraphrased or invented), tagged (Google) or (survey). Quotes only — no commentary.');
+  return `You are a restaurant operations analyst writing a guest-feedback briefing for a busy operator. You read raw feedback for ONE restaurant from two sources — the restaurant's own guest survey and its public Google reviews — and report what the data says.
 
 ${HOSPITALITY_DOCTRINE}
 
-Output ALL ${includeActions ? "THREE" : "TWO"} section${includeActions ? "s" : "s"} below, in this order, with these EXACT markdown bold headers and nothing else before or after. ALWAYS include every header even when a section is light — if there's little to say, still write the header with one short honest line (e.g. under "Where to improve": "Nothing significant flagged this period.") rather than dropping the section:
+WRITING STYLE — this matters as much as the content:
+- Direct and factual. State what the data shows; do not editorialize.
+- No soft-pedaling or hedging ("might", "seems", "perhaps", "a bit"), no motivational or congratulatory language, no restating the obvious.
+- Prefer specifics and numbers (ratings, counts, dish names) over adjectives.
+- Every line must carry new information. Cut filler words. Short sentences.
+
+Output the sections below, in this exact order, each with its EXACT markdown bold header and nothing else before or after. ALWAYS include every header, even a light one (write one short factual line rather than dropping it). Finish every section — never cut off mid-sentence:
 ${sections.join("\n")}
-Keep it tight and concrete, and finish every section — do not cut off mid-sentence. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)").${quoteRule} Never invent feedback or quotes that aren't in the data.`;
+Never invent feedback or quotes that aren't in the data.`;
 }
 
 export type ComposeResult = { error: string | null; summary?: string; surveyCount?: number; googleCount?: number };
@@ -141,10 +144,10 @@ export async function composeReviewSummary(
     googleBlock,
   ].filter(Boolean).join("\n\n");
 
-  const scopeNote = windowed ? ` This is only the feedback from ${opts.periodLabel ?? "the recent period"} — summarize just what's here.` : "";
-  const prompt = `Combined guest feedback for ${opts.orgName}.${
-    mindset ? `\n\nThe owner's mindset (reflect its spirit): ${mindset}` : ""
-  }\n\n${blocks}\n\nWrite the ${includeActions ? "three" : "two"}-section combined readout across both sources.${scopeNote}`;
+  const scopeNote = windowed ? ` This is only the feedback from ${opts.periodLabel ?? "the recent period"} — report just what's here.` : "";
+  const prompt = `Guest feedback for ${opts.orgName}, across the survey and Google reviews.${
+    mindset ? `\n\nThe owner's mindset (for context only): ${mindset}` : ""
+  }\n\n${blocks}\n\nWrite the briefing in the sections specified, direct and factual.${scopeNote}`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
