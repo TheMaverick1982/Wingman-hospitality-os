@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Copy, Check, QrCode, Star, MessageSquare, Sparkles, Heart } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, recognizeFromReview, type ReviewDigestFrequency } from "./actions";
+import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, recognizeFromReview, setExecRecapFrequency, setExecRecapEmails, setExecRecapIncludeActions, type ReviewDigestFrequency, type ExecRecapFrequency } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -46,10 +46,14 @@ export function ReviewsClient({
   links,
   responses,
   canManage,
+  isSuperAdmin = false,
   askServer,
   hasGoogleReviews,
   digestFrequency = "off",
   digestCc = "",
+  execFrequency = "off",
+  execEmails = "",
+  execIncludeActions = true,
   scopeLocationId,
   googleSlot,
 }: {
@@ -57,10 +61,14 @@ export function ReviewsClient({
   links: SurveyLinkRow[];
   responses: ReviewRow[];
   canManage: boolean;
+  isSuperAdmin?: boolean;
   askServer: boolean;
   hasGoogleReviews?: boolean;
   digestFrequency?: ReviewDigestFrequency;
   digestCc?: string;
+  execFrequency?: ExecRecapFrequency;
+  execEmails?: string;
+  execIncludeActions?: boolean;
   scopeLocationId: string | null;
   googleSlot?: React.ReactNode;
 }) {
@@ -79,6 +87,37 @@ export function ReviewsClient({
   const [cc, setCc] = useState(digestCc);
   const [ccSaved, setCcSaved] = useState(false);
   const [savingCc, startCc] = useTransition();
+  // Ownership recap (super-admin only): company-wide, to specific owner emails.
+  const [execFreq, setExecFreq] = useState<ExecRecapFrequency>(execFrequency);
+  const [savingExecFreq, startExecFreq] = useTransition();
+  const [execMails, setExecMails] = useState(execEmails);
+  const [execMailsSaved, setExecMailsSaved] = useState(false);
+  const [savingExecMails, startExecMails] = useTransition();
+  const [execActions, setExecActions] = useState(execIncludeActions);
+  const [savingExecActions, startExecActions] = useTransition();
+
+  function chooseExecFreq(next: ExecRecapFrequency) {
+    const prev = execFreq;
+    setExecFreq(next);
+    startExecFreq(async () => {
+      const res = await setExecRecapFrequency(next);
+      if (res.error) setExecFreq(prev);
+    });
+  }
+  function saveExecMails() {
+    setExecMailsSaved(false);
+    startExecMails(async () => {
+      const res = await setExecRecapEmails(execMails);
+      if (!res.error) { setExecMailsSaved(true); setTimeout(() => setExecMailsSaved(false), 2500); }
+    });
+  }
+  function toggleExecActions(next: boolean) {
+    setExecActions(next);
+    startExecActions(async () => {
+      const res = await setExecRecapIncludeActions(next);
+      if (res.error) setExecActions(!next);
+    });
+  }
   // Locally track which reviews have been turned into a Wins-feed shout-out, so
   // the button flips to "Recognized" the moment it's tapped.
   const [recognized, setRecognized] = useState<Record<string, boolean>>(() =>
@@ -230,6 +269,80 @@ export function ReviewsClient({
               </div>
               <p className="text-[12px] text-muted-2 mt-1.5">Each location&rsquo;s report always goes to its managers — these addresses get a copy of every location&rsquo;s report too. Separate several with commas. {ccSaved && <span className="text-olive font-semibold">Saved</span>}</p>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Ownership recap — company-wide (all locations) exec view, to specific
+          ownership addresses. Owner-only: only a Super Admin sees or edits this. */}
+      {isSuperAdmin && (
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">Ownership recap</div>
+              <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-brick bg-brick-tint rounded-full px-2 py-0.5">Owner only</span>
+            </div>
+            <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 shrink-0">
+              {([
+                { id: "off" as const, label: "Off" },
+                { id: "daily" as const, label: "Daily" },
+                { id: "weekly" as const, label: "Weekly" },
+              ]).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => chooseExecFreq(o.id)}
+                  disabled={savingExecFreq}
+                  className={`text-[12.5px] font-semibold rounded-full px-3 py-1.5 transition-colors disabled:opacity-60 ${
+                    execFreq === o.id ? "bg-brick text-white" : "text-charcoal-2 hover:text-ink"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-[13px] text-muted">
+            A single company-wide read across <span className="font-semibold text-charcoal-2">all locations</span>, emailed {execFreq === "off" ? "to ownership" : execFreq === "daily" ? "every morning" : "every Monday"} — what guests love and where to improve, with a few supporting quotes. For ownership; only you can set the recipients.
+          </p>
+
+          {execFreq !== "off" && (
+            <>
+              <div className="mt-4">
+                <label className="block text-[12.5px] font-semibold text-ink mb-1">Send to</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={execMails}
+                    onChange={(e) => setExecMails(e.target.value)}
+                    onBlur={saveExecMails}
+                    placeholder="owner@company.com, partner@company.com"
+                    className="flex-1 min-w-[220px] rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none focus:border-brick"
+                  />
+                  <button type="button" onClick={saveExecMails} disabled={savingExecMails} className="text-[12.5px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick disabled:opacity-50">
+                    {savingExecMails ? "Saving…" : "Save"}
+                  </button>
+                </div>
+                <p className="text-[12px] text-muted-2 mt-1.5">Only these addresses get the ownership recap. Separate several with commas. {execMailsSaved && <span className="text-olive font-semibold">Saved</span>}</p>
+              </div>
+
+              <label className="mt-4 flex items-start justify-between gap-4 cursor-pointer">
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-semibold text-ink">Include the &ldquo;This week&rdquo; action</div>
+                  <p className="text-[12.5px] text-muted-2 mt-0.5">Adds the single highest-leverage fix at the end. Turn off for just &ldquo;what guests love&rdquo; and &ldquo;where to improve.&rdquo;</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={execActions}
+                  disabled={savingExecActions}
+                  onClick={() => toggleExecActions(!execActions)}
+                  className={`relative shrink-0 mt-0.5 h-6 w-11 rounded-full transition-colors disabled:opacity-60 ${execActions ? "bg-brick" : "bg-line-strong"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${execActions ? "translate-x-5" : ""}`} />
+                </button>
+              </label>
+            </>
           )}
         </div>
       )}
