@@ -172,20 +172,24 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
   if (recipients.length === 0) return { error: "Add an email address above first, then send a test." };
 
   // Broken down by location, stacked into one email — same shape the scheduled
-  // recap sends. All-time (no window) so the test always has content.
+  // recap sends. All-time (no window) so the test always has content. Run the
+  // per-location summaries in PARALLEL so the button doesn't sit spinning while
+  // several AI calls go one-by-one.
   const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", profile.orgId).order("name");
   const locations = (locs ?? []) as { id: string; name: string }[];
-  const sections: { locationName: string; summary: string }[] = [];
-  for (const loc of locations) {
-    const r = await composeReviewSummary(admin, {
-      orgId: profile.orgId,
-      orgName: profile.orgName,
-      scopeLocationId: loc.id,
-      includeActions,
-      includeQuotes: true,
-    });
-    if (!r.error && r.summary) sections.push({ locationName: loc.name, summary: r.summary });
-  }
+  const results = await Promise.all(
+    locations.map(async (loc) => {
+      const r = await composeReviewSummary(admin, {
+        orgId: profile.orgId,
+        orgName: profile.orgName,
+        scopeLocationId: loc.id,
+        includeActions,
+        includeQuotes: true,
+      });
+      return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
+    }),
+  );
+  const sections = results.filter((s): s is { locationName: string; summary: string } => s !== null);
   if (sections.length === 0) return { error: "No guest feedback yet to summarize." };
 
   const html = execRecapEmailHtml({
