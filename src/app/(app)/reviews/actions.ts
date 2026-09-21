@@ -171,20 +171,28 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
   if (recipients.length === 0 && profile.email) recipients = [profile.email];
   if (recipients.length === 0) return { error: "Add an email address above first, then send a test." };
 
-  const res = await composeReviewSummary(admin, {
-    orgId: profile.orgId,
-    orgName: profile.orgName,
-    scopeLocationId: null,
-    includeActions,
-    includeQuotes: true,
-  });
-  if (res.error || !res.summary) return { error: res.error || "No guest feedback yet to summarize." };
+  // Broken down by location, stacked into one email — same shape the scheduled
+  // recap sends. All-time (no window) so the test always has content.
+  const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", profile.orgId).order("name");
+  const locations = (locs ?? []) as { id: string; name: string }[];
+  const sections: { locationName: string; summary: string }[] = [];
+  for (const loc of locations) {
+    const r = await composeReviewSummary(admin, {
+      orgId: profile.orgId,
+      orgName: profile.orgName,
+      scopeLocationId: loc.id,
+      includeActions,
+      includeQuotes: true,
+    });
+    if (!r.error && r.summary) sections.push({ locationName: loc.name, summary: r.summary });
+  }
+  if (sections.length === 0) return { error: "No guest feedback yet to summarize." };
 
   const html = execRecapEmailHtml({
     orgName: profile.orgName,
     periodTitle: "Ownership recap — test",
-    subLine: `Sample company-wide guest feedback across all locations${(res.googleCount ?? 0) > 0 ? " — survey + Google reviews" : ""}. This is a test you triggered.`,
-    summary: res.summary,
+    subLine: `Sample company-wide guest feedback, broken down by location. This is a test you triggered.`,
+    sections,
     footer: `Test recap sent from Guests → Reviews. The scheduled recap covers just the recent period; this test shows all-time so there's always something to see.`,
   });
   try {
