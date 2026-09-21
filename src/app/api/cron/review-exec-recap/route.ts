@@ -53,7 +53,11 @@ export async function GET(request: NextRequest) {
     // day, weekly = last 7 days) so each recap covers NEW feedback and never
     // re-reports old reviews. A location with no new feedback this period is
     // simply left out.
-    const sinceIso = new Date(Date.now() - (daily ? 1 : 7) * 24 * HOUR_MS).toISOString();
+    // Window to exactly the feedback since the LAST recap — no re-reporting, no
+    // gaps if a run was skipped. Floor at one period back for the first send.
+    const floorMs = Date.now() - (daily ? 1 : 7) * 24 * HOUR_MS;
+    const lastMs = org.review_exec_sent_at ? new Date(org.review_exec_sent_at).getTime() : 0;
+    const sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
     const periodLabel = daily ? "the last day" : "the last week";
     const includeActions = org.review_exec_include_actions !== false;
     const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", org.id).order("name");
