@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Copy, Check, QrCode, Star, MessageSquare, Sparkles, Heart } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { avgRating, RATING_LABEL } from "@/lib/guest-survey";
-import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, recognizeFromReview, setExecRecapFrequency, setExecRecapEmails, setExecRecapIncludeActions, type ReviewDigestFrequency, type ExecRecapFrequency } from "./actions";
+import { generateReviewSummary, setSurveyAskServer, setReviewDigestFrequency, setReviewDigestCc, recognizeFromReview, setExecRecapFrequency, setExecRecapEmails, setExecRecapIncludeActions, sendExecRecapTestNow, type ReviewDigestFrequency, type ExecRecapFrequency } from "./actions";
 
 // Render **bold** markers inline without dangerouslySetInnerHTML.
 function renderInline(text: string) {
@@ -116,6 +116,18 @@ export function ReviewsClient({
     startExecActions(async () => {
       const res = await setExecRecapIncludeActions(next);
       if (res.error) setExecActions(!next);
+    });
+  }
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [testErr, setTestErr] = useState<string | null>(null);
+  const [sendingTest, startTest] = useTransition();
+  function sendExecTest() {
+    setTestMsg(null);
+    setTestErr(null);
+    startTest(async () => {
+      const res = await sendExecRecapTestNow();
+      if (res.error) setTestErr(res.error);
+      else setTestMsg(`Sent to ${res.sentTo}`);
     });
   }
   // Locally track which reviews have been turned into a Wins-feed shout-out, so
@@ -344,6 +356,20 @@ export function ReviewsClient({
               </label>
             </>
           )}
+
+          <div className="mt-4 pt-4 border-t border-line flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={sendExecTest}
+              disabled={sendingTest}
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brick border border-brick/40 rounded-full px-3.5 py-2 hover:bg-brick-tint disabled:opacity-50"
+            >
+              {sendingTest ? "Sending…" : "Send a test now"}
+            </button>
+            <span className="text-[12px] text-muted-2">
+              {testMsg ? <span className="text-olive font-semibold">{testMsg}</span> : testErr ? <span className="text-danger font-semibold">{testErr}</span> : "Emails the recap to your ownership addresses (or to you if none saved yet)."}
+            </span>
+          </div>
         </div>
       )}
 
