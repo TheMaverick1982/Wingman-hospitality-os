@@ -25,9 +25,9 @@ function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
 
 ${HOSPITALITY_DOCTRINE}
 
-Output ${includeActions ? "THREE" : "TWO"} section${includeActions ? "s" : "s"} with these exact markdown bold headers and nothing else before or after:
+Output ALL ${includeActions ? "THREE" : "TWO"} section${includeActions ? "s" : "s"} below, in this order, with these EXACT markdown bold headers and nothing else before or after. ALWAYS include every header even when a section is light — if there's little to say, still write the header with one short honest line (e.g. under "Where to improve": "Nothing significant flagged this period.") rather than dropping the section:
 ${sections.join("\n")}
-Keep it tight and concrete. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)").${quoteRule} Never invent feedback or quotes that aren't in the data.`;
+Keep it tight and concrete, and finish every section — do not cut off mid-sentence. When a point comes mainly from one source, you may note it briefly (e.g. "(Google)" or "(survey)").${quoteRule} Never invent feedback or quotes that aren't in the data.`;
 }
 
 export type ComposeResult = { error: string | null; summary?: string; surveyCount?: number; googleCount?: number };
@@ -150,7 +150,7 @@ export async function composeReviewSummary(
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: includeQuotes ? 1000 : 700, system: buildSystem(includeActions, includeQuotes), messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: includeQuotes ? 1600 : 1000, system: buildSystem(includeActions, includeQuotes), messages: [{ role: "user", content: prompt }] }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
