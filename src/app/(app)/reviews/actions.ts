@@ -149,9 +149,12 @@ export async function setExecRecapIncludeActions(enabled: boolean): Promise<{ er
 }
 
 // Send the ownership recap right now, so an owner can see it without waiting for
-// the schedule. Company-wide, all-time (so the test always has content to show),
-// respecting the "This week" toggle. Goes to the saved ownership addresses, or to
-// the owner running it if none are set yet. Super-admin only + rate-limited.
+// the schedule. Mirrors the SELECTED cadence's window (daily = the last day,
+// weekly = the last week) so the test matches what the real email will contain;
+// if that window has no new feedback (or the cadence is Off), it falls back to
+// all-time so the test is never empty. Broken down by location, respecting the
+// "This week" toggle. Goes to the saved ownership addresses, or to the owner
+// running it if none are set yet. Super-admin only + rate-limited.
 export async function sendExecRecapTestNow(): Promise<{ error: string | null; sentTo?: string }> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in." };
@@ -162,42 +165,72 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
   const admin = createAdminClient();
   const { data: orgRow } = await admin
     .from("organizations")
-    .select("review_exec_include_actions, review_exec_emails")
+    .select("review_exec_include_actions, review_exec_emails, review_exec_frequency, review_exec_sent_at")
     .eq("id", profile.orgId)
     .maybeSingle();
   const includeActions = (orgRow as { review_exec_include_actions?: boolean } | null)?.review_exec_include_actions !== false;
   const emailsRaw = (orgRow as { review_exec_emails?: string } | null)?.review_exec_emails ?? "";
+  const freq = (orgRow as { review_exec_frequency?: string } | null)?.review_exec_frequency;
+  const lastSentAt = (orgRow as { review_exec_sent_at?: string | null } | null)?.review_exec_sent_at ?? null;
   let recipients = emailsRaw.split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
   if (recipients.length === 0 && profile.email) recipients = [profile.email];
   if (recipients.length === 0) return { error: "Add an email address above first, then send a test." };
 
-  // Broken down by location, stacked into one email — same shape the scheduled
-  // recap sends. All-time (no window) so the test always has content. Run the
-  // per-location summaries in PARALLEL so the button doesn't sit spinning while
-  // several AI calls go one-by-one.
   const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", profile.orgId).order("name");
   const locations = (locs ?? []) as { id: string; name: string }[];
-  const results = await Promise.all(
-    locations.map(async (loc) => {
-      const r = await composeReviewSummary(admin, {
-        orgId: profile.orgId,
-        orgName: profile.orgName,
-        scopeLocationId: loc.id,
-        includeActions,
-        includeQuotes: true,
-      });
-      return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
-    }),
-  );
-  const sections = results.filter((s): s is { locationName: string; summary: string } => s !== null);
+
+  // Compose every location in PARALLEL for the given window (null = all-time).
+  async function composeAll(sinceIso: string | null, periodLabel?: string) {
+    const results = await Promise.all(
+      locations.map(async (loc) => {
+        const r = await composeReviewSummary(admin, {
+          orgId: profile!.orgId,
+          orgName: profile!.orgName,
+          scopeLocationId: loc.id,
+          includeActions,
+          includeQuotes: true,
+          sinceIso: sinceIso ?? undefined,
+          periodLabel,
+        });
+        return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
+      }),
+    );
+    return results.filter((s): s is { locationName: string; summary: string } => s !== null);
+  }
+
+  // Window that matches the selected cadence (floored at one period, like the cron).
+  const DAY_MS = 86400000;
+  let sinceIso: string | null = null;
+  let periodLabel: string | undefined;
+  let windowNote = "all-time";
+  if (freq === "daily" || freq === "weekly") {
+    const floorMs = Date.now() - (freq === "daily" ? 1 : 7) * DAY_MS;
+    const lastMs = lastSentAt ? new Date(lastSentAt).getTime() : 0;
+    sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
+    periodLabel = freq === "daily" ? "the last day" : "the last week";
+    windowNote = freq === "daily" ? "the last day" : "the last week";
+  }
+
+  let sections = await composeAll(sinceIso, periodLabel);
+  let fellBackToAllTime = false;
+  if (sections.length === 0 && sinceIso) {
+    fellBackToAllTime = true;
+    sections = await composeAll(null);
+  }
   if (sections.length === 0) return { error: "No guest feedback yet to summarize." };
+
+  const subLine = fellBackToAllTime
+    ? `Sample company-wide guest feedback, broken down by location. No new feedback in ${windowNote}, so this test shows all-time.`
+    : sinceIso
+      ? `Company-wide guest feedback from ${windowNote}, broken down by location — this is a test of your ${freq} recap.`
+      : `Sample company-wide guest feedback (all-time), broken down by location. Pick a cadence above to test the exact window.`;
 
   const html = execRecapEmailHtml({
     orgName: profile.orgName,
     periodTitle: "Ownership recap — test",
-    subLine: `Sample company-wide guest feedback, broken down by location. This is a test you triggered.`,
+    subLine,
     sections,
-    footer: `Test recap sent from Guests → Reviews. The scheduled recap covers just the recent period; this test shows all-time so there's always something to see.`,
+    footer: `Test recap sent from Guests → Reviews. The scheduled recap covers only new feedback since the last one; this test mirrors that window (or all-time when there's nothing new).`,
   });
   try {
     await sendEmail({ to: recipients, subject: `[Test] Ownership recap — ${profile.orgName}`, html });
