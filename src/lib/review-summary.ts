@@ -17,7 +17,7 @@ function buildSystem(includeActions: boolean, includeQuotes: boolean): string {
     "**Where to improve** — 2–4 short bullets. Each states one specific thing guests complained about, with the count or rating if the data shows it. Just what they said — do NOT add the cause, the impact, or a fix. If there's no real signal, write one line saying so.",
   ];
   if (includeActions) sections.push("**This week** — one direct sentence naming the single fix to make. This is the ONLY place any recommendation belongs.");
-  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes. Each on its own line, in quotation marks, tagged (Google) or (survey). Use the guest\'s exact words; if a quote runs long, trim to the key phrase with an ellipsis (…) — keep each under ~25 words. Never invent or paraphrase. Quotes only — no commentary.');
+  if (includeQuotes) sections.push('**In their words** — 3–6 of the most representative guest quotes, each as its OWN markdown bullet starting with "- ", in quotation marks, tagged (Google) or (survey). Use the guest\'s exact words; if a quote runs long, trim to the key phrase with an ellipsis (…) — keep each under ~25 words. Never invent or paraphrase. Quotes only — no commentary.');
   return `You are compiling a guest-feedback report for a restaurant operator from two sources — the restaurant's own guest survey and its public Google reviews. Report ONLY what guests said. Do not interpret it, explain what it means, note its impact, or recommend what to do about it${includeActions ? ' (except the single "This week" line)' : ""}.
 
 ${HOSPITALITY_DOCTRINE}
