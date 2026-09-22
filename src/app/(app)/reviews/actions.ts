@@ -165,13 +165,12 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
   const admin = createAdminClient();
   const { data: orgRow } = await admin
     .from("organizations")
-    .select("review_exec_include_actions, review_exec_emails, review_exec_frequency, review_exec_sent_at")
+    .select("review_exec_include_actions, review_exec_emails, review_exec_frequency")
     .eq("id", profile.orgId)
     .maybeSingle();
   const includeActions = (orgRow as { review_exec_include_actions?: boolean } | null)?.review_exec_include_actions !== false;
   const emailsRaw = (orgRow as { review_exec_emails?: string } | null)?.review_exec_emails ?? "";
   const freq = (orgRow as { review_exec_frequency?: string } | null)?.review_exec_frequency;
-  const lastSentAt = (orgRow as { review_exec_sent_at?: string | null } | null)?.review_exec_sent_at ?? null;
   let recipients = emailsRaw.split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
   if (recipients.length === 0 && profile.email) recipients = [profile.email];
   if (recipients.length === 0) return { error: "Add an email address above first, then send a test." };
@@ -198,32 +197,34 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
     return results.filter((s): s is { locationName: string; summary: string } => s !== null);
   }
 
-  // Window that matches the selected cadence (floored at one period, like the cron).
+  // Escalating windows, most-recent first, so a quiet day broadens to the last
+  // week, then two weeks — but NEVER further. We never surface month-old feedback
+  // as if it were current. Starts at the selected cadence's window.
   const DAY_MS = 86400000;
-  let sinceIso: string | null = null;
-  let periodLabel: string | undefined;
-  let windowNote = "all-time";
-  if (freq === "daily" || freq === "weekly") {
-    const floorMs = Date.now() - (freq === "daily" ? 1 : 7) * DAY_MS;
-    const lastMs = lastSentAt ? new Date(lastSentAt).getTime() : 0;
-    sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
-    periodLabel = freq === "daily" ? "the last day" : "the last week";
-    windowNote = freq === "daily" ? "the last day" : "the last week";
+  const ladder: { days: number; label: string }[] = [];
+  if (freq === "daily") ladder.push({ days: 1, label: "the last day" });
+  if (freq === "daily" || freq === "weekly") ladder.push({ days: 7, label: "the last week" });
+  ladder.push({ days: 14, label: "the last two weeks" }); // hard cap — nothing older
+  const seenDays = new Set<number>();
+  const steps = ladder.filter((w) => (seenDays.has(w.days) ? false : (seenDays.add(w.days), true)));
+
+  let sections: { locationName: string; summary: string }[] = [];
+  let usedLabel = "";
+  let stepIndex = 0;
+  for (let i = 0; i < steps.length; i++) {
+    const sinceIso = new Date(Date.now() - steps[i].days * DAY_MS).toISOString();
+    sections = await composeAll(sinceIso, steps[i].label);
+    if (sections.length > 0) { usedLabel = steps[i].label; stepIndex = i; break; }
+  }
+  if (sections.length === 0) {
+    return { error: "No guest feedback in the last two weeks to preview." };
   }
 
-  let sections = await composeAll(sinceIso, periodLabel);
-  let fellBackToAllTime = false;
-  if (sections.length === 0 && sinceIso) {
-    fellBackToAllTime = true;
-    sections = await composeAll(null);
-  }
-  if (sections.length === 0) return { error: "No guest feedback yet to summarize." };
-
-  const subLine = fellBackToAllTime
-    ? `Sample company-wide guest feedback, broken down by location. No new feedback in ${windowNote}, so this test shows all-time.`
-    : sinceIso
-      ? `Company-wide guest feedback from ${windowNote}, broken down by location — this is a test of your ${freq} recap.`
-      : `Sample company-wide guest feedback (all-time), broken down by location. Pick a cadence above to test the exact window.`;
+  const primaryLabel = steps[0].label;
+  const broadened = stepIndex > 0;
+  const subLine = broadened
+    ? `Company-wide guest feedback from ${usedLabel}, broken down by location. No new feedback in ${primaryLabel}, so this test broadened to ${usedLabel}.`
+    : `Company-wide guest feedback from ${usedLabel}, broken down by location — a test of your ${freq === "off" ? "" : `${freq} `}recap.`;
 
   const html = execRecapEmailHtml({
     orgName: profile.orgName,

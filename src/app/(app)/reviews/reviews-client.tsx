@@ -374,22 +374,32 @@ export function ReviewsClient({
       )}
 
       {hasGoogle && (
-        <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 w-full sm:w-auto sm:self-start">
-          {([
-            { id: "survey" as const, label: "Survey feedback" },
-            { id: "google" as const, label: "Google reviews" },
-          ]).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`flex-1 sm:flex-none text-[13px] font-semibold rounded-full px-4 py-2 transition-colors ${
-                tab === t.id ? "bg-white text-ink shadow-sm" : "text-charcoal-2 hover:text-ink"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 sm:self-start">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-2">Showing — tap to switch</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {([
+              { id: "survey" as const, label: "Survey feedback", Icon: MessageSquare },
+              { id: "google" as const, label: "Google reviews", Icon: Star },
+            ]).map((t) => {
+              const on = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setTab(t.id)}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 text-[13.5px] font-semibold rounded-full px-4 py-2.5 border transition-colors ${
+                    on
+                      ? "bg-brick text-white border-brick shadow-sm"
+                      : "bg-white text-charcoal-2 border-line-strong hover:border-brick hover:text-brick"
+                  }`}
+                >
+                  <t.Icon size={14} className={on ? "text-white" : "text-muted-2"} strokeWidth={2} />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

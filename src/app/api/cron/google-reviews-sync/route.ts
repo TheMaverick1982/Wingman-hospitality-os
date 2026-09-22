@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncOrgReviews } from "@/lib/google-review-sync";
 
-// Weekly: pull fresh Google reviews for every connected location and refresh its
-// AI insight. Owners can also refresh on demand from Guest Reviews.
+// Daily (10:00 UTC, before the review report crons at 13:00/15:00): pull fresh
+// Google reviews for every connected location and refresh its AI insight, so the
+// scheduled reports always have current data. Owners can also refresh on demand
+// from Guest Reviews, but never need to.
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
