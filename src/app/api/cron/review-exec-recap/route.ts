@@ -48,17 +48,14 @@ export async function GET(request: NextRequest) {
     const recipients = (org.review_exec_emails || "").split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
     if (recipients.length === 0) { skipped++; continue; }
 
-    // Broken down BY LOCATION, stacked into one email. Quotes on; the "This week"
-    // action follows the owner's toggle. Only the trailing period (daily = last
-    // day, weekly = last 7 days) so each recap covers NEW feedback and never
-    // re-reports old reviews. A location with no new feedback this period is
-    // simply left out.
-    // Window to exactly the feedback since the LAST recap — no re-reporting, no
-    // gaps if a run was skipped. Floor at one period back for the first send.
-    const floorMs = Date.now() - (daily ? 1 : 7) * 24 * HOUR_MS;
-    const lastMs = org.review_exec_sent_at ? new Date(org.review_exec_sent_at).getTime() : 0;
-    const sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
-    const periodLabel = daily ? "the last day" : "the last week";
+    // Broken down BY LOCATION, ALL locations listed. The window is the trailing
+    // period (daily = last 24h, weekly = last 7 days) so each recap covers only
+    // NEW feedback and never re-reports old reviews; consecutive runs tile
+    // exactly, so nothing duplicates. Quiet locations still appear with a short
+    // "no new feedback" line so ownership sees the full roster.
+    const windowPhrase = daily ? "the last 24 hours" : "the last 7 days";
+    const sinceIso = new Date(Date.now() - (daily ? 1 : 7) * 24 * HOUR_MS).toISOString();
+    const periodLabel = windowPhrase;
     const includeActions = org.review_exec_include_actions !== false;
     const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", org.id).order("name");
     const locations = (locs ?? []) as { id: string; name: string }[];
@@ -73,17 +70,22 @@ export async function GET(request: NextRequest) {
           sinceIso,
           periodLabel,
         });
-        return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
+        return { locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
       }),
     );
-    const sections = results.filter((s): s is { locationName: string; summary: string } => s !== null);
-    if (sections.length === 0) { skipped++; continue; } // no NEW feedback at any location this period
+    // Only send if at least one location had new feedback — no point emailing an
+    // all-quiet roster.
+    if (!results.some((r) => r.summary)) { skipped++; continue; }
+    const sections = results.map((r) => ({
+      locationName: r.locationName,
+      summary: r.summary ?? `No new guest feedback in ${windowPhrase}.`,
+    }));
 
     const period = daily ? "Today" : "This week";
     const html = execRecapEmailHtml({
       orgName: org.name,
       periodTitle: `${period}'s ownership recap`,
-      subLine: `Company-wide guest feedback, broken down by location.`,
+      subLine: `All locations. Reflects guest feedback received in ${windowPhrase}.`,
       sections,
       footer: `You're getting this because the ownership recap is on for ${org.name}. An owner can change the cadence or recipients under Guests → Reviews.`,
     });
