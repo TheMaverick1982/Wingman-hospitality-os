@@ -177,61 +177,41 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
 
   const { data: locs } = await admin.from("locations").select("id, name").eq("org_id", profile.orgId).order("name");
   const locations = (locs ?? []) as { id: string; name: string }[];
+  if (locations.length === 0) return { error: "No locations to report on yet." };
 
-  // Compose every location in PARALLEL for the given window (null = all-time).
-  async function composeAll(sinceIso: string | null, periodLabel?: string) {
-    const results = await Promise.all(
-      locations.map(async (loc) => {
-        const r = await composeReviewSummary(admin, {
-          orgId: profile!.orgId,
-          orgName: profile!.orgName,
-          scopeLocationId: loc.id,
-          includeActions,
-          includeQuotes: true,
-          sinceIso: sinceIso ?? undefined,
-          periodLabel,
-        });
-        return !r.error && r.summary ? { locationName: loc.name, summary: r.summary } : null;
-      }),
-    );
-    return results.filter((s): s is { locationName: string; summary: string } => s !== null);
-  }
-
-  // Escalating windows, most-recent first, so a quiet day broadens to the last
-  // week, then two weeks — but NEVER further. We never surface month-old feedback
-  // as if it were current. Starts at the selected cadence's window.
+  // Mirror the selected cadence's window (daily = last 24h, weekly = last 7 days;
+  // "off" previews the weekly window). List ALL locations; quiet ones get a short
+  // "no new feedback" line so the test shows the full roster, and the email notes
+  // the window it covers.
   const DAY_MS = 86400000;
-  const ladder: { days: number; label: string }[] = [];
-  if (freq === "daily") ladder.push({ days: 1, label: "the last day" });
-  if (freq === "daily" || freq === "weekly") ladder.push({ days: 7, label: "the last week" });
-  ladder.push({ days: 14, label: "the last two weeks" }); // hard cap — nothing older
-  const seenDays = new Set<number>();
-  const steps = ladder.filter((w) => (seenDays.has(w.days) ? false : (seenDays.add(w.days), true)));
-
-  let sections: { locationName: string; summary: string }[] = [];
-  let usedLabel = "";
-  let stepIndex = 0;
-  for (let i = 0; i < steps.length; i++) {
-    const sinceIso = new Date(Date.now() - steps[i].days * DAY_MS).toISOString();
-    sections = await composeAll(sinceIso, steps[i].label);
-    if (sections.length > 0) { usedLabel = steps[i].label; stepIndex = i; break; }
-  }
-  if (sections.length === 0) {
-    return { error: "No guest feedback in the last two weeks to preview." };
-  }
-
-  const primaryLabel = steps[0].label;
-  const broadened = stepIndex > 0;
-  const subLine = broadened
-    ? `Company-wide guest feedback from ${usedLabel}, broken down by location. No new feedback in ${primaryLabel}, so this test broadened to ${usedLabel}.`
-    : `Company-wide guest feedback from ${usedLabel}, broken down by location — a test of your ${freq === "off" ? "" : `${freq} `}recap.`;
+  const daily = freq === "daily";
+  const windowPhrase = daily ? "the last 24 hours" : "the last 7 days";
+  const sinceIso = new Date(Date.now() - (daily ? 1 : 7) * DAY_MS).toISOString();
+  const results = await Promise.all(
+    locations.map(async (loc) => {
+      const r = await composeReviewSummary(admin, {
+        orgId: profile.orgId,
+        orgName: profile.orgName,
+        scopeLocationId: loc.id,
+        includeActions,
+        includeQuotes: true,
+        sinceIso,
+        periodLabel: windowPhrase,
+      });
+      return { locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
+    }),
+  );
+  const sections = results.map((r) => ({
+    locationName: r.locationName,
+    summary: r.summary ?? `No new guest feedback in ${windowPhrase}.`,
+  }));
 
   const html = execRecapEmailHtml({
     orgName: profile.orgName,
     periodTitle: "Ownership recap — test",
-    subLine,
+    subLine: `All locations. Reflects guest feedback received in ${windowPhrase}. This is a test${freq === "off" ? " (previewing the weekly window — pick a cadence to change it)" : ` of your ${freq} recap`}.`,
     sections,
-    footer: `Test recap sent from Guests → Reviews. The scheduled recap covers only new feedback since the last one; this test mirrors that window (or all-time when there's nothing new).`,
+    footer: `Test recap sent from Guests → Reviews. The scheduled recap covers only feedback received in ${windowPhrase}.`,
   });
   try {
     await sendEmail({ to: recipients, subject: `[Test] Ownership recap — ${profile.orgName}`, html });

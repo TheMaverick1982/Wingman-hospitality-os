@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;">
         <p style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#b45309;font-weight:600;margin:0 0 4px;">${esc(period)}'s guest feedback</p>
         <h1 style="font-size:20px;color:#1a1a1a;margin:0 0 2px;">${esc(loc.name || org.name)}</h1>
-        <p style="font-size:12.5px;color:#888;margin:0 0 16px;">A combined read across your guest survey${(res.googleCount ?? 0) > 0 ? " and Google reviews" : ""}.</p>
+        <p style="font-size:12.5px;color:#888;margin:0 0 16px;">A combined read across your guest survey${(res.googleCount ?? 0) > 0 ? " and Google reviews" : ""} — reflects feedback received in ${esc(periodLabel)}.</p>
         ${summaryToHtml(res.summary)}
         <p style="font-size:12px;color:#aaa;margin-top:20px;border-top:1px solid #eee;padding-top:12px;">You're getting this because ${esc(period.toLowerCase())} guest-feedback reports are on for ${esc(org.name)}. Turn it off under Guests → Reviews.</p>
       </div>`;
