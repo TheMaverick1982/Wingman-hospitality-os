@@ -72,6 +72,9 @@ export function MarketingFooter() {
           <Link href="/privacy" className="text-[#525252]">
             Privacy
           </Link>
+          <Link href="/security" className="text-[#525252]">
+            Security
+          </Link>
           <Link href="/terms" className="text-[#525252]">
             Terms
           </Link>
