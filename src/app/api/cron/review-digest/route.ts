@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { getOrgOwnerEmails } from "@/lib/billing";
 import { composeReviewSummary } from "@/lib/review-summary";
 
 export const maxDuration = 300;
@@ -74,7 +73,10 @@ export async function GET(request: NextRequest) {
     const lastMs = org.review_digest_sent_at ? new Date(org.review_digest_sent_at).getTime() : 0;
     const sinceIso = new Date(Math.max(lastMs, floorMs)).toISOString();
     const periodLabel = weekly ? "the last week" : "the last month";
-    const ownerEmails = await getOrgOwnerEmails(admin, org.id);
+    // This per-location report goes to each location's MANAGERS (its email on
+    // file) + any master-copy addresses — deliberately NOT the owners. Owners get
+    // the single combined all-locations Ownership recap instead, so they aren't
+    // buried in one email per store.
     const ccEmails = (org.review_digest_cc || "").split(/[,\n;]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
     const { data: locs } = await admin.from("locations").select("id, name, email").eq("org_id", org.id);
     const locations = (locs ?? []) as { id: string; name: string; email: string | null }[];
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
     let anySent = false;
     for (const loc of locations) {
       const to = (loc.email || "").trim();
-      const recipients = Array.from(new Set([to, ...ownerEmails, ...ccEmails].filter(Boolean)));
+      const recipients = Array.from(new Set([to, ...ccEmails].filter(Boolean)));
       if (recipients.length === 0) continue;
 
       const res = await composeReviewSummary(admin, { orgId: org.id, orgName: org.name, scopeLocationId: loc.id, sinceIso, periodLabel });
