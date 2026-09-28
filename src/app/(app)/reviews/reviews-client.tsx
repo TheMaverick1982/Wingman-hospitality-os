@@ -240,7 +240,7 @@ export function ReviewsClient({
           <div className="mt-4 pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[13.5px] font-semibold text-ink">Email this report automatically</div>
-              <p className="text-[12.5px] text-muted-2 mt-0.5">Sends each location&rsquo;s report to its managers and you {digest === "off" ? "" : digest === "weekly" ? "every Monday" : "on the 1st"}.</p>
+              <p className="text-[12.5px] text-muted-2 mt-0.5">Sends each location&rsquo;s own report to that location&rsquo;s managers {digest === "off" ? "" : digest === "weekly" ? "every Monday" : "on the 1st"}. Owners get the combined all-locations recap below — not one email per store.</p>
             </div>
             <div className="flex gap-1.5 bg-panel border border-line rounded-full p-1 shrink-0">
               {([
@@ -279,7 +279,7 @@ export function ReviewsClient({
                   {savingCc ? "Saving…" : "Save"}
                 </button>
               </div>
-              <p className="text-[12px] text-muted-2 mt-1.5">Each location&rsquo;s report always goes to its managers — these addresses get a copy of every location&rsquo;s report too. Separate several with commas. {ccSaved && <span className="text-olive font-semibold">Saved</span>}</p>
+              <p className="text-[12px] text-muted-2 mt-1.5">Each location&rsquo;s report goes to that location&rsquo;s managers — these addresses get a copy of every location&rsquo;s report too. Separate several with commas. {ccSaved && <span className="text-olive font-semibold">Saved</span>}</p>
             </div>
           )}
         </div>
