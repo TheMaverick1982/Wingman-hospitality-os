@@ -35,7 +35,7 @@ export async function guardPublicForm(
   const ip = ((await headers()).get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
 
   if (!(await verifyTurnstile(formData.get("cf-turnstile-response") as string | null, ip))) {
-    return { ok: false, reason: "turnstile", message: "Couldn't verify you're human. Please refresh the page and try again." };
+    return { ok: false, reason: "turnstile", message: "We couldn't verify you're human. This usually happens in an in-app or automated browser (for example, the browser inside ChatGPT or a link opened from within another app). Please open this page directly in your phone or computer's browser — Safari or Chrome — and submit again." };
   }
 
   if (opts?.rateKey) {
