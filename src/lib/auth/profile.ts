@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -51,7 +52,12 @@ export type CurrentProfile = {
   franchiseRole: "admin" | "viewer" | null;
 };
 
-export async function getCurrentProfile(): Promise<CurrentProfile | null> {
+// Wrapped in React's per-request cache(): the layout and nearly every page both
+// call getCurrentProfile(), so without this it re-runs its auth + profile reads
+// several times per navigation. cache() makes it run once per request (it takes
+// no args, and request cookies are constant within a request), deduping all
+// call sites for free.
+export const getCurrentProfile = cache(async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const supabase = await createClient();
 
   // getUser() cryptographically validates the session cookie, so `user.id` is
@@ -183,4 +189,4 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   }
 
   return base;
-}
+});
