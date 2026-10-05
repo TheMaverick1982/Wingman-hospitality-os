@@ -32,22 +32,35 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile) redirect("/onboarding");
 
   // Record a login for the staff-activity trail (throttled to once per session).
-  await logLoginOncePerWindow(profile.orgId, profile.userId, profile.fullName);
+  // Fire-and-forget: this is a side-effect write and must never sit on the
+  // critical path of rendering every logged-in page.
+  void logLoginOncePerWindow(profile.orgId, profile.userId, profile.fullName).catch(() => {});
 
   const isSuperAdmin = profile.accessRole === "super_admin";
-  // Read the shell's location list by the profile's validated org id with the
-  // service-role client — never the RLS client — so a transient chunked-cookie
-  // auth blackout can't return zero rows and make the location switcher vanish.
-  const locations = await getOrgLocationsById(profile.orgId);
-  // Keep "Start here" in the sidebar through the whole 14-day launch — including
-  // the usage milestones — not just until setup is done.
-  const launch = isSuperAdmin ? await getLaunchPlan() : null;
+  const canAnswerQuestions = getSectionAccess(profile.accessRole, "questions", profile.permissionOverrides) === "full";
 
+  // Everything the shell needs is independent once we have the profile, so fetch
+  // it all in PARALLEL instead of one await after another — the layout runs on
+  // every logged-in page, so serial round-trips made every navigation sluggish.
+  // The guests read pulls only the three fields repeat-rate needs (not incentive
+  // / notes), keeping the per-navigation payload small as guest data grows.
   const supabase = await createClient();
-  const { data: guests } = await supabase
-    .from("guests")
-    .select("id, guest_visits(visit_number, visit_date, location_id, incentive, notes)");
-  const guestRows = (guests ?? []) as GuestWithVisits[];
+  const [locations, launch, guestsRes, questionsRes] = await Promise.all([
+    // Location list by the validated org id via the service-role client — never
+    // the RLS client — so a transient chunked-cookie auth blackout can't return
+    // zero rows and make the location switcher vanish.
+    getOrgLocationsById(profile.orgId),
+    // "Start here" stays in the sidebar through the 14-day launch (super admin).
+    isSuperAdmin ? getLaunchPlan() : Promise.resolve(null),
+    supabase.from("guests").select("id, guest_visits(visit_number, visit_date, location_id)"),
+    // Badge on the Questions nav — only for those who can answer. Guarded so a
+    // not-yet-applied migration can't break the shell.
+    canAnswerQuestions
+      ? supabase.from("staff_questions").select("id", { count: "exact", head: true }).eq("status", "open").is("deleted_at", null)
+      : Promise.resolve({ count: 0 as number | null }),
+  ]);
+  const guestRows = (guestsRes.data ?? []) as unknown as GuestWithVisits[];
+  const openQuestions = (questionsRes as { count?: number | null }).count ?? 0;
 
   const cookieStore = await cookies();
   const isImpersonating = Boolean(cookieStore.get("wingman_impersonator_refresh")?.value);
@@ -81,24 +94,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const fallbackRepeatRate = showsAllLocationsDefault
     ? computeRepeatRate(guestRows, null)
     : computeRepeatRate(guestRows, homeLocation?.id ?? profile.locationId ?? null);
-
-  // Badge on the Questions nav: how many staff questions are waiting for a
-  // manager. Only computed for those who can answer (RLS already scopes the
-  // count to this org); guarded so a not-yet-applied migration can't break the
-  // whole app shell.
-  let openQuestions = 0;
-  if (getSectionAccess(profile.accessRole, "questions", profile.permissionOverrides) === "full") {
-    try {
-      const { count } = await supabase
-        .from("staff_questions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "open")
-        .is("deleted_at", null);
-      openQuestions = count ?? 0;
-    } catch {
-      openQuestions = 0;
-    }
-  }
 
   return (
     <div className="fixed inset-0 flex overflow-hidden">
