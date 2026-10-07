@@ -116,6 +116,25 @@ function sourceLabel(s: string): string {
 // Common presets offered as one-tap "tag this link" buttons for the owner.
 const SOURCE_PRESETS = ["craigslist", "facebook", "instagram", "indeed", "flyer", "qr"];
 
+// Availability is captured as free text on the application ("Weeknights &
+// weekends, can start next week"), so the filter matches keywords rather than a
+// fixed enum. Each bucket is an OR of patterns; an applicant matches a bucket if
+// their availability text contains any of them.
+const AVAILABILITY_BUCKETS: { id: string; label: string; test: RegExp }[] = [
+  { id: "weekdays", label: "Weekdays", test: /weekday|week day|monday|tuesday|wednesday|thursday|friday|\bmon\b|\btues?\b|\bweds?\b|\bthurs?\b|\bfri\b|m-?f|weeknight/ },
+  { id: "weekends", label: "Weekends", test: /weekend|saturday|sunday|\bsat\b|\bsun\b/ },
+  { id: "mornings", label: "Mornings / days", test: /morning|breakfast|\bam\b|open(?:ing|er)?|day ?time|\bdays?\b|lunch|brunch/ },
+  { id: "nights", label: "Nights / evenings", test: /night|evening|\bpm\b|dinner|clos(?:e|ing|er)|late/ },
+  { id: "fulltime", label: "Full-time", test: /full[\s-]?time|\bfull\b|40\s?h/ },
+  { id: "parttime", label: "Part-time", test: /part[\s-]?time|\bpart\b/ },
+  { id: "immediate", label: "Can start now", test: /immediate|\basap\b|right away|start (?:now|today|immediately|this week)|available now|any ?time|anytime|open availability|flexible|whenever/ },
+];
+function matchesAvailability(text: string, bucketId: string): boolean {
+  const b = AVAILABILITY_BUCKETS.find((x) => x.id === bucketId);
+  if (!b) return true;
+  return b.test.test((text || "").toLowerCase());
+}
+
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
   { value: "contacted", label: "Reviewed", cls: "bg-[#FDF3E1] text-[#B45309]" },
@@ -151,6 +170,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const [tab, setTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [availFilter, setAvailFilter] = useState<string>("all");
   // Sort order. "fit" keeps the best→worst tier grouping (the default); the date
   // orders render a flat chronological list instead.
   const [sort, setSort] = useState<"fit" | "newest" | "oldest">("fit");
@@ -227,10 +247,17 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
     for (const a of pool) { const d = a.department || "Any role"; m.set(d, (m.get(d) ?? 0) + 1); }
     return [...m.entries()].sort((x, y) => y[1] - x[1]);
   })();
+  // Availability buckets present in the current pool (with counts), so we only
+  // show filters that actually match someone. Hidden entirely if no applicant
+  // provided availability text.
+  const availCounts = AVAILABILITY_BUCKETS
+    .map((b) => [b, pool.filter((a) => b.test.test((a.availability || "").toLowerCase())).length] as const)
+    .filter(([, n]) => n > 0);
   const shown = pool.filter(
     (a) =>
       (tab === "archive" || filter === "all" || a.status === filter) &&
-      (roleFilter === "all" || (a.department || "Any role") === roleFilter),
+      (roleFilter === "all" || (a.department || "Any role") === roleFilter) &&
+      (availFilter === "all" || matchesAvailability(a.availability, availFilter)),
   );
   // Only group by tier when at least one shown applicant has actually been
   // screened; otherwise a single flat (score-then-date) list reads cleaner.
@@ -424,7 +451,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         {([["active", "Applications", activeApps.length], ["archive", "Rejected (Archived)", archivedApps.length]] as const).map(([key, label, n]) => (
           <button
             key={key}
-            onClick={() => { setTab(key); setFilter("all"); setRoleFilter("all"); }}
+            onClick={() => { setTab(key); setFilter("all"); setRoleFilter("all"); setAvailFilter("all"); }}
             className={`text-[13px] font-semibold px-3.5 py-2 -mb-px border-b-2 transition-colors ${
               tab === key ? "border-brick text-brick-dark" : "border-transparent text-muted hover:text-charcoal-2"
             }`}
@@ -475,6 +502,33 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
               }`}
             >
               {role} <span className="tabular-nums">· {n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Availability filter — keyword buckets matched against each applicant's
+          free-text availability. Only shows the buckets that match someone. */}
+      {availCounts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Availability</span>
+          <button
+            onClick={() => setAvailFilter("all")}
+            className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+              availFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+            }`}
+          >
+            Any time
+          </button>
+          {availCounts.map(([b, n]) => (
+            <button
+              key={b.id}
+              onClick={() => setAvailFilter(b.id)}
+              className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                availFilter === b.id ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+              }`}
+            >
+              {b.label} <span className="tabular-nums">· {n}</span>
             </button>
           ))}
         </div>
