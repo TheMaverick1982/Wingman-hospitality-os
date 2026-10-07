@@ -177,6 +177,7 @@ export type ApplicantDetail = {
   source: string;
   appliedDate: string;
   availability: string;
+  availabilityShifts: string[];
   message: string;
   customAnswers: { label: string; value: string }[];
   screeningGrade: ScreeningGrade | null;
@@ -196,11 +197,11 @@ export async function getApplicantDetail(id: string): Promise<{ detail: Applican
   const admin = createAdminClient();
   const { data } = await admin
     .from("job_applications")
-    .select("id, name, email, phone, department, location_id, availability, message, status, source, created_at, custom_answers, screening_answers, screening_grade, resume_path")
+    .select("id, name, email, phone, department, location_id, availability, availability_shifts, message, status, source, created_at, custom_answers, screening_answers, screening_grade, resume_path")
     .eq("id", id)
     .eq("org_id", profile.orgId)
     .maybeSingle();
-  const r = data as (Row & { resume_path: string | null }) | null;
+  const r = data as (Row & { resume_path: string | null; availability_shifts?: unknown }) | null;
   if (!r) return { detail: null, error: "Applicant not found." };
 
   // Enforce the same location scoping as the list.
@@ -225,6 +226,7 @@ export async function getApplicantDetail(id: string): Promise<{ detail: Applican
       source: r.source || "",
       appliedDate: r.created_at,
       availability: r.availability ?? "",
+      availabilityShifts: Array.isArray(r.availability_shifts) ? (r.availability_shifts as string[]) : [],
       message: r.message ?? "",
       customAnswers: (r.custom_answers ?? []).filter((c) => String(c.value ?? "").trim()).map((c) => ({ label: c.label, value: String(c.value) })),
       screeningGrade: r.screening_grade ?? null,
