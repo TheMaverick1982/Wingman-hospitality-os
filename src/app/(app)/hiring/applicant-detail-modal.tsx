@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { TIER_META } from "@/lib/screening";
 import { getApplicantDetail, type ApplicantDetail } from "./ask-applicants-actions";
 import { getResumeUrl } from "./applicant-actions";
+import { AvailabilityView } from "./availability-view";
 
 const sectionLabel = "text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mb-1.5";
 
@@ -78,10 +79,10 @@ export function ApplicantDetailModal({ id, onClose }: { id: string; onClose: () 
             </div>
           )}
 
-          {detail.availability && (
+          {(detail.availabilityShifts.length > 0 || detail.availability) && (
             <div>
               <div className={sectionLabel}>Availability</div>
-              <p className="text-[13.5px] text-charcoal-2 whitespace-pre-wrap">{detail.availability}</p>
+              <AvailabilityView shifts={detail.availabilityShifts} text={detail.availability} />
             </div>
           )}
 

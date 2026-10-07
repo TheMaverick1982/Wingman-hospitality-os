@@ -7,6 +7,7 @@ import type { CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
 import { utcToWallClockInput, formatInZone, zoneAbbrev } from "@/lib/timezone";
 import { AVAIL_BUCKETS, applicantMatchesBucket } from "@/lib/availability";
+import { AvailabilityView } from "./availability-view";
 
 export type Applicant = {
   id: string;
@@ -680,7 +681,12 @@ function ApplicantCard({ a }: { a: Applicant }) {
       {!open ? null : (
       <div className="px-5 pb-5 -mt-1">
       {(a.email || a.phone) && <div className="text-[13px] text-charcoal-2">{[a.email, a.phone].filter(Boolean).join(" · ")}</div>}
-      {a.availability && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Availability:</span> {a.availability}</div>}
+      {(a.availabilityShifts.length > 0 || a.availability) && (
+        <div className="mt-2">
+          <div className="text-[12px] font-semibold text-charcoal-2 mb-1">Availability</div>
+          <AvailabilityView shifts={a.availabilityShifts} text={a.availability} />
+        </div>
+      )}
       {a.preferredVisitAt && <div className="text-[13px] text-muted mt-1"><span className="font-semibold text-charcoal-2">Wants to come in:</span> {formatInZone(a.preferredVisitAt, a.locationTimezone, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>}
       {a.message && <p className="text-[13px] text-muted mt-1 whitespace-pre-wrap">{a.message}</p>}
       {a.customAnswers.length > 0 && (
