@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { isNotificationEnabled } from "@/lib/notifications";
 import { builtinSetting, normalizeFormConfig, type CustomAnswer } from "@/lib/application-form";
+import { normalizeShifts, summarizeShifts } from "@/lib/availability";
 import { gradeScreeningAnswers } from "@/lib/hiring/screening-grader";
 import { isScreeningAxis, type ScreeningAnswer } from "@/lib/screening";
 import { guardPublicForm } from "@/lib/public-form-guard";
@@ -97,8 +98,19 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
 
   const locationId = locF.enabled && !openingIsCorporate ? (String(formData.get("locationId") || "").trim() || null) : null;
   if (locF.enabled && locF.required && !openingIsCorporate && !locationId) return { error: `Please choose a ${locF.label.toLowerCase()}.` };
-  const availability = availF.enabled ? String(formData.get("availability") || "").trim() : "";
-  if (availF.enabled && availF.required && !availability) return { error: `Please fill in ${availF.label.toLowerCase()}.` };
+  // Availability is now a weekly shift grid (or "anytime"). We store the
+  // structured picks AND a readable summary in the existing free-text column so
+  // cards/emails/exports keep working unchanged.
+  let availabilityShifts: string[] = [];
+  if (availF.enabled) {
+    try {
+      availabilityShifts = normalizeShifts(JSON.parse(String(formData.get("availability_shifts") || "[]")));
+    } catch {
+      availabilityShifts = [];
+    }
+  }
+  const availability = availF.enabled ? summarizeShifts(availabilityShifts) : "";
+  if (availF.enabled && availF.required && availabilityShifts.length === 0) return { error: `Please choose your ${availF.label.toLowerCase()}.` };
   const message = msgF.enabled ? String(formData.get("message") || "").trim() : "";
   if (msgF.enabled && msgF.required && !message) return { error: `Please fill in ${msgF.label.toLowerCase()}.` };
   const visit = visitF.enabled ? String(formData.get("preferredVisit") || "").trim() : "";
@@ -176,6 +188,7 @@ export async function submitApplication(slug: string, _prev: ApplyState, formDat
       email,
       phone,
       availability,
+      availability_shifts: availabilityShifts,
       message,
       preferred_visit_at: preferredVisitAt,
       // A tagged link (?src=craigslist) wins; otherwise fall back to how they

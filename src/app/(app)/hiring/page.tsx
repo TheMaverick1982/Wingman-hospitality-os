@@ -95,7 +95,7 @@ export default async function HiringPage({
   // used for custom_answers / screening / form config throughout this page.
   let applicationsQ = hiringAdmin
     .from("job_applications")
-    .select("id, name, department, location_id, email, phone, availability, message, resume_path, preferred_visit_at, status, created_at, source")
+    .select("id, name, department, location_id, email, phone, availability, availability_shifts, message, resume_path, preferred_visit_at, status, created_at, source")
     .eq("org_id", profile.orgId)
     .order("created_at", { ascending: false });
   if (scopeOr) applicationsQ = applicationsQ.or(scopeOr);
@@ -233,7 +233,7 @@ export default async function HiringPage({
 
   const allApplications: Applicant[] = ((applications ?? []) as {
     id: string; name: string; department: string; location_id: string | null; email: string; phone: string;
-    availability: string; message: string; resume_path: string | null; preferred_visit_at: string | null;
+    availability: string; availability_shifts: unknown; message: string; resume_path: string | null; preferred_visit_at: string | null;
     status: string; created_at: string; source: string | null;
   }[]).map((a) => ({
     id: a.id,
@@ -245,6 +245,7 @@ export default async function HiringPage({
     email: a.email,
     phone: a.phone,
     availability: a.availability,
+    availabilityShifts: Array.isArray(a.availability_shifts) ? (a.availability_shifts as string[]) : [],
     message: a.message,
     hasResume: Boolean(a.resume_path),
     source: a.source || "link",

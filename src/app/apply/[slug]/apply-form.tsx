@@ -6,6 +6,7 @@ import { submitApplication, type ApplyState } from "./actions";
 import { builtinSetting, type ApplicationFormConfig, type CustomField } from "@/lib/application-form";
 import { HoneypotField } from "@/components/honeypot-field";
 import { TurnstileWidget } from "@/components/turnstile-widget";
+import { AvailabilityGrid } from "./availability-grid";
 
 const initial: ApplyState = { error: null };
 const field = "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none focus:border-brick";
@@ -165,10 +166,7 @@ export function ApplyForm({
         )}
 
         {availability.enabled && (
-          <div>
-            <label className={label}>{availability.label}<Req on={availability.required} /></label>
-            <input name="availability" required={availability.required} className={field} placeholder="e.g. Weeknights & weekends, can start next week" />
-          </div>
+          <AvailabilityGrid label={availability.label} required={availability.required} />
         )}
 
         {preferredVisit.enabled && (

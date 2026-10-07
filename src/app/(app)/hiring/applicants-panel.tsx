@@ -6,6 +6,7 @@ import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplicat
 import type { CustomAnswer } from "@/lib/application-form";
 import { AXIS_LABEL, TIER_META, type ScreeningGrade, type ScreeningAnswer, type ScreeningTier } from "@/lib/screening";
 import { utcToWallClockInput, formatInZone, zoneAbbrev } from "@/lib/timezone";
+import { AVAIL_BUCKETS, applicantMatchesBucket } from "@/lib/availability";
 
 export type Applicant = {
   id: string;
@@ -17,6 +18,7 @@ export type Applicant = {
   email: string;
   phone: string;
   availability: string;
+  availabilityShifts: string[];
   message: string;
   hasResume: boolean;
   source: string;
@@ -116,24 +118,6 @@ function sourceLabel(s: string): string {
 // Common presets offered as one-tap "tag this link" buttons for the owner.
 const SOURCE_PRESETS = ["craigslist", "facebook", "instagram", "indeed", "flyer", "qr"];
 
-// Availability is captured as free text on the application ("Weeknights &
-// weekends, can start next week"), so the filter matches keywords rather than a
-// fixed enum. Each bucket is an OR of patterns; an applicant matches a bucket if
-// their availability text contains any of them.
-const AVAILABILITY_BUCKETS: { id: string; label: string; test: RegExp }[] = [
-  { id: "weekdays", label: "Weekdays", test: /weekday|week day|monday|tuesday|wednesday|thursday|friday|\bmon\b|\btues?\b|\bweds?\b|\bthurs?\b|\bfri\b|m-?f|weeknight/ },
-  { id: "weekends", label: "Weekends", test: /weekend|saturday|sunday|\bsat\b|\bsun\b/ },
-  { id: "mornings", label: "Mornings / days", test: /morning|breakfast|\bam\b|open(?:ing|er)?|day ?time|\bdays?\b|lunch|brunch/ },
-  { id: "nights", label: "Nights / evenings", test: /night|evening|\bpm\b|dinner|clos(?:e|ing|er)|late/ },
-  { id: "fulltime", label: "Full-time", test: /full[\s-]?time|\bfull\b|40\s?h/ },
-  { id: "parttime", label: "Part-time", test: /part[\s-]?time|\bpart\b/ },
-  { id: "immediate", label: "Can start now", test: /immediate|\basap\b|right away|start (?:now|today|immediately|this week)|available now|any ?time|anytime|open availability|flexible|whenever/ },
-];
-function matchesAvailability(text: string, bucketId: string): boolean {
-  const b = AVAILABILITY_BUCKETS.find((x) => x.id === bucketId);
-  if (!b) return true;
-  return b.test.test((text || "").toLowerCase());
-}
 
 const STATUS: { value: string; label: string; cls: string }[] = [
   { value: "new", label: "New", cls: "bg-brick-tint text-brick-dark" },
@@ -248,16 +232,17 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
     return [...m.entries()].sort((x, y) => y[1] - x[1]);
   })();
   // Availability buckets present in the current pool (with counts), so we only
-  // show filters that actually match someone. Hidden entirely if no applicant
-  // provided availability text.
-  const availCounts = AVAILABILITY_BUCKETS
-    .map((b) => [b, pool.filter((a) => b.test.test((a.availability || "").toLowerCase())).length] as const)
+  // show filters that actually match someone. Works across new applications (the
+  // ticked shift grid) and older ones (free-text availability) via the shared
+  // matcher. Hidden entirely if no applicant has any availability on file.
+  const availCounts = AVAIL_BUCKETS
+    .map((b) => [b, pool.filter((a) => applicantMatchesBucket(a.availabilityShifts, a.availability, b.id)).length] as const)
     .filter(([, n]) => n > 0);
   const shown = pool.filter(
     (a) =>
       (tab === "archive" || filter === "all" || a.status === filter) &&
       (roleFilter === "all" || (a.department || "Any role") === roleFilter) &&
-      (availFilter === "all" || matchesAvailability(a.availability, availFilter)),
+      (availFilter === "all" || applicantMatchesBucket(a.availabilityShifts, a.availability, availFilter)),
   );
   // Only group by tier when at least one shown applicant has actually been
   // screened; otherwise a single flat (score-then-date) list reads cleaner.
