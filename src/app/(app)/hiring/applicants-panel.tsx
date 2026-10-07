@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type Dispatch, type SetStateAction } from "react";
 import { Inbox, Paperclip, Trash2, CalendarClock, Link2, Check, Code2, ImagePlus, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import { updateApplicationStatus, confirmInterview, getResumeUrl, deleteApplication, updateApplicationsCc, uploadOrgLogo, removeOrgLogo, updateApplySlug, saveRejectionDetails, sendApplicantReply } from "./applicant-actions";
 import type { CustomAnswer } from "@/lib/application-form";
@@ -154,8 +154,18 @@ function byScoreThenDate(a: Applicant, b: Applicant): number {
 export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsCc, logoUrl }: { applicants: Applicant[]; applyUrl: string | null; applySlug: string | null; applicationsCc: string; logoUrl: string | null }) {
   const [tab, setTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState<string>("all");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [availFilter, setAvailFilter] = useState<string>("all");
+  // Role and availability are multi-select: an empty set means "all". Within a
+  // dimension the selected chips are OR'd (e.g. Bartender OR Server); the two
+  // dimensions are AND'd together (those roles AND one of these availabilities).
+  const [roleSel, setRoleSel] = useState<Set<string>>(new Set());
+  const [availSel, setAvailSel] = useState<Set<string>>(new Set());
+  const toggleIn = (setter: Dispatch<SetStateAction<Set<string>>>, v: string) =>
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v);
+      else next.add(v);
+      return next;
+    });
   // Sort order. "fit" keeps the best→worst tier grouping (the default); the date
   // orders render a flat chronological list instead.
   const [sort, setSort] = useState<"fit" | "newest" | "oldest">("fit");
@@ -242,8 +252,8 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
   const shown = pool.filter(
     (a) =>
       (tab === "archive" || filter === "all" || a.status === filter) &&
-      (roleFilter === "all" || (a.department || "Any role") === roleFilter) &&
-      (availFilter === "all" || applicantMatchesBucket(a.availabilityShifts, a.availability, availFilter)),
+      (roleSel.size === 0 || roleSel.has(a.department || "Any role")) &&
+      (availSel.size === 0 || [...availSel].some((b) => applicantMatchesBucket(a.availabilityShifts, a.availability, b))),
   );
   // Only group by tier when at least one shown applicant has actually been
   // screened; otherwise a single flat (score-then-date) list reads cleaner.
@@ -437,7 +447,7 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         {([["active", "Applications", activeApps.length], ["archive", "Rejected (Archived)", archivedApps.length]] as const).map(([key, label, n]) => (
           <button
             key={key}
-            onClick={() => { setTab(key); setFilter("all"); setRoleFilter("all"); setAvailFilter("all"); }}
+            onClick={() => { setTab(key); setFilter("all"); setRoleSel(new Set()); setAvailSel(new Set()); }}
             className={`text-[13px] font-semibold px-3.5 py-2 -mb-px border-b-2 transition-colors ${
               tab === key ? "border-brick text-brick-dark" : "border-transparent text-muted hover:text-charcoal-2"
             }`}
@@ -472,9 +482,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
           <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Role</span>
           <button
-            onClick={() => setRoleFilter("all")}
+            onClick={() => setRoleSel(new Set())}
             className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-              roleFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+              roleSel.size === 0 ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
             }`}
           >
             All roles
@@ -482,9 +492,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
           {roleCounts.map(([role, n]) => (
             <button
               key={role}
-              onClick={() => setRoleFilter(role)}
+              onClick={() => toggleIn(setRoleSel, role)}
               className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                roleFilter === role ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+                roleSel.has(role) ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
               }`}
             >
               {role} <span className="tabular-nums">· {n}</span>
@@ -499,9 +509,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
           <span className="text-[11.5px] font-semibold uppercase tracking-[0.05em] text-muted-2 mr-1">Availability</span>
           <button
-            onClick={() => setAvailFilter("all")}
+            onClick={() => setAvailSel(new Set())}
             className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-              availFilter === "all" ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+              availSel.size === 0 ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
             }`}
           >
             Any time
@@ -509,9 +519,9 @@ export function ApplicantsPanel({ applicants, applyUrl, applySlug, applicationsC
           {availCounts.map(([b, n]) => (
             <button
               key={b.id}
-              onClick={() => setAvailFilter(b.id)}
+              onClick={() => toggleIn(setAvailSel, b.id)}
               className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                availFilter === b.id ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
+                availSel.has(b.id) ? "border-brick bg-brick-tint text-brick-dark" : "border-line text-muted hover:border-line-strong"
               }`}
             >
               {b.label} <span className="tabular-nums">· {n}</span>
