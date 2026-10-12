@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isHoneypotFilled } from "@/lib/honeypot";
+import { scoreContactSpam } from "@/lib/contact-spam";
 import { sendEmail } from "@/lib/email";
 import { BILLING_OWNER_EMAIL } from "@/lib/billing";
 import { getVisitorId } from "@/lib/visitor";
@@ -48,6 +49,12 @@ export async function submitContact(input: {
     return { error: "Too many submissions from this connection. Please try again later.", ok: false };
   }
 
+  // Heuristic spam check (the form has no CAPTCHA). Flagged submissions are still
+  // recorded below for the audit trail, but we skip the team email + CRM mirror
+  // so bot noise never reaches the inbox or the sales pipeline. Return ok either
+  // way — a bot gets no signal about why it was dropped.
+  const spam = scoreContactSpam({ name, email, phone, message });
+
   // Consent record: store the verbatim language for whatever the user checked.
   const consentParts: string[] = [`v${SMS_CONSENT_VERSION}`];
   if (optInTransactional) consentParts.push(`[transactional] ${TRANSACTIONAL_CONSENT}`);
@@ -65,8 +72,17 @@ export async function submitContact(input: {
     consent_text: consentText,
     ip,
     user_agent: userAgent,
+    spam_score: spam.score,
+    spam_reasons: spam.reasons.join(","),
   });
   if (error) return { error: error.message, ok: false };
+
+  // Looks like bot spam: recorded above, but don't email the team or mirror it
+  // into the CRM pipeline. Pretend success so the bot learns nothing.
+  if (spam.isSpam) {
+    console.info("[contact] dropped suspected spam", { score: spam.score, reasons: spam.reasons });
+    return { error: null, ok: true };
+  }
 
   // Mirror into the CRM (best-effort) so the team sees it in the pipeline.
   try {
