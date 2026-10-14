@@ -83,15 +83,16 @@ export async function saveContact(_prev: ActionState, formData: FormData): Promi
 }
 
 // Soft delete — hidden by RLS but recoverable by the owner from Settings → Trash.
-export async function deleteContact(contactId: string) {
-  const { profile } = await requirePartnersAccess();
-  if (!profile) return;
+export async function deleteContact(contactId: string): Promise<{ error: string | null }> {
+  const { error: gate, profile } = await requirePartnersAccess();
+  if (gate || !profile) return { error: gate ?? "Access denied." };
   const supabase = await createClient();
   const { data: c } = await supabase.from("partner_contacts").select("company_name").eq("id", contactId).maybeSingle();
-  await supabase
+  const { error: delErr } = await supabase
     .from("partner_contacts")
     .update({ deleted_at: new Date().toISOString(), deleted_by: profile.userId })
     .eq("id", contactId);
+  if (delErr) return { error: delErr.message };
   await logAudit({
     orgId: profile.orgId,
     actorId: profile.userId,
@@ -103,6 +104,7 @@ export async function deleteContact(contactId: string) {
   });
   await recordActivity({ orgId: profile.orgId, actorId: profile.userId, actorName: profile.fullName, area: "partners", action: "deleted", label: (c as { company_name?: string } | null)?.company_name ?? "" });
   revalidatePath("/partners");
+  return { error: null };
 }
 
 export async function logActivity(_prev: ActionState, formData: FormData): Promise<ActionState> {
