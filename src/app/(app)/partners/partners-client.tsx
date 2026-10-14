@@ -91,7 +91,7 @@ export function PartnersClient({
   const [modalContact, setModalContact] = useState<ContactFormValue | null | undefined>(undefined);
   const [detailContact, setDetailContact] = useState<PartnerContact | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
-  const [, startTransition] = useTransition();
+  const [mutating, startTransition] = useTransition();
   const [now] = useState(() => Date.now());
   const today = useMemo(() => new Date(now).toISOString().slice(0, 10), [now]);
 
@@ -188,6 +188,17 @@ export function PartnersClient({
     });
   }
 
+  // Soft-delete a contact. The action stamps deleted_at + revalidates, but that
+  // only refreshes the list when the call runs inside a transition — a bare
+  // onClick leaves the UI stale (the row looked undeleted). Confirm first since
+  // restore lives in the owner-only Settings → Trash, not here.
+  function removeContact(id: string, name: string) {
+    if (!window.confirm(`Move ${name || "this partner"} to Trash?\n\nAn owner can restore it from Settings → Trash.`)) return;
+    startTransition(async () => {
+      await deleteContact(id);
+    });
+  }
+
   const fadeBadge = { label: "Needs Follow-up", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]", dot: "bg-[#D97706]" };
   const activeBadge = { label: "Active", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]", dot: "bg-[#16A34A]" };
 
@@ -260,7 +271,7 @@ export function PartnersClient({
                 <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(c)}>
                   Edit
                 </Btn>
-                <button onClick={() => deleteContact(c.id)} className="text-brick ml-auto p-1" aria-label="Delete contact">
+                <button onClick={() => removeContact(c.id, c.company_name)} disabled={mutating} className="text-brick ml-auto p-1 disabled:opacity-40" aria-label="Delete contact">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -451,7 +462,7 @@ export function PartnersClient({
                             <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(c)}>
                               Edit
                             </Btn>
-                            <button onClick={() => deleteContact(c.id)} className="text-brick p-1" aria-label="Delete contact">
+                            <button onClick={() => removeContact(c.id, c.company_name)} disabled={mutating} className="text-brick p-1 disabled:opacity-40" aria-label="Delete contact">
                               <Trash2 size={15} />
                             </button>
                           </div>
