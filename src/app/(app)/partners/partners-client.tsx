@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -92,6 +93,7 @@ export function PartnersClient({
   const [detailContact, setDetailContact] = useState<PartnerContact | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
   const [mutating, startTransition] = useTransition();
+  const router = useRouter();
   const [now] = useState(() => Date.now());
   const today = useMemo(() => new Date(now).toISOString().slice(0, 10), [now]);
 
@@ -188,14 +190,20 @@ export function PartnersClient({
     });
   }
 
-  // Soft-delete a contact. The action stamps deleted_at + revalidates, but that
-  // only refreshes the list when the call runs inside a transition — a bare
-  // onClick leaves the UI stale (the row looked undeleted). Confirm first since
-  // restore lives in the owner-only Settings → Trash, not here.
+  // Soft-delete a contact. The action stamps deleted_at (hidden by RLS) and
+  // revalidates server-side, but revalidatePath alone wasn't re-fetching the
+  // list here, so the row stayed on screen as if nothing happened. Force a
+  // client refresh on success, and surface a real error instead of swallowing
+  // it. Confirm first since restore lives in the owner-only Settings → Trash.
   function removeContact(id: string, name: string) {
     if (!window.confirm(`Move ${name || "this partner"} to Trash?\n\nAn owner can restore it from Settings → Trash.`)) return;
     startTransition(async () => {
-      await deleteContact(id);
+      const res = await deleteContact(id);
+      if (res?.error) {
+        window.alert(`Couldn't delete that contact: ${res.error}`);
+        return;
+      }
+      router.refresh();
     });
   }
 
