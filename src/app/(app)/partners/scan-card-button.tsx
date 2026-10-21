@@ -5,6 +5,20 @@ import { Camera } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import type { ContactFormValue } from "./contact-modal";
 
+// The iOS app is a WKWebView loading the live site; it has no camera usage
+// permission (NSCameraUsageDescription) or camera plugin, so invoking the
+// camera-capture file input hard-crashes the whole app. Detect the native shell
+// (UA token baked into the build + the wm_native cookie it stamps) so we can
+// skip the camera there instead of crashing. Web + Android are unaffected.
+function isNativeIOSClient(): boolean {
+  try {
+    const ua = navigator.userAgent || "";
+    return ua.includes("WingmanNativeIOS") || document.cookie.includes("wm_native=ios");
+  } catch {
+    return false;
+  }
+}
+
 // Scanned fields the API returns. Mapped onto a new (id-less) contact so the
 // Add Contact modal opens pre-filled for the manager to confirm.
 type ScannedFields = Pick<ContactFormValue, "company_name" | "contact_name" | "title" | "email" | "phone" | "website" | "address">;
@@ -80,7 +94,18 @@ export function ScanCardButton({
           if (file) void handleFile(file);
         }}
       />
-      <Btn kind="ghost" icon={Camera} loading={busy} onClick={() => inputRef.current?.click()}>
+      <Btn
+        kind="ghost"
+        icon={Camera}
+        loading={busy}
+        onClick={() => {
+          if (isNativeIOSClient()) {
+            setErr("Card scanning isn't available in the app yet — add them with Add Contact, or scan from the web dashboard.");
+            return;
+          }
+          inputRef.current?.click();
+        }}
+      >
         {busy ? "Reading…" : "Scan Card"}
       </Btn>
       {err && <span className="text-xs text-brick self-center">{err}</span>}
