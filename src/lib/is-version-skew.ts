@@ -11,9 +11,15 @@
 export function isVersionSkewError(error?: { message?: string; digest?: string } | null): boolean {
   const s = `${error?.message ?? ""} ${error?.digest ?? ""}`.toLowerCase();
   return (
+    // Older Next wording.
     s.includes("failed to find server action") ||
     s.includes("older or newer deployment") ||
-    (s.includes("server action") && s.includes("deployment"))
+    // Newer Next (16) wording: `Server Action "…" was not found on the server`,
+    // thrown as UnrecognizedActionError. The message also carries the canonical
+    // doc link, whose slug is a stable, unambiguous marker of this exact error.
+    s.includes("failed-to-find-server-action") ||
+    s.includes("unrecognizedactionerror") ||
+    (s.includes("server action") && (s.includes("deployment") || s.includes("not found")))
   );
 }
 
