@@ -153,7 +153,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userLocationName={profile.locationName}
           language={profile.language}
         />
-        <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden overscroll-contain flex-1 bg-paper">
+        {/* min-h-0 is load-bearing: a flex child with overflow-y-auto keeps its
+            default min-height:auto (= content height) without it, so on a tall
+            page (e.g. Hiring's full applicant list) this grows to its content
+            instead of shrinking to fill, the parent column overflows, and an
+            autofocus/scroll then pushes the sticky nav off-screen while the
+            bottom gets clipped. min-h-0 lets it scroll internally instead. */}
+        <div id="app-scroll" className="px-5 py-5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden overscroll-contain flex-1 min-h-0 bg-paper">
           <ScrollReset targetId="app-scroll" />
           {/* Contain the PAGE here: if any page component uses useSearchParams()
               (which opts into a Suspense/CSR bailout on a param navigation), the
