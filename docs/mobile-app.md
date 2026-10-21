@@ -91,6 +91,47 @@ The app should launch, briefly show the blue Wingman loading screen
 
 ---
 
+## Enabling the camera (Scan Card)
+
+The web app's **Scan Card** (Partners) uses a camera-capture file input
+(`<input type="file" accept="image/*" capture>`). Both platforms refuse camera
+access to a web view unless the **native app declares a camera permission** —
+and on iOS, invoking the camera without it **hard-crashes the whole app**. So
+until the steps below ship, the web app intentionally blocks Scan Card inside the
+native iOS shell (see `src/app/(app)/partners/scan-card-button.tsx`) and shows a
+"use the web dashboard" message instead of crashing.
+
+To turn it on, this is a **native change → App Store / Play resubmit** (not a web
+deploy):
+
+### iOS — add the camera usage string
+1. `npx cap open ios`, select the **App** target → **Info** tab (this edits
+   `ios/App/App/Info.plist`).
+2. Add a row: key **`NSCameraUsageDescription`**, value e.g.
+   *"Wingman uses the camera to scan business cards into your partner contacts."*
+   (A missing or empty string is an automatic App Review rejection — and a crash.)
+3. Optional, only if you later drop `capture` to allow picking an existing photo:
+   **`NSPhotoLibraryUsageDescription`** with a similar sentence.
+4. `npx cap sync`, rebuild in Xcode, and **resubmit** (a native capability change
+   triggers App Review).
+
+### Android — add the camera permission
+1. In `android/app/src/main/AndroidManifest.xml`, add inside `<manifest>`:
+   ```xml
+   <uses-permission android:name="android.permission.CAMERA" />
+   ```
+2. `npx cap sync`, rebuild the release `.aab`, and upload.
+
+### Then re-enable it on the web side
+Once a permission-carrying build is live, relax the iOS block in
+`scan-card-button.tsx` so the camera opens again. To avoid crashing users who are
+still on an *old* (permission-less) build, gate the re-enable on a capability
+marker only the new build carries — e.g. bump `ios.appendUserAgent` in
+`capacitor.config.json` to add a token like `WingmanCam1` in the **same** rebuild
+that adds the Info.plist key, and have the button allow the camera only when the
+user agent contains that token. (Do both in one rebuild so the marker never
+appears without the permission.)
+
 ## What's next (Phase 3)
 
 - **Push notifications** — `@capacitor/push-notifications` + a send path
