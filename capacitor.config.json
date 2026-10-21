@@ -14,7 +14,7 @@
   },
   "ios": {
     "contentInset": "always",
-    "appendUserAgent": "WingmanNativeIOS"
+    "appendUserAgent": "WingmanNativeIOS WingmanCam1"
   },
   "android": {
     "appendUserAgent": "WingmanNativeAndroid"
