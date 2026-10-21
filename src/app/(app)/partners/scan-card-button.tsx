@@ -5,15 +5,26 @@ import { Camera } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import type { ContactFormValue } from "./contact-modal";
 
-// The iOS app is a WKWebView loading the live site; it has no camera usage
-// permission (NSCameraUsageDescription) or camera plugin, so invoking the
-// camera-capture file input hard-crashes the whole app. Detect the native shell
-// (UA token baked into the build + the wm_native cookie it stamps) so we can
-// skip the camera there instead of crashing. Web + Android are unaffected.
+// The iOS app is a WKWebView loading the live site. If the native build has no
+// camera usage permission (NSCameraUsageDescription), invoking the camera-capture
+// file input hard-crashes the whole app — so on such builds we skip the camera
+// and show a message instead. Web + Android are unaffected.
 function isNativeIOSClient(): boolean {
   try {
     const ua = navigator.userAgent || "";
     return ua.includes("WingmanNativeIOS") || document.cookie.includes("wm_native=ios");
+  } catch {
+    return false;
+  }
+}
+
+// A rebuilt iOS binary that ships the camera permission appends this token to its
+// user agent (capacitor.config.json → ios.appendUserAgent; see
+// docs/mobile-app.md). We re-enable the camera only when it's present, so older
+// permission-less builds that are still installed can never open it and crash.
+function iosCameraCapable(): boolean {
+  try {
+    return (navigator.userAgent || "").includes("WingmanCam");
   } catch {
     return false;
   }
@@ -99,7 +110,7 @@ export function ScanCardButton({
         icon={Camera}
         loading={busy}
         onClick={() => {
-          if (isNativeIOSClient()) {
+          if (isNativeIOSClient() && !iosCameraCapable()) {
             setErr("Card scanning isn't available in the app yet — add them with Add Contact, or scan from the web dashboard.");
             return;
           }

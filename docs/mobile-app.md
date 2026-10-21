@@ -122,15 +122,19 @@ deploy):
    ```
 2. `npx cap sync`, rebuild the release `.aab`, and upload.
 
-### Then re-enable it on the web side
-Once a permission-carrying build is live, relax the iOS block in
-`scan-card-button.tsx` so the camera opens again. To avoid crashing users who are
-still on an *old* (permission-less) build, gate the re-enable on a capability
-marker only the new build carries — e.g. bump `ios.appendUserAgent` in
-`capacitor.config.json` to add a token like `WingmanCam1` in the **same** rebuild
-that adds the Info.plist key, and have the button allow the camera only when the
-user agent contains that token. (Do both in one rebuild so the marker never
-appears without the permission.)
+### The web side is already wired up
+No web change is needed when you ship the camera build. The capability token is
+already staged: `capacitor.config.json` appends **`WingmanCam1`** to the iOS user
+agent, and `scan-card-button.tsx` re-enables the camera only when that token is
+present. So the moment your rebuilt (permission-carrying) binary is live, Scan
+Card turns itself on; older permission-less builds that are still installed keep
+the "use the web dashboard" message and can't crash.
+
+**Important — don't un-stage the footgun:** the `WingmanCam1` token rides along on
+`cap sync`, so a rebuild enables the camera *whether or not* you added the
+`Info.plist` key. Add `NSCameraUsageDescription` in the **same** rebuild, and test
+a scan in the simulator/TestFlight before submitting — a missing key crashes on
+the first tap, which you want to catch in your own testing, not in review.
 
 ## What's next (Phase 3)
 
