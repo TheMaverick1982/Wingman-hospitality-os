@@ -22,14 +22,16 @@ type SidebarProps = {
 
 // Mobile-only top bar with a hamburger that opens the sidebar as a slide-in
 // drawer. Hidden at lg+ where the fixed sidebar takes over.
-export function MobileNav(props: SidebarProps) {
+export function MobileNav({ nativeIOS, ...props }: SidebarProps & { nativeIOS?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <div
         className="lg:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-line px-5 min-h-14"
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
+        // Native iOS already insets below the status bar (contentInset "always");
+        // adding env() padding there double-insets. Web keeps the safe-area inset.
+        style={nativeIOS ? undefined : { paddingTop: "env(safe-area-inset-top)" }}
       >
         <button
           type="button"
