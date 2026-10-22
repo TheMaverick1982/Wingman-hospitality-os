@@ -24,6 +24,7 @@ export type GuestFormValue = {
   email: string;
   visits: Record<number, GuestVisitFormValue | undefined>;
   referred_a_friend?: boolean;
+  details?: string;
 };
 
 const REACTIONS: { value: string; label: string }[] = [
@@ -71,6 +72,18 @@ export function GuestModal({
         <label className="flex flex-col gap-1.5 text-sm mb-4">
           <span className="font-semibold text-ink">Email</span>
           <input name="email" defaultValue={guest?.email} className={inputClass} />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm mb-4">
+          <span className="font-semibold text-ink">Little details</span>
+          <textarea
+            name="details"
+            defaultValue={guest?.details}
+            rows={2}
+            placeholder="The personal things worth remembering — anniversary, favorite dish, kids' names, &ldquo;drove 3 hours,&rdquo; always sits by the window…"
+            className={inputClass}
+          />
+          <span className="text-[12px] text-muted-2">Sticks with the guest across every visit, so the team can greet them by what matters to them.</span>
         </label>
 
         <label className="flex items-center gap-2 text-sm mb-4">

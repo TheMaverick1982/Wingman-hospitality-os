@@ -15,6 +15,7 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
   const phone = String(formData.get("phone") || "").trim();
   const email = String(formData.get("email") || "").trim();
   const referredAFriend = formData.get("referred_a_friend") === "on";
+  const details = String(formData.get("details") || "").trim().slice(0, 2000);
 
   if (!name) return { error: "Guest name is required." };
 
@@ -26,13 +27,13 @@ export async function saveGuest(_prev: ActionState, formData: FormData): Promise
   if (id) {
     const { error } = await supabase
       .from("guests")
-      .update({ name, phone, email, referred_a_friend: referredAFriend })
+      .update({ name, phone, email, referred_a_friend: referredAFriend, details })
       .eq("id", id);
     if (error) return { error: error.message };
   } else {
     const { data, error } = await supabase
       .from("guests")
-      .insert({ org_id: org.id, name, phone, email, referred_a_friend: referredAFriend })
+      .insert({ org_id: org.id, name, phone, email, referred_a_friend: referredAFriend, details })
       .select("id")
       .single();
     if (error) return { error: error.message };

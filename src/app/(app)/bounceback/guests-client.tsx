@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search, Download, Megaphone, Clock, Heart } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, Megaphone, Clock, Heart, Sparkles } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -156,7 +156,7 @@ export function GuestsClient({
   function exportContacts() {
     downloadCsv(
       "guest-bounce-back.csv",
-      ["Guest", "Phone", "Email", "Visits", "Stage", "Last location", "Referred a friend"],
+      ["Guest", "Phone", "Email", "Visits", "Stage", "Last location", "Referred a friend", "Little details"],
       filtered.map((g) => {
         const stage = stageOf(g.guest_visits);
         const lastLocationId = visitAt(g.guest_visits, stage)?.location_id;
@@ -168,6 +168,7 @@ export function GuestsClient({
           stage,
           locations.find((l) => l.id === lastLocationId)?.name ?? "",
           g.referred_a_friend ? "Yes" : "No",
+          g.details ?? "",
         ];
       })
     );
@@ -192,6 +193,7 @@ export function GuestsClient({
       email: g.email,
       visits,
       referred_a_friend: g.referred_a_friend,
+      details: g.details,
     });
   }
 
@@ -251,6 +253,12 @@ export function GuestsClient({
                 </span>
               )}
             </div>
+            {g.details && (
+              <div className="flex items-start gap-1.5 mt-2.5 text-[12.5px] text-charcoal-2 bg-brick-tint/40 rounded-lg px-2.5 py-1.5">
+                <Sparkles size={13} className="text-brick shrink-0 mt-0.5" />
+                <span className="whitespace-pre-wrap">{g.details}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
               <Btn small kind="ghost" icon={Pencil} onClick={() => openEdit(g)}>
                 Edit
@@ -568,6 +576,12 @@ export function GuestsClient({
                       {g.name}
                       {g.referred_a_friend && <Megaphone size={12} className="text-gold" />}
                     </div>
+                    {g.details && (
+                      <div className="flex items-start gap-1 mt-0.5 text-[12px] text-muted max-w-[260px]" title={g.details}>
+                        <Sparkles size={11} className="text-brick shrink-0 mt-0.5" />
+                        <span className="truncate">{g.details}</span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 text-muted">{g.phone || g.email || "—"}</td>
                   <td className="px-5 py-3.5">
