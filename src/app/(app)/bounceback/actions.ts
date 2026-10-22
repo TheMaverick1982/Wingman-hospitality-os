@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
+import { softDeleteRow } from "@/lib/soft-delete";
 import { logActivity } from "@/lib/activity-log";
 
 export type ActionState = { error: string | null };
@@ -156,13 +157,15 @@ export async function importGuests(rows: ImportRow[], fallbackLocationId: string
 // the owner from Settings → Trash. The action is recorded to the audit log.
 export async function deleteGuest(guestId: string) {
   const profile = await getCurrentProfile();
+  if (!profile) return;
   const supabase = await createClient();
+  // RLS read = authorization gate: only returns the guest if the caller may see
+  // it. Refuse if missing, then soft-delete via admin (RLS can't stamp
+  // deleted_at — see softDeleteRow).
   const { data: g } = await supabase.from("guests").select("name").eq("id", guestId).maybeSingle();
-  await supabase
-    .from("guests")
-    .update({ deleted_at: new Date().toISOString(), deleted_by: profile?.userId ?? null })
-    .eq("id", guestId);
-  if (profile) {
+  if (!g) return;
+  await softDeleteRow("guests", guestId, profile.orgId, profile.userId);
+  {
     await logAudit({
       orgId: profile.orgId,
       actorId: profile.userId,

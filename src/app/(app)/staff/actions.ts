@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
+import { softDeleteRow } from "@/lib/soft-delete";
 import { ALL_DEPARTMENTS, type Department } from "@/lib/constants";
 import { sendLoginInvite, type LoginAccessRole } from "@/lib/invite";
 
@@ -200,13 +201,14 @@ export async function setStaffSurveyExcluded(id: string, excluded: boolean) {
 // Soft delete — hidden by RLS but recoverable by the owner from Settings → Trash.
 export async function deleteStaffMember(id: string) {
   const profile = await getCurrentProfile();
+  if (!profile) return;
   const supabase = await createClient();
+  // RLS read = authorization gate; then soft-delete via admin (RLS can't stamp
+  // deleted_at — see softDeleteRow).
   const { data: s } = await supabase.from("staff_members").select("name").eq("id", id).maybeSingle();
-  await supabase
-    .from("staff_members")
-    .update({ deleted_at: new Date().toISOString(), deleted_by: profile?.userId ?? null })
-    .eq("id", id);
-  if (profile) {
+  if (!s) return;
+  await softDeleteRow("staff_members", id, profile.orgId, profile.userId);
+  {
     await logAudit({
       orgId: profile.orgId,
       actorId: profile.userId,

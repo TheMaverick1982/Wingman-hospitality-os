@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
 import { logActivity as recordActivity } from "@/lib/activity-log";
+import { softDeleteRow } from "@/lib/soft-delete";
 import { sendEmail } from "@/lib/email";
 import { OUTREACH_STATUS_VALUES, INTERESTED_IN_OPTIONS, type PartnerActivityType } from "@/lib/partners";
 
@@ -98,12 +99,12 @@ export async function deleteContact(contactId: string): Promise<{ error: string 
   const { error: gate, profile } = await requirePartnersAccess();
   if (gate || !profile) return { error: gate ?? "Access denied." };
   const supabase = await createClient();
+  // RLS read = authorization gate: only returns the contact if the caller may
+  // see it. Refuse if they can't (or it's gone) before the admin-scoped delete.
   const { data: c } = await supabase.from("partner_contacts").select("company_name").eq("id", contactId).maybeSingle();
-  const { error: delErr } = await supabase
-    .from("partner_contacts")
-    .update({ deleted_at: new Date().toISOString(), deleted_by: profile.userId })
-    .eq("id", contactId);
-  if (delErr) return { error: delErr.message };
+  if (!c) return { error: "That contact could not be found." };
+  const { error: delErr } = await softDeleteRow("partner_contacts", contactId, profile.orgId, profile.userId);
+  if (delErr) return { error: delErr };
   await logAudit({
     orgId: profile.orgId,
     actorId: profile.userId,
