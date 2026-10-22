@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { isNativeIOS } from "@/lib/native/platform";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { logLoginOncePerWindow } from "@/lib/activity-log";
 import { getOrgLocationsById } from "@/lib/data/locations";
@@ -30,6 +31,12 @@ export const metadata: Metadata = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
+
+  // In the native iOS app the WKWebView already insets content below the status
+  // bar (capacitor.config → contentInset "always"), so the mobile top bar must
+  // NOT add its own env(safe-area-inset-top) padding — that double-insets and
+  // leaves a gap above the logo. On web (no contentInset), the CSS inset stays.
+  const nativeIOS = await isNativeIOS();
 
   // Record a login for the staff-activity trail (throttled to once per session).
   // Fire-and-forget: this is a side-effect write and must never sit on the
@@ -141,6 +148,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           isFranchiseAdmin={!!profile.franchiseGroupId}
           permissionOverrides={profile.permissionOverrides}
           showStartHere={!!launch && !launch.allDone}
+          nativeIOS={nativeIOS}
         />
         {/* The Topbar (location switcher) reads the `?location=` param WITHOUT
             useSearchParams() — see use-location-param.ts — so it never triggers a

@@ -33,6 +33,7 @@ export function PartnersReportForm({
   const [state, formAction, pending] = useActionState(updatePartnersReport, initialState);
   const [freq, setFreq] = useState(frequency);
   const [dlv, setDlv] = useState(mode);
+  const [dayVal, setDayVal] = useState(String(day));
   const [testing, startTest] = useTransition();
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -77,9 +78,9 @@ export function PartnersReportForm({
         {freq === "weekly" && (
           <label className="flex flex-col gap-1.5 text-sm max-w-[220px]">
             <span className="font-semibold text-ink">Send on</span>
-            <select name="day" defaultValue={String(day)} className={inputClass}>
+            <select name="day" value={dayVal} onChange={(e) => setDayVal(e.target.value)} className={inputClass}>
               {DAYS.map((d) => (
-                <option key={d.v} value={d.v}>{d.label}</option>
+                <option key={d.v} value={String(d.v)}>{d.label}</option>
               ))}
             </select>
           </label>
