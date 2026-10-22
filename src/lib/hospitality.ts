@@ -17,6 +17,7 @@ export type GuestWithVisits = {
   email: string;
   guest_visits: GuestVisit[];
   referred_a_friend?: boolean;
+  details?: string;
 };
 
 export function stageOf(visits: GuestVisit[]): number {
