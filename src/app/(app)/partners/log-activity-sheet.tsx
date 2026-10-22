@@ -5,21 +5,23 @@ import { X } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
-import { ACTIVITY_TYPES, type PartnerActivityType } from "@/lib/partners";
+import { ACTIVITY_TYPES, OUTREACH_STATUSES, type PartnerActivityType } from "@/lib/partners";
 import { logActivity, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
 
 // Right-side slide-out for logging a touch against a contact. call/email/meeting
 // reset the fading clock; event/fundraiser also carry revenue (entered after the
-// event happens).
+// event happens). A touch can also move the status forward and record a hand-off.
 export function LogActivitySheet({
   contacts,
   preselectContactId,
+  handoffTargets,
   onClose,
 }: {
   contacts: { id: string; company_name: string }[];
   preselectContactId?: string | null;
+  handoffTargets: string[];
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(logActivity, initialState);
@@ -130,6 +132,27 @@ export function LogActivitySheet({
               className={inputClass}
             />
           </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-semibold text-ink">Update status <span className="font-normal text-muted">(optional)</span></span>
+              <select name="set_status" defaultValue="" className={inputClass}>
+                <option value="">— No change —</option>
+                {OUTREACH_STATUSES.filter((s) => s.value !== "none").map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-semibold text-ink">Handed off to <span className="font-normal text-muted">(optional)</span></span>
+              <select name="set_handoff" defaultValue="" className={inputClass}>
+                <option value="">— No change —</option>
+                {handoffTargets.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <div className="rounded-xl border border-line p-3.5">
             <label className="flex items-center gap-2.5 text-sm cursor-pointer">

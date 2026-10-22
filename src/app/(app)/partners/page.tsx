@@ -32,7 +32,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       .order("company_name"),
     supabase
       .from("partner_activities")
-      .select("id, contact_id, location_id, activity_date, activity_type, notes, revenue_cents, event_date, headcount, created_by, created_at, partner_contacts(company_name)")
+      .select("id, contact_id, location_id, activity_date, activity_type, notes, revenue_cents, event_date, headcount, set_status, set_handoff, created_by, created_at, partner_contacts(company_name)")
       .order("activity_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(300),
@@ -125,6 +125,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
         revenue_cents: a.revenue_cents,
         event_date: a.event_date,
         headcount: a.headcount,
+        set_status: a.set_status,
+        set_handoff: a.set_handoff,
         created_by: a.created_by,
         created_at: a.created_at,
         companyName: a.companyName,

@@ -20,6 +20,8 @@ export type DetailActivity = {
   revenue_cents: number | null;
   event_date?: string | null;
   headcount?: number | null;
+  set_status?: string | null;
+  set_handoff?: string | null;
   loggedBy: string;
 };
 export type DetailFollowUp = { id: string; contact_id: string; due_date: string; notes: string; createdBy: string };
@@ -40,6 +42,7 @@ export function ContactDetail({
   repEmail,
   canEdit,
   onEdit,
+  onLogActivity,
   onClose,
   locationName,
 }: {
@@ -49,6 +52,7 @@ export function ContactDetail({
   repEmail: string;
   canEdit: boolean;
   onEdit: () => void;
+  onLogActivity: () => void;
   onClose: () => void;
   locationName: string | null;
 }) {
@@ -113,7 +117,10 @@ export function ContactDetail({
       {/* Quick actions */}
       {canEdit && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <Btn small icon={Mail} onClick={() => { setEmailOpen((v) => !v); setReachOpen(false); }} disabled={!contact.email}>
+          <Btn small icon={Plus} onClick={onLogActivity}>
+            Log activity
+          </Btn>
+          <Btn small kind="ghost" icon={Mail} onClick={() => { setEmailOpen((v) => !v); setReachOpen(false); }} disabled={!contact.email}>
             Email
           </Btn>
           <Btn small kind="ghost" icon={CalendarPlus} onClick={() => { setReachOpen((v) => !v); setEmailOpen(false); }}>
@@ -257,6 +264,15 @@ export function ContactDetail({
                       {a.event_date ? `Event ${fmtDate(a.event_date)}` : ""}
                       {a.event_date && a.headcount ? " · " : ""}
                       {a.headcount ? `${a.headcount} guests` : ""}
+                    </div>
+                  )}
+                  {(a.set_status || a.set_handoff) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {a.set_status && (() => {
+                        const m = OUTREACH_STATUSES.find((s) => s.value === a.set_status);
+                        return m ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.bg} ${m.fg}`}>{m.label}</span> : null;
+                      })()}
+                      {a.set_handoff && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E8F1FF] text-[#0a6cff]">→ {a.set_handoff}</span>}
                     </div>
                   )}
                   {a.notes && <div className="text-[13px] text-charcoal-2 mt-1 whitespace-pre-wrap">{a.notes}</div>}
