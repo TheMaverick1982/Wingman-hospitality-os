@@ -117,8 +117,8 @@
       "schedule": "0 13 * * *"
     },
     {
-      "path": "/api/cron/partner-monthly-report",
-      "schedule": "0 * 1 * *"
+      "path": "/api/cron/partners-report",
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/cron/continuing-ed",

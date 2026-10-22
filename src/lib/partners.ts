@@ -80,13 +80,17 @@ export type PartnerActivity = {
 // (or never touched) a contact shows the orange "Needs Follow-up" badge.
 export const FADING_DAYS = 30;
 
-// Standing per-quarter targets. location_id null = org-wide default.
+// Standing targets. location_id null = org-wide default. The _new/_events/
+// _fundraisers/_active are per-quarter; _weekly_reach/_weekly_visits are the
+// weekly activity goals shown on the weekly report.
 export type PartnerGoal = {
   location_id: string | null;
   goal_new_contacts: number;
   goal_events: number;
   goal_fundraisers: number;
   goal_active_connections: number;
+  goal_weekly_reach: number;
+  goal_weekly_visits: number;
 };
 
 // Seeded defaults if an owner hasn't set anything yet.
@@ -95,6 +99,8 @@ export const DEFAULT_GOALS = {
   goal_events: 3,
   goal_fundraisers: 3,
   goal_active_connections: 20,
+  goal_weekly_reach: 7,
+  goal_weekly_visits: 3,
 };
 
 // Resolve the target for a location: its own row, else the org default, else the
@@ -110,6 +116,8 @@ export function resolveGoal(
     goal_events: row?.goal_events ?? DEFAULT_GOALS.goal_events,
     goal_fundraisers: row?.goal_fundraisers ?? DEFAULT_GOALS.goal_fundraisers,
     goal_active_connections: row?.goal_active_connections ?? DEFAULT_GOALS.goal_active_connections,
+    goal_weekly_reach: row?.goal_weekly_reach ?? DEFAULT_GOALS.goal_weekly_reach,
+    goal_weekly_visits: row?.goal_weekly_visits ?? DEFAULT_GOALS.goal_weekly_visits,
   };
 }
 
