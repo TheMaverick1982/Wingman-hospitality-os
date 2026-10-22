@@ -1002,6 +1002,7 @@ export const ARTICLES: HelpArticle[] = [
       { kind: "h", text: "Set goals (owner)" },
       { kind: "p", text: "Under Settings → Partners, the account owner sets each store's quarterly targets — new contacts, community events, fundraisers, and how many connections to keep warm. Set one default for all stores and override any store that's different. The goal-progress cards on the Partners page fill against these." },
       { kind: "p", text: "The same Settings → Partners page is where the owner manages the \"Handed off to\" list — the managers or departments a contact can be assigned to. Add company-wide names everyone can use, or scope one to a single location. Only the owner can edit the list; managers just pick from it when logging a contact." },
+      { kind: "p", text: "Owners can also export contacts to a spreadsheet: on the Partners page, use the location selector up top to choose All locations or one store, then tap \"Export\" to download a CSV of those contacts (with their status, interests, hand-off, and last activity). Export is owner-only." },
       { kind: "image", src: "/help/partners-goals.png", alt: "The Partners goals editor in Settings, with a default row and per-store overrides.", caption: "Settings → Partners — quarterly goals, with an all-stores default and per-store overrides." },
       { kind: "h", text: "The monthly report" },
       { kind: "h", text: "The weekly report (owner)" },

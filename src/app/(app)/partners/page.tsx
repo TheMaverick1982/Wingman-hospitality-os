@@ -135,6 +135,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       locations={locations}
       assignableLocations={assignableLocations}
       defaultLocationId={effectiveLocation ?? profile.locationId}
+      exportLocationId={effectiveLocation}
       handoffTargets={handoffTargets}
       canEdit={canEdit}
       canPickOrgWide={profile.accessRole === "super_admin"}

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target, ChevronRight, Download } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -75,6 +75,7 @@ export function PartnersClient({
   locations,
   assignableLocations,
   defaultLocationId,
+  exportLocationId,
   handoffTargets,
   canEdit,
   canPickOrgWide,
@@ -90,6 +91,7 @@ export function PartnersClient({
   locations: Location[];
   assignableLocations: Location[];
   defaultLocationId: string | null;
+  exportLocationId: string | null;
   handoffTargets: string[];
   canEdit: boolean;
   canPickOrgWide: boolean;
@@ -433,6 +435,15 @@ export function PartnersClient({
             <Btn kind="ghost" icon={MessageSquarePlus} onClick={() => setSheet({ open: true, preselect: null })}>
               Log Activity
             </Btn>
+            {isOwner && (
+              <a
+                href={`/partners/export${exportLocationId ? `?location=${exportLocationId}` : ""}`}
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-charcoal-2 border border-line rounded-full px-3.5 py-2 hover:border-brick hover:text-brick transition-colors"
+                title={exportLocationId ? "Export this location's contacts to CSV" : "Export all locations' contacts to CSV"}
+              >
+                <Download size={15} /> Export
+              </a>
+            )}
             <Btn icon={Plus} onClick={() => setModalContact(null)}>
               Add Contact
             </Btn>
