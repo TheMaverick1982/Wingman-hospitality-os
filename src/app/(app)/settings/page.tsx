@@ -23,6 +23,7 @@ import { BillingEmailForm } from "./billing-email-form";
 import { BillingCancel } from "./billing-cancel";
 import { PartnerGoalsForm, type GoalRow } from "./partner-goals-form";
 import { PartnersReportEmailForm } from "./partners-report-email-form";
+import { HandoffTargetsForm } from "./handoff-targets-form";
 import { TrashPanel } from "./trash-panel";
 import { DirectIntegrations, type SquareConnection, type CloverConnection, type ToastConnection, type LightspeedConnection, type HeartlandConnection, type SevenroomsConnection } from "./square-card";
 import { squareConfigured, squareSandboxTokenAvailable } from "@/lib/square";
@@ -75,13 +76,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   }
 
   const supabase = await createClient();
-  const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts] = await Promise.all([
+  const [{ data: members }, locations, { data: org }, { data: plRows }, { data: goalRows }, activeDepts, { data: handoffRows }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, access_role, location_id, all_locations, is_corporate, section_overrides").order("full_name"),
     getOrgLocations(),
     supabase.from("organizations").select("is_free_account, billing_status, card_brand, card_last4, billing_email, cancel_at_period_end, partners_report_email, custom_addl_location_cents, plan_first_cents, plan_addl_cents, billed_by_group").single(),
     supabase.from("profile_locations").select("profile_id, location_id"),
     supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
     getActiveDepartments(),
+    supabase.from("partner_handoff_targets").select("id, label, location_id").order("sort_order").order("label"),
   ]);
   const isFreeAccount = org?.is_free_account ?? false;
   const billedByGroup = (org as { billed_by_group?: boolean } | null)?.billed_by_group ?? false;
@@ -447,9 +449,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const goals = (goalRows ?? []) as GoalRow[];
   const orgDefaultGoal = goals.find((g) => g.location_id === null) ?? null;
   const goalByLocation = Object.fromEntries(goals.filter((g) => g.location_id).map((g) => [g.location_id as string, g]));
+  const handoffTargets = ((handoffRows ?? []) as { id: string; label: string; location_id: string | null }[]);
   const partnersContent = (
     <div className="flex flex-col gap-6">
       <PartnerGoalsForm orgDefault={orgDefaultGoal} byLocation={goalByLocation} locations={locations} />
+      <HandoffTargetsForm targets={handoffTargets} locations={locations} />
       <PartnersReportEmailForm reportEmail={org?.partners_report_email ?? null} ownerEmail={profile.email ?? ""} />
     </div>
   );

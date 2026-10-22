@@ -108,6 +108,19 @@ export function LogActivitySheet({
             </div>
           </label>
 
+          {isEvent && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-semibold text-ink">Event date</span>
+                <input type="date" name="event_date" className={inputClass} />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-semibold text-ink">Headcount</span>
+                <input type="number" min="1" step="1" name="headcount" placeholder="e.g. 40" className={inputClass} />
+              </label>
+            </div>
+          )}
+
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-semibold text-ink">Notes / details</span>
             <textarea
