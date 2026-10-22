@@ -148,6 +148,13 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
   const headcountRaw = Number(String(formData.get("headcount") || "").trim());
   const headcount = isBooking && Number.isFinite(headcountRaw) && headcountRaw > 0 ? Math.min(100000, Math.round(headcountRaw)) : null;
 
+  // A touch can also move the relationship forward: set the status and/or record
+  // a hand-off. Blank = no change. Stored on the activity (timeline history) and
+  // mirrored to the contact's current value below.
+  const statusSetRaw = String(formData.get("set_status") || "");
+  const setStatus = ["no_answer", "follow_up", "booked", "not_interested"].includes(statusSetRaw) ? statusSetRaw : null;
+  const setHandoff = String(formData.get("set_handoff") || "").trim().slice(0, 120) || null;
+
   const contactLocation = (contact as { location_id: string | null }).location_id;
   const { error } = await supabase.from("partner_activities").insert({
     org_id: profile.orgId,
@@ -159,9 +166,19 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
     revenue_cents: parseMoneyCents(String(formData.get("revenue") || "")),
     event_date: eventDate,
     headcount,
+    set_status: setStatus,
+    set_handoff: setHandoff,
     created_by: profile.userId,
   });
   if (error) return { error: error.message };
+
+  // Mirror the touch's status/hand-off onto the contact as its current value.
+  if (setStatus || setHandoff) {
+    const patch: Record<string, string> = {};
+    if (setStatus) patch.outreach_status = setStatus;
+    if (setHandoff) patch.handed_off_to = setHandoff;
+    await supabase.from("partner_contacts").update(patch).eq("id", contactId);
+  }
 
   // Optional follow-up task → its own row; a daily cron emails the assignee
   // (the creator) when it comes due.

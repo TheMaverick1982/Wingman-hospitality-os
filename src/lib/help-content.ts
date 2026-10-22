@@ -982,11 +982,13 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Track where each relationship stands" },
       { kind: "p", text: "On the contact form you can set a Status (No answer, Follow up, Booked, or Not interested), tick what they're Interested in (Party, Fundraiser, Catering, Class, Partner), note the Result / next step, and record who it's Handed off to — a manager or department. That last one keeps leads from falling through the cracks: when you pass a contact to someone, it's on the record. Filter the contact list by Status or Interest to work a specific group — e.g. everyone marked \"Follow up\" who's interested in Catering." },
+      { kind: "p", text: "Status and \"Handed off to\" also live in Log Activity, since they change as you work a relationship: each time you log a touch you can move the status forward and record a hand-off. The contact always shows the latest, and the change is stamped on the timeline so you can see the whole progression." },
       { kind: "h", text: "Log every touch" },
       { kind: "p", text: "Tap \"Log Activity\" (or the quick call/text icon on any row) to record a call, email, meeting, visit, an in-store guest, or a booked event/fundraiser. Booked events and fundraisers can carry the event date, headcount, and the actual revenue they brought in — enter the revenue once the event happens. You can log revenue as many times as a partner books, so a repeat partner's lifetime value adds up. Every touch resets that contact's follow-up clock." },
       { kind: "h", text: "Open a contact to see everything" },
       { kind: "p", text: "Click any contact's company name to open its full record: their info up top, then their whole activity history (every call, email, meeting, and note), any upcoming reach-outs, and quick actions. It's the one place to see where a relationship stands and take the next step." },
       { kind: "list", items: [
+        "Log an activity — tap \"Log activity\" to record a call, visit, meeting, or booking right from the contact (it's pre-selected for you). You can update the status and who it's handed off to in the same step.",
         "Email them right here — tap \"Email,\" write a subject and message, and send. It goes out from your name with replies routed to your email, and it's logged to their timeline automatically so you always have a record.",
         "Add a note — jot a detail or a next step and it stacks on the timeline with the date, so the history builds up over time (separate from the contact's \"about\" note).",
         "Schedule a reach-out — pick a date and what the next step is, and Wingman emails you that morning. Upcoming reach-outs show on the contact with overdue ones flagged in red; tap \"Done\" when you've handled it.",

@@ -70,6 +70,8 @@ export type PartnerActivity = {
   revenue_cents: number | null;
   event_date: string | null; // YYYY-MM-DD, for event/fundraiser bookings
   headcount: number | null;
+  set_status: OutreachStatus | null; // status this touch set the contact to
+  set_handoff: string | null; // hand-off this touch recorded
   created_by: string | null;
   created_at: string;
 };

@@ -37,6 +37,8 @@ type FeedActivity = {
   revenue_cents: number | null;
   event_date: string | null;
   headcount: number | null;
+  set_status: OutreachStatus | null;
+  set_handoff: string | null;
   created_by: string | null;
   created_at: string;
   companyName: string;
@@ -603,6 +605,7 @@ export function PartnersClient({
         <LogActivitySheet
           contacts={contactOptions}
           preselectContactId={sheet.preselect}
+          handoffTargets={handoffTargets}
           onClose={() => setSheet({ open: false, preselect: null })}
         />
       )}
@@ -615,6 +618,7 @@ export function PartnersClient({
           canEdit={canEdit}
           locationName={locName(detailContact.location_id)}
           onEdit={() => { openEdit(detailContact); setDetailContact(null); }}
+          onLogActivity={() => { setSheet({ open: true, preselect: detailContact.id }); setDetailContact(null); }}
           onClose={() => setDetailContact(null)}
         />
       )}
