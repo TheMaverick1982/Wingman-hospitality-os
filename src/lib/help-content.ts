@@ -969,7 +969,7 @@ export const ARTICLES: HelpArticle[] = [
     title: "Partners & community",
     summary: "Track the local businesses around each store — and turn catering, events, and fundraisers into a measured habit instead of luck.",
     categoryId: "growth",
-    keywords: ["partners", "b2b", "community", "catering", "events", "fundraisers", "happy hour", "chamber", "local business", "outreach", "follow up", "fading", "goals", "hit list", "scan card", "business card", "relationships"],
+    keywords: ["partners", "b2b", "community", "catering", "events", "fundraisers", "happy hour", "chamber", "local business", "outreach", "follow up", "fading", "goals", "hit list", "scan card", "business card", "relationships", "status", "handed off", "hand off", "interested in", "accountability", "next step", "headcount", "event date", "visit", "in-store guest"],
     body: [
       { kind: "p", text: "Partners is a lightweight relationship CRM built into Wingman. Where Guest Bounce Back wins back guests, Partners helps you build relationships with the businesses around you — offices, schools, gyms, non-profits, the chamber — so catering, group lunches, private events, happy-hour buyouts, and fundraisers become a repeatable, measured habit." },
       { kind: "image", src: "/help/partners.png", alt: "The Partners screen showing KPI cards, quarterly goal progress, and a list of contacts with Needs Follow-up badges.", caption: "Partners — your connections at a glance, with who's fading and how you're tracking to goal." },
@@ -980,8 +980,10 @@ export const ARTICLES: HelpArticle[] = [
         "Or tap \"Scan Card\": snap a photo of a business card and Wingman reads the details off it and pre-fills the form for you to confirm. The photo is used only to read the card — it's never stored.",
         "Managers file each contact under their store; owners can also mark one \"Org-wide.\"",
       ] },
+      { kind: "h", text: "Track where each relationship stands" },
+      { kind: "p", text: "On the contact form you can set a Status (No answer, Follow up, Booked, or Not interested), tick what they're Interested in (Party, Fundraiser, Catering, Class, Partner), note the Result / next step, and record who it's Handed off to — a manager or department. That last one keeps leads from falling through the cracks: when you pass a contact to someone, it's on the record. Filter the contact list by Status or Interest to work a specific group — e.g. everyone marked \"Follow up\" who's interested in Catering." },
       { kind: "h", text: "Log every touch" },
-      { kind: "p", text: "Tap \"Log Activity\" (or the quick call/text icon on any row) to record a call, email, meeting, or a booked event/fundraiser. Booked events and fundraisers can carry the actual revenue they brought in — enter it once the event happens. Every touch resets that contact's follow-up clock." },
+      { kind: "p", text: "Tap \"Log Activity\" (or the quick call/text icon on any row) to record a call, email, meeting, visit, an in-store guest, or a booked event/fundraiser. Booked events and fundraisers can carry the event date, headcount, and the actual revenue they brought in — enter the revenue once the event happens. You can log revenue as many times as a partner books, so a repeat partner's lifetime value adds up. Every touch resets that contact's follow-up clock." },
       { kind: "h", text: "Open a contact to see everything" },
       { kind: "p", text: "Click any contact's company name to open its full record: their info up top, then their whole activity history (every call, email, meeting, and note), any upcoming reach-outs, and quick actions. It's the one place to see where a relationship stands and take the next step." },
       { kind: "list", items: [
@@ -997,6 +999,7 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { kind: "h", text: "Set goals (owner)" },
       { kind: "p", text: "Under Settings → Partners, the account owner sets each store's quarterly targets — new contacts, community events, fundraisers, and how many connections to keep warm. Set one default for all stores and override any store that's different. The goal-progress cards on the Partners page fill against these." },
+      { kind: "p", text: "The same Settings → Partners page is where the owner manages the \"Handed off to\" list — the managers or departments a contact can be assigned to. Add company-wide names everyone can use, or scope one to a single location. Only the owner can edit the list; managers just pick from it when logging a contact." },
       { kind: "image", src: "/help/partners-goals.png", alt: "The Partners goals editor in Settings, with a default row and per-store overrides.", caption: "Settings → Partners — quarterly goals, with an all-stores default and per-store overrides." },
       { kind: "h", text: "The monthly report" },
       { kind: "p", text: "On the 1st of each month (8am in each store's timezone), Wingman emails a leadership rollup across all stores to the owner and your report email, and sends each manager their store's metrics plus a \"hit list\" of the fading contacts to call that week. Set the report email under Settings → Partners; set each store's timezone under Settings → Locations. You can turn either email off under Settings → Notifications." },

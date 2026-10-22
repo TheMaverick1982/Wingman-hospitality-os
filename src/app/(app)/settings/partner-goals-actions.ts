@@ -99,3 +99,40 @@ export async function updatePartnersReportEmail(_prev: ActionState, formData: Fo
   revalidatePath("/settings");
   return { error: null, ok: true };
 }
+
+// Owner-only. Add a hand-off target (a manager or department a contact can be
+// handed to). location_id empty = company-wide; otherwise scoped to that store.
+export async function addHandoffTarget(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (profile.accessRole !== "super_admin") return { error: "Only the account owner can edit hand-off targets." };
+
+  const label = String(formData.get("label") || "").trim().slice(0, 120);
+  if (!label) return { error: "Enter a name or department." };
+  const locationId = String(formData.get("location_id") || "").trim() || null;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("partner_handoff_targets")
+    .insert({ org_id: profile.orgId, location_id: locationId, label });
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/partners");
+  return { error: null, ok: true };
+}
+
+// Owner-only. Remove a hand-off target by id.
+export async function removeHandoffTarget(id: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+  if (profile.accessRole !== "super_admin") return { error: "Only the account owner can edit hand-off targets." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("partner_handoff_targets").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/partners");
+  return { error: null, ok: true };
+}

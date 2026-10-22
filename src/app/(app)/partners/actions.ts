@@ -6,11 +6,11 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { logAudit } from "@/lib/audit-log";
 import { logActivity as recordActivity } from "@/lib/activity-log";
 import { sendEmail } from "@/lib/email";
-import type { PartnerActivityType } from "@/lib/partners";
+import { OUTREACH_STATUS_VALUES, INTERESTED_IN_OPTIONS, type PartnerActivityType } from "@/lib/partners";
 
 export type ActionState = { error: string | null };
 
-const ACTIVITY_VALUES: PartnerActivityType[] = ["call_text", "email", "meeting", "event_booked", "fundraiser_booked"];
+const ACTIVITY_VALUES: PartnerActivityType[] = ["call_text", "email", "meeting", "visit", "in_store_guest", "event_booked", "fundraiser_booked"];
 
 // Dollars string -> integer cents, or null when blank/invalid.
 function parseMoneyCents(raw: string): number | null {
@@ -48,6 +48,13 @@ export async function saveContact(_prev: ActionState, formData: FormData): Promi
     return { error: "Pick a location for this contact." };
   }
 
+  const statusRaw = String(formData.get("outreach_status") || "none");
+  const outreachStatus = OUTREACH_STATUS_VALUES.includes(statusRaw) ? statusRaw : "none";
+  const interestedIn = formData
+    .getAll("interested_in")
+    .map((v) => String(v))
+    .filter((v) => (INTERESTED_IN_OPTIONS as readonly string[]).includes(v));
+
   const fields = {
     location_id: locationId,
     company_name: companyName.slice(0, 200),
@@ -60,6 +67,10 @@ export async function saveContact(_prev: ActionState, formData: FormData): Promi
     website: String(formData.get("website") || "").trim().slice(0, 300),
     address: String(formData.get("address") || "").trim().slice(0, 300),
     notes: String(formData.get("notes") || "").trim().slice(0, 4000),
+    outreach_status: outreachStatus,
+    interested_in: interestedIn,
+    handed_off_to: String(formData.get("handed_off_to") || "").trim().slice(0, 120),
+    next_step: String(formData.get("next_step") || "").trim().slice(0, 500),
   };
 
   const supabase = await createClient();
@@ -130,6 +141,13 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
     .maybeSingle();
   if (!contact) return { error: "That contact could not be found." };
 
+  // Event specifics only apply to a booking (event/fundraiser); ignore otherwise.
+  const isBooking = activityType === "event_booked" || activityType === "fundraiser_booked";
+  const eventDateRaw = String(formData.get("event_date") || "").trim();
+  const eventDate = isBooking && /^\d{4}-\d{2}-\d{2}$/.test(eventDateRaw) ? eventDateRaw : null;
+  const headcountRaw = Number(String(formData.get("headcount") || "").trim());
+  const headcount = isBooking && Number.isFinite(headcountRaw) && headcountRaw > 0 ? Math.min(100000, Math.round(headcountRaw)) : null;
+
   const contactLocation = (contact as { location_id: string | null }).location_id;
   const { error } = await supabase.from("partner_activities").insert({
     org_id: profile.orgId,
@@ -139,6 +157,8 @@ export async function logActivity(_prev: ActionState, formData: FormData): Promi
     activity_type: activityType,
     notes: String(formData.get("notes") || "").trim().slice(0, 4000),
     revenue_cents: parseMoneyCents(String(formData.get("revenue") || "")),
+    event_date: eventDate,
+    headcount,
     created_by: profile.userId,
   });
   if (error) return { error: error.message };

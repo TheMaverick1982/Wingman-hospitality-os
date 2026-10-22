@@ -23,16 +23,16 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   });
 
   const supabase = await createClient();
-  const [{ data: contactRows }, { data: activityRows }, { data: followUpRows }, { data: profileRows }, { data: goalRows }, locations] = await Promise.all([
+  const [{ data: contactRows }, { data: activityRows }, { data: followUpRows }, { data: profileRows }, { data: goalRows }, { data: handoffRows }, locations] = await Promise.all([
     supabase
       .from("partner_contacts")
       .select(
-        "id, location_id, company_name, contact_name, title, email, phone, category, subcategory, website, address, notes, status, last_activity_at, created_by, created_at"
+        "id, location_id, company_name, contact_name, title, email, phone, category, subcategory, website, address, notes, status, outreach_status, interested_in, handed_off_to, next_step, last_activity_at, created_by, created_at"
       )
       .order("company_name"),
     supabase
       .from("partner_activities")
-      .select("id, contact_id, location_id, activity_date, activity_type, notes, revenue_cents, created_by, created_at, partner_contacts(company_name)")
+      .select("id, contact_id, location_id, activity_date, activity_type, notes, revenue_cents, event_date, headcount, created_by, created_at, partner_contacts(company_name)")
       .order("activity_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(300),
@@ -45,6 +45,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       .order("due_date", { ascending: true }),
     supabase.from("profiles").select("id, full_name"),
     supabase.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections"),
+    // Configurable hand-off targets (org-wide + reachable locations); RLS scopes.
+    supabase.from("partner_handoff_targets").select("label, location_id, sort_order").order("sort_order").order("label"),
     getOrgLocations(),
   ]);
 
@@ -63,6 +65,12 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   );
 
   const whoById = new Map(((profileRows ?? []) as { id: string; full_name: string }[]).map((p) => [p.id, p.full_name]));
+
+  // Flat, de-duped list of hand-off labels the user can see (org-wide + their
+  // reachable locations), already ordered by sort_order then label.
+  const handoffTargets = Array.from(
+    new Set(((handoffRows ?? []) as { label: string }[]).map((h) => h.label.trim()).filter(Boolean)),
+  );
 
   type FollowUpRow = { id: string; contact_id: string; location_id: string | null; due_date: string; notes: string; created_by: string | null; created_at: string };
   const allFollowUps = (followUpRows ?? []) as FollowUpRow[];
@@ -115,6 +123,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
         activity_type: a.activity_type,
         notes: a.notes,
         revenue_cents: a.revenue_cents,
+        event_date: a.event_date,
+        headcount: a.headcount,
         created_by: a.created_by,
         created_at: a.created_at,
         companyName: a.companyName,
@@ -123,6 +133,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       locations={locations}
       assignableLocations={assignableLocations}
       defaultLocationId={effectiveLocation ?? profile.locationId}
+      handoffTargets={handoffTargets}
       canEdit={canEdit}
       canPickOrgWide={profile.accessRole === "super_admin"}
       scopedLocationName={scopedLocationName}

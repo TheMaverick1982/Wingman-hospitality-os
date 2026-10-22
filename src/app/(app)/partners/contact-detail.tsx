@@ -8,7 +8,7 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { Btn } from "@/components/ui/btn";
 import { inputClass } from "@/components/ui/field";
-import { ACTIVITY_LABELS, money, fmtDate, type PartnerActivityType, type PartnerContact } from "@/lib/partners";
+import { ACTIVITY_LABELS, money, fmtDate, OUTREACH_STATUSES, type PartnerActivityType, type PartnerContact } from "@/lib/partners";
 import { addContactNote, scheduleReachOut, completeReachOut, sendContactEmail } from "./actions";
 
 export type DetailActivity = {
@@ -18,6 +18,8 @@ export type DetailActivity = {
   activity_type: PartnerActivityType;
   notes: string;
   revenue_cents: number | null;
+  event_date?: string | null;
+  headcount?: number | null;
   loggedBy: string;
 };
 export type DetailFollowUp = { id: string; contact_id: string; due_date: string; notes: string; createdBy: string };
@@ -131,6 +133,26 @@ export function ContactDetail({
         {contact.website && <a href={contact.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-charcoal-2 hover:text-brick"><Globe size={13} /> Website</a>}
       </div>
 
+      {(contact.outreach_status !== "none" || contact.interested_in?.length > 0 || contact.handed_off_to || contact.next_step) && (
+        <div className="rounded-xl bg-paper border border-line p-3 mb-4 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {(() => {
+              const m = OUTREACH_STATUSES.find((s) => s.value === contact.outreach_status && s.value !== "none");
+              return m ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.bg} ${m.fg}`}>{m.label}</span> : null;
+            })()}
+            {(contact.interested_in ?? []).map((i) => (
+              <span key={i} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white text-muted border border-line">{i}</span>
+            ))}
+            {contact.handed_off_to && (
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E8F1FF] text-[#0a6cff]">Handed to {contact.handed_off_to}</span>
+            )}
+          </div>
+          {contact.next_step && (
+            <div className="text-[13px]"><span className="font-semibold text-ink">Next step:</span> <span className="text-charcoal-2">{contact.next_step}</span></div>
+          )}
+        </div>
+      )}
+
       {contact.notes && (
         <div className="rounded-xl bg-paper border border-line p-3 mb-4">
           <div className={`${label} mb-1`}>About</div>
@@ -228,6 +250,13 @@ export function ContactDetail({
                       {a.revenue_cents ? <span className="text-[#15803D] font-medium">{money(a.revenue_cents)}</span> : ""}
                       {a.revenue_cents && a.loggedBy ? " · " : ""}
                       {a.loggedBy ? `by ${a.loggedBy}` : ""}
+                    </div>
+                  )}
+                  {(a.event_date || a.headcount) && (
+                    <div className="text-[12px] text-muted-2 mt-0.5">
+                      {a.event_date ? `Event ${fmtDate(a.event_date)}` : ""}
+                      {a.event_date && a.headcount ? " · " : ""}
+                      {a.headcount ? `${a.headcount} guests` : ""}
                     </div>
                   )}
                   {a.notes && <div className="text-[13px] text-charcoal-2 mt-1 whitespace-pre-wrap">{a.notes}</div>}

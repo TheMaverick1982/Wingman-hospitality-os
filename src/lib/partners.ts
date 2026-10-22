@@ -4,7 +4,38 @@
 // each store and every touch (call, email, meeting, booked event/fundraiser)
 // against them, so community revenue becomes a measured habit rather than luck.
 
-export type PartnerActivityType = "call_text" | "email" | "meeting" | "event_booked" | "fundraiser_booked" | "note";
+export type PartnerActivityType =
+  | "call_text"
+  | "email"
+  | "meeting"
+  | "visit"
+  | "in_store_guest"
+  | "event_booked"
+  | "fundraiser_booked"
+  | "note";
+
+// Outreach pipeline status for a contact — the accountability signal ("who still
+// needs a call back", "who's booked"). 'none' = not yet set.
+export type OutreachStatus = "none" | "no_answer" | "follow_up" | "booked" | "not_interested";
+
+export const OUTREACH_STATUSES: { value: OutreachStatus; label: string; fg: string; bg: string }[] = [
+  { value: "none", label: "No status", fg: "text-muted-2", bg: "bg-panel" },
+  { value: "no_answer", label: "No answer", fg: "text-[#B45309]", bg: "bg-[#FDF3E1]" },
+  { value: "follow_up", label: "Follow up", fg: "text-[#0a6cff]", bg: "bg-[#E8F1FF]" },
+  { value: "booked", label: "Booked", fg: "text-[#15803D]", bg: "bg-[#E7F6EC]" },
+  { value: "not_interested", label: "Not interested", fg: "text-muted", bg: "bg-panel" },
+];
+
+export const OUTREACH_STATUS_LABELS: Record<OutreachStatus, string> = Object.fromEntries(
+  OUTREACH_STATUSES.map((s) => [s.value, s.label]),
+) as Record<OutreachStatus, string>;
+
+// The allowed status string values (for server-side validation).
+export const OUTREACH_STATUS_VALUES: string[] = OUTREACH_STATUSES.map((s) => s.value);
+
+// What a partner has expressed interest in — drives bookings and reporting.
+export const INTERESTED_IN_OPTIONS = ["Party", "Fundraiser", "Catering", "Class", "Partner"] as const;
+export type InterestedIn = (typeof INTERESTED_IN_OPTIONS)[number];
 
 export type PartnerContact = {
   id: string;
@@ -20,6 +51,10 @@ export type PartnerContact = {
   address: string;
   notes: string;
   status: "active" | "archived";
+  outreach_status: OutreachStatus;
+  interested_in: string[];
+  handed_off_to: string;
+  next_step: string;
   last_activity_at: string | null; // YYYY-MM-DD or null (never contacted)
   created_by: string | null;
   created_at: string;
@@ -33,6 +68,8 @@ export type PartnerActivity = {
   activity_type: PartnerActivityType;
   notes: string;
   revenue_cents: number | null;
+  event_date: string | null; // YYYY-MM-DD, for event/fundraiser bookings
+  headcount: number | null;
   created_by: string | null;
   created_at: string;
 };
@@ -78,6 +115,8 @@ export const ACTIVITY_TYPES: { value: PartnerActivityType; label: string; counts
   { value: "call_text", label: "Called or Texted" },
   { value: "email", label: "Emailed" },
   { value: "meeting", label: "Meeting" },
+  { value: "visit", label: "Visit" },
+  { value: "in_store_guest", label: "In-store guest" },
   { value: "event_booked", label: "Event Booked", countsAsEvent: true },
   { value: "fundraiser_booked", label: "Fundraiser Booked", countsAsEvent: true },
 ];

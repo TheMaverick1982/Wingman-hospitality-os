@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, MapPin, PhoneCall, MessageSquarePlus, Users, CircleDot, Clock, DollarSign, Target, ChevronRight } from "lucide-react";
 import { Btn } from "@/components/ui/btn";
 import { StatTile } from "@/components/ui/stat-tile";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -15,6 +15,9 @@ import {
   money,
   fmtDate,
   quarterStart,
+  OUTREACH_STATUSES,
+  INTERESTED_IN_OPTIONS,
+  type OutreachStatus,
   type PartnerActivityType,
   type PartnerContact,
 } from "@/lib/partners";
@@ -32,11 +35,21 @@ type FeedActivity = {
   activity_type: PartnerActivityType;
   notes: string;
   revenue_cents: number | null;
+  event_date: string | null;
+  headcount: number | null;
   created_by: string | null;
   created_at: string;
   companyName: string;
   loggedBy: string;
 };
+
+// Small pill for a contact's outreach status.
+function StatusBadge({ status }: { status: OutreachStatus }) {
+  if (status === "none") return null;
+  const meta = OUTREACH_STATUSES.find((s) => s.value === status);
+  if (!meta) return null;
+  return <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${meta.bg} ${meta.fg}`}>{meta.label}</span>;
+}
 
 type SortKey = "fading" | "company" | "recent" | "revenue";
 
@@ -60,6 +73,7 @@ export function PartnersClient({
   locations,
   assignableLocations,
   defaultLocationId,
+  handoffTargets,
   canEdit,
   canPickOrgWide,
   scopedLocationName,
@@ -74,6 +88,7 @@ export function PartnersClient({
   locations: Location[];
   assignableLocations: Location[];
   defaultLocationId: string | null;
+  handoffTargets: string[];
   canEdit: boolean;
   canPickOrgWide: boolean;
   scopedLocationName: string | null;
@@ -89,6 +104,8 @@ export function PartnersClient({
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("fading");
   const [fadingOnly, setFadingOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<OutreachStatus | "all">("all");
+  const [interestFilter, setInterestFilter] = useState<string>("all");
   const [modalContact, setModalContact] = useState<ContactFormValue | null | undefined>(undefined);
   const [detailContact, setDetailContact] = useState<PartnerContact | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
@@ -135,6 +152,8 @@ export function PartnersClient({
     const q = search.trim().toLowerCase();
     let list = contacts;
     if (fadingOnly) list = list.filter((c) => isFading(c, now));
+    if (statusFilter !== "all") list = list.filter((c) => c.outreach_status === statusFilter);
+    if (interestFilter !== "all") list = list.filter((c) => (c.interested_in ?? []).includes(interestFilter));
     if (q) {
       list = list.filter(
         (c) =>
@@ -160,7 +179,7 @@ export function PartnersClient({
       sorted.sort((a, b) => rank(b) - rank(a));
     }
     return sorted;
-  }, [contacts, search, sort, fadingOnly, now, revenueByContact]);
+  }, [contacts, search, sort, fadingOnly, statusFilter, interestFilter, now, revenueByContact]);
 
   const contactOptions = useMemo(
     () => [...contacts].sort((a, b) => a.company_name.localeCompare(b.company_name)).map((c) => ({ id: c.id, company_name: c.company_name })),
@@ -181,6 +200,10 @@ export function PartnersClient({
       website: c.website,
       address: c.address,
       notes: c.notes,
+      outreach_status: c.outreach_status,
+      interested_in: c.interested_in,
+      handed_off_to: c.handed_off_to,
+      next_step: c.next_step,
     });
   }
 
@@ -237,6 +260,29 @@ export function PartnersClient({
     </select>
   );
 
+  const selectClass = "text-sm rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none shrink-0";
+  const filterBar = (
+    <div className="flex flex-wrap items-center gap-2">
+      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as OutreachStatus | "all")} className={selectClass} aria-label="Filter by status">
+        <option value="all">All statuses</option>
+        {OUTREACH_STATUSES.filter((s) => s.value !== "none").map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+      <select value={interestFilter} onChange={(e) => setInterestFilter(e.target.value)} className={selectClass} aria-label="Filter by interest">
+        <option value="all">All interests</option>
+        {INTERESTED_IN_OPTIONS.map((i) => (
+          <option key={i} value={i}>{i}</option>
+        ))}
+      </select>
+      {(statusFilter !== "all" || interestFilter !== "all") && (
+        <button type="button" onClick={() => { setStatusFilter("all"); setInterestFilter("all"); }} className="text-[12.5px] font-semibold text-muted hover:text-brick px-2 py-1">
+          Clear
+        </button>
+      )}
+    </div>
+  );
+
   const contactCards = (
     <div className="flex flex-col gap-2.5">
       {filtered.map((c) => {
@@ -249,7 +295,15 @@ export function PartnersClient({
           <div key={c.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <button type="button" onClick={() => setDetailContact(c)} className="font-semibold text-ink truncate hover:text-brick text-left transition-colors">{c.company_name}</button>
+                <button
+                  type="button"
+                  onClick={() => setDetailContact(c)}
+                  className="group inline-flex items-center gap-1 font-semibold text-brick hover:underline underline-offset-2 text-left max-w-full"
+                  title="Open contact"
+                >
+                  <span className="truncate">{c.company_name}</span>
+                  <ChevronRight size={15} className="shrink-0 text-brick/60 group-hover:translate-x-0.5 transition-transform" />
+                </button>
                 {(c.contact_name || c.category) && (
                   <div className="text-[13px] text-muted truncate mt-0.5">
                     {c.contact_name}
@@ -264,8 +318,21 @@ export function PartnersClient({
                   </div>
                 )}
               </div>
-              <StatusPill {...badge} />
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <StatusPill {...badge} />
+                <StatusBadge status={c.outreach_status} />
+              </div>
             </div>
+            {(c.interested_in?.length > 0 || c.handed_off_to) && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                {(c.interested_in ?? []).map((i) => (
+                  <span key={i} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-panel text-muted border border-line">{i}</span>
+                ))}
+                {c.handed_off_to && (
+                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E8F1FF] text-[#0a6cff]">→ {c.handed_off_to}</span>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[12.5px] text-muted-2">
               <span className={fading ? "text-[#B45309] font-medium" : ""}>Last touch: {relTouch(days)}</span>
               {rev > 0 && <span>Revenue: <span className="text-charcoal-2">{money(rev)}</span></span>}
@@ -408,7 +475,7 @@ export function PartnersClient({
           {/* Mobile & tablet: search + sort + cards right under the tabs. */}
           <div className="lg:hidden flex flex-col gap-3">
             {searchBar}
-            {sortControl}
+            <div className="flex items-center gap-2">{sortControl}{filterBar}</div>
             {contactCards}
           </div>
 
@@ -423,7 +490,7 @@ export function PartnersClient({
                 className="text-sm outline-none w-full bg-transparent text-ink"
               />
             </div>
-            {sortControl}
+            <div className="flex items-center gap-2">{filterBar}{sortControl}</div>
           </div>
 
           <div className="hidden lg:block bg-white border border-line rounded-2xl overflow-x-auto shadow-sm">
@@ -445,7 +512,16 @@ export function PartnersClient({
                   return (
                     <tr key={c.id} className="border-b border-line hover:bg-[#FAFAFA] transition-colors">
                       <td className="px-5 py-3.5">
-                        <button type="button" onClick={() => setDetailContact(c)} className="text-ink font-medium hover:text-brick text-left transition-colors">{c.company_name}</button>
+                        <button
+                          type="button"
+                          onClick={() => setDetailContact(c)}
+                          className="group inline-flex items-center gap-1 text-brick font-medium hover:underline underline-offset-2 text-left"
+                          title="Open contact"
+                        >
+                          {c.company_name}
+                          <ChevronRight size={14} className="shrink-0 text-brick/60 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                        {c.handed_off_to && <div className="text-[11.5px] text-muted-2 mt-0.5">→ {c.handed_off_to}</div>}
                       </td>
                       <td className="px-5 py-3.5 text-muted">{c.contact_name || "—"}</td>
                       <td className="px-5 py-3.5 text-muted">{c.category || "—"}</td>
@@ -454,7 +530,10 @@ export function PartnersClient({
                         {relTouch(days)}
                       </td>
                       <td className="px-5 py-3.5">
-                        <StatusPill {...badge} />
+                        <div className="flex flex-col items-start gap-1">
+                          <StatusPill {...badge} />
+                          <StatusBadge status={c.outreach_status} />
+                        </div>
                       </td>
                       <td className="px-5 py-3.5">
                         {canEdit && (
@@ -516,6 +595,7 @@ export function PartnersClient({
           assignableLocations={assignableLocations}
           defaultLocationId={defaultLocationId}
           canPickOrgWide={canPickOrgWide}
+          handoffTargets={handoffTargets}
           onClose={() => setModalContact(undefined)}
         />
       )}
