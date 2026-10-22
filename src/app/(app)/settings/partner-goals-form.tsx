@@ -15,6 +15,8 @@ export type GoalRow = {
   goal_events: number;
   goal_fundraisers: number;
   goal_active_connections: number;
+  goal_weekly_reach: number;
+  goal_weekly_visits: number;
 };
 
 const numClass = `${inputClass} text-center`;
@@ -38,17 +40,18 @@ export function PartnerGoalsForm({ orgDefault, byLocation, locations }: { orgDef
   return (
     <form action={formAction} className="flex flex-col gap-6">
       <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Quarterly goals</div>
+        <div className="text-[17px] font-semibold tracking-[-0.01em] text-ink mb-1">Partner goals</div>
         <p className="text-sm text-muted mb-5">
-          Targets each store aims for every quarter. Set a default for all stores; override any store below. These
-          drive the goal-progress cards and the monthly Partners report.
+          Targets each store aims for. The first four are per quarter; <span className="font-semibold text-charcoal-2">Weekly reach</span> and
+          <span className="font-semibold text-charcoal-2"> Weekly visits</span> are the weekly activity goals shown on the weekly report. Set a
+          default for all stores; override any store below.
         </p>
 
         <div className="rounded-xl border border-line overflow-x-auto">
-          <table className="w-full text-sm min-w-[560px]">
+          <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-[#FAFAFA] border-b border-line text-left">
-                {["Store", "New contacts", "Events", "Fundraisers", "Active (keep warm)"].map((h) => (
+                {["Store", "New contacts", "Events", "Fundraisers", "Active (keep warm)", "Weekly reach", "Weekly visits"].map((h) => (
                   <th key={h} className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
                     {h}
                   </th>
@@ -70,6 +73,12 @@ export function PartnerGoalsForm({ orgDefault, byLocation, locations }: { orgDef
                 <td className="px-4 py-2">
                   <input name="default_active" type="number" min="0" defaultValue={def.goal_active_connections} className={numClass} />
                 </td>
+                <td className="px-4 py-2">
+                  <input name="default_weekly_reach" type="number" min="0" defaultValue={def.goal_weekly_reach} className={numClass} />
+                </td>
+                <td className="px-4 py-2">
+                  <input name="default_weekly_visits" type="number" min="0" defaultValue={def.goal_weekly_visits} className={numClass} />
+                </td>
               </tr>
               {locations.map((l) => {
                 const o = byLocation[l.id];
@@ -90,6 +99,12 @@ export function PartnerGoalsForm({ orgDefault, byLocation, locations }: { orgDef
                     </td>
                     <td className="px-4 py-2">
                       <input name={`loc_${l.id}_active`} type="number" min="0" defaultValue={o?.goal_active_connections ?? ""} placeholder={String(def.goal_active_connections)} className={numClass} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input name={`loc_${l.id}_weekly_reach`} type="number" min="0" defaultValue={o?.goal_weekly_reach ?? ""} placeholder={String(def.goal_weekly_reach)} className={numClass} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input name={`loc_${l.id}_weekly_visits`} type="number" min="0" defaultValue={o?.goal_weekly_visits ?? ""} placeholder={String(def.goal_weekly_visits)} className={numClass} />
                     </td>
                   </tr>
                 );

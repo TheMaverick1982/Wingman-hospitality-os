@@ -115,8 +115,8 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
   {
     key: "partner_monthly_report",
     group: "Partners",
-    label: "Monthly Partners report",
-    description: "On the 1st of each month, email a leadership rollup across all stores, plus each manager their store's metrics and a follow-up hit list.",
+    label: "Partners report",
+    description: "Email the Partners report on the schedule set under Settings → Partners — who the team talked to, emailed, and visited, contacts reached vs goal, bookings, revenue, and who's gone cold.",
     audience: "Account owner + report email, and each location manager",
   },
 ];
