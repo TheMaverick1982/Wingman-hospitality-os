@@ -43,6 +43,7 @@ export type LocationMetrics = {
   bookings: Booking[];
   revenueCents: number;
   touchesByPerson: { name: string; count: number }[];
+  handoffs: { company: string; to: string; by: string }[];
   fadingCount: number;
   fadingTop: { company: string; contact: string; days: number | null }[];
   goal: typeof DEFAULT_GOALS;
@@ -51,7 +52,7 @@ export type LocationMetrics = {
 export type PartnerReport = { orgName: string; locations: LocationMetrics[] };
 
 type Contact = { id: string; location_id: string | null; company_name: string; contact_name: string; phone: string; email: string; last_activity_at: string | null };
-type Activity = { contact_id: string; location_id: string | null; activity_type: string; activity_date: string; revenue_cents: number | null; event_date: string | null; headcount: number | null; created_by: string | null };
+type Activity = { contact_id: string; location_id: string | null; activity_type: string; activity_date: string; revenue_cents: number | null; event_date: string | null; headcount: number | null; set_handoff: string | null; created_by: string | null };
 
 const REACH_TYPES = new Set(["call_text", "email", "meeting", "visit", "in_store_guest"]);
 
@@ -63,7 +64,7 @@ export async function computePartnerReport(admin: Admin, orgId: string, orgName:
   const [{ data: locRows }, { data: contactRows }, { data: activityRows }, { data: goalRows }, { data: profileRows }] = await Promise.all([
     admin.from("locations").select("id, name").eq("org_id", orgId).order("name"),
     admin.from("partner_contacts").select("id, location_id, company_name, contact_name, phone, email, last_activity_at").eq("org_id", orgId),
-    admin.from("partner_activities").select("contact_id, location_id, activity_type, activity_date, revenue_cents, event_date, headcount, created_by").eq("org_id", orgId).gte("activity_date", since),
+    admin.from("partner_activities").select("contact_id, location_id, activity_type, activity_date, revenue_cents, event_date, headcount, set_handoff, created_by").eq("org_id", orgId).gte("activity_date", since),
     admin.from("partner_goals").select("location_id, goal_new_contacts, goal_events, goal_fundraisers, goal_active_connections, goal_weekly_reach, goal_weekly_visits").eq("org_id", orgId),
     admin.from("profiles").select("id, full_name").eq("org_id", orgId),
   ]);
@@ -87,7 +88,7 @@ export async function computePartnerReport(admin: Admin, orgId: string, orgName:
   for (const l of locations) {
     byLoc.set(l.id, {
       locationId: l.id, name: l.name, talkedTo: [], emailed: [], visited: [], reachedCount: 0, visitCount: 0,
-      bookings: [], revenueCents: 0, touchesByPerson: [], fadingCount: 0, fadingTop: [],
+      bookings: [], revenueCents: 0, touchesByPerson: [], handoffs: [], fadingCount: 0, fadingTop: [],
       goal: resolveGoal(goalByLoc, orgDefaultGoal, l.id),
     });
     reached.set(l.id, new Set()); talkedSeen.set(l.id, new Set()); emailSeen.set(l.id, new Set()); visitSeen.set(l.id, new Set()); loggers.set(l.id, new Map());
@@ -111,6 +112,11 @@ export async function computePartnerReport(admin: Admin, orgId: string, orgName:
     if (c && a.activity_type === "visit" && !visitSeen.get(locId)!.has(a.contact_id)) { visitSeen.get(locId)!.add(a.contact_id); m.visited.push(line(c)); m.visitCount++; }
     if (a.activity_type === "event_booked" || a.activity_type === "fundraiser_booked") {
       m.bookings.push({ company: c?.company_name ?? "—", kind: a.activity_type === "event_booked" ? "Event" : "Fundraiser", eventDate: a.event_date, headcount: a.headcount });
+    }
+    // A hand-off recorded on this touch (who a lead was passed to) — the
+    // accountability signal: how many handed off this period, and to whom.
+    if (a.set_handoff && a.set_handoff.trim()) {
+      m.handoffs.push({ company: c?.company_name ?? "—", to: a.set_handoff.trim(), by: a.created_by ? (nameById.get(a.created_by) ?? "Someone") : "Someone" });
     }
     if (a.revenue_cents) m.revenueCents += a.revenue_cents;
   }
@@ -163,6 +169,18 @@ function sectionHtml(m: LocationMetrics): string {
     ? `<ul style="margin:3px 0 0;padding-left:18px;">${m.fadingTop.map((c) => `<li style="font-size:13px;color:#333;margin:2px 0;">${esc(c.company)}${c.contact ? ` — ${esc(c.contact)}` : ""} <span style="color:#B45309;">(${c.days === null ? "never" : `${c.days}d quiet`})</span></li>`).join("")}</ul>`
     : `<div style="font-size:13px;color:#15803D;margin-top:3px;">Nobody's fading — nice work.</div>`;
 
+  // Hand-offs this period: total, a who-got-what breakdown, and the list.
+  const handoffBlock = (() => {
+    if (!m.handoffs.length) return `<div style="font-size:13px;color:#999;margin-top:10px;"><strong style="color:#555;">Hand-offs:</strong> none this period</div>`;
+    const byTarget = new Map<string, number>();
+    for (const h of m.handoffs) byTarget.set(h.to, (byTarget.get(h.to) ?? 0) + 1);
+    const summary = [...byTarget.entries()].sort((a, b) => b[1] - a[1]).map(([to, n]) => `${esc(to)} ${n}`).join(" · ");
+    const items = m.handoffs
+      .map((h) => `<li style="font-size:13px;color:#333;margin:2px 0;">${esc(h.company)} → <strong>${esc(h.to)}</strong>${h.by ? ` <span style="color:#888;">(by ${esc(h.by)})</span>` : ""}</li>`)
+      .join("");
+    return `<div style="margin-top:10px;"><strong style="font-size:13px;color:#555;">Hand-offs (${m.handoffs.length}):</strong> <span style="font-size:13px;color:#333;">${summary}</span><ul style="margin:3px 0 0;padding-left:18px;">${items}</ul></div>`;
+  })();
+
   return `<div style="margin-top:20px;">
     <p style="font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#b45309;font-weight:700;margin:0 0 8px;">${esc(m.name)}</p>
     <div style="font-size:14px;color:#1a1a1a;margin-bottom:4px;">
@@ -172,6 +190,7 @@ function sectionHtml(m: LocationMetrics): string {
     ${contactListHtml("Emailed", m.emailed)}
     ${contactListHtml("Visited", m.visited)}
     <div style="margin-top:10px;"><strong style="font-size:13px;color:#555;">Bookings:</strong>${bookings}</div>
+    ${handoffBlock}
     <div style="font-size:13px;color:#333;margin-top:10px;"><strong>${money(m.revenueCents)}</strong> revenue booked · logged by: ${byPerson}</div>
     <div style="font-size:13px;font-weight:600;color:#B45309;margin-top:10px;">Needs follow-up (${m.fadingCount}):</div>
     ${hits}
