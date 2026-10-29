@@ -126,7 +126,7 @@ export async function syncLocationReviews(orgId: string, locationId: string): Pr
   const account = accRow as GbpAccountRow | null;
   if (!account) return { error: "The Google connection is missing — reconnect it." };
 
-  const { error, reviews, averageRating } = await gbpListReviews(account, map.google_account_id, map.google_location_id);
+  const { error, reviews, averageRating, totalReviewCount } = await gbpListReviews(account, map.google_account_id, map.google_location_id);
   if (error || !reviews) {
     await admin.from("google_review_locations").update({ last_sync_status: `error: ${error ?? "unknown"}`, last_synced_at: new Date().toISOString() }).eq("id", map.id);
     return { error: error ?? "Couldn't read reviews from Google." };
@@ -154,7 +154,8 @@ export async function syncLocationReviews(orgId: string, locationId: string): Pr
     .from("google_review_locations")
     .update({
       average_rating: averageRating ?? null,
-      review_count: reviews.length,
+      // Google's own total — the sync only pulls a capped page of recent reviews.
+      review_count: Math.max(totalReviewCount ?? 0, reviews.length),
       last_synced_at: new Date().toISOString(),
       last_sync_status: "ok",
       ...(insight ? { insight, insight_generated_at: new Date().toISOString() } : {}),

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { composeReviewSummary } from "@/lib/review-summary";
+import { composeReviewSummary, fetchGoogleStandings } from "@/lib/review-summary";
+import { googleStandingHtml } from "@/lib/review-email";
 
 export const maxDuration = 300;
 
@@ -81,6 +82,8 @@ export async function GET(request: NextRequest) {
     const { data: locs } = await admin.from("locations").select("id, name, email").eq("org_id", org.id);
     const locations = (locs ?? []) as { id: string; name: string; email: string | null }[];
 
+    const standings = await fetchGoogleStandings(admin, org.id, sinceIso);
+
     // Single-location orgs still have one location row; iterate all.
     let anySent = false;
     for (const loc of locations) {
@@ -95,6 +98,7 @@ export async function GET(request: NextRequest) {
         <p style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#b45309;font-weight:600;margin:0 0 4px;">${esc(period)}'s guest feedback</p>
         <h1 style="font-size:20px;color:#1a1a1a;margin:0 0 2px;">${esc(loc.name || org.name)}</h1>
         <p style="font-size:12.5px;color:#888;margin:0 0 16px;">A combined read across your guest survey${(res.googleCount ?? 0) > 0 ? " and Google reviews" : ""} — reflects feedback received in ${esc(periodLabel)}.</p>
+        ${googleStandingHtml(standings.get(loc.id), periodLabel)}
         ${summaryToHtml(res.summary)}
         <p style="font-size:12px;color:#aaa;margin-top:20px;border-top:1px solid #eee;padding-top:12px;">You're getting this because ${esc(period.toLowerCase())} guest-feedback reports are on for ${esc(org.name)}. Turn it off under Guests → Reviews.</p>
       </div>`;
