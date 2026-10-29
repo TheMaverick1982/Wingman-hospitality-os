@@ -5,7 +5,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSectionAccess } from "@/lib/auth/permissions";
 import { consumeAiLimit } from "@/lib/rate-limit";
-import { composeReviewSummary } from "@/lib/review-summary";
+import { composeReviewSummary, fetchGoogleStandings } from "@/lib/review-summary";
 import { execRecapEmailHtml } from "@/lib/review-email";
 import { sendEmail } from "@/lib/email";
 import { pushCultureMomentToTeam } from "@/lib/culture-notify";
@@ -198,12 +198,14 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
         sinceIso,
         periodLabel: windowPhrase,
       });
-      return { locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
+      return { locationId: loc.id, locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
     }),
   );
+  const standings = await fetchGoogleStandings(admin, profile.orgId, sinceIso);
   const sections = results.map((r) => ({
     locationName: r.locationName,
     summary: r.summary ?? `No new guest feedback in ${windowPhrase}.`,
+    google: standings.get(r.locationId) ?? null,
   }));
 
   const html = execRecapEmailHtml({
@@ -211,6 +213,7 @@ export async function sendExecRecapTestNow(): Promise<{ error: string | null; se
     periodTitle: "Ownership recap — test",
     subLine: `All locations. Reflects guest feedback received in ${windowPhrase}. This is a test${freq === "off" ? " (previewing the weekly window — pick a cadence to change it)" : ` of your ${freq} recap`}.`,
     sections,
+    windowPhrase,
     footer: `Test recap sent from Guests → Reviews. The scheduled recap covers only feedback received in ${windowPhrase}.`,
   });
   try {

@@ -172,3 +172,40 @@ export async function composeReviewSummary(
     return { error: err instanceof Error ? err.message : "Couldn't generate the summary. Try again." };
   }
 }
+
+// Each location's CURRENT Google star rating + total review count (the cached
+// figures from the Google sync), plus how many Google reviews arrived since
+// `sinceIso`. Reports show this standing number next to the period's activity,
+// so owners see where each store stands even in a quiet week. Best-effort:
+// returns an empty map if Google isn't connected.
+export type GoogleStanding = { rating: number | null; total: number; newInPeriod: number };
+
+export async function fetchGoogleStandings(
+  admin: SupabaseClient,
+  orgId: string,
+  sinceIso?: string | null,
+): Promise<Map<string, GoogleStanding>> {
+  const out = new Map<string, GoogleStanding>();
+  try {
+    const { data } = await admin.from("google_review_locations").select("location_id, average_rating, review_count").eq("org_id", orgId);
+    for (const m of (data ?? []) as { location_id: string; average_rating: number | null; review_count: number | null }[]) {
+      const rating = m.average_rating != null ? Math.round(Number(m.average_rating) * 10) / 10 : null;
+      out.set(m.location_id, { rating, total: m.review_count ?? 0, newInPeriod: 0 });
+    }
+    if (sinceIso && out.size > 0) {
+      const { data: recent } = await admin
+        .from("google_reviews")
+        .select("location_id")
+        .eq("org_id", orgId)
+        .gte("review_created_at", sinceIso)
+        .limit(2000);
+      for (const r of (recent ?? []) as { location_id: string }[]) {
+        const s = out.get(r.location_id);
+        if (s) s.newInPeriod++;
+      }
+    }
+  } catch {
+    /* rating context is best-effort */
+  }
+  return out;
+}

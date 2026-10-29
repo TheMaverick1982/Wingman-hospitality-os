@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { composeReviewSummary } from "@/lib/review-summary";
+import { composeReviewSummary, fetchGoogleStandings } from "@/lib/review-summary";
 import { execRecapEmailHtml } from "@/lib/review-email";
 
 export const maxDuration = 300;
@@ -70,15 +70,17 @@ export async function GET(request: NextRequest) {
           sinceIso,
           periodLabel,
         });
-        return { locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
+        return { locationId: loc.id, locationName: loc.name, summary: !r.error && r.summary ? r.summary : null };
       }),
     );
     // Only send if at least one location had new feedback — no point emailing an
     // all-quiet roster.
     if (!results.some((r) => r.summary)) { skipped++; continue; }
+    const standings = await fetchGoogleStandings(admin, org.id, sinceIso);
     const sections = results.map((r) => ({
       locationName: r.locationName,
       summary: r.summary ?? `No new guest feedback in ${windowPhrase}.`,
+      google: standings.get(r.locationId) ?? null,
     }));
 
     const period = daily ? "Today" : "This week";
@@ -87,6 +89,7 @@ export async function GET(request: NextRequest) {
       periodTitle: `${period}'s ownership recap`,
       subLine: `All locations. Reflects guest feedback received in ${windowPhrase}.`,
       sections,
+      windowPhrase,
       footer: `You're getting this because the ownership recap is on for ${org.name}. An owner can change the cadence or recipients under Guests → Reviews.`,
     });
 
