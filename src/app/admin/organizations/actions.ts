@@ -73,6 +73,25 @@ export async function removeOrgCoupon(orgId: string): Promise<PricingState> {
   return { error: null, ok: true };
 }
 
+// Branded owner-welcome email body. Mirrors the password-reset pipeline: a
+// stateless token_hash link (works on any device, no PKCE cookie) delivered by
+// our own Resend sender, so a new customer's very first email doesn't hinge on
+// Supabase's templated invite landing in the inbox.
+function ownerWelcomeHtml(args: { firstName: string; orgName: string; link: string; appUrl: string }): string {
+  const { firstName, orgName, link, appUrl } = args;
+  const dl = `${appUrl}/download`;
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;font-size:15px;line-height:1.6;max-width:560px;">
+  <p style="font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#0a6cff;margin:0 0 8px;">Wingman</p>
+  <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Welcome, ${firstName} — ${orgName} is ready</h1>
+  <p style="margin:0 0 16px;">Your Wingman workspace for <strong>${orgName}</strong> is set up. One quick step to get in:</p>
+  <p style="margin:0 0 20px;"><a href="${link}" style="display:inline-block;background:#0a6cff;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:11px 22px;border-radius:9999px;">Set your password &amp; get started</a></p>
+  <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">If the button doesn&rsquo;t work, paste this link into your browser:</p>
+  <p style="margin:0 0 16px;font-size:12px;color:#6b7280;word-break:break-all;">${link}</p>
+  <p style="margin:0 0 16px;">Once you&rsquo;re in, download the app so your team can use it every shift: <a href="${dl}" style="color:#0a6cff;font-weight:600;">${dl.replace(/^https?:\/\//, "")}</a> (App Store &amp; Google Play).</p>
+  <p style="margin:0;">Welcome aboard,<br/>The Wingman Team</p>
+</div>`;
+}
+
 export async function createFreeOrganization(_prev: CreateOrgState, formData: FormData): Promise<CreateOrgState> {
   const profile = await platformSectionActor("organizations");
   if (!profile) return { error: "Only a platform admin with Organizations access can do this." };
@@ -93,21 +112,54 @@ export async function createFreeOrganization(_prev: CreateOrgState, formData: Fo
   }
   if (cleanLocations.length === 0) return { error: "At least one location is required." };
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin");
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get("origin") ?? "https://www.joinwingman.app").replace(/\/$/, "");
   const admin = createAdminClient();
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
-    redirectTo: `${origin}/auth/callback?type=invite`,
+
+  // Create the owner's account and mint a stateless, cross-device set-password
+  // link — but DON'T rely on Supabase's templated invite email. generateLink
+  // creates the user and returns the token yet sends nothing, so we deliver one
+  // branded welcome ourselves via the same Resend pipeline as the rest of our
+  // mail (the templated invite was landing in spam / going unseen).
+  const { data: linkData, error: inviteError } = await admin.auth.admin.generateLink({
+    type: "invite",
+    email: ownerEmail,
+    options: { redirectTo: `${origin}/auth/callback?type=invite` },
   });
-  if (inviteError) return { error: inviteError.message };
+  if (inviteError || !linkData?.user) {
+    return { error: inviteError?.message ?? "Couldn't create the owner's account." };
+  }
 
   const supabase = await createClient();
   const { error: rpcError } = await supabase.rpc("create_organization_for_user", {
     org_name: orgName,
-    owner_user_id: invited.user.id,
+    owner_user_id: linkData.user.id,
     gm_full_name: ownerName,
     location_names: cleanLocations,
   });
   if (rpcError) return { error: rpcError.message };
+
+  // Send the branded welcome with the working set-password button. Best-effort:
+  // the account + org already exist, so a mail hiccup must never fail setup (and
+  // the owner can still use Forgot Password, which shares this exact mechanism).
+  const hash = linkData.properties?.hashed_token;
+  if (hash) {
+    const link = `${origin}/auth/callback?token_hash=${encodeURIComponent(hash)}&type=invite`;
+    const strip = (s: string) => s.replace(/[<>&]/g, "");
+    try {
+      await sendEmail({
+        to: [ownerEmail],
+        subject: `Welcome to Wingman — set up ${strip(orgName)}`,
+        html: ownerWelcomeHtml({
+          firstName: strip(ownerName.split(/\s+/)[0] || "there"),
+          orgName: strip(orgName),
+          link,
+          appUrl: origin,
+        }),
+      });
+    } catch (e) {
+      console.error("[createFreeOrganization] owner welcome email failed", e);
+    }
+  }
 
   revalidatePath("/admin/organizations");
   return { error: null };
